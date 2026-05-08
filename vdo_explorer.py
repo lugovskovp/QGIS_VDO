@@ -44,26 +44,31 @@ class VDOExplorerPlugin:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
-        '''self.iface.messageBar().pushMessage(
-            self.tr('Plugin <b>{}</b> not found.').format(plugin),
-            Qgis.Warning, 1)'''
+        self.iface.messageBar().pushMessage(
+            self.tr('Plugin <b>VDOExplorerPlugin</b> initialised.'), Qgis.Warning, 1)
 
     def tr(self, message: str) -> str:
         """Translate a string."""
-        return QCoreApplication.translate('Plugin', message)
+        return QCoreApplication.translate('VDOExplorerPlugin', message)
 
     def initGui(self):
+        """Add actions to the QGIS menu and toolbar."""
         icon = QIcon(os.path.join(os.path.dirname(__file__), ICON_PATH_PLUGIN))
-        self.action = QAction(icon, 'Go!', self.iface.mainWindow())
+        self.action = QAction(icon, self.tr('Go!'), self.iface.mainWindow())
         self.action.triggered.connect(self.hide_show)
         self.iface.addToolBarIcon(self.action)
 
     def unload(self):
+        """Remove the plugin's actions from the QGIS menu and toolbars."""
         self.iface.removeToolBarIcon(self.action)
         del self.action
 
+    def run(self):
+        self.iface
+
     def hide_show(self):
-        QMessageBox.information(None, 'Minimal plugin', 'Do something useful here')
+        QMessageBox.information(None, self.tr('Minimal plugin'), 
+                                self.tr('Do something useful here'))
         msg = self.tr('<b>{}</b> asdasd reloaded in {} ms.').format("plugin", 67)
 
         self.iface.messageBar().pushMessage(msg, Qgis.Success)

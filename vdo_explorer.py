@@ -26,7 +26,7 @@ ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
 
 class VDOExplorerPlugin:
     """The plugin class."""
-    
+
     def __init__(self, iface: QgisInterface):
         self.iface = iface
 

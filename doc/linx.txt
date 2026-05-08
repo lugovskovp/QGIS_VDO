@@ -1,0 +1,51 @@
+https://gis-lab.info/docs/postgis/manual/postgis-manual-ru-1.3.4.pdf
+
+Как высчитать ключи перехода от любой системы координат к WGS с сантиметровой точностью?
+https://habr.com/ru/post/521910/
+https://armrus.org/extranet/proj/
+
+
+https://habr.com/ru/post/321710/
+https://openlayers.org/en/latest/examples/vector-wfs.html
+
+Импорт данных из OpenStreetMap
+https://eax.me/postgis/
+
+What's the difference between EPSG:4326 and EPSG:900913?
+https://gis.stackexchange.com/questions/34276/whats-the-difference-between-epsg4326-and-epsg900913/34277#34277
+
+
+https://habr.com/ru/post/321710/
+Принципиальная разница между протоколами WMS и WFS заключается в следующем:
+WMS — передает картографическую информацию в виде готовых изображений (растров), привязанных к координатам.
+WFS — позволяет запрашивать и при наличии полномочий редактировать на карте векторные пространственные данные, такие как дороги, береговые линии, земельные участки и т.д.
+
+Отображение географических данных в Python
+https://machinelearningmastery.ru/mapping-geograph-data-in-python-610a963d2d7f/
+
+Reading shapefile in Python
+https://gis.stackexchange.com/questions/113799/reading-shapefile-in-python
+
+Using Fiona to write a new shapefile from scratch
+https://gis.stackexchange.com/questions/97545/using-fiona-to-write-a-new-shapefile-from-scratch/97563
+
+https://github.com/geopandas/geopandas
+
+How to write Shapely geometries to shapefiles?
+https://gis.stackexchange.com/questions/52705/how-to-write-shapely-geometries-to-shapefiles
+https://gis.stackexchange.com/questions/97545/using-fiona-to-write-a-new-shapefile-from-scratch/97563
+https://gis.stackexchange.com/questions/113799/reading-shapefile-in-python
+
+
+
+OpenStreetMap® содержит свободные данные, распространяемые по лицензии Open Data Commons Open Database License (ODbL)
+https://www.openstreetmap.org/copyright
+
+
+
+
+
+
+
+
+2207753 7286325 балтийск

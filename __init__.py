@@ -10,7 +10,9 @@
 #---------------------------------------------------------------------
 
 # flake8: noqa: QGS105      # игнор передачи iface по значению, а не импорт его
+import os
 
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMessageBox
 
 
@@ -23,7 +25,8 @@ class MinimalPlugin:
         self.iface = iface
 
     def initGui(self):
-        self.action = QAction('Go!', self.iface.mainWindow())
+        icon = QIcon(os.path.join(os.path.dirname(__file__), "resources/plugin.icons/qgis-vdo_i.svg"))
+        self.action = QAction(icon, 'Go!', self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addToolBarIcon(self.action)
 

@@ -1,58 +1,29 @@
-#-----------------------------------------------------------
-# Copyright (C) 2026 Paul Lugovskov
-#-----------------------------------------------------------
-# Licensed under the terms of GNU GPL 2
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#---------------------------------------------------------------------
+''' VDOExplorerPlugin
+A QGIS plugin
+Systeme Guidage Carminat C-IQ navigation database viewer
 
-# flake8: noqa: QGS105      # игнор передачи iface по значению, а не импорт его
-import os
+        begin                : 2023-01-08
+        copyright            : (C) 2023 by Sweet Home
+        email                : p.lugovskov@gmail.com
+        git sha              : https://github.com/lugovskovp/QGIS_VDO
 
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.'''
 
 
 def classFactory(iface):
-    return MinimalPlugin(iface)
+    """Load VDOExplorerPlugin class from file VDOExplorer.
+
+    :param iface: A QGIS interface instance.
+    :type iface: QgsInterface
+    """
+    #return MinimalPlugin(iface)
+    from QGIS_VDO.vdo_explorer import VDOExplorerPlugin
+    return VDOExplorerPlugin(iface)
 
 
-class MinimalPlugin:
-    def __init__(self, iface):  # type: ignore
-        self.iface = iface
-
-    def initGui(self):
-        icon = QIcon(os.path.join(os.path.dirname(__file__), "resources/plugin.icons/qgis-vdo_i.svg"))
-        self.action = QAction(icon, 'Go!', self.iface.mainWindow())
-        self.action.triggered.connect(self.run)
-        self.iface.addToolBarIcon(self.action)
-
-    def unload(self):
-        self.iface.removeToolBarIcon(self.action)
-        del self.action
-
-    def run(self):
-        QMessageBox.information(None, 'Minimal plugin', 'Do something useful here')
-        self.iface
-
-
-'''from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-from qgis.core import QgsApplication
-from qgis.PyQt.QtCore import QAbstractItemModel, QModelIndex, Qt
-from qgis.PyQt.QtGui import (
-    QBrush,
-    QFont,
-    QGuiApplication,
-    QIcon,
-    QMovie,
-    QPalette,
-)
-
-from osminfo.openstreetmap.models import OsmElement, OsmResultTree, OsmTag
-from osminfo.openstreetmap.tag2link import TagLink
-from osminfo.ui.icon import qgis_icon'''
+if __name__ == "__main__":
+    """Standalone execution."""
+    pass

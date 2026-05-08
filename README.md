@@ -1,26 +1,43 @@
 # About
+Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for view/explore a digital road map database for the CARiN- and VDODayton navigation compatible systems
 
-Плагин на Python для просмотра VDO Carindb файлов в QGIS
+Плагин для просмотра в QGIS данных файлов навигационных систем VDO Dayton CD, устанавливавшихся на Citroen, Pegout, BMW, Mercedes, Fiat ect с начала 2000 годов.
 
 > [!IMPORTANT]  
 > Плагин в процессе разработки, релизов не было, смысла скачивать - пока что нет.
 
 
 # Версии ПО
-
 - QGIS 3.44.10 ltr
-- Carindb v.
-- Carindb v.
+- VDO Dayton CD Carindb v.30
+- VDO Dayton CD Carindb v.34
+
+
+# Функциональность
+- Выбор файла. Вывод инфо о файле (файлах). Запоминание настроек.
+- Выбор страны, города, дороги, точки интереса
+- Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
+
+
+# История реверс-инжиниринга формата carindb
+Формат данных закрытый, история получения информации по значению данных в файлах VDO Dayton на Habr:
+- [Реверс черного тессеракта. Начало](https://habr.com/ru/post/597625/) [eng](https://translated.turbopages.org/proxy_u/ru-en.ru.2f5d74b3-63ff776e-440b408c-74722d776562/https/habr.com/ru/post/597625/)
+- [01. Сшей красное с красным, желтое с желтым, белое с белым. Наверняка будет хорошо](https://habr.com/ru/post/597851/) [eng](https://translated.turbopages.org/proxy_u/ru-en.ru.1f39f163-63ff7879-fca36fdd-74722d776562/https/habr.com/ru/post/597851/)
+- [02. Я уже даже не вижу код. Я вижу блондинку, брюнетку и рыжую](https://habr.com/ru/post/598673/) [eng](https://translated.turbopages.org/proxy_u/ru-en.ru.7eefa2d2-63ff78ae-7b1bd31b-74722d776562/https/habr.com/ru/post/598673/)
+- [03. С прозрачными воротами и яркою звездой](https://habr.com/ru/post/599661/) [eng](https://translated.turbopages.org/proxy_u/ru-en.ru.feff4f4f-63ff7b3d-64ac638b-74722d776562/https/habr.com/ru/post/599661/)
+- [04. The Gold-Bug](https://habr.com/ru/post/645355/) [eng](https://translated.turbopages.org/proxy_u/ru-en.ru.65863e91-63ff7baa-91e5cf05-74722d776562/https/habr.com/ru/post/645355/)
+- i hope to be continued...
 
 
 # TODO
-
 - [x] Плагин вообще
 - [ ] Кнопка на панели - скрывает/показывает рабочее поле плагина, пустое поле с краткой справкой
 -- [x] иконка
 -- [x] кнопка с иконкой на toolbars
+-- [ ] рабочее поле с заглушкой
+- [ ] i18l
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
-- [ ] настройки - открываются, сохраняются
+- [ ] настройки - открываются, редактируются, сохраняются
 
 
 

@@ -1,0 +1,15 @@
+{
+  "python.languageServer": "Jedi", //  рекомендуется для автодополнения с QGIS/PyQt5;
+  "editor.formatOnSave": true, //  автоматическое форматирование и сортировка импортов при сохранении.
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "files.associations": {
+    "metadata.txt": "ini"
+  }
+}

@@ -34,8 +34,10 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [ ] Кнопка на панели - скрывает/показывает рабочее поле плагина, пустое поле с краткой справкой
 -- [x] иконка
 -- [x] кнопка с иконкой на toolbars
+-- [x] use QgsMessageLog
 -- [ ] рабочее поле с заглушкой
-- [ ] i18l
+-- [x] log = QgisLog("VDOExplorer")
+- [ ] i18n - интернационализация - text=self.tr(u'Carin C-IQ VDO DB Viewer'),
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
 - [ ] настройки - открываются, редактируются, сохраняются
 
@@ -43,7 +45,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 # useful
 - [Язык разметки Markdown: шпаргалка по синтаксису с примерами](https://skillbox.ru/media/code/yazyk-razmetki-markdown-shpargalka-po-sintaksisu-s-primerami/)
-
+- [PyQt5 - Урок 004. Использование QSettings](https://evileg.com/ru/post/219/)
 
 # unicode color symbols
 КРАСНОЕ ЯБЛОКО (&#x1F34E;): 🍎

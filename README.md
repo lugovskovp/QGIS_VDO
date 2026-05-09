@@ -32,12 +32,13 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 # TODO
 - [x] Плагин вообще
 - [ ] Кнопка на панели - скрывает/показывает рабочее поле плагина, пустое поле с краткой справкой
--- [x] иконка
--- [x] кнопка с иконкой на toolbars
--- [x] use QgsMessageLog
--- [ ] рабочее поле с заглушкой
--- [x] log = QgisLog("VDOExplorer")
+    * [x] иконка
+    * [x] кнопка с иконкой на toolbars
+    * [x] use QgsMessageLog
+    * [ ] рабочее поле с заглушкой
+    * [x] log = QgisLog("VDOExplorer")
 - [x] i18n - интернационализация - text=self.tr(u'Carin C-IQ VDO DB Viewer'),
+- [ ] Поведение кнопки: открыть-закрыть файл, путь-по последнему из последних, список последних, настройки (к-во последних, очистить список)
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
 - [ ] настройки - открываются, редактируются, сохраняются
 
@@ -55,9 +56,14 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 3. c:\Tools\QtLinguist\bin\linguist.exe 
 
 
+
 # useful
 - [Язык разметки Markdown: шпаргалка по синтаксису с примерами](https://skillbox.ru/media/code/yazyk-razmetki-markdown-shpargalka-po-sintaksisu-s-primerami/)
 - [PyQt5 - Урок 004. Использование QSettings](https://evileg.com/ru/post/219/)
+- [Qt Creator](https://github.com/qt-creator/qt-creator)
+- [Qt Designer](https://github.com/PyQt5/QtDesigner/releases)
+
+
 
 # unicode color symbols
 КРАСНОЕ ЯБЛОКО (&#x1F34E;): 🍎

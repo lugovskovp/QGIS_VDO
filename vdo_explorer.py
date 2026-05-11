@@ -1,5 +1,5 @@
-''' VDOExplorerPlugin class
-A QGIS plugin
+''' Carindb VDO
+A QGIS plugin VDOExplorerPlugin class
 Systeme Guidage Carminat C-IQ navigation database viewer
 
         begin                : 2023-01-08
@@ -15,20 +15,26 @@ the Free Software Foundation; either version 2 of the License, or
 import os.path
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QObject
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox
 from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgisInterface
 
-#from QGIS_VDO.vdo_setup import ICON_PATH_PLUGIN
+from .settings import Settings
 
 ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
+ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/settings.svg"
 
 
 class VDOExplorerPlugin:
     """The plugin class."""
-
+    
     def __init__(self, iface: QgisInterface):
         self.iface = iface
+
+        self.menu = None
+
+        #
+        #self.dockwidget = None
 
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
@@ -44,8 +50,9 @@ class VDOExplorerPlugin:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
-        self.iface.messageBar().pushMessage(
-            self.tr('Plugin <b>VDOExplorerPlugin</b> initialised.'), Qgis.Warning, 1)
+        # push варнинг - плагин стартовал
+        # self.iface.messageBar().pushMessage(
+        #     self.tr('Plugin <b>VDOExplorerPlugin</b> initialised.'), Qgis.Warning, 1)
 
     def tr(self, message: str) -> str:
         """Translate a string."""
@@ -54,20 +61,77 @@ class VDOExplorerPlugin:
     def initGui(self):
         """Add actions to the QGIS menu and toolbar."""
         icon = QIcon(os.path.join(os.path.dirname(__file__), ICON_PATH_PLUGIN))
-        self.action = QAction(icon, self.tr('Go!'), self.iface.mainWindow())
-        self.action.triggered.connect(self.hide_show)
-        self.iface.addToolBarIcon(self.action)
+        iconConf = QIcon(os.path.join(os.path.dirname(__file__),
+                         ICON_PATH_PLUGIN_CONFIG))
+        # В строку меню Модули добавить меню плагина
+        self.menu = self.iface.pluginMenu().addMenu(icon, self.tr(
+            "&Carindb VDO"))
+
+        # Действие по-умолчанию - открыть файл
+        self.actionLoadRecentCarindb = QAction(
+            icon, self.tr("Load recent Carindb"))
+        self.actionLoadRecentCarindb.setObjectName(
+            "PluginReloader_ReloadRecentPlugin")
+        self.actionLoadRecentCarindb.triggered.connect(self.loadDefaultCarindb)
+
+        # Кнопка на панели
+        self.toolButton = QToolButton()
+        self.toolButton.setMenu(QMenu())
+        self.toolButton.setToolButtonStyle(Settings.toolButtonStyle())
+        self.toolButton.setPopupMode(
+            QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        toolButtonMenu = self.toolButton.menu()
+
+        # Add the actionLoadRecentCarindb to menu (to present its shortcut)
+        # and set it to the tool buttton as the default action
+        self.toolButton.setDefaultAction(self.actionLoadRecentCarindb)
+        self.menu.addAction(self.actionLoadRecentCarindb)
+        self.menu.addSeparator()
+        #
+        toolButtonMenu.addAction(self.actionLoadRecentCarindb)
+        toolButtonMenu.addSeparator()
+
+        # Create action for opening the settings window
+        self.actionSettings = QAction(iconConf, self.tr("Configure"))
+        self.actionSettings.triggered.connect(self.openConfigWindow)
+        # add Setting action into menu and button
+        toolButtonMenu.addAction(self.actionSettings)
+        self.menu.addAction(self.actionSettings)
+
+        self.iface.addToolBarWidget(self.toolButton)
+
+        #self.iface.initializationCompleted.connect(self.updatePluginIcons)
 
     def unload(self):
         """Remove the plugin's actions from the QGIS menu and toolbars."""
-        self.iface.removeToolBarIcon(self.action)
-        del self.action
+        # self.iface.removeToolBarIcon(self.action)
+        # del self.action
+        if not self.menu:
+            # The initGui() method was never called
+            return
+        self.iface.pluginMenu().removeAction(self.menu.menuAction())
+        self.toolButton.deleteLater()
+        pass
 
     def run(self):
+        # if self.dockwidget == None:
+        #     # Create the dockwidget (after translation) and keep reference
+        #     self.dockwidget = Ui_VDODockWidget()
+        #     pass
         self.iface
 
+    def openConfigWindow(self):
+        """Open the configuration dialog."""
+        QMessageBox.information(None, self.tr('config windows'),
+                                self.tr('configuration'))
+
+    def loadDefaultCarindb(self):
+        """Loading default"""
+        QMessageBox.information(None, self.tr('load windows'),
+                                self.tr('load Default Carindb'))
+
     def hide_show(self):
-        QMessageBox.information(None, self.tr('Minimal plugin'), 
+        QMessageBox.information(None, self.tr('Minimal plugin'),
                                 self.tr('Do something useful here'))
         msg = self.tr('<b>{}</b> asdasd reloaded in {} ms.').format("plugin", 67)
 

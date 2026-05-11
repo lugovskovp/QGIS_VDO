@@ -1,4 +1,4 @@
-''' VDOExplorerPlugin
+''' Carindb VDO
 A QGIS plugin
 Systeme Guidage Carminat C-IQ navigation database viewer
 

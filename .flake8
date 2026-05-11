@@ -17,8 +17,9 @@ exclude = .git, __pycache__, build, dist, venv
 
 # block comment should start with '# 'Flake8(E265)
 # Do not pass iface (QgisInterface) as an argument, instead import it: 'from qgis.utils import iface'Flake8(QGS105)
+# blank line contains whitespaceFlake8(W293)
 
-ignore = E265, QGS105
+ignore = E265, QGS105, W293
 
 
 

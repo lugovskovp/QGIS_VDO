@@ -24,7 +24,8 @@ from .ConfigurationDialog import ConfigurationDialog
 
 
 ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
-ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/settings.svg"
+ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/gears_i.svg"
+ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
 
 
 class VDOExplorerPlugin:
@@ -65,16 +66,25 @@ class VDOExplorerPlugin:
         icon = QIcon(os.path.join(os.path.dirname(__file__), ICON_PATH_PLUGIN))
         iconConf = QIcon(os.path.join(os.path.dirname(__file__),
                          ICON_PATH_PLUGIN_CONFIG))
+        iconOpen = QIcon(os.path.join(os.path.dirname(__file__),
+                         ICON_PATH_PLUGIN_OPEN))
         # В строку меню Модули добавить меню плагина
         self.menu = self.iface.pluginMenu().addMenu(icon, self.tr(
             "&Carindb VDO"))
 
-        # Действие по-умолчанию - открыть файл
+        # Действие по-умолчанию - открыть предыдущий файл
         self.actionLoadRecentCarindb = QAction(
             icon, self.tr("Load recent Carindb"))
         self.actionLoadRecentCarindb.setObjectName(
-            "PluginReloader_ReloadRecentPlugin")
+            "CarindbVDO_ReloadRecentPlugin")
         self.actionLoadRecentCarindb.triggered.connect(self.loadDefaultCarindb)
+
+        # Действие открыть новый файл
+        self.actionLoadNewCarindb = QAction(
+            iconOpen, self.tr("Load Carindb ..."))
+        self.actionLoadNewCarindb.setObjectName(
+            "CarindbVDO_loadNewCarindb")
+        self.actionLoadNewCarindb.triggered.connect(self.loadNewCarindb)
 
         # Кнопка на панели
         self.toolButton = QToolButton()
@@ -88,9 +98,11 @@ class VDOExplorerPlugin:
         # and set it to the tool buttton as the default action
         self.toolButton.setDefaultAction(self.actionLoadRecentCarindb)
         self.menu.addAction(self.actionLoadRecentCarindb)
+        self.menu.addAction(self.actionLoadNewCarindb)
         self.menu.addSeparator()
         #
         toolButtonMenu.addAction(self.actionLoadRecentCarindb)
+        toolButtonMenu.addAction(self.actionLoadNewCarindb)
         toolButtonMenu.addSeparator()
 
         # Create action for opening the settings window
@@ -136,7 +148,12 @@ class VDOExplorerPlugin:
         QMessageBox.information(None, self.tr('load windows'),
                                 self.tr('load Default Carindb'))
         
-        #QMessageBox.information(None, self.tr('load windows'), msg)
+    def loadNewCarindb(self):
+        """ """
+        val = "just file name and path"
+        QMessageBox.information(None, self.tr('load new carindb'),
+                                val)
+        return val
 
     def hide_show(self):
         QMessageBox.information(None, self.tr('Minimal plugin'),

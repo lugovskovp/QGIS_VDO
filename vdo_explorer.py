@@ -20,6 +20,8 @@ from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgisInterface
 
 from .settings import Settings
+from .ConfigurationDialog import ConfigurationDialog
+
 
 ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
 ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/settings.svg"
@@ -122,13 +124,19 @@ class VDOExplorerPlugin:
 
     def openConfigWindow(self):
         """Open the configuration dialog."""
-        QMessageBox.information(None, self.tr('config windows'),
-                                self.tr('configuration'))
+        dlg = ConfigurationDialog(self.iface.mainWindow())
+        dlg.exec()
+        if dlg.result():
+            # обновить вид кнопки - с надписью или без
+            if self.toolButton.toolButtonStyle() != Settings.toolButtonStyle():
+                self.toolButton.setToolButtonStyle(Settings.toolButtonStyle())
 
-    def loadDefaultCarindb(self):
+    def loadDefaultCarindb(self, msg: str = "Default load message") -> None:
         """Loading default"""
         QMessageBox.information(None, self.tr('load windows'),
                                 self.tr('load Default Carindb'))
+        
+        #QMessageBox.information(None, self.tr('load windows'), msg)
 
     def hide_show(self):
         QMessageBox.information(None, self.tr('Minimal plugin'),

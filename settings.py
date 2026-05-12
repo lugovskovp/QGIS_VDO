@@ -12,6 +12,7 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.'''
 
+
 from qgis.PyQt.QtCore import Qt, QSettings
 
 
@@ -21,20 +22,23 @@ class Settings():
     PREFIX = '/QGIS_VDO'
     """QSettings branch used by the plugin"""
 
-    DEFAULT_RECENT_PLUGINS_COUNT = 5
+    DEFAULT_RECENT_FILES_COUNT = 5
 
+    # RecentFilesCount
     @classmethod
-    def recentPluginsCount(cls) -> int:
+    def RecentFilesCount(cls) -> int:
         """Get the number of recent plugins to display in the menu."""
-        return QSettings().value(f'{cls.PREFIX}/recentPluginsCount',
-                                 cls.DEFAULT_RECENT_PLUGINS_COUNT,
-                                 type=int)
+        val = QSettings().value(f'{cls.PREFIX}/RecentFilesCount',
+                                cls.DEFAULT_RECENT_FILES_COUNT,
+                                type=int)
+        return val
 
     @classmethod
-    def setRecentPluginsCount(cls, count: int) -> None:
+    def setRecentFilesCount(cls, count: int) -> None:
         """Set number of recent plugins to display in the menu."""
-        QSettings().setValue(f'{cls.PREFIX}/recentPluginsCount', count)
+        QSettings().setValue(f'{cls.PREFIX}/RecentFilesCount', count)
 
+    # toolButtonStyle
     @classmethod
     def toolButtonStyle(cls) -> Qt.ToolButtonStyle:
         """Get toolbar button style (with text or icon only)."""
@@ -51,6 +55,6 @@ class Settings():
                                  True, type=bool)
 
     @classmethod
-    def setToolButtonTextEnabled(cls, state: bool):
+    def setToolButtonTextEnabled(cls, state: bool) -> None:
         """Enable or disable text displayed beside the toolbar icon."""
         QSettings().setValue(f'{cls.PREFIX}/toolButtonTextEnabled', state)

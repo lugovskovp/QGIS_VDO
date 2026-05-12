@@ -38,14 +38,20 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] рабочее поле с заглушкой
     * [x] log = QgisLog("VDOExplorer")
 - [x] i18n - интернационализация - text=self.tr(u'Carin C-IQ VDO DB Viewer'),
-- [ ] Поведение кнопки: открыть-закрыть файл, путь-по последнему из последних, список последних, настройки (к-во последних, очистить список)
+- [x] Поведение кнопки (mvp): открыть-закрыть файл, настройки
     * [x] нажатие на кнопку подписано, что загружается последний Carindb
     * [x] гармонизированы меню и попап кнопки
     * [x] mockи на нажатия настроек и загрузки
     * [x] settings.py - qt-настройки
-    * [ ]
+- [x] настройки - открываются, редактируются, сохраняются, интернализированы
+    * [x] кнопка настроек в меню и у основной кнопки
+    * [x] файл settings.py для обеспечения сохранения/чтения настроек
+    * [x] сохранение/восстановление параметров при изменении в qt-настройках
+    * [x] окно - виджет настроек
+    * [x] i18n настроек
+- [ ] добавить в меню открытия диалог выбора для открытия файла
+- [ ] Поведение кнопки: открыть-закрыть файл, путь-по последнему из последних, список последних, настройки (к-во последних, очистить список)
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
-- [ ] настройки - открываются, редактируются, сохраняются
 
 
 # i18n
@@ -57,9 +63,9 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 5. С помощью утилиты lrelease или просто с помощью той же программы Qt Linguist вы компилируете .ts-файлы в .qm-файлы.
 6. Внутри исходного кода своей программы с помощью нескольких объектов класса QTranslator вы применяете к своей программе переводы строк в зависимости от системной локали.
 Итак:
-1. ./i18n/QGIS_VDO.pro - файл проекта
-2. ```pylupdate5 .\i18n\QGIS_VDO.pro```
-3. c:\Tools\QtLinguist\bin\linguist.exe 
+- ./i18n/QGIS_VDO.pro - файл проекта
+- ```pylupdate5 .\i18n\QGIS_VDO.pro```
+- c:\Tools\QtLinguist\bin\linguist.exe 
 
 
 
@@ -68,7 +74,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [PyQt5 - Урок 004. Использование QSettings](https://evileg.com/ru/post/219/)
 - [Qt Creator](https://github.com/qt-creator/qt-creator)
 - [Qt Designer](https://github.com/PyQt5/QtDesigner/releases)
-
+- [PyQt6 — полное руководство для новичков. Продолжение](https://habr.com/ru/companies/skillfactory/articles/648845/)
 
 
 # unicode color symbols

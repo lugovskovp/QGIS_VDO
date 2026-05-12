@@ -6,7 +6,10 @@
 
 - основной интерфейс. При старте - пустой, две кнопки - открыть (папочка) и настройки (шестеренка).
 
-- 
+- Plugin Reloader plugin 4 restart? 
+Откройте Python Console через «Plugins → Python Console».
+Введите команду qgis.utils.reloadPlugin('plugin_name'), заменив plugin_name на фактическое имя директории плагина.
+qgis.utils.reloadPlugin('QGIS_VDO')
 
 - Настройки (иконка, сохранение путей, сохранение настроек)
 
@@ -21,3 +24,4 @@
 
 
 ##
+https://www.svgai.org/convert/image-to-svg- converter 

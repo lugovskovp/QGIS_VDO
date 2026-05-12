@@ -16,4 +16,4 @@ exclude = .git, __pycache__, build, dist, venv
 
 # block comment should start with '# 'Flake8(E265)
 
-ignore = E265
+ignore = E265, QGS105

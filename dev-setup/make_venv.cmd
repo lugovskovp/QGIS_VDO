@@ -69,7 +69,8 @@ copy %PLUGIN_SETUP_PATH%\ref\example.launch.json .vscode\launch.json /Y
 
 ::.venv\Scripts\activate
 :: python.exe -m pip install --upgrade pip
-:: pip install flake8 flake8-qgis flake8-qt-tr
+:: pip install flake8 flake8-qgis flake8-qt-tr 
+:: pip install PyQt5 PyQt5-Qt5 PyQt5_sip
 
 
 :: ???????? pip install debugpy

@@ -10,14 +10,13 @@
 - Carindb VDO v.
 
 ## Теория
-
 0. Установка [QGIS DevTools](https://docs.nextgis.com/docs_ngqgis/source/devtools.html)
 1. Для запуска+отладки py файлов в VSCode не системным интерпретатором Python, а идущим в комплекте c OSGEO4W, необходимо, чтобы переменные виртуального окружения были установлены так же, как и при запуске QGIS. Для этого и в ``` activate.bat ``` (из cmd) и в ``` Activate.ps1``` (из vscode и powershell) необходимо обеспечить их инициализацию, референс - **c:\OSGeo4W\bin\python-qgis-ltr.bat**.  
 2. PS env set->     ``` $env:PYTHONHOME="c:\OSGeo4W\apps\Python312" ```
 3. PS env view->    ``` Get-ChildItem Env: ```
 4. PYTHONHOME в виртуальном окружении активацией очищается. В то же время, т.к. при установке pip пакетов необходима эта переменная (иначе ``` Could not find platform independent libraries <prefix> ```), в пакетные файлы добавляю ``` PYTHONHOME=c:\OSGeo4W\apps\Python312 ```.
 5. Проверка - ``` .venv\Scripts\activate```, ```pip -V```
-Резкльтат:
+Результат:
 ```
 (.venv) c:\Work\QGIS_VDO>pip -V
 pip 25.0.1 from c:\Work\QGIS_VDO\.venv\Lib\site-packages\pip (python 3.12)
@@ -35,11 +34,7 @@ pip 25.0.1 from c:\Work\QGIS_VDO\.venv\Lib\site-packages\pip (python 3.12)
 
 
 # Полезные линки
-Отладка плагинов QGIS 3.x на Python в Windows 10 с помощью VS Code https://gist.github.com/thbaumann/73c873d4c49d8c1add8dc97359cebabe
-
-Создание собственного репозитория плагинов QGIS https://habr.com/ru/articles/501298/
-
-Пример плагина, с минимальным набором файлов https://github.com/wonder-sk/qgis-minimal-plugin
-   
-Расширенные инструменты разработчика для QGIS. Включают поддержку удаленной отладки через debugpy.
-https://github.com/nextgis/qgis_devtools
+- [Отладка плагинов QGIS 3.x на Python в Windows 10 с помощью VS Code](https://gist.github.com/thbaumann/73c873d4c49d8c1add8dc97359cebabe)
+- [habr: Создание собственного репозитория плагинов QGIS](https://habr.com/ru/articles/501298/)
+- [Пример плагина, с минимальным набором файлов](https://github.com/wonder-sk/qgis-minimal-plugin)
+- [Расширенные инструменты разработчика для QGIS. Включают поддержку удаленной отладки через debugpy](https://github.com/nextgis/qgis_devtools)

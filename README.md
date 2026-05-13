@@ -56,7 +56,11 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [ ] Список последних файлов 
     * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
     * [x] при успешном открытии перестроить в настройках список файлов - первым этот самый, следующие, но не более числа из настроек - из предыдущего списка
-    * [ ] initGui генерит строки qafctions из ранее открытых (список в настройках) файлов
+    * [x] initGui генерит строки qafctions из ранее открытых (список в настройках) файлов
+    * [x] выделение цветом невалидных (например перемещенных)
+    * [ ] refresh при апдейте
+    * [ ] очистка списка последних открытых файлов из панели настроек
+    * [ ] на кнопку - по умолчанию - первый из валидных
     * [ ] если файл по указанному пути не существует или же не является carindb - строка есть, но выделена цветом невалидности
 - [ ] Поведение кнопки: открыть-закрыть файл, путь-по последнему из последних, список последних, настройки (к-во последних, очистить список)
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
@@ -84,6 +88,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [Qt Creator](https://github.com/qt-creator/qt-creator)
 - [Qt Designer](https://github.com/PyQt5/QtDesigner/releases)
 - [PyQt6 — полное руководство для новичков. Продолжение](https://habr.com/ru/companies/skillfactory/articles/648845/)
+- [Изменение цвета выделения для определенного элемента (типа QAction) в QMenuBar](https://stackoverflow.com/questions/72316405/change-highlight-color-for-a-specific-item-qaction-type-on-a-qmenubar)
 
 
 # unicode color symbols

@@ -13,6 +13,7 @@ the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.'''
 
 import os.path
+from functools import partial
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QObject
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog
@@ -26,6 +27,7 @@ from .ConfigurationDialog import ConfigurationDialog
 ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
 ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/gears_i.svg"
 ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
+ICON_PATH_PLUGIN_ALERT = "resources/plugin.icons/icon_alert.svg"
 
 
 class VDOExplorerPlugin:
@@ -71,6 +73,8 @@ class VDOExplorerPlugin:
                          ICON_PATH_PLUGIN_CONFIG))
         iconOpen = QIcon(os.path.join(os.path.dirname(__file__),
                          ICON_PATH_PLUGIN_OPEN))
+        self.iconAlert = QIcon(os.path.join(os.path.dirname(__file__),
+                                            ICON_PATH_PLUGIN_ALERT))
         # В строку меню Модули добавить меню плагина
         self.menu = self.iface.pluginMenu().addMenu(icon, self.tr(
             "&Carindb VDO"))
@@ -102,11 +106,21 @@ class VDOExplorerPlugin:
         # Add the actionLoadRecentCarindb to menu (to present its shortcut)
         # and set it to the tool buttton as the default action
         self.toolButton.setDefaultAction(self.actionLoadRecentCarindb)
+
+        # Create actions for recently processed
+        self.actionForPlugin = {}
+        for f in Settings.RecentFiles():
+            self.actionForPlugin[f] = self.createActionForPlugin(f)
+
         self.menu.addAction(self.actionLoadRecentCarindb)
         self.menu.addAction(self.actionChooseNewCarindb)
         self.menu.addSeparator()
         #
         toolButtonMenu.addAction(self.actionLoadRecentCarindb)
+        # Add all the rest of the actions to the menu and the toolbar
+        for action in self.actionForPlugin.values():
+            toolButtonMenu.addAction(action)
+            self.menu.addAction(action)
         toolButtonMenu.addAction(self.actionChooseNewCarindb)
         toolButtonMenu.addSeparator()
 
@@ -181,6 +195,30 @@ class VDOExplorerPlugin:
         # self.tr('Plugin <b>{}</b> not found.').format(plugin),
         # Qgis.Warning, 1)
         return False
+
+    def createActionForPlugin(self, filePath: os.path) -> None:
+        """ Create action from path """
+        actionDir, actionName = os.path.split(filePath)
+        # тут проверяем carindb ли, и генерим название
+        disable = actionName != 'carindb'
+        ap = filePath.split("/")
+        actionName = ap[-2] + ":::" + ap[-1]
+        #
+        if disable:
+            action = QAction(self.iconAlert, self.tr('Error: {}').format(actionName))
+            run = partial(self.alertCarindb, filePath)
+        else:
+            action = QAction(actionName)
+            run = partial(self.loadCarindb, filePath)   # в разных ветках разные экшен
+        action.setToolTip(filePath)     # where its showing?
+        action.setStatusTip(filePath)   # show in status string
+        action.triggered.connect(run)
+        return action
+
+    def alertCarindb(self, filePath: os.path) -> None:
+        """ Delete problem path and|or rebuild menu """
+        QMessageBox.information(None, self.tr('alertCarindb'),
+                                self.tr('Do something useful here {}').format(filePath))
 
     def hide_show(self):
         QMessageBox.information(None, self.tr('Minimal plugin'),

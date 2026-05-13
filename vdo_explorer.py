@@ -31,6 +31,9 @@ ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
 class VDOExplorerPlugin:
     """The plugin class."""
 
+    actionForPlugin: dict[str, QAction] = {}
+    """ Список последних открытых carindb """
+
     def __init__(self, iface: QgisInterface):
         self.iface = iface
 
@@ -78,6 +81,8 @@ class VDOExplorerPlugin:
         self.actionLoadRecentCarindb.setObjectName(
             "CarindbVDO_ReloadRecentPlugin")
         self.actionLoadRecentCarindb.triggered.connect(self.loadDefaultCarindb)
+
+        # Действия из ранее открывавшихся файлов
 
         # Действие открыть новый файл
         self.actionChooseNewCarindb = QAction(
@@ -153,8 +158,7 @@ class VDOExplorerPlugin:
         vdof_dlg = QFileDialog()
         # Ожидаемый результат - один файл
         vdof_dlg.setFileMode(QFileDialog.ExistingFile)
-        fp = Settings.LastFileNamePath()
-        # fp = 'C:/DIY/VDO/db_src/1. BNL_13_14/carindb'
+        fp = Settings.LastFileNamePath()    # fp = 'C:/VDO/db_src/1. BNL_13_14/carindb'
         fileNamePath, _ = vdof_dlg.getOpenFileName(None,
                                                    self.tr("Load carindb file"), fp, "")
         if fileNamePath:
@@ -162,16 +166,20 @@ class VDOExplorerPlugin:
             Settings.setLastFileNamePath(fileNamePath)
             # try to load carindb file
             if self.loadCarindb(fileNamePath):
-                # if sucess,
+                # if sucess, add into actionsForPlugin
+                Settings.updateRecentFiles(fileNamePath)
                 pass
             #exit
+
             pass
 
     def loadCarindb(self, path: os.path) -> bool:
         """ Load carindb file """
         if os.path.exists(path):
             return True
-        
+        # self.iface.messageBar().pushMessage(
+        # self.tr('Plugin <b>{}</b> not found.').format(plugin),
+        # Qgis.Warning, 1)
         return False
 
     def hide_show(self):

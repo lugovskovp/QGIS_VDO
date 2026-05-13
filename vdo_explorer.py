@@ -15,7 +15,7 @@ the Free Software Foundation; either version 2 of the License, or
 import os.path
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QObject
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog
 from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgisInterface
 
@@ -30,7 +30,7 @@ ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
 
 class VDOExplorerPlugin:
     """The plugin class."""
-    
+
     def __init__(self, iface: QgisInterface):
         self.iface = iface
 
@@ -80,11 +80,11 @@ class VDOExplorerPlugin:
         self.actionLoadRecentCarindb.triggered.connect(self.loadDefaultCarindb)
 
         # Действие открыть новый файл
-        self.actionLoadNewCarindb = QAction(
+        self.actionChooseNewCarindb = QAction(
             iconOpen, self.tr("Load Carindb ..."))
-        self.actionLoadNewCarindb.setObjectName(
-            "CarindbVDO_loadNewCarindb")
-        self.actionLoadNewCarindb.triggered.connect(self.loadNewCarindb)
+        self.actionChooseNewCarindb.setObjectName(
+            "CarindbVDO_chooseNewCarindb")
+        self.actionChooseNewCarindb.triggered.connect(self.chooseNewCarindb)
 
         # Кнопка на панели
         self.toolButton = QToolButton()
@@ -98,11 +98,11 @@ class VDOExplorerPlugin:
         # and set it to the tool buttton as the default action
         self.toolButton.setDefaultAction(self.actionLoadRecentCarindb)
         self.menu.addAction(self.actionLoadRecentCarindb)
-        self.menu.addAction(self.actionLoadNewCarindb)
+        self.menu.addAction(self.actionChooseNewCarindb)
         self.menu.addSeparator()
         #
         toolButtonMenu.addAction(self.actionLoadRecentCarindb)
-        toolButtonMenu.addAction(self.actionLoadNewCarindb)
+        toolButtonMenu.addAction(self.actionChooseNewCarindb)
         toolButtonMenu.addSeparator()
 
         # Create action for opening the settings window
@@ -148,12 +148,31 @@ class VDOExplorerPlugin:
         QMessageBox.information(None, self.tr('load windows'),
                                 self.tr('load Default Carindb'))
         
-    def loadNewCarindb(self):
-        """ """
-        val = "just file name and path"
-        QMessageBox.information(None, self.tr('load new carindb'),
-                                val)
-        return val
+    def chooseNewCarindb(self):
+        """ File open dialog and call load file func, if success"""
+        vdof_dlg = QFileDialog()
+        # Ожидаемый результат - один файл
+        vdof_dlg.setFileMode(QFileDialog.ExistingFile)
+        fp = Settings.LastFileNamePath()
+        # fp = 'C:/DIY/VDO/db_src/1. BNL_13_14/carindb'
+        fileNamePath, _ = vdof_dlg.getOpenFileName(None,
+                                                   self.tr("Load carindb file"), fp, "")
+        if fileNamePath:
+            # adding LastFileNamePath into settings
+            Settings.setLastFileNamePath(fileNamePath)
+            # try to load carindb file
+            if self.loadCarindb(fileNamePath):
+                # if sucess,
+                pass
+            #exit
+            pass
+
+    def loadCarindb(self, path: os.path) -> bool:
+        """ Load carindb file """
+        if os.path.exists(path):
+            return True
+        
+        return False
 
     def hide_show(self):
         QMessageBox.information(None, self.tr('Minimal plugin'),

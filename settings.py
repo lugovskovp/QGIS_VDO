@@ -12,7 +12,7 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.'''
 
-
+import os.path
 from qgis.PyQt.QtCore import Qt, QSettings
 
 
@@ -37,6 +37,19 @@ class Settings():
     def setRecentFilesCount(cls, count: int) -> None:
         """Set number of recent plugins to display in the menu."""
         QSettings().setValue(f'{cls.PREFIX}/RecentFilesCount', count)
+
+    # LastFileNamePath
+    @classmethod
+    def LastFileNamePath(cls) -> str:
+        """ Get last opened folder """
+        path = QSettings().value(f'{cls.PREFIX}/LastFileNamePath',
+                                 '', type=str)
+        return path
+
+    @classmethod
+    def setLastFileNamePath(cls, path: os.path) -> None:
+        """ Setting last opened file path """
+        QSettings().setValue(f'{cls.PREFIX}/LastFileNamePath', path)
 
     # toolButtonStyle
     @classmethod

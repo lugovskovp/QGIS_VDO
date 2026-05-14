@@ -31,6 +31,7 @@ class Settings():
     NAME_RECENT_FILES_COUNT = 'RecentFilesCount'
     NAME_LAST_PATH = 'LastFileNamePath'
     NAME_TOOL_BUTTON_TEXT = 'toolButtonTextEnabled'
+    NAME_ENABLE_SHOW_CLEAR_ACTION = 'ShowClearRecentFilesEnabled'
 
     # RecentFilesCount
     @classmethod
@@ -83,6 +84,15 @@ class Settings():
         all_files = all_files[:cls.MAX_RECENT_FILES_COUNT]
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_RECENT_FILES}', all_files)
 
+    @classmethod
+    def removeRecentFiles(cls, recentFile: str):
+        """ Remuve one file from recent files array """
+        all_files = cls.RecentFiles(True)
+        if recentFile in all_files:
+            all_files.remove(recentFile)
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_RECENT_FILES}', all_files)
+
+    @classmethod
     def clearRecentFiles(cls):
         """ Setting recently files to []"""
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_RECENT_FILES}', [])
@@ -107,3 +117,15 @@ class Settings():
     def setToolButtonTextEnabled(cls, state: bool) -> None:
         """Enable or disable text displayed beside the toolbar icon."""
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_TOOL_BUTTON_TEXT}', state)
+
+    #ShowClearRecentFiles
+    @classmethod
+    def ShowClearRecentFilesEnabled(cls) -> bool:
+        """ Enable to show clear recent files in menu """
+        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}',
+                                 False, type=bool)
+
+    @classmethod
+    def setShowClearRecentFilesEnabled(cls, state: bool) -> None:
+        """ Enable or disable to show clear recent files in menu """
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}', state)

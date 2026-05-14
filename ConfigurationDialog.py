@@ -31,6 +31,7 @@ class ConfigurationDialog(QDialog, FORM_CLASS):
         super().__init__(parent)
         self.setupUi(self)
         self.cbToolButtonText.setChecked(Settings.toolButtonTextEnabled())
+        self.cbShowClearRecent.setChecked(Settings.ShowClearRecentFilesEnabled())
         if rpc := Settings.RecentFilesCount():
             self.sbRecentFilesCount.setValue(rpc)
 
@@ -38,4 +39,5 @@ class ConfigurationDialog(QDialog, FORM_CLASS):
         """Accept."""
         Settings.setToolButtonTextEnabled(self.cbToolButtonText.isChecked())
         Settings.setRecentFilesCount(self.sbRecentFilesCount.value())
+        Settings.setShowClearRecentFilesEnabled(self.cbShowClearRecent.isChecked())
         super().accept()

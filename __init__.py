@@ -2,8 +2,8 @@
 A QGIS plugin
 Systeme Guidage Carminat C-IQ navigation database viewer
 
-        begin                : 2023-01-08
-        copyright            : (C) 2023 by Sweet Home
+        begin                : 2026-05-12
+        copyright            : (C) 2026 by Sweet Home
         email                : p.lugovskov@gmail.com
         git sha              : https://github.com/lugovskovp/QGIS_VDO
 

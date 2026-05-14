@@ -3,7 +3,7 @@ A QGIS plugin VDOExplorerPlugin class
 Systeme Guidage Carminat C-IQ navigation database viewer
 
         begin                : 2023-01-08
-        copyright            : (C) 2023 by Sweet Home
+        copyright            : (C) 2026 by Sweet Home
         email                : p.lugovskov@gmail.com
         git sha              : https://github.com/lugovskovp/QGIS_VDO
 
@@ -179,7 +179,11 @@ class VDOExplorerPlugin:
             pass
 
     def loadCarindb(self, path: os.path) -> bool:
-        """ Load carindb file """
+        """ Load carindb file
+
+        :param path: A path for loading carindb file.
+        :type path: os.path
+        """
         Settings.updateRecentFiles(path)
         self.RegenerateMenu()
 
@@ -191,15 +195,23 @@ class VDOExplorerPlugin:
         return False
 
     def isCarinb(self, filePath: os.path) -> bool:
-        """ А carindb ли файл? """
+        """ А carindb ли файл?
+
+        :param path: A path for checking carindb file.
+        :type path: os.path
+        """
         #
         actionDir, actionName = os.path.split(filePath)
         res = actionName != 'carindb'
         #
         return res
 
-    def createActionForPlugin(self, filePath: os.path) -> None:
-        """ Create action from path """
+    def createActionForPlugin(self, filePath: os.path) -> QAction:
+        """ Create action from path
+
+        :param path: A path to carindb file for creating QAction.
+        :type path: os.path
+        """
         # генерим имя
         ap = filePath.split("/")
         actionName = ap[-2] + ":::" + ap[-1]
@@ -222,7 +234,11 @@ class VDOExplorerPlugin:
         return action
 
     def alertCarindb(self, filePath: os.path) -> None:
-        """ action Delete problem path and|or rebuild menu """
+        """ action Delete problem path and|or rebuild menu
+
+        :param path: A path for ploblem carindb file.
+        :type path: os.path
+        """
         QMessageBox.information(None, self.tr('alertCarindb'),
                                 self.tr('Do something useful here {}').format(filePath))
         return

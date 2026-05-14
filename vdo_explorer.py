@@ -14,10 +14,10 @@ the Free Software Foundation; either version 2 of the License, or
 
 import os.path
 from functools import partial
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QObject
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication   # , QObject
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog
-from qgis.core import Qgis, QgsMessageLog
+#from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgisInterface
 
 from .settings import Settings
@@ -29,6 +29,7 @@ ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/gears_i.svg"
 ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
 ICON_PATH_PLUGIN_ALERT = "resources/plugin.icons/icon_alert.svg"
 ACTION_LOAD_NEW_CARINDB = "CarindbVDO_chooseNewCarindb"
+ACTION_CLEAR_RECENT_CARINDB = "CarindbVDO_clearRecentList"
 
 
 class VDOExplorerPlugin:
@@ -50,7 +51,6 @@ class VDOExplorerPlugin:
 
     def __init__(self, iface: QgisInterface):
         self.iface = iface
-        #
         self.menu = None
 
         #
@@ -58,7 +58,6 @@ class VDOExplorerPlugin:
 
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
@@ -94,6 +93,11 @@ class VDOExplorerPlugin:
             self.iconOpen, self.tr("Load Carindb ..."))
         self.actionChooseNewCarindb.setObjectName(ACTION_LOAD_NEW_CARINDB)
         self.actionChooseNewCarindb.triggered.connect(self.chooseNewCarindb)
+        # Действие - очистить весь список последних файлов
+        self.actionClearRecent = QAction(self.iconAlert,
+                                         self.tr("Clear ALL RECENT FILES list"))
+        self.actionClearRecent.setObjectName(ACTION_CLEAR_RECENT_CARINDB)
+        self.actionClearRecent.triggered.connect(self.clearRecentList)
         # Действие  Настройки Create action for opening the settings window
         self.actionSettings = QAction(iconConf, self.tr("Configure"))
         self.actionSettings.triggered.connect(self.openConfigWindow)
@@ -142,6 +146,8 @@ class VDOExplorerPlugin:
         # add Setting action into menu and button
         toolButtonMenu.addAction(self.actionSettings)
         self.menu.addAction(self.actionSettings)
+        if Settings.ShowClearRecentFilesEnabled:
+            self.menu.addAction(self.actionClearRecent)
         self.iface
 
     def run(self):
@@ -202,7 +208,7 @@ class VDOExplorerPlugin:
         """
         #
         actionDir, actionName = os.path.split(filePath)
-        res = actionName != 'carindb'
+        res = actionName == 'carindb'
         #
         return res
 
@@ -221,7 +227,7 @@ class VDOExplorerPlugin:
             action = QAction(self.iconAlert,
                              self.tr('Not found: {}').format(actionName))
         # а carindb ли это?
-        elif self.isCarinb(filePath):
+        elif not self.isCarinb(filePath):
             action = QAction(self.iconAlert,
                              self.tr('Not carindb: {}').format(actionName))
         else:
@@ -239,23 +245,59 @@ class VDOExplorerPlugin:
         :param path: A path for ploblem carindb file.
         :type path: os.path
         """
-        QMessageBox.information(None, self.tr('alertCarindb'),
-                                self.tr('Do something useful here {}').format(filePath))
-        return
-        #
-        QMessageBox.information(None, self.tr('Minimal plugin'),
-                                self.tr('Do something useful here'))
-        msg = self.tr('<b>{}</b> asdasd reloaded in {} ms.').format("plugin", 67)
+        #if file carindb not found
+        if not os.path.isfile(filePath):
+            msg = self.tr('Can`t find file.\nDo you want\
+ to remove path from recent?\n{}').format(filePath)
+            res = QMessageBox.question(None,
+                                       self.tr('Delete from recent files'),
+                                       msg,
+                                       QMessageBox.Yes | QMessageBox.Cancel,
+                                       QMessageBox.Cancel)
+            if res == QMessageBox.Cancel:
+                return
+            else:
+                Settings.removeRecentFiles(filePath)
+                self.RegenerateMenu()
+                msg = self.tr('Do you want to load another carindb?')
+                res = QMessageBox.question(None,
+                                           self.tr('Open another carindb'),
+                                           msg,
+                                           QMessageBox.Yes | QMessageBox.Cancel,
+                                           QMessageBox.Yes)
+                if res == QMessageBox.Yes:
+                    self.chooseNewCarindb()
+                    self.RegenerateMenu()
+                return
+        #if file in path - not carindb file
+        if not self.isCarinb(filePath):
+            msg = self.tr('This is not carindb by inner structure.\nDo you want\
+ to remove path from recent?\n{}').format(filePath)
+            res = QMessageBox.question(None,
+                                       self.tr('Delete from recent files'),
+                                       msg,
+                                       QMessageBox.Yes | QMessageBox.Cancel,
+                                       QMessageBox.Cancel)
+            if res == QMessageBox.Cancel:
+                return
+            else:
+                Settings.removeRecentFiles(filePath)
+                self.RegenerateMenu()
+                msg = self.tr('Do you want to load another carindb?')
+                res = QMessageBox.question(None,
+                                           self.tr('Open another carindb'),
+                                           msg,
+                                           QMessageBox.Yes | QMessageBox.Cancel,
+                                           QMessageBox.Yes)
+                if res == QMessageBox.Yes:
+                    self.chooseNewCarindb()
+                    self.RegenerateMenu()
+                return
 
-        self.iface.messageBar().pushMessage(msg, Qgis.Success)
-        # Actual name of the "Plugins" tab in the message log panel
-        # is localized, so we need to find it in QGIS' translations.
-        # Don't pass the string value directly to QObject().tr()
-        # to prevent local pylupdate from catching it.
-        pluginsLogTabSourceName = "Plugins"
-        pluginsLogTabName = QObject().tr(pluginsLogTabSourceName)
-        QgsMessageLog.logMessage(msg, pluginsLogTabName, level=Qgis.Info)
-        self.iface
+    def clearRecentList(self) -> None:
+        """ Clearing ALL recent list """
+        Settings.clearRecentFiles()
+        self.RegenerateMenu()
 
 
 '''

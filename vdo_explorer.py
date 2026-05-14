@@ -28,6 +28,7 @@ ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
 ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/gears_i.svg"
 ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
 ICON_PATH_PLUGIN_ALERT = "resources/plugin.icons/icon_alert.svg"
+ACTION_LOAD_NEW_CARINDB = "CarindbVDO_chooseNewCarindb"
 
 
 class VDOExplorerPlugin:
@@ -36,9 +37,20 @@ class VDOExplorerPlugin:
     actionForPlugin: dict[str, QAction] = {}
     """ Список последних открытых carindb """
 
+    icon = QIcon(os.path.join(os.path.dirname(__file__), ICON_PATH_PLUGIN))
+    """ Иконка плагина """
+
+    iconAlert = QIcon(os.path.join(os.path.dirname(__file__),
+                                   ICON_PATH_PLUGIN_ALERT))
+    """ Иконка - предупреждение """
+
+    iconOpen = QIcon(os.path.join(os.path.dirname(__file__),
+                                  ICON_PATH_PLUGIN_OPEN))
+    """ Иконка открытия файла """
+
     def __init__(self, iface: QgisInterface):
         self.iface = iface
-
+        #
         self.menu = None
 
         #
@@ -68,72 +80,25 @@ class VDOExplorerPlugin:
 
     def initGui(self):
         """Add actions to the QGIS menu and toolbar."""
-        icon = QIcon(os.path.join(os.path.dirname(__file__), ICON_PATH_PLUGIN))
         iconConf = QIcon(os.path.join(os.path.dirname(__file__),
                          ICON_PATH_PLUGIN_CONFIG))
-        iconOpen = QIcon(os.path.join(os.path.dirname(__file__),
-                         ICON_PATH_PLUGIN_OPEN))
-        self.iconAlert = QIcon(os.path.join(os.path.dirname(__file__),
-                                            ICON_PATH_PLUGIN_ALERT))
-        # В строку меню Модули добавить меню плагина
-        self.menu = self.iface.pluginMenu().addMenu(icon, self.tr(
-            "&Carindb VDO"))
-
-        # Действие по-умолчанию - открыть предыдущий файл
-        self.actionLoadRecentCarindb = QAction(
-            icon, self.tr("Load recent Carindb"))
-        self.actionLoadRecentCarindb.setObjectName(
-            "CarindbVDO_ReloadRecentPlugin")
-        self.actionLoadRecentCarindb.triggered.connect(self.loadDefaultCarindb)
-
-        # Действия из ранее открывавшихся файлов
-
-        # Действие открыть новый файл
-        self.actionChooseNewCarindb = QAction(
-            iconOpen, self.tr("Load Carindb ..."))
-        self.actionChooseNewCarindb.setObjectName(
-            "CarindbVDO_chooseNewCarindb")
-        self.actionChooseNewCarindb.triggered.connect(self.chooseNewCarindb)
-
+        # В меню Модули добавить меню плагина
+        self.menu = self.iface.pluginMenu().addMenu(self.icon, self.tr("&Carindb VDO"))
         # Кнопка на панели
         self.toolButton = QToolButton()
-        self.toolButton.setMenu(QMenu())
         self.toolButton.setToolButtonStyle(Settings.toolButtonStyle())
         self.toolButton.setPopupMode(
             QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        toolButtonMenu = self.toolButton.menu()
-
-        # Add the actionLoadRecentCarindb to menu (to present its shortcut)
-        # and set it to the tool buttton as the default action
-        self.toolButton.setDefaultAction(self.actionLoadRecentCarindb)
-
-        # Create actions for recently processed
-        self.actionForPlugin = {}
-        for f in Settings.RecentFiles():
-            self.actionForPlugin[f] = self.createActionForPlugin(f)
-
-        self.menu.addAction(self.actionLoadRecentCarindb)
-        self.menu.addAction(self.actionChooseNewCarindb)
-        self.menu.addSeparator()
-        #
-        toolButtonMenu.addAction(self.actionLoadRecentCarindb)
-        # Add all the rest of the actions to the menu and the toolbar
-        for action in self.actionForPlugin.values():
-            toolButtonMenu.addAction(action)
-            self.menu.addAction(action)
-        toolButtonMenu.addAction(self.actionChooseNewCarindb)
-        toolButtonMenu.addSeparator()
-
-        # Create action for opening the settings window
+        # Действие  открыть новый файл
+        self.actionChooseNewCarindb = QAction(
+            self.iconOpen, self.tr("Load Carindb ..."))
+        self.actionChooseNewCarindb.setObjectName(ACTION_LOAD_NEW_CARINDB)
+        self.actionChooseNewCarindb.triggered.connect(self.chooseNewCarindb)
+        # Действие  Настройки Create action for opening the settings window
         self.actionSettings = QAction(iconConf, self.tr("Configure"))
         self.actionSettings.triggered.connect(self.openConfigWindow)
-        # add Setting action into menu and button
-        toolButtonMenu.addAction(self.actionSettings)
-        self.menu.addAction(self.actionSettings)
-
+        self.RegenerateMenu()
         self.iface.addToolBarWidget(self.toolButton)
-
-        #self.iface.initializationCompleted.connect(self.updatePluginIcons)
 
     def unload(self):
         """Remove the plugin's actions from the QGIS menu and toolbars."""
@@ -144,7 +109,40 @@ class VDOExplorerPlugin:
             return
         self.iface.pluginMenu().removeAction(self.menu.menuAction())
         self.toolButton.deleteLater()
-        pass
+    
+    def RegenerateMenu(self) -> None:
+        " (re?)create menu and button menu "
+        #--- clear menu values if needed
+        self.toolButton.setMenu(QMenu())
+        toolButtonMenu = self.toolButton.menu()
+        self.iface.pluginMenu().removeAction(self.menu.menuAction())
+        # В меню Модули добавить меню плагина
+        self.menu = self.iface.pluginMenu().addMenu(self.icon, self.tr("&Carindb VDO"))
+        #--- create actions
+        # Create files for recently processed Действия из ранее открывавшихся файлов
+        self.actionForPlugin = {}
+        for f in Settings.RecentFiles():
+            self.actionForPlugin[f] = self.createActionForPlugin(f)
+        # и добавить открыть новый файл
+        self.actionForPlugin[ACTION_LOAD_NEW_CARINDB] = self.actionChooseNewCarindb
+        # Add all the rest of the actions to the menu and the toolbar
+        defAction = self.actionChooseNewCarindb
+        for action in self.actionForPlugin.values():
+            if defAction == self.actionChooseNewCarindb and action.icon().isNull():
+                # если дефолтное значение, но иконка текущего - null
+                defAction = action
+            toolButtonMenu.addAction(action)
+            self.menu.addAction(action)
+        # установить defauil action
+        self.toolButton.setDefaultAction(defAction)
+        self.toolButton.setIcon(self.icon)
+        # Добавляем визуальные разделители
+        toolButtonMenu.addSeparator()
+        self.menu.addSeparator()
+        # add Setting action into menu and button
+        toolButtonMenu.addAction(self.actionSettings)
+        self.menu.addAction(self.actionSettings)
+        self.iface
 
     def run(self):
         # if self.dockwidget == None:
@@ -161,11 +159,7 @@ class VDOExplorerPlugin:
             # обновить вид кнопки - с надписью или без
             if self.toolButton.toolButtonStyle() != Settings.toolButtonStyle():
                 self.toolButton.setToolButtonStyle(Settings.toolButtonStyle())
-
-    def loadDefaultCarindb(self, msg: str = "Default load message") -> None:
-        """Loading default"""
-        QMessageBox.information(None, self.tr('load windows'),
-                                self.tr('load Default Carindb'))
+            self.RegenerateMenu()
         
     def chooseNewCarindb(self):
         """ File open dialog and call load file func, if success"""
@@ -181,14 +175,14 @@ class VDOExplorerPlugin:
             # try to load carindb file
             if self.loadCarindb(fileNamePath):
                 # if sucess, add into actionsForPlugin
-                Settings.updateRecentFiles(fileNamePath)
                 pass
-            #exit
-
             pass
 
     def loadCarindb(self, path: os.path) -> bool:
         """ Load carindb file """
+        Settings.updateRecentFiles(path)
+        self.RegenerateMenu()
+
         if os.path.exists(path):
             return True
         # self.iface.messageBar().pushMessage(
@@ -196,31 +190,43 @@ class VDOExplorerPlugin:
         # Qgis.Warning, 1)
         return False
 
+    def isCarinb(self, filePath: os.path) -> bool:
+        """ А carindb ли файл? """
+        #
+        actionDir, actionName = os.path.split(filePath)
+        res = actionName != 'carindb'
+        #
+        return res
+
     def createActionForPlugin(self, filePath: os.path) -> None:
         """ Create action from path """
-        actionDir, actionName = os.path.split(filePath)
-        # тут проверяем carindb ли, и генерим название
-        disable = actionName != 'carindb'
+        # генерим имя
         ap = filePath.split("/")
         actionName = ap[-2] + ":::" + ap[-1]
-        #
-        if disable:
-            action = QAction(self.iconAlert, self.tr('Error: {}').format(actionName))
-            run = partial(self.alertCarindb, filePath)
+        # а есть ли файл?
+        run = partial(self.alertCarindb, filePath)
+        if not os.path.isfile(filePath):
+            action = QAction(self.iconAlert,
+                             self.tr('Not found: {}').format(actionName))
+        # а carindb ли это?
+        elif self.isCarinb(filePath):
+            action = QAction(self.iconAlert,
+                             self.tr('Not carindb: {}').format(actionName))
         else:
             action = QAction(actionName)
             run = partial(self.loadCarindb, filePath)   # в разных ветках разные экшен
+        #
         action.setToolTip(filePath)     # where its showing?
         action.setStatusTip(filePath)   # show in status string
         action.triggered.connect(run)
         return action
 
     def alertCarindb(self, filePath: os.path) -> None:
-        """ Delete problem path and|or rebuild menu """
+        """ action Delete problem path and|or rebuild menu """
         QMessageBox.information(None, self.tr('alertCarindb'),
                                 self.tr('Do something useful here {}').format(filePath))
-
-    def hide_show(self):
+        return
+        #
         QMessageBox.information(None, self.tr('Minimal plugin'),
                                 self.tr('Do something useful here'))
         msg = self.tr('<b>{}</b> asdasd reloaded in {} ms.').format("plugin", 67)

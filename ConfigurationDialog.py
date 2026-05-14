@@ -2,8 +2,8 @@
 A QGIS plugin Settings UI class
 Systeme Guidage Carminat C-IQ navigation database viewer
 
-        begin                : 2023-01-08
-        copyright            : (C) 2023 by Sweet Home
+        begin                : 2026-05-12
+        copyright            : (C) 2026 by Sweet Home
         email                : p.lugovskov@gmail.com
         git sha              : https://github.com/lugovskovp/QGIS_VDO
 
@@ -31,6 +31,7 @@ class ConfigurationDialog(QDialog, FORM_CLASS):
         super().__init__(parent)
         self.setupUi(self)
         self.cbToolButtonText.setChecked(Settings.toolButtonTextEnabled())
+        self.cbShowClearRecent.setChecked(Settings.ShowClearRecentFilesEnabled())
         if rpc := Settings.RecentFilesCount():
             self.sbRecentFilesCount.setValue(rpc)
 
@@ -38,4 +39,5 @@ class ConfigurationDialog(QDialog, FORM_CLASS):
         """Accept."""
         Settings.setToolButtonTextEnabled(self.cbToolButtonText.isChecked())
         Settings.setRecentFilesCount(self.sbRecentFilesCount.value())
+        Settings.setShowClearRecentFilesEnabled(self.cbShowClearRecent.isChecked())
         super().accept()

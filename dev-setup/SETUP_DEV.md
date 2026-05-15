@@ -5,6 +5,8 @@
 - VS Code 1.119.0
 - OSGEO4W: QGIS Desctop 3.44.10, Qt5, Python312 (c:\OSGeo4W\)
 - QGIS DevTools plugin 
+- не надо QGIS debugvs plugin
+- QGIS Plugin Reloader
 - Разрабатываемый плагин QGIS_VDO (c:\Work\QGIS_VDO\)
 - Carindb VDO v.
 - Carindb VDO v.

@@ -14,6 +14,7 @@ the Free Software Foundation; either version 2 of the License, or
 
 import os.path
 from functools import partial
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication   # , QObject
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog
@@ -23,6 +24,7 @@ from qgis.gui import QgisInterface
 from .settings import Settings
 from .ConfigurationDialog import ConfigurationDialog
 
+#import logging
 
 ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
 ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/gears_i.svg"
@@ -50,14 +52,42 @@ class VDOExplorerPlugin:
     """ Иконка открытия файла """
 
     def __init__(self, iface: QgisInterface):
+        # initialize plugin directory
+        self.plugin_dir = os.path.dirname(__file__)
         self.iface = iface
         self.menu = None
 
+        # QgsMessageLog.logMessage("Your plugin code has been executed correctly",
+        #                          'MyPlugin', level=Qgis.MessageLevel.Info)
+        # QgsMessageLog.logMessage("Your plugin code might have some problems",
+        #                          level=Qgis.MessageLevel.Warning)
+        # QgsMessageLog.logMessage("Your plugin code has crashed!",
+        #                          level=Qgis.MessageLevel.Critical)
+        
+        #
+        # self.log = logging.getLogger(__name__)
+        # self.log.setLevel(logging.INFO)
+
+        # filename = self.plugin_dir + '/log/myapp.log'
+        # ch = logging.FileHandler(filename)
+        # ch.setLevel(logging.INFO)
+
+        # строка формата сообщения
+        # strfmt = '[%(asctime)s] [%(name)s] [%(levelname)s] > %(message)s'
+        # строка формата времени
+        # datefmt = '%Y-%m-%d %H:%M:%S'
+        # создаем форматтер
+        # formatter = logging.Formatter(fmt=strfmt, datefmt=datefmt)
+
+        # добавляем форматтер к 'ch'
+        # ch.setFormatter(formatter)
+        # добавляем ch в регистратор
+        # self.log.addHandler(ch)
+
+        # self.log.debug('__init__')
         #
         #self.dockwidget = None
 
-        # initialize plugin directory
-        self.plugin_dir = os.path.dirname(__file__)
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
@@ -79,6 +109,7 @@ class VDOExplorerPlugin:
 
     def initGui(self):
         """Add actions to the QGIS menu and toolbar."""
+        # self.log.debug('initGui <')
         iconConf = QIcon(os.path.join(os.path.dirname(__file__),
                          ICON_PATH_PLUGIN_CONFIG))
         # В меню Модули добавить меню плагина
@@ -88,12 +119,14 @@ class VDOExplorerPlugin:
         self.toolButton.setToolButtonStyle(Settings.toolButtonStyle())
         self.toolButton.setPopupMode(
             QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self.toolButton.setMenu(QMenu())
         # Действие  открыть новый файл
         self.actionChooseNewCarindb = QAction(
             self.iconOpen, self.tr("Load Carindb ..."))
         self.actionChooseNewCarindb.setObjectName(ACTION_LOAD_NEW_CARINDB)
         self.actionChooseNewCarindb.triggered.connect(self.chooseNewCarindb)
         # Действие - очистить весь список последних файлов
+        #if Settings.clearRecentFiles:
         self.actionClearRecent = QAction(self.iconAlert,
                                          self.tr("Clear ALL RECENT FILES list"))
         self.actionClearRecent.setObjectName(ACTION_CLEAR_RECENT_CARINDB)
@@ -103,9 +136,11 @@ class VDOExplorerPlugin:
         self.actionSettings.triggered.connect(self.openConfigWindow)
         self.RegenerateMenu()
         self.iface.addToolBarWidget(self.toolButton)
+        # self.log.debug('initGui >')
 
     def unload(self):
         """Remove the plugin's actions from the QGIS menu and toolbars."""
+        # self.log.debug('unload <')
         # self.iface.removeToolBarIcon(self.action)
         # del self.action
         if not self.menu:
@@ -115,13 +150,9 @@ class VDOExplorerPlugin:
         self.toolButton.deleteLater()
     
     def RegenerateMenu(self) -> None:
-        " (re?)create menu and button menu "
-        #--- clear menu values if needed
-        self.toolButton.setMenu(QMenu())
-        toolButtonMenu = self.toolButton.menu()
-        self.iface.pluginMenu().removeAction(self.menu.menuAction())
-        # В меню Модули добавить меню плагина
-        self.menu = self.iface.pluginMenu().addMenu(self.icon, self.tr("&Carindb VDO"))
+        """ (re?)create menu and button menu """
+        # self.log.debug('RegenerateMenu <')
+        
         #--- create actions
         # Create files for recently processed Действия из ранее открывавшихся файлов
         self.actionForPlugin = {}
@@ -129,11 +160,15 @@ class VDOExplorerPlugin:
             self.actionForPlugin[f] = self.createActionForPlugin(f)
         # и добавить открыть новый файл
         self.actionForPlugin[ACTION_LOAD_NEW_CARINDB] = self.actionChooseNewCarindb
+        # Очистка меню
+        toolButtonMenu = self.toolButton.menu()
+        toolButtonMenu.clear()
+        self.menu.clear()
         # Add all the rest of the actions to the menu and the toolbar
         defAction = self.actionChooseNewCarindb
         for action in self.actionForPlugin.values():
             if defAction == self.actionChooseNewCarindb and action.icon().isNull():
-                # если дефолтное значение, но иконка текущего - null
+                # если дефолтное значение, но иконка текущего  = null (валидный vdo)
                 defAction = action
             toolButtonMenu.addAction(action)
             self.menu.addAction(action)
@@ -146,9 +181,10 @@ class VDOExplorerPlugin:
         # add Setting action into menu and button
         toolButtonMenu.addAction(self.actionSettings)
         self.menu.addAction(self.actionSettings)
-        if Settings.ShowClearRecentFilesEnabled:
+        if Settings.ShowClearRecentFilesEnabled():
+            self.menu.addSeparator()
             self.menu.addAction(self.actionClearRecent)
-        self.iface
+        # self.log.debug('RegenerateMenu >')
 
     def run(self):
         # if self.dockwidget == None:
@@ -159,6 +195,7 @@ class VDOExplorerPlugin:
 
     def openConfigWindow(self):
         """Open the configuration dialog."""
+        # self.log.debug('openConfigWindow <')
         dlg = ConfigurationDialog(self.iface.mainWindow())
         dlg.exec()
         if dlg.result():
@@ -169,6 +206,7 @@ class VDOExplorerPlugin:
         
     def chooseNewCarindb(self):
         """ File open dialog and call load file func, if success"""
+        # self.log.debug('chooseNewCarindb <')
         vdof_dlg = QFileDialog()
         # Ожидаемый результат - один файл
         vdof_dlg.setFileMode(QFileDialog.ExistingFile)
@@ -183,6 +221,7 @@ class VDOExplorerPlugin:
                 # if sucess, add into actionsForPlugin
                 pass
             pass
+        # self.log.debug('chooseNewCarindb >')
 
     def loadCarindb(self, path: os.path) -> bool:
         """ Load carindb file
@@ -190,6 +229,7 @@ class VDOExplorerPlugin:
         :param path: A path for loading carindb file.
         :type path: os.path
         """
+        # self.log.debug('loadCarindb <')
         Settings.updateRecentFiles(path)
         self.RegenerateMenu()
 
@@ -206,6 +246,7 @@ class VDOExplorerPlugin:
         :param path: A path for checking carindb file.
         :type path: os.path
         """
+        # self.log.debug('isCarinb <' + filePath)
         #
         actionDir, actionName = os.path.split(filePath)
         res = actionName == 'carindb'
@@ -218,6 +259,7 @@ class VDOExplorerPlugin:
         :param path: A path to carindb file for creating QAction.
         :type path: os.path
         """
+        # self.log.debug('isCarinb < ' + filePath)
         # генерим имя
         ap = filePath.split("/")
         actionName = ap[-2] + ":::" + ap[-1]
@@ -245,6 +287,7 @@ class VDOExplorerPlugin:
         :param path: A path for ploblem carindb file.
         :type path: os.path
         """
+        # self.log.debug('alertCarindb < ' + filePath)
         #if file carindb not found
         if not os.path.isfile(filePath):
             msg = self.tr('Can`t find file.\nDo you want\
@@ -296,8 +339,10 @@ class VDOExplorerPlugin:
 
     def clearRecentList(self) -> None:
         """ Clearing ALL recent list """
+        # self.log.debug('alertCarindb <')
         Settings.clearRecentFiles()
         self.RegenerateMenu()
+        # self.log.debug('clearRecentList >')
 
 
 '''

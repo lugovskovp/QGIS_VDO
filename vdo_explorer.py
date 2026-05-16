@@ -248,11 +248,12 @@ class VDOExplorerPlugin:
         """
         # self.log.debug('isCarinb <' + filePath)
         #
-        actionDir, actionName = os.path.split(filePath)
-        res = actionName == 'carindb'
-        #
-        return res
-
+        CORRECT_VDO_BEGIN = b'\x00\x00\x00\x01\x00\x12\x00\x00'
+        with open(filePath, 'rb') as f:
+            if f.read(8) == CORRECT_VDO_BEGIN:
+                return True
+            return False
+        
     def createActionForPlugin(self, filePath: os.path) -> QAction:
         """ Create action from path
 

@@ -33,25 +33,51 @@ ZERO_DWORD = b'\x00\x00\x00\x00'
 
 # ----
 class VDO_FILE():
-    """ """
+    """ --- """
+    path: os.path
+    # :path: full filepath, os.path or None
+    dbrev: int
+    """:dbrev: database revision, 30 (0x1e) or 34 (0x22)"""
+    segsize: int    # :segsize: size of one segment in chank
 
-    def __init__(self, path: os.path = None):
+    def __init__(self, path: os.path = None) -> None:
         """ """
         if path:
             self.path = path
-            with open(path, 'rb') as f:
-                f.seek(OFFSET_DB_REVISION)
-                self.dbrev = USHORT_struct.unpack(f.read(2))[0]
-                f.seek(OFFSET_ONE_SEG_SIZE)
-                self.segsize = USHORT_struct.unpack(f.read(2))[0]
+            self.dbrev = USHORT_struct.unpack(self.read(OFFSET_DB_REVISION, 2))[0]
+            self.segsize = USHORT_struct.unpack(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
             return
         self.empty()
 
     def __repr__(self):
         s = f'VDOv{self.dbrev}[{self.segsize}]:{self.path}'
         return s
+
+    def read(self, offset: int, size: int) -> bytearray:
+        """ Return bytearray[size] from self.path.offset
+        Args:
+            offset: offset in file path
+            size:    bytes in result bytearray
+        Returns:
+            bytearray[size]: from self.path.offset
+        """
+        with open(self.path, 'rb') as f:
+            f.seek(offset)
+            return f.read(size)
+        return None
     
     def empty(self):
+        """
+        Args:
+            param1: This is the first param.
+            param2: This is a second param.
+
+        Returns:
+            This is a description of what is returned.
+
+        Raises:
+            KeyError: Raises an exception.
+        """
         self.path = None
         self.dbrev = DEFAULT_DB_REVISION
         self.segsize = DEFAULT_ONE_SEG_SIZE
@@ -97,6 +123,7 @@ class BYTESTRUCT():
 # ----
 class BLADDR(BYTESTRUCT):
     ''' b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks '''
+    size: int = UINT_BYTES_CNT
 
     def __new__(cls, buffer, parent: VDO_FILE = None):
         instance = super().__new__(cls)
@@ -104,7 +131,11 @@ class BLADDR(BYTESTRUCT):
 
     def __init__(self, buffer: bytearray, vdo: VDO_FILE = None) -> None:
         super().__init__(buffer[:UINT_BYTES_CNT])  # 4 - self.bytescnt
-        self.vdo = vdo if vdo else VDO_FILE()
+        #self.vdo = vdo if vdo else VDO_FILE()
+        if not vdo or self._raw == ZERO_DWORD:
+            self.vdo = VDO_FILE()
+        else:
+            self.vdo = vdo
 
     def __repr__(self) -> str:
         ''' View while debug value'''
@@ -180,7 +211,8 @@ class BLADDR(BYTESTRUCT):
 # ----
 class PTR(BYTESTRUCT):
     ''' Указатель(near) 01 02 -> near offset 0x102 '''
-    
+    size: int = USHORT_BYTES_CNT
+
     def __init__(self, buffer: bytearray) -> None:
         super().__init__(buffer[:USHORT_BYTES_CNT])     # 2 - self.bytescnt
     
@@ -204,7 +236,8 @@ class PTR(BYTESTRUCT):
 class LIST(BYTESTRUCT):
     ''' ptr: указатель(near) на начало массива; cnt: количество элементов
     b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304 '''
-    
+    size: int = UINT_BYTES_CNT
+
     def __init__(self, buffer: bytearray) -> None:
         super().__init__(buffer[:UINT_BYTES_CNT])   # 4 - self.bytescnt
 
@@ -227,6 +260,7 @@ class LIST(BYTESTRUCT):
 # ----
 class FAR_LIST(BYTESTRUCT):
     ''' BLADDR : LIST '''
+    size: int = DOUBLE_BYTES_CNT
 
     def __new__(cls, buffer, parent: VDO_FILE = None):
         instance = super().__new__(cls)
@@ -234,7 +268,11 @@ class FAR_LIST(BYTESTRUCT):
     
     def __init__(self, buffer: bytearray, vdo: VDO_FILE = None) -> None:
         super().__init__(buffer[:DOUBLE_BYTES_CNT])  # 8 - self.bytescnt
-        self.vdo = vdo if vdo else VDO_FILE()
+        #self.vdo = vdo if vdo else VDO_FILE()
+        if not vdo or self._raw[:4] == ZERO_DWORD:
+            self.vdo = VDO_FILE()
+        else:
+            self.vdo = vdo
     
     def __repr__(self):
         ''' View while debug value'''
@@ -271,18 +309,18 @@ class CH_IDX(BYTESTRUCT):
       LIST  pointer-counter в bl_postaddr
       WORD  align
     '''
+    size: int = 12        # CH_IDX size = 3 * DWORD
 
     def __new__(cls, buffer, parent: VDO_FILE = None):
         instance = super().__new__(cls)
         return instance
     
     def __init__(self, buffer: bytearray, vdo: VDO_FILE = None) -> None:
-        CH_IDX_SIZE = 12      # CH_IDX size = 3 * DWORD
-        if (len(buffer) < CH_IDX_SIZE):
+        if (len(buffer) < self.size):
             err = f"Размер массива байтов {len(buffer)}\
- меньше требуемого {CH_IDX_SIZE}"
+ меньше требуемого {self.size}"
             raise TypeError(err)
-        super().__init__(buffer[:CH_IDX_SIZE])  # 4 - CH_IDX_SIZE
+        super().__init__(buffer[:self.size])  # 4 - CH_IDX_SIZE
         self.vdo = vdo if vdo else VDO_FILE()
 
     def __repr__(self):
@@ -319,6 +357,8 @@ class BLSTART(BYTESTRUCT):
         04   word    bl_type         0012
         06   char    is_arch         00-not arch, 01- ???, 02-lzw
         07   char    unarch_size """
+    
+    size: int = DOUBLE_BYTES_CNT
 
     def __new__(cls, buffer, parent: VDO_FILE = None):
         instance = super().__new__(cls)
@@ -326,12 +366,13 @@ class BLSTART(BYTESTRUCT):
 
     def __init__(self, buffer: bytearray, vdo: VDO_FILE = None):
         """ """
-        super().__init__(buffer[:DOUBLE_BYTES_CNT])
+        super().__init__(buffer[:self.size])
         self.vdo = vdo if vdo else VDO_FILE()
 
     def __repr__(self):
         ''' View while debug value'''
         v = '' if self.vdo.path else ' virt'
+        v = f'{v} [{self.bltype.value:02X}:{self.bltype.name}]'
         return self.headhex() + v
     
     @property

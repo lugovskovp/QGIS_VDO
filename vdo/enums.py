@@ -42,6 +42,11 @@ class BlockType(enum.Enum):
     MAP__11k_11 = 0x1e  # scale 11  1e_MAP_POLI_11			//[11] b(b:666h)-0x1e
 
     UNKN = 0xFF  # если тип блока ещё не описан
+
+    bl_0x0 = 0x0
+    bl_0x4 = 0x4
+    bl_0x17 = 0x17
+    bl_0x18 = 0x18
     
     # EMPTY = BLOCK_TYPE_EMPTY_ENTRY    # value may be '00 00 00 00' - its legal, but
     # empty, must not read

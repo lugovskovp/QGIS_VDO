@@ -7,7 +7,7 @@ import zlib             # распаковка архивов типа 2 и 3
 
 # from vdo.enums import BlockType
 from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST
-from vdo.datatypes import ZERO_DWORD
+from vdo.datatypes import ZERO_DWORD, CH_IDX
 from vdo.geotypes import COORD
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
@@ -59,6 +59,7 @@ class block_base(BYTESTRUCT):
             return
         elif self.head.arch_type == 1:
             # ВОТ ТУТ САМОЕ ПЕЧАЛЬНОЕ
+            raise ValueError("пока что вот так, запаковано")
             pass
         super().__init__(buffer)
         
@@ -123,6 +124,17 @@ class block_base(BYTESTRUCT):
             COORD: structure
         """
         return COORD(self.read(offset, COORD.size))
+
+    def ch_idx(self, ptr_ch_idx: int) -> CH_IDX:
+        """
+        CH_IDX указатель на список букв или (страны, города, улицы, poi)
+        Args:
+            ptr_ch_idx: offset
+        Returns:
+            CH_IDX: object
+        """
+        buf = self.read(ptr_ch_idx, CH_IDX.size)
+        return CH_IDX(buf, self.vdo)
 
     def read_str(self, ptr_list_str: int):
         """

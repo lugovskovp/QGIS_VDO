@@ -422,6 +422,12 @@ class BLSTART(BYTESTRUCT):
             return self.segcnt * self.vdo.segsize
         return self.bladdr.sizeofblock
 
+# class PSTR(PTR):
+#     ''' PSTR    WORD, nearPTR на zero-ended строку '''
+#     strval:str
+#     bytescnt: int = 2  # CH_IDX size = 3 * DWORD
+#     def __init__(self, bytes_arr) -> None:
+#         super().__init__(bytes_arr[:self.bytescnt]) # 4 - self.bytescnt
 
 # =========================================================================
 if __name__ == '__main__':

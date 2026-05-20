@@ -32,6 +32,9 @@ class block_base(BYTESTRUCT):
             self._raw = zero
             return
         #
+        self.dbrev = addr.vdo.dbrev
+        self.path = addr.vdo.path
+        #
         self.vdo = addr.vdo
         # и тут инициировать BYTESTRUCT
         size = addr.sizeofblock if addr.offset else BLOCK_0x12_SIZE

@@ -429,6 +429,7 @@ class BLSTART(BYTESTRUCT):
 #     def __init__(self, bytes_arr) -> None:
 #         super().__init__(bytes_arr[:self.bytescnt]) # 4 - self.bytescnt
 
+
 # =========================================================================
 if __name__ == '__main__':
     

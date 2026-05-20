@@ -87,7 +87,10 @@ class VDO_FILE():
 class BYTESTRUCT():
     """ Base for other data structures """
 
-    def __init__(self, buffer: bytearray) -> None:
+    def __init__(self, buffer: bytearray, size: int = None) -> None:
+        if size is not None:
+            self._raw = buffer[:size]
+            return
         self._raw = buffer
     
     @property

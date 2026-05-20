@@ -3,7 +3,7 @@ import enum
 
 '''
 BlockType
-    en_CARINET_LANGUAGE
+en_CARINET_LANGUAGE
     en_POI_CATEGORY
     en_GEO_CATEGORY
     en_DRAW_TYPE
@@ -55,3 +55,35 @@ class BlockType(enum.Enum):
     # 17 1E 09 1D 14 1C 15 16 01 02 03 04 00 06 10 11 0E 0F 0C 0D 0A 13
     # 17 *1E *09 *1D *14 *1C *15 *16 *01 *02 *03
     #  04 00 *06 *10 *11 *0E *0F *0C *0D *0A *13
+
+
+# Nederlands, English, French, Deutch, Italian, Hispain, Svedian
+#!"Nederlands=1, English=2, French=3, Deutch=4, Italian=5, Spanish=6, Swedish=7"
+@enum.unique
+class en_CARINET_LANGUAGE(enum.Enum):
+    Holland = 1             # //01 (1) 	 nederland, belgie - Dutch
+    English = 2             # //02 (2) 	 united kingdom, eire
+    French = 3              # //03 (3) 	 france, luxembourg
+    Deutch = 4              # //04 (4) 	 deutschland oesterreich osterreich schweiz
+    Italian = 5             # //05 (5) 	 italia
+    Spanish = 6             # //06 (6) 	 espana
+    Swedish = 7             # //07 (7) 	 sverige
+    unk_lang_x08 = 8        #
+    unk_lang_x09 = 9        #
+    Danian = 0xA            # //0A (10) 	 danmark
+    Catalan = 0xB           # //0B (11) 	 andorra
+    Finnish = 0xC           # //0C (12) 	 suomen tasavalta
+    unk_x0d = 0xD           #
+    Norvegian = 0xE         # //0E (14) 	 norge
+    Portugal = 0xF          # //0F (15) 	 portugal  //07FF: (nenhuma mensagem)
+    unk_lang_x10 = 0x10     # // _english_TOO
+    eng_TOO_x11 = 0x11      #
+    Polish = 0x12           # //12 (18) 	 polska
+    Czech = 0x13            # //13 (19) 	 ceska republika
+    Slovak = 0x14           # //14 (20) 	 slovenska republika
+    Russian = 0x15          # RUSSIA
+    Croatian = 0x1A         # //1A (26) 	 hrvatska
+    Latvian = 0x1B          # //1B (27) 	 latvija
+    Lithuanian = 0x18       # //18 (24) 	 lietuva
+    Slovene = 0x17          # //17 (23) 	 slovenija
+    UNKN_FF = 0xFF          #

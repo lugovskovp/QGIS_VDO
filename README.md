@@ -71,6 +71,20 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] лог в рабочую папку?
     * [x] логирование по функциям
     * [x] переписать RegenerateMenu
+- [x] минимальный бекенд
+    * [x] типы данных
+    * [x] типы геоданных
+    * [x] базовый тип блока
+    * [x] распаковка lzw
+    * [x] enums
+    * [x] блок х12
+    * [x] блок х13
+- [ ] работа со строковыми данными
+    * [ ] блок CH_country / country
+    * [ ] CH_city / city
+    * [ ] CH_road / road
+    * [ ] CH_poi / poi
+    * [ ] keyboard
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
     * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
     * [ ] виджет рабочего поля - открыть/создать при загрузке файла
@@ -101,6 +115,9 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [Qt Designer](https://github.com/PyQt5/QtDesigner/releases)
 - [PyQt6 — полное руководство для новичков. Продолжение](https://habr.com/ru/companies/skillfactory/articles/648845/)
 - [Изменение цвета выделения для определенного элемента (типа QAction) в QMenuBar](https://stackoverflow.com/questions/72316405/change-highlight-color-for-a-specific-item-qaction-type-on-a-qmenubar)
+- [Начинаем работать с цифровыми картами (ГИС)](https://habr.com/ru/companies/bft/articles/773814/)
+- [wiki/Web_Mercator_projection](https://en.wikipedia.org/wiki/Web_Mercator_projection)
+- [30-й меридиан восточной долготы](https://ru.wikipedia.org/wiki/30-%D0%B9_%D0%BC%D0%B5%D1%80%D0%B8%D0%B4%D0%B8%D0%B0%D0%BD_%D0%B2%D0%BE%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%BE%D0%B9_%D0%B4%D0%BE%D0%BB%D0%B3%D0%BE%D1%82%D1%8B)
 
 
 # unicode color symbols

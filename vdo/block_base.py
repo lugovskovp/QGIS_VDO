@@ -8,9 +8,12 @@ import zlib             # распаковка архивов типа 2 и 3
 # from vdo.enums import BlockType
 from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST
 from vdo.datatypes import ZERO_DWORD
+from vdo.geotypes import COORD
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
 BLOCK_0x12_SIZE = 0x800
+
+# 0x13 - read_str(self)
 
 
 class block_base(BYTESTRUCT):
@@ -20,9 +23,13 @@ class block_base(BYTESTRUCT):
         """ """
         if addr._raw == ZERO_DWORD:
             #nothing
+            zero = ZERO_DWORD + ZERO_DWORD
+            self._raw = zero
             return
         if not addr.vdo.path:
             # virtual BLADDR
+            zero = ZERO_DWORD + ZERO_DWORD
+            self._raw = zero
             return
         #
         self.vdo = addr.vdo
@@ -43,7 +50,7 @@ class block_base(BYTESTRUCT):
             unarc_raw = buffer[:ZLIB_BEGIN_OFFSET]    # - начало не запаковано
             # распаковать запакованное
             unarc_raw += zlib.decompress(buffer[ZLIB_BEGIN_OFFSET:],
-                                         bufsize=self.unarc_segcnt * self.segsize)
+                                         bufsize=self.head.segcnt * self.vdo.segsize)
             #self._raw = unarc_raw
             super().__init__(unarc_raw)
             return
@@ -53,11 +60,13 @@ class block_base(BYTESTRUCT):
         super().__init__(buffer)
         
         pass
-    
+
+    def __repr__(self) -> str:
+        return self.head.__repr__()
+
     @property
     def head(self) -> BLSTART:
-        """ Заголовок блока
-
+        """ Заголовок, первые 8 байт блока
         Args:
             self: from _raw
         Returns:
@@ -101,6 +110,28 @@ class block_base(BYTESTRUCT):
             return LIST(self.read(value, LIST.size))
         #bytearray
         return LIST(value)
+
+    def coord(self, offset: int) -> COORD:
+        """ Координаты - 8 байт блока
+        Args:
+            self: from _raw
+            offset: offset from block start
+        Returns:
+            COORD: structure
+        """
+        return COORD(self.read(offset, COORD.size))
+
+    def read_str(self, ptr_list_str: int):
+        """
+        Строка, адрес и размер которой в LIST по offset
+        Args:
+            ptr_list_str: int offset ptr-cnt
+        Returns:
+            str: строка
+        """
+        li = self.list(ptr_list_str)
+        # -1: 'no label\x00'
+        return self.read(li.ptr, li.cnt - 1).decode('cp1250')
 
 
 # --------------------------------------------------------

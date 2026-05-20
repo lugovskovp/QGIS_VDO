@@ -15,6 +15,8 @@ BLSTART
 
 '''
 
+OFFSET_TOC = 0x08
+
 OFFSET_DB_REVISION = 0x1a
 DEFAULT_DB_REVISION = 0x1e
 OFFSET_ONE_SEG_SIZE = 0x2c
@@ -328,7 +330,8 @@ class CH_IDX(BYTESTRUCT):
 
     def __repr__(self):
         ''' View while debug value'''
-        val = self.hex
+        # val = self.hex
+        val = f"{self.ch} {self.is_out} {self.bladdr} {self.list}"
         return val
     
     @property

@@ -18,14 +18,41 @@ class block_0x0B(block_base):
         """ LIST to table of contents """
         return self.list(OFFSET_TOC)
 
+    def get_chidxs(self, li: LIST) -> dict:
+        """
+        Словарь {'CH_IDX.ch' : CH_IDX}
+        Args:
+            li: LIST - ptr-cnt массива ch_idx
+        Returns:
+            array: of ch_idx
+        """
+        res = {}
+        for chi in self.get_indexes(li):
+            res[chi.ch] = chi
+        return res
+
+    def find_chidxs(self, li: LIST, find_char) -> CH_IDX | None:
+        """
+        Перебор CH_IDX из li, пока не найдётся ch
+        Args:
+            li: LIST - ptr-cnt массива ch_idx
+            find_char: char for find
+        Returns:
+            CH_IDX: or None
+        """
+        for chi in self.get_indexes(li):
+            if chi.ch == find_char:
+                return chi
+        return None
+
     def get_indexes(self, li: LIST) -> CH_IDX:
-        """ Массив ch_idx из li: ptr-cnt
+        """ Генератор ch_idx из li: ptr-cnt
         Args:
             li: LIST - ptr-cnt массива ch_idx
         Returns:
             array: of ch_idx
         Example:
-            for ci in ch_country_block.lst_ch_idx( ch_country_block.list_toc ):
+            for ci in ch_country_block.get_indexes( ch_country_block.list_toc ):
                 print(ci.ch, ci.hex())
         """
         offset = li.ptr
@@ -39,7 +66,7 @@ class block_0x0B(block_base):
 
 if __name__ == '__main__':
     from vdo.datatypes import VDO_FILE
-    from vdo.blocks.block_0x12 import block_0x12
+    from vdo.blocks import block_0x12
 
     vdo2 = VDO_FILE()
 

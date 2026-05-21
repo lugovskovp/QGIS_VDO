@@ -45,7 +45,7 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 from vdo.enums import BlockType
 from vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
 from vdo.datatypes import OFFSET_ONE_SEG_SIZE, OFFSET_DB_REVISION
-from vdo.geotypes import COORD      # noqa: F401 (Ignores only "unused import")
+from vdo.geotypes import COORD
 from vdo.block_base import block_base
 
 

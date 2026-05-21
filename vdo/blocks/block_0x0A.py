@@ -101,9 +101,9 @@ class MORE_INFO_0xA(BYTESTRUCT):
         self.parent = parent
 
     @property
-    def get_ch_idx_cityes(self) -> FAR_LIST:
+    def ch_idx_cityes(self) -> FAR_LIST:
         """
-        ch_idx - на НАИМЕНОВАНИЯ городов (каждый может писаться по-разному)
+        ch_idx - на НАИМЕНОВАНИЯ городов страны (каждый может писаться по-разному)
         offset 0: FAR_LIST на блок CH_city = 0x0d, ch_idx_cityes
         """
         # return self.parent.farlist(0)
@@ -272,8 +272,8 @@ class block_0x0A(block_base):
 if __name__ == '__main__':
 
     from vdo.datatypes import CH_IDX
-    from vdo.blocks.block_0x12 import block_0x12
-    from vdo.blocks.block_0x0B import block_0x0B
+    from vdo.blocks import block_0x12
+    from vdo.blocks import block_0x0B
 
     vdo2 = VDO_FILE()
 

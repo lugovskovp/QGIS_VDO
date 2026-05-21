@@ -31,7 +31,7 @@ class block_0x13(block_base):
 
 if __name__ == '__main__':
     from vdo.datatypes import VDO_FILE, BYTESTRUCT
-    from vdo.blocks.block_0x12 import block_0x12
+    from vdo.blocks import block_0x12
 
     fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
     vdo30 = VDO_FILE(fpath30)

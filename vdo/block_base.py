@@ -6,8 +6,8 @@
 import zlib             # распаковка архивов типа 2 и 3
 
 # from vdo.enums import BlockType
-from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST
-from vdo.datatypes import ZERO_DWORD, CH_IDX
+from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX
+from vdo.datatypes import ZERO_DWORD, MAX_STR_LEN
 from vdo.geotypes import COORD
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
@@ -66,7 +66,8 @@ class block_base(BYTESTRUCT):
         pass
 
     def __repr__(self) -> str:
-        return self.head.__repr__()
+        packed = 'A ' if self.head.arch_type else ''
+        return packed + self.head.__repr__()
 
     @property
     def head(self) -> BLSTART:
@@ -136,17 +137,27 @@ class block_base(BYTESTRUCT):
         buf = self.read(ptr_ch_idx, CH_IDX.size)
         return CH_IDX(buf, self.vdo)
 
-    def read_str(self, ptr_list_str: int):
+    def read_li_str(self, ptr_list_str: int):
         """
         Строка, адрес и размер которой в LIST по offset
         Args:
-            ptr_list_str: int offset ptr-cnt
+            ptr_list_str: int offset to ptr-cnt
         Returns:
             str: строка
         """
         li = self.list(ptr_list_str)
-        # -1: 'no label\x00'
+        # -1: 'no label\x00', последний char \x00
         return self.read(li.ptr, li.cnt - 1).decode('cp1250')
+
+    def read_str(self, offset: int) -> str:
+        """
+        Чтение строки, в vdo_file не выйдет, запакованные блоки
+        Args:
+            offset: offset в текущем блоке
+        Returns:
+            str: 0-ended строка
+        """
+        return self.read(offset, MAX_STR_LEN).decode('cp1250').split('\x00')[0]
 
 
 # --------------------------------------------------------

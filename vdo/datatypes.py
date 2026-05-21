@@ -31,6 +31,7 @@ USHORT_struct = struct.Struct(">H")
 UINT_struct = struct.Struct(">L")
 
 ZERO_DWORD = b'\x00\x00\x00\x00'
+MAX_STR_LEN = 63    # 255
 
 
 # ----
@@ -67,7 +68,7 @@ class VDO_FILE():
             f.seek(offset)
             return f.read(size)
         return None
-    
+
     def empty(self):
         """
         Args:
@@ -95,6 +96,10 @@ class BYTESTRUCT():
             return
         self._raw = buffer
     
+    def __repr__(self) -> str:
+        # ss = "B " + self.hex
+        return self.hex
+    
     @property
     def hex(self):
         he = " ".join("{:02x}".format(c) for c in self._raw)
@@ -109,6 +114,18 @@ class BYTESTRUCT():
         """ read from inner bytes array """
         ret = self._raw[offset: offset + cnt]
         return ret
+
+    def read_str(self, ptr: int, max_len: int = None) -> str:
+        """
+        Args:
+            ptr: offset в текущем _raw
+        Returns:
+            str: 0-ended строка
+        """
+        # ??? struct.unpack("s*")
+        if not max_len:
+            max_len = MAX_STR_LEN
+        return self.read(ptr, max_len).decode('cp1250').split('\x00')[0]
     
     def uchar(self, near_offset: int = 0) -> int:
         ''' Return uchar, offset from block begin'''

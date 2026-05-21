@@ -16,15 +16,15 @@ class block_0x13(block_base):
 
     @property
     def str_label(self):
-        return self.read_str(OFFSET_LIST_STR_LABEL)
+        return self.read_li_str(OFFSET_LIST_STR_LABEL)
 
     @property
     def str_description(self):
-        return self.read_str(OFFSET_LIST_STR_DESCRIPTION)
+        return self.read_li_str(OFFSET_LIST_STR_DESCRIPTION)
 
     @property
     def str_information(self):
-        return self.read_str(OFFSET_LIST_STR_INFORMATION)
+        return self.read_li_str(OFFSET_LIST_STR_INFORMATION)
 
 
 # -------------------------------------------------------------------------

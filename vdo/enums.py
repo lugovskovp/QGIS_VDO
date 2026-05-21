@@ -4,12 +4,13 @@ import enum
 '''
 BlockType
 en_CARINET_LANGUAGE
-    en_POI_CATEGORY
+en_POI_CAT
+en_TeleAtlasRegion
     en_GEO_CATEGORY
     en_DRAW_TYPE
-    en_GEO_COUNTRY
 '''
 
+# flake8: noqa E221
 
 @enum.unique
 class BlockType(enum.Enum):
@@ -87,3 +88,145 @@ class en_CARINET_LANGUAGE(enum.Enum):
     Lithuanian = 0x18       # //18 (24) 	 lietuva
     Slovene = 0x17          # //17 (23) 	 slovenija
     UNKN_FF = 0xFF          #
+
+
+@enum.unique
+class en_POI_CAT(enum.Enum):    	# //{en_PLACE_CATEGORY	 0xA 0xC blocks
+    Car_repair        = 0x0B  #
+    Gas_station       = 0x0C  #
+    CarRent           = 0x0D  #
+    Parking           = 0x0E  #
+    ParkAndRide       = 0x0F  # // park and ride, intercept parking, parkuj i jedz metro marymont
+    RestingPlace      = 0x10  # //  mop olesnica mala,  mop jonas polnoc, mop jonas poludnie
+    Intresting        = 0x14  #
+    Hotel             = 0x15  #
+    Restaurant        = 0x16  #
+    Bank              = 0x17  #
+    Culture           = 0x18  #
+    Library           = 0x19  #
+    Court             = 0x1a  #
+    UNKN_BMW	      = 0x1C  
+    Embassy           = 0x1D  #
+    BankomatATM       = 0x1E  #
+    Tourist_info      = 0x1F  #
+    Museum	          = 0x20  # //musee d'art moderne, musee de l'armee, musee des sciences Naturelles
+    Theater           = 0x21  #
+    Sport             = 0x23  # //automotodrom brno, o2 arena, ski areal jasna, o2 arena
+    Church            = 0x24  #
+    Architecture      = 0x25  # //
+    Fun_park          = 0x26  # //boudewijn seapark, bruparck
+    Nature_park       = 0x27  # //het zwin, nationale plantentuin
+    UN_United_Nations = 0x28  # ,
+    Hospital          = 0x29  #
+    Police            = 0x2A  #
+    Goverment         = 0x2B  #
+    Post              = 0x2C  #
+    Clinic            = 0x2D  #
+    Aphoteca          = 0x2E  #
+    Shop              = 0x2F  # // supermarket?
+    City	          = 0x30  # //russian map
+    Cinema            = 0x31  #
+    golf_club 	      = 0x32  # //first warsaw golf country club
+    RailStation       = 0x33  #
+    Border_point      = 0x34  # //
+    Seaport           = 0x35  # // oostende ramsgate (tonnel), zeebrugge (port), need mode exmpls
+    BusStation        = 0x36  #
+    Pier              = 0x37  # // przystan kortowska-> Piers, Dock
+    Shcool            = 0x38  #
+    Winery            = 0x39  # // lanson caves, champagne krug, moet et chandon, ruinart caves
+    Airport           = 0x3a  # //brussel nationaal, brussels airport; , luchthaven brussel
+    motorbike_service = 0x3B  # bmw_motorbike_service
+    Business          = 0x3D  # // Olsztyn, Poland https://en.wikipedia.org/wiki/Michelin_Polska
+
+
+'''
+
+ OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
+ 1991 - 2005 SiemensVDO Automotive AG
+ 
+ 
+rt3595.img - CT_db_EN.CD 
+Road : Town : Curr. loc Archive « » Town halls, town centre Universities, colleges 
+Hospitals Hotels Restaurants Vinyards Business centres, industrial sites Shopping, Supermarkets Tradesmen Cult/·
+ure, museums, theatres Tourism, historic monuments Shows and exhibitions Casinos and nightlife Cinemas Sports centres Golf cours/Z
+es Skating rinks, bowling alleys Winter sports resorts Parks and gardens Theme parks Airports, Ports Stations, bus stations Auto.«
+matic checks Vehicle rental Rest areas, car parks Service stations, garages 
+
+TOWN HALLS, TOWN CENTRE UNIVERSITIES, COLLEGES HOSPITALS HOTELS RESTAURANTS VINYARDS BUSINESS CENTRES, INDUSTRIAL SITES 
+SHOPPING, SUPERMARKETS TRADESMEN CULTURE, MUSEUMS AND THEATRES TOURISM, HISTOR"ň
+IC MONUMENTS SHOWS AND EXHIBITIONS CASINOS AND NIGHTLIFE CINEMAS SPORTS CENTRES GOLF COURSES SKATING RINKS, BOWLING ALLEYS WINTE".
+R SPORTS RESORTS PARKS AND GARDENS THEME PARKS AIRPORTS, PORTS STATIONS, BUS STATIONS AUTOMATIC CHECKS VEHICLE RENTAL REST AREAS"
+, CAR PARKS SERVICE STATIONS, GARAGES 
+
+DTdb7_EN.CD 
+Hotels, Restaurants and Shops Culture, tourism and shows Sports and open air centres Transports and automobile 
+Airports, Ports Stations, bus stations Automatic checks Vehicle rental Lay-bys, car parks 
+Service stations, garages Hotels Restaurants Vinyards Business centres Shopping, Supermarkets Tradesmen Town halls, town centre 
+Universities, colleges Hospitals Sports centres Golf courses Skating rinks, bowling alleys Winter sports resorts Parks, gardens  
+Theme parks Tourism, historic monuments Culture, museums, theatres Shows and exhibitions Casinos and nightlife Cinemas 
+
+own halls, town centre Universities, colleges Tourism, historic monuments Shows and exhibitions 
+Casinos and nightlife Cinemas Sports centres Golf courses Skating rinks, bowling alleys Winter sports resorts 
+Parks and gardens Theme parks Hospitals Airports, Ports Stations, bus stations Automatic checks Vehicle rental Lay-bys, car parks 
+Service stations, garages Hotels Restaurants Vinyards Business centres Supermarkets Shopping Culture, museums and theatres 
+
+Universities, colleges Town halls, town centre Hospitals Airports, Ports Vehicle rental 
+Service stations, garages Automatic checks Lay-bys, car parks Stations, bus stations Business centres HЇtels  
+Restaurants  Shopping, Supermarkets Tradesmen Vinyards Skating rinks, bowling alleys Theme parks Golf courses 
+Parks and gardens Sports centres Winter sports resorts Casinos and nightlife Cinemas Culture, museums and theatres 
+Shows and exhibitions Tourism, historic monuments
+
+'''
+
+
+@enum.unique
+class en_TeleAtlasRegion(enum.Enum):             # TeleAtlasHexRegion
+    SHQIPERIA = 0x02                          # Албания
+    ANDORRA = 0x05                            # Андорра
+    OESTERREICH = 0x0E                        # Австрия
+    AZARBAYCAN = 0x0F                         # Азербайджан
+    BYELARUS_BYELARUS = 0x14                  # Беларусь
+    BELGIE_BELGIE = 0x15                      # Бельгия
+    BOSNA_I_HERCEGOVINA = 0x1B                # Босния и Герцеговина
+    BULGARIA = 0x21                           # Болгария
+    HRVATSKA = 0x35                           # Хорватия
+    KIBRIS = 0x37                             # Кипр
+    CESKA_REPUBLIKA = 0x38                    # Чехия
+    DANMARK = 0x39                            # Дания
+    EESTI_VABARIIK = 0x43                     # Эстония
+    SUOMI_SUOMEN_TASAVALTA = 0x48             # Финляндия
+    FRANCE = 0x49                             # Франция
+    SAKARTVELO = 0x50                         # Грузия
+    DEUTSCHLAND = 0x51                        # Германия
+    GIBRALTAR = 0x53                          # Гибралтар
+    ELLAS_ELLADA = 0x54                       # Греция
+    MAGYARORSZAG = 0x61                       # Венгрия
+    LYOVELDIO_ISLAND = 0x62                   # Исландия
+    EIRE_IRELAND = 0x67                       # Ирландия
+    ITALIA = 0x69                             # Италия
+    LATVIJA = 0x75                            # Латвия
+    LIECHTENSTEIN = 0x7A                      # Лихтенштейн
+    LIETUVA = 0x7B                            # Литва
+    LUXEMBOURG = 0x7C                         # Люксембург
+    MAKEDONIJA = 0x7E                         # Северная Македония
+    MOLDOVA = 0x8C                            # Молдова
+    MONACO = 0x8D                             # Монако
+    NEDERLAND = 0x96                          # Нидерланды
+    NORGE = 0xA0                              # Норвегия
+    POLSKA = 0xAB                             # Польша
+    PORTUGAL = 0xAC                           # Португалия
+    ROMANIA = 0xB0                            # Румыния
+    ROSSIYA = 0xB1                            # Россия
+    SAN_MARINO = 0xB7                         # Сан-Марино
+    SLOVENSKO_SLOVENSKA_REPUBLIKA = 0xBE      # Словакия
+    SLOVENIJA = 0xBF                          # Словения
+    ESPANA = 0xC4                             # Испания
+    SVERIGE = 0xCC                            # Швеция
+    SCHWEIZ = 0xCD                            # Швейцария
+    TURKIYE = 0xD8                            # Турция
+    UKRAYINA = 0xDD                           # Украина
+    UNITED_KINGDOM = 0xDF                     # Великобритания
+    STATO_DELLA_CITTA_DEL_VATICANO = 0xE5     # Ватикан
+    SRBIJA_I_CRNA_GORA = 0xF1                 # Сербия и Черногория
+
+

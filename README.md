@@ -93,7 +93,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] vdo.block(offset | bladdr) - создание объекта блока
     * [x] GEO структуры
     * [x] базовый гео-блок
-    * [ ] блоки карт - 0x14, 0x15, 0x16, 0x1C, 0x1D, 0x1E
+    * [ ] блоки карт - *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
     * [ ] list(blarray, blarray) - vrtx from shapes, lines 
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
     * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault

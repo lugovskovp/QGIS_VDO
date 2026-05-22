@@ -1,9 +1,6 @@
-import struct
-import os.path
-from vdo.enums import BlockType
+"""
 
-
-'''
+классы:
 VDO_FILE
 BYTESTRUCT
 BL_ADDR  DWORD, Структура адреса блока
@@ -12,8 +9,15 @@ LIST
 FAR_LIST
 CH_IDX
 BLSTART
+"""
 
-'''
+
+import os.path
+import struct
+import importlib
+
+from vdo.enums import BlockType
+
 
 OFFSET_TOC = 0x08
 
@@ -27,16 +31,37 @@ USHORT_BYTES_CNT = 2
 UINT_BYTES_CNT = 4
 DOUBLE_BYTES_CNT = 8
 
-USHORT_struct = struct.Struct(">H")
-UINT_struct = struct.Struct(">L")
-
 ZERO_DWORD = b'\x00\x00\x00\x00'
 MAX_STR_LEN = 63    # 255
+
+UINT_struct = struct.Struct(">L")
+USHORT_struct = struct.Struct(">H")
+
+
+def setup_known_types():
+    """ """
+    # 'C:\\Work\\QGIS_VDO\\vdo'
+    plugin_dir = os.path.dirname(os.path.realpath(__file__))
+    # 'C:\\Work\\QGIS_VDO\\vdo\\blocks'
+    dirname = os.path.join(plugin_dir, "blocks")
+    # список файлов в директории - только файлы
+    files = [f for f in os.listdir(dirname) if os.path.isfile(os.path.join(dirname, f))]
+    # оставить только файлы, начинающемися на 'block_', без расширений [0:-3]
+    block_files = [f[0:-3] for f in files if f[0:6] == 'block_']
+    # 'block_0x0B', 'block_0x12' ...
+    # '0x0B' '0x12' '0x13' '0xEE' - block types
+    known_types = dict([(int(t[-4:], 16), t) for t in block_files])
+    # {(11, 'block_0x0B'), (18, 'block_0x12'), (19, 'block_0x13')...}
+    return known_types
+
+
+# создается список блоков, для которых уже есть классы
+KNOWN_BLOCKS = setup_known_types()
 
 
 # ----
 class VDO_FILE():
-    """ --- """
+    """ класс работы с файлом формата carindb """
     path: os.path
     # :path: full filepath, os.path or None
     dbrev: int
@@ -69,6 +94,46 @@ class VDO_FILE():
             return f.read(size)
         return None
 
+    def get_block(self, addr: int) -> object:
+        """
+        Возвращает блок по offset addr или из BLADDR adr
+        Args:
+            addr: int offset | BLADDR block address
+        Returns:
+            Block: block base structure needed type (if possible)
+        """
+        if type(addr) is int:
+            offset = addr
+        elif type(addr) is BLADDR:
+            if not UINT_struct.unpack(addr._raw)[0]:       # == 0
+                # raise ValueError(addr, " bladdr 00 00 00 00")
+                return None
+            offset = addr.offset
+        else:
+            # только offset начала блока или BLADDR
+            raise ValueError(addr, " Тип не int и не bladdr")
+        head = BLSTART(self.read(offset, BLSTART.size), self)
+        if head.bladdr.offset != offset:
+            # а это и не блок вовсе
+            return None
+        # а описан ли тип этого блока?
+        if head.bltype.value in KNOWN_BLOCKS.keys():
+            bl = KNOWN_BLOCKS[head.bltype.value]
+            # импорт класса bl из модуля
+            bl_class = getattr(importlib.import_module('vdo.blocks.' + bl), bl)
+            bl_class.type = head.bltype.value
+            bl_class.type_name = bl
+        else:
+            # no this type in known blocks
+            bl_class = getattr(importlib.import_module('vdo.block_base'), 'block_base')
+            #return block_base(head.bladdr, self)
+            bl_class.type = head.bltype.value
+            bl_class.type_name = 'block_base'
+            pass
+        #
+        bl_instance = bl_class(head.bladdr)
+        return bl_instance
+
     def empty(self):
         """
         Args:
@@ -86,7 +151,7 @@ class VDO_FILE():
         self.segsize = DEFAULT_ONE_SEG_SIZE
 
 
-# ----
+# ================================================
 class BYTESTRUCT():
     """ Base for other data structures """
 

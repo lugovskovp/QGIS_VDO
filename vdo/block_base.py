@@ -43,6 +43,7 @@ class block_base(BYTESTRUCT):
         # property self.head = - информация о блоке: тип, архивирован ли, размер(ы)
         self._raw = buffer[:BLSTART.size]
         # при необходимости, распаковать
+        self.is_unpacked = True
         if self.head.arch_type == 0:
             super().__init__(buffer)
             return
@@ -54,12 +55,12 @@ class block_base(BYTESTRUCT):
             # распаковать запакованное
             unarc_raw += zlib.decompress(buffer[ZLIB_BEGIN_OFFSET:],
                                          bufsize=self.head.segcnt * self.vdo.segsize)
-            #self._raw = unarc_raw
             super().__init__(unarc_raw)
             return
         elif self.head.arch_type == 1:
             # ВОТ ТУТ САМОЕ ПЕЧАЛЬНОЕ
-            raise ValueError("пока что вот так, запаковано")
+            #raise ValueError("пока что вот так, запаковано")
+            self.is_unpacked = False
             pass
         super().__init__(buffer)
         

@@ -230,3 +230,25 @@ class en_TeleAtlasRegion(enum.Enum):             # TeleAtlasHexRegion
     SRBIJA_I_CRNA_GORA = 0xF1                 # Сербия и Черногория
 
 
+@enum.unique
+class en_GEO_CATEGORY(enum.Enum):    	#//{en_GEO_OBJ_TYPE	// 03->05->06->08->01->00 blocks MAPS
+	FOREST   = 0x3
+	CITY     = 0x5
+	INDUSTRIAL = 0x6
+	ISLAND   = 0x8
+	WATER    = 0x1
+	EMPTY  = 0          
+	RIVER    = 0x65
+	RAILWAY  = 0x66
+	BORDER   = 0x67
+	ROAD_HIGHWAY = 0x68 	# /https://wiki.openstreetmap.org/wiki/RU:Highway_classification
+	ROAD_PRIME = 0x69       #//ex en_ROAD_A
+	ROAD_MINOR = 0x6a
+	UN__KNOWN = 0xEE		# debug and default val?
+	GROUND = 0xFE			# for  preview only, make ground
+
+
+@enum.unique
+class en_DRAW_TYPE(enum.Enum):    	#//{en_GEO_OBJ_TYPE	// 03->05->06->08->01->00 blocks MAPS
+    SHAPE = 0
+    POLILINE = 1

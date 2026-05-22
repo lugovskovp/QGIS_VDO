@@ -1,4 +1,4 @@
-
+import struct
 from vdo.datatypes import VDO_FILE
 
 
@@ -31,6 +31,20 @@ geo_bl = vdo.get_block(0x1E6EA000)
 ss = geo_bl.read(geo_bl.toc['li_str'].ptr, 16)  # облом 0x7c - b'\x00\x80\x02\x00atlantic oce' # noqa: E501
 st = geo_bl.read_tstr(geo_bl.toc['li_str'].ptr)
 #
+
+
+# buf = b'\x02\x01\x01\x01\x04\x05\x10\x01'
+# (cat, draw, ptr, next_ptr) = struct.unpack(">bbH2xH", buf)
+
+cats = geo_bl.get_all_categories()
+
+GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
+
+# buf = geo_bl.read(geo_bl.toc['li_shp'].ptr, 0x14 * 2)
+# (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
+
+shape1 = geo_bl.shape(geo_bl.toc['li_shp'].ptr, cats[0])
+sss = shape1.__repr__()
 
 pass
 

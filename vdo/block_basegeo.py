@@ -1,25 +1,12 @@
 """
 Базовый тип для геоданных - карты
-    BL_HEADER   block;          // block.data - list of geo_types
-    struct{
-            PTR_CNT     p_all_shapes <bgcolor=cLtYellow>;
-            PTR_CNT     p_all_lines  <bgcolor=cLtYellow>;
-            PTR_CNT     p_all_vertexes <bgcolor=cLtYellow>;
-            PTR_CNT     p_all_pois;
-            PTR_CNT     p_all_pgeo_str <bgcolor=cLtYellow>;
-            geo_area    map_area;
-            CONST_WORD       unkn_eq_1(0x1) <hidden=true>;  
-            en_SCALES   en_scale <hidden=false>;  // VertexXY left shift value for coordinate value equal # noqa E501
-             local WORD vrtx_max_x, vrtx_max_y;
-            vrtx_max_x =  map_area.h_size  >> en_scale;
-            vrtx_max_y =  map_area.v_size >> en_scale;
-    }head;
+
 """
 
 from vdo.block_base import block_base
-from vdo.datatypes import BLADDR
+from vdo.datatypes import BLADDR, LIST
 from vdo.enums import en_GEO_CATEGORY       # , en_DRAW_TYPE
-from vdo.geotypes import GEO_CATEGORY, GEO_SHAPE, GEO_LINE
+from vdo.geotypes import MAP_AREA, GEO_CATEGORY, GEO_SHAPE, GEO_LINE
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -31,10 +18,36 @@ OFFSET_LI_TSTR = 0x1c           # ptrs tstr - индексы строк en_GEO_O
 
 
 class block_basegeo(block_base):
-    toc: dict = {}
+    """
+        BL_HEADER   block;          // block.data - list of geo_types
+    struct{
+        toc:
+            PTR_CNT     p_all_shapes <bgcolor=cLtYellow>;
+            PTR_CNT     p_all_lines  <bgcolor=cLtYellow>;
+            PTR_CNT     p_all_vertexes <bgcolor=cLtYellow>;
+            PTR_CNT     p_all_pois;
+            PTR_CNT     p_all_pgeo_str <bgcolor=cLtYellow>;
+        geo_area    map_area;
+        CONST_WORD       unkn_eq_1(0x1) <hidden=true>;  
+        en_SCALES   en_scale <hidden=false>;  // VertexXY left shift value for coordinate value equal # noqa E501
+            local WORD vrtx_max_x, vrtx_max_y;
+        vrtx_max_x =  map_area.h_size  >> en_scale;
+        vrtx_max_y =  map_area.v_size >> en_scale;
+    }head;
+    """
 
     def __init__(self, addr: BLADDR) -> None:
+        class toc:
+            li_cat: LIST
+            li_shp: LIST
+            li_lin: LIST
+            li_vrtx: LIST
+            li_poi: LIST
+            li_str: LIST
         super().__init__(addr)
+        OFFSET_MAP_AREA = 0x20
+        self.map = MAP_AREA(self.read(OFFSET_MAP_AREA, MAP_AREA.size))
+        self.toc = toc()
         self.setup_toc()        # toc - table of contents
         
     def setup_toc(self):
@@ -42,12 +55,19 @@ class block_basegeo(block_base):
         Returns:
 
         """
-        self.toc['li_cat'] = self.list(OFFSET_LI_GEOCATEGORY)
-        self.toc['li_shp'] = self.list(OFFSET_LI_GEOSHAPE)
-        self.toc['li_lin'] = self.list(OFFSET_LI_GEOLINE)
-        self.toc['li_ver'] = self.list(OFFSET_LI_VERTEX)
-        self.toc['li_poi'] = self.list(OFFSET_LI_POI)
-        self.toc['li_str'] = self.list(OFFSET_LI_TSTR)
+        self.toc.li_cat = self.list(OFFSET_LI_GEOCATEGORY)
+        self.toc.li_shp = self.list(OFFSET_LI_GEOSHAPE)
+        self.toc.li_lin = self.list(OFFSET_LI_GEOLINE)
+        self.toc.li_vrtx = self.list(OFFSET_LI_VERTEX)
+        self.toc.li_poi = self.list(OFFSET_LI_POI)
+        self.toc.li_str = self.list(OFFSET_LI_TSTR)
+
+        # self.toc['li_cat'] = self.list(OFFSET_LI_GEOCATEGORY)
+        # self.toc['li_shp'] = self.list(OFFSET_LI_GEOSHAPE)
+        # self.toc['li_lin'] = self.list(OFFSET_LI_GEOLINE)
+        # self.toc['li_ver'] = self.list(OFFSET_LI_VERTEX)
+        # self.toc['li_poi'] = self.list(OFFSET_LI_POI)
+        # self.toc['li_str'] = self.list(OFFSET_LI_TSTR)
 
     def read_tstr(self, offset: int) -> str:
         """
@@ -111,8 +131,8 @@ class block_basegeo(block_base):
 
         """
         res = []
-        offset = self.toc['li_cat'].ptr
-        for i in range(self.toc['li_cat'].cnt):
+        offset = self.toc.li_cat.ptr
+        for i in range(self.toc.li_cat.cnt):
             res.append(self.category(offset))
             offset += GEO_CATEGORY.size
 

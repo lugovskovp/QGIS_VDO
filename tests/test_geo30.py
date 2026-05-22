@@ -33,8 +33,8 @@ blak = BLADDR(blnum, vdo)
 geo_bl = vdo.get_block(blak)
 
 
-ss = geo_bl.read(geo_bl.toc['li_str'].ptr, 16)  # облом 0x7c - b'\x00\x80\x02\x00atlantic oce' # noqa: E501
-st = geo_bl.read_tstr(geo_bl.toc['li_str'].ptr)
+ss = geo_bl.read(geo_bl.toc.li_str.ptr, 16)  # облом 0x7c - b'\x00\x80\x02\x00atlantic oce' # noqa: E501
+st = geo_bl.read_tstr(geo_bl.toc.li_str.ptr)
 #
 
 
@@ -48,7 +48,7 @@ all_categories = geo_bl.get_all_categories()
 # buf = geo_bl.read(geo_bl.toc['li_shp'].ptr, 0x14 * 2)
 # (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
 
-shape1 = geo_bl.shape(geo_bl.toc['li_shp'].ptr, all_categories[0])
+shape1 = geo_bl.shape(geo_bl.toc.li_shp.ptr, all_categories[0])
 sss = shape1.__repr__()
 
 
@@ -64,8 +64,11 @@ sss = shape1.__repr__()
 #     ptr_unk3,
 #     next_ptr_vrtx) = GEO_LINE_struct.unpack(buf)
 
-line_river = geo_bl.line(geo_bl.toc['li_lin'].ptr, all_categories[3])  # bl_addr(0x03c68a03) # noqa: E501
+line_river = geo_bl.line(geo_bl.toc.li_lin.ptr, all_categories[3])  # bl_addr(0x03c68a03) # noqa: E501
 lss = line_river.__repr__()
+
+max_vrt_val = geo_bl.map.max_vrt_val
+
 pass
 
 """

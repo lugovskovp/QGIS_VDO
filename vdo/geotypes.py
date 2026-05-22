@@ -30,6 +30,9 @@ GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
 #           next_ptr_vrtx) = GEO_LINE_struct.unpack(buf)
 GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
 
+# use: (x, y) = VERTEX_struct.unpack(buf)
+VERTEX_struct = struct.Struct(">HH")
+
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
 MULCOORD = 0x54C563     # dec 5555555 - волшебный коэффициент перевода.
@@ -77,6 +80,42 @@ class COORD(BYTESTRUCT):
         return "{:02.6f}{:s} {:02.6f}{:s}".format(abs(self.lat),
                                                   ch_lat, abs(self.lon),
                                                   ch_lon)
+
+
+class MAP_AREA(BYTESTRUCT):
+    ''' Near offs 0x20 - координаты нижнего левого и верхнего правого, 0x32 - масштаб '''  # noqa: E501
+    size: int = 20
+
+    def __init__(self, buffer: bytearray) -> None:
+        super().__init__(buffer[:self.size])
+        self.left_bottom = COORD(self._raw[0:COORD.size])
+        self.rigth_top = COORD(self._raw[COORD.size:(COORD.size * 2)])
+        self._scale = self.ushort(0x12)    # 2**scale, на сколько сдвигать влево ху вертекса чтобы получить координаты   # noqa: E501
+    
+    def __repr__(self):
+        ''' View while debug value '''
+        val = "{:s}  {:s}".format(self.left_bottom.__repr__(), self.rigth_top.__repr__())   # noqa: E501
+        return val
+    
+    @property
+    def dimentions(self) -> str:
+        ''' Размеры в точках и км.'''
+        '''111,134861111 км в одном градусе, делим на 60 минут:
+           1,85224768519 км в одной минуте, делим на 60 секунд:
+         0,0308707947531 км (30,8707947531 м) в одной секунде.'''
+        KM_IN_DEGREE = 111.134861111
+        grad = (KM_IN_DEGREE * (self.rigth_top._hlon - self.left_bottom._hlon)) / MULCOORD      # mul = 5555555 # noqa: E501
+        val = '{:x}*{:x} ({:0.3f}km)'.format((self.rigth_top._hlat - self.left_bottom._hlat),   # noqa: E501
+                                             (self.rigth_top._hlon - self.left_bottom._hlon),   # noqa: E501
+                                             grad)          # noqa: E501
+        return val
+       
+    @property
+    def max_vrt_val(self) -> str:
+        ''' Максимально возможное значение Х или Y вертекса'''
+        max_x = (self.rigth_top._hlon - self.left_bottom._hlon) >> self._scale
+        max_y = (self.rigth_top._hlat - self.left_bottom._hlat) >> self._scale
+        return "{:04X} {:04X}".format(max_x, max_y)
 
 
 # -------------------------------------------------------------------------
@@ -202,6 +241,36 @@ class GEO_LINE(BYTESTRUCT):
         val = f"{self.cat.category.name}:[{self.cnt_vrtx}] {self.name}"
         return val
     pass    # GEO_LINE_PROTO
+
+
+# ----
+class VERTEX(BYTESTRUCT):
+    '''' прототип класса вертекса - координаты ХY точек на map area карты'''
+    size: int = 4   # размер элемента класса в байтах
+
+    def __init__(self, buffer: bytearray) -> None:
+        """ """
+        super().__init__(buffer[:self.size])
+        (self._x, self._y) = VERTEX_struct.unpack(buffer)
+        # self.x = self.ushort(0)
+        # self.y = self.ushort(2)
+    
+    @property
+    def x(self) -> int:        # координата х
+        return self._x
+
+    @property
+    def y(self) -> int:        # координата y
+        return self._y
+
+    def getXY(self) -> tuple:
+        return (self.x, self.y)
+    
+    def __repr__(self) -> str:
+        ''' View vertex hex val - debug value '''
+        val = "{:04X} {:04X}".format(self.x, self.y)
+        return val
+    pass    # VERTEX_PROTO
 
 
 # -------------------------------------------------------------------------
@@ -335,11 +404,39 @@ if __name__ == '__main__':
 
 
 """
+# noqa: E501, W291
 //GEO_VERTEX
 typedef struct{
     WORD x;
     WORD y;
 }GEO_VERTEX
 
+class POI_CATEGORY(BYTESTRUCT):     #   
+    ''' POI_CATEGORY 3*DWORD
+        QWORD   POIs  FAR_LIST
+        WORD    en_POI_CATEGORY - enum тип, категория POI 
+        WORD    reference_addr_start  В 0X0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ ''' 
+    bytescnt: int = 12  # 3*DWORD 0a 0c
+    def __init__(self, bytes_arr) -> None:
+        if (len(bytes_arr) < self.bytescnt):
+            raise TypeError(f"Размер массива байтов {len(bytes_arr)} меньше требуемого {self.bytescnt}")
+        super().__init__(bytes_arr[:self.bytescnt]) # 12 - self.bytescnt
+    @property
+    def fl_poi(self):
+        ''' QWORD   POIs  FAR_LIST '''
+        res = FAR_LIST(self.read(0, FAR_LIST.bytescnt)) 
+        return res
+    @property
+    def poi_cat(self):
+        ''' WORD    en_POI_CATEGORY - enum тип, категория POI '''
+        res = self.read(FAR_LIST.bytescnt+1 , 1) # from FAR_LIST.bytescnt, zero, enum
+        return en_POI_CATEGORY( struct.unpack('>B', res)[0] )
+    @property
+    def pname(self):
+        ''' WORD    reference_addr_start  В 0X0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
+        return self.ushort(0x0a) 
+        barr = self.read(10, 2)
+        res = struct.unpack('>H', barr)[0]
+        return res
 
 """

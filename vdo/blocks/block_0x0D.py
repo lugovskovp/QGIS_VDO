@@ -117,15 +117,11 @@ if __name__ == '__main__':
 
     pass
     
-    import struct
-    from vdo.datatypes import BYTESTRUCT, BLSTART
+    import struct       # noqa: F401
+    from vdo.datatypes import BYTESTRUCT, BLSTART    # noqa: F401
     #0x09D1AE00
     bl_num = vdobmv.read(0x09D1AE00, 8)
     bl_head = BLSTART(bl_num, vdobmv)
     blo = block_0x0A(bl_head.bladdr)
 
-
     pass
-
-
-

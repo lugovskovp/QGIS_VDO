@@ -66,7 +66,7 @@ class block_base(BYTESTRUCT):
         pass
 
     def __repr__(self) -> str:
-        packed = 'A ' if self.head.arch_type else ''
+        packed = '@ ' if self.head.arch_type else ''
         return packed + self.head.__repr__()
 
     @property
@@ -78,6 +78,16 @@ class block_base(BYTESTRUCT):
             BLSTART: structure
         """
         return BLSTART(self.read(0, BLSTART.size), self.vdo)
+
+    def offset_next(self) -> int:
+        """
+        offset следующего блока (да, если последний - то и упс)
+        """
+        if not len(self.vdo.path):
+            return None
+        # if filesize < next ????
+        next = self.head.bladdr.offset + (self.vdo.segsize * self.head.segcnt)
+        return next
 
     def bladdr(self, value: bytearray | int) -> BLADDR:
         """
@@ -162,7 +172,7 @@ class block_base(BYTESTRUCT):
 
 # --------------------------------------------------------
 if __name__ == "__main__":
-    from vdo.datatypes import VDO_FILE
+    from vdo.vdo import VDO_FILE
 
     fpath = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
     vdo = VDO_FILE(fpath)

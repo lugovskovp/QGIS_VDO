@@ -71,8 +71,9 @@ OFFSET_MAY_BE_HUFFMAN_THREE = 0x28
 class block_0x12(block_base):
     ''' Самый первый, 0й, уникальный блок type = 0x12 '''
 
-    def __init__(self, vdo: VDO_FILE) -> None:
+    def __init__(self, unused_bladdr: BLADDR) -> None:
         """ --- """
+        vdo: VDO_FILE = unused_bladdr.vdo
         bladdr0x12 = BLADDR(b'\x00\x00\x00\x01', vdo)
         super().__init__(bladdr0x12)
 
@@ -215,8 +216,7 @@ def print_huff(self):
 # -------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from vdo.datatypes import VDO_FILE
-
+    
     vdo2 = VDO_FILE()
 
     fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'

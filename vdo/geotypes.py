@@ -2,6 +2,8 @@
     bmw ee bnl:  00 16 15 1c 14 1d 1e
         future: MAP_AREA(BYTESTRUCT):
         future: POI_CATEGORY
+GEO_CATEGORY
+GEO_SHAPE
 
 COORD
 functions:
@@ -12,9 +14,18 @@ functions:
 """
 
 import re
+import struct
 
 from vdo.datatypes import BYTESTRUCT
 from vdo.datatypes import DOUBLE_BYTES_CNT, UINT_struct
+from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
+
+# use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
+GEO_CATEGORY_struct = struct.Struct(">bbHxxH")
+
+# use: (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
+GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
+
 
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
@@ -66,6 +77,80 @@ class COORD(BYTESTRUCT):
 
 
 # -------------------------------------------------------------------------
+# прототипы
+
+# ----
+class GEO_CATEGORY(BYTESTRUCT):
+    '''GEO CATEGORY портотип?, используемый класс - дочерний'''
+    cat: en_GEO_CATEGORY = None
+    draw: en_DRAW_TYPE = None  # SHAPE = 0, POLILINE = 1
+    cnt: int = 0    # сколько элементов в категории (расчетом, разница со следующим ptr
+    ptr: int = 0    # near на первый объект
+    obj_size: int = 0          # shape size = 0x14, line = 0x10
+    size: int = 4               # b b w
+
+    def __init__(self, buffer) -> None:
+        """
+        size = 4, но в следующих 4 есть следующий CAT, с ptr, и по их разнице
+                получим количество элементов этой категории
+        """
+        (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buffer)
+        # 4 важны, для инициализации нужны ещё ptr следущего
+        super().__init__(buffer[:self.size])
+        self.category = en_GEO_CATEGORY(cat)
+        self.draw = en_DRAW_TYPE(draw)
+        self.obj_size = 0x10 if draw else 0x14  # 0x10 if POLILINE else if SHAPE 0x14
+        self.cnt = int((next_ptr - ptr) / self.obj_size)
+        self.ptr = ptr
+
+    def __repr__(self):
+        ''' View while debug value'''
+        val = f"{self.ptr:02x} {self.draw.name} {self.category.name}:[{self.cnt}]"
+        return val
+    
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    pass  # GEO_CATEGORY_PROTO
+
+
+# ----
+class GEO_SHAPE(BYTESTRUCT):
+    '''
+    Geo shape - closed, filled poligon
+    //{GEO_SHAPE
+            PTR         p_str_name <bgcolor=cGreen>;
+            PTR         p_vertexes_obj
+            DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
+            LON_LAT     coord;
+        ZERO_WORD   aligment;
+            PTR         p_table_name <bgcolor=cLtGreen>;
+    '''
+    size: int = 0x14              # ptr ptr dword qword w ptr
+    name: str = ''
+
+    def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
+        OFFSET_COORD = 8
+        VRTX_OBJ_SIZE = 4       # word x, word y
+        (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
+        super().__init__(buffer[:self.size])  # первые 0x14 в raw, для инициализации нужны ещё ptr следущего # noqa: E501
+        self.ptr_str = ptr_str    # begin zero-ended string
+        self.ptr_vrtx = ptr_vrtx
+        self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
+        self.id = id
+        self.coord = COORD(self.read(OFFSET_COORD, COORD.size))
+        self.ptr_tstr = ptr_tstr
+        self.name = "Proto. Need read from parent"
+        self.category = category
+        pass
+  
+    def __repr__(self):
+        ''' View while debug value'''
+        val = f"{self.category.category.name}:[{self.cnt_vrtx}] {self.name}"
+        return val
+    pass    # GEO_SHAPE_PROTO
+
+
 # functions
 # -------------------------------------------------------------------------
 
@@ -194,3 +279,14 @@ if __name__ == '__main__':
 # # Приведение к 32-битному знаковому целому
 # dword_val = ctypes.c_int32(0xFFFFFFFF).value
 # print(dword_val) # Выведет: -1
+
+
+"""
+//GEO_VERTEX
+typedef struct{
+    WORD x;
+    WORD y;
+}GEO_VERTEX
+
+
+"""

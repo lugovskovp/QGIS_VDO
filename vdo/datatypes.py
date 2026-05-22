@@ -205,6 +205,12 @@ class BYTESTRUCT():
     def uint(self, near_offset: int = 0) -> int:
         ''' Return unsigned int (4 bytes, dword), offset from block begin'''
         return UINT_struct.unpack_from(self._raw[near_offset:])[0]
+
+    # def list(self, near_offset: int = 0) -> LIST:
+    #     return LIST(self._raw[near_offset:LIST.size])
+
+    # def coord(self, near_offset: int = 0) -> COORD:
+    #     return COORD(self._raw[near_offset:COORD.size])
     
 
 # ----

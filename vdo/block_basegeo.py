@@ -19,7 +19,7 @@
 from vdo.block_base import block_base
 from vdo.datatypes import BLADDR
 from vdo.enums import en_GEO_CATEGORY       # , en_DRAW_TYPE
-from vdo.geotypes import GEO_CATEGORY, GEO_SHAPE
+from vdo.geotypes import GEO_CATEGORY, GEO_SHAPE, GEO_LINE
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -93,10 +93,16 @@ class block_basegeo(block_base):
             # TODO read vertexes
         return res
 
-    def line(self, offset: int):
-        buff = self.read(offset, GEO_SHAPE.size * 2)
+    def line(self, offset: int, category: en_GEO_CATEGORY) -> GEO_LINE:
+        """
 
-        res = ''
+        """
+        buff = self.read(offset, GEO_LINE.size * 2)
+        res = GEO_LINE(buff, category)
+        # TODO
+        if self.is_unpacked:
+            res.name = self.read_str(res.ptr_str)
+            # TODO read vertexes
         return res
 
     # -------------------------------------------

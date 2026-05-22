@@ -26,6 +26,9 @@ GEO_CATEGORY_struct = struct.Struct(">bbHxxH")
 # use: (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
 GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
 
+# use: (   prt_str, ptr_vrtx, id, ptr_linesign, ptr_unk2, ptr_tstr, ptr_unk3,
+#           next_ptr_vrtx) = GEO_LINE_struct.unpack(buf)
+GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
 
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
@@ -118,13 +121,12 @@ class GEO_CATEGORY(BYTESTRUCT):
 class GEO_SHAPE(BYTESTRUCT):
     '''
     Geo shape - closed, filled poligon
-    //{GEO_SHAPE
-            PTR         p_str_name <bgcolor=cGreen>;
-            PTR         p_vertexes_obj
-            DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
-            LON_LAT     coord;
-        ZERO_WORD   aligment;
-            PTR         p_table_name <bgcolor=cLtGreen>;
+        2h - ptr2str/0;
+        2h - ptr2vertexes (first=first vert)
+        4h - id [0000 7685]
+        8h - LON_LAT
+        2h = 00 00 - aligment
+        2h - ptr2 list strPtr
     '''
     size: int = 0x14              # ptr ptr dword qword w ptr
     name: str = ''
@@ -141,18 +143,69 @@ class GEO_SHAPE(BYTESTRUCT):
         self.coord = COORD(self.read(OFFSET_COORD, COORD.size))
         self.ptr_tstr = ptr_tstr
         self.name = "Proto. Need read from parent"
-        self.category = category
+        self.cat = category
         pass
   
     def __repr__(self):
         ''' View while debug value'''
-        val = f"{self.category.category.name}:[{self.cnt_vrtx}] {self.name}"
+        val = f"{self.cat.category.name}:[{self.cnt_vrtx}] {self.name}"
         return val
     pass    # GEO_SHAPE_PROTO
 
 
-# functions
+# ----
+
+class GEO_LINE(BYTESTRUCT):
+    '''
+    # noqa: E501
+    Geo segment of line - poligon
+        PTR         p_str_name <bgcolor=cGreen>;
+        PTR         p_vertexes_obj;
+            local WORD vertex_cnt <format=hex> = 0;
+                // ReadUInt(FTell() = 0 in last
+            if( ReadUInt( FTell() ) ) vertex_cnt = (ReadUShort(FTell()+0eh) - p_vertexes_obj.Ptr )/4;
+        DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
+        // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
+        PTR   p_line_sign; // Or start pstr
+        WORD  b_or_c;
+        PTR   p_p_str_name; // ptr to GEO_OBJ_STR
+        WORD   or_38_or_0_b_country;
+    '''
+    size: int = 0x10              # ptr ptr dword qword w ptr
+    name: str = ''
+    cnt_vrtx: int = 0
+
+    def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
+        VRTX_OBJ_SIZE = 4       # word x, word y
+        (ptr_str,
+         ptr_vrtx,
+         id,
+         ptr_linesign,
+         ptr_unk2,
+         ptr_tstr,
+         ptr_unk3,
+         next_ptr_vrtx) = GEO_LINE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
+        super().__init__(buffer[:self.size])  # первые 0x10 в raw
+        self.ptr_str = ptr_str           # begin zero-ended string
+        self.ptr_vrtx = ptr_vrtx         # begin vertexes
+        self.id = id
+        self.ptr_unk1 = ptr_linesign      # ptstr - but strange, unkn
+        self.ptr_unk2 = ptr_unk2   # named as "b or c" but bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
+        self.ptr_tstr = ptr_tstr    # ptr to GEO_OBJ_STR
+        self.ptr_unk3 = ptr_unk3    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501
+        self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
+        self.name = "Proto. Need read from parent"
+        self.cat = category
+    
+    def __repr__(self):
+        ''' View while debug value '''
+        val = f"{self.cat.category.name}:[{self.cnt_vrtx}] {self.name}"
+        return val
+    pass    # GEO_LINE_PROTO
+
+
 # -------------------------------------------------------------------------
+# functions
 
 def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
     ''' Ret COORD by hex_vdo values lo&la'''

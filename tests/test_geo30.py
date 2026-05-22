@@ -1,5 +1,5 @@
-import struct
-from vdo.datatypes import VDO_FILE
+import struct       # noqa: F401
+from vdo.datatypes import VDO_FILE, UINT_struct, BLADDR
 
 
 def get_vdo():
@@ -28,6 +28,11 @@ vdo = get_vdo()
 # ru 0x1E6EA000 === 03cdd401 14 0000 [14:MAP__05k200]
 geo_bl = vdo.get_block(0x1E6EA000)
 
+blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
+blak = BLADDR(blnum, vdo)
+geo_bl = vdo.get_block(blak)
+
+
 ss = geo_bl.read(geo_bl.toc['li_str'].ptr, 16)  # облом 0x7c - b'\x00\x80\x02\x00atlantic oce' # noqa: E501
 st = geo_bl.read_tstr(geo_bl.toc['li_str'].ptr)
 #
@@ -36,16 +41,31 @@ st = geo_bl.read_tstr(geo_bl.toc['li_str'].ptr)
 # buf = b'\x02\x01\x01\x01\x04\x05\x10\x01'
 # (cat, draw, ptr, next_ptr) = struct.unpack(">bbH2xH", buf)
 
-cats = geo_bl.get_all_categories()
+all_categories = geo_bl.get_all_categories()
 
-GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
+# GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
 
 # buf = geo_bl.read(geo_bl.toc['li_shp'].ptr, 0x14 * 2)
 # (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
 
-shape1 = geo_bl.shape(geo_bl.toc['li_shp'].ptr, cats[0])
+shape1 = geo_bl.shape(geo_bl.toc['li_shp'].ptr, all_categories[0])
 sss = shape1.__repr__()
 
+
+# buf = geo_bl.read(geo_bl.toc['li_lin'].ptr, 0x10 * 2)
+
+# GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
+# (   prt_str,
+#     ptr_vrtx,
+#     id,
+#     ptr_linesign,
+#     ptr_unk2,
+#     ptr_tstr,
+#     ptr_unk3,
+#     next_ptr_vrtx) = GEO_LINE_struct.unpack(buf)
+
+line_river = geo_bl.line(geo_bl.toc['li_lin'].ptr, all_categories[3])  # bl_addr(0x03c68a03) # noqa: E501
+lss = line_river.__repr__()
 pass
 
 """

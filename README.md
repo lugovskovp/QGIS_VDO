@@ -89,12 +89,44 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] CH_road / road
     * [ ] CH_poi / poi
     * [ ] keyboard
+- [ ] GEO структуры
+    * [x] TOC
+    * [x] MAP_AREA
+    * [x] GEO_CATEGORIES
+    * [x] GEO_SHAPES
+    * [x] GEO_LINES
+    * [x] VERTEXES
+    * [ ] POI
+    * [ ] TSTR
 - [ ] блоки карт - 0x14, 0x15, 0x16, 0x1C, 0x1D, 0x1E
     * [x] vdo.block(offset | bladdr) - создание объекта блока
-    * [x] GEO структуры
-    * [x] базовый гео-блок
-    * [ ] блоки карт - *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
+    * [x] базовый гео-блок MVP
+    * [ ] гео-объекты генерируются в базовом гео-блоке
+        - [x] ТОС и область карты
+        - [x] список категорий
+        - [x] полигоны - shapes
+        - [x] полилинии - lines
+        - [x] vertex
+        - [ ] poi
+        - [ ] testr_array_ объекта
+    * [ ] блоки карт - childs базового гео-блока
+        - [x] 0x14, 
+        - [ ] 0x15, 
+        - [ ] 0x16, 
+        - [x] 0x1C, 
+        - [ ] 0x1D, 
+        - [ ] 0x1E
     * [ ] list(blarray, blarray) - vrtx from shapes, lines 
+- [ ] archives
+    * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
+        - [ ] categories
+        - [ ] shapes
+        - [ ] polilines
+        - [ ] vertex
+        - [ ] tstr
+        - [ ] str
+        - [ ] странное число после ТОС
+    * [x] type 2, 3
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
     * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
     * [ ] виджет рабочего поля - открыть/создать при загрузке файла

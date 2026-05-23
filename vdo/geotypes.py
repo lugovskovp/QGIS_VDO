@@ -147,7 +147,7 @@ class GEO_CATEGORY(BYTESTRUCT):
 
     def __repr__(self):
         ''' View while debug value'''
-        val = f"{self.ptr:02x} {self.draw.name} {self.category.name}:[{self.cnt}]"
+        val = f"{self.draw.name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
         return val
     
     def __str__(self) -> str:
@@ -181,7 +181,7 @@ class GEO_SHAPE(BYTESTRUCT):
         self.id = id
         self.coord = COORD(self.read(OFFSET_COORD, COORD.size))
         self.ptr_tstr = ptr_tstr
-        self.name = "Proto. Need read from parent"
+        self.name = "Proto shape. Need read from parent"
         self.cat = category
         pass
   
@@ -233,7 +233,7 @@ class GEO_LINE(BYTESTRUCT):
         self.ptr_tstr = ptr_tstr    # ptr to GEO_OBJ_STR
         self.ptr_unk3 = ptr_unk3    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
-        self.name = "Proto. Need read from parent"
+        self.name = "Proto line. Need read from parent"
         self.cat = category
     
     def __repr__(self):
@@ -405,11 +405,7 @@ if __name__ == '__main__':
 
 """
 # noqa: E501, W291
-//GEO_VERTEX
-typedef struct{
-    WORD x;
-    WORD y;
-}GEO_VERTEX
+
 
 class POI_CATEGORY(BYTESTRUCT):     #   
     ''' POI_CATEGORY 3*DWORD

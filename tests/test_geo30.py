@@ -26,7 +26,7 @@ def get_vdo():
 
 vdo = get_vdo()
 # ru 0x1E6EA000 === 03cdd401 14 0000 [14:MAP__05k200]
-geo_bl = vdo.get_block(0x1E6EA000)
+geo_bl = vdo.get_block(0x1E6EA000)      # ru 0x1E6EA000
 
 blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
 blak = BLADDR(blnum, vdo)

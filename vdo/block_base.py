@@ -168,7 +168,10 @@ class block_base(BYTESTRUCT):
         Returns:
             str: 0-ended строка
         """
-        return self.read(offset, MAX_STR_LEN).decode('cp1250').split('\x00')[0]
+        # offset = 0 -> нет строки
+        if offset:
+            return self.read(offset, MAX_STR_LEN).decode('cp1250').split('\x00')[0]
+        return ''
 
 
 # --------------------------------------------------------

@@ -6,7 +6,7 @@ from vdo.block_basegeo import block_basegeo
 from vdo.datatypes import BLADDR
 
 
-class block_0x1C(block_basegeo):
+class block_0x1E(block_basegeo):
     """
 
     """

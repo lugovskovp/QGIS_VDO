@@ -116,8 +116,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [ ] 0x15, 
         - [ ] 0x16, 
         - [x] 0x1C, 
-        - [ ] 0x1D, 
-        - [ ] 0x1E
+        - [x] 0x1D, 
+        - [x] 0x1E
     * [ ] list(blarray, blarray) - vrtx from shapes, lines 
 - [ ] archives
     * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E

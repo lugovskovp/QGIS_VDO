@@ -105,16 +105,17 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] базовый гео-блок MVP
     * [ ] гео-объекты генерируются в базовом гео-блоке
         - [x] ТОС и область карты
+        - [ ] все объекты - lines & shapes
         - [x] список категорий
         - [x] полигоны - shapes
         - [x] полилинии - lines
         - [x] vertex
         - [ ] poi
-        - [ ] testr_array_ объекта
-    * [ ] блоки карт - childs базового гео-блока
+        - [ ] tstr_array_ объекта
+    * [x] блоки карт - childs базового гео-блока
         - [x] 0x14, 
-        - [ ] 0x15, 
-        - [ ] 0x16, 
+        - [x] 0x15, 
+        - [x] 0x16, 
         - [x] 0x1C, 
         - [x] 0x1D, 
         - [x] 0x1E

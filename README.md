@@ -15,6 +15,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - VDO Dayton CD Carindb v.30
 - VDO Dayton CD Carindb v.34
 
+- pip install bitarray
+
 
 # Функциональность
 - Выбор файла. Вывод инфо о файле (файлах). Запоминание настроек.

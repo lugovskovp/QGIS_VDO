@@ -1,7 +1,6 @@
 import binascii
 import heapq
 
-import heapq
 
 def generate_huffman_lookup(weights_table):
     """
@@ -103,7 +102,7 @@ def decode_bit_stream(hex_compressed, weights_table):
             if char == "[EOS]":
                 break
             decoded_output.append(char)
-            current_bits = "" # Очистка буфера под следующий символ
+            current_bits = ""  # Очистка буфера под следующий символ
             
     return "".join(decoded_output)
 

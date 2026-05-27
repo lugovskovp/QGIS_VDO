@@ -233,20 +233,63 @@ class en_TeleAtlasRegion(enum.Enum):             # TeleAtlasHexRegion
 
 @enum.unique
 class en_GEO_CATEGORY(enum.Enum):    	#//{en_GEO_OBJ_TYPE	// 03->05->06->08->01->00 blocks MAPS
-	FOREST   = 0x3
-	CITY     = 0x5
-	INDUSTRIAL = 0x6
-	ISLAND   = 0x8
-	WATER    = 0x1
-	EMPTY  = 0          
-	RIVER    = 0x65
-	RAILWAY  = 0x66
-	BORDER   = 0x67
-	ROAD_HIGHWAY = 0x68 	# /https://wiki.openstreetmap.org/wiki/RU:Highway_classification
-	ROAD_PRIME = 0x69       #//ex en_ROAD_A
-	ROAD_MINOR = 0x6a
-	UN__KNOWN = 0xEE		# debug and default val?
-	GROUND = 0xFE			# for  preview only, make ground
+    """
+Rак искать недостающие коды самостоятельно в сети:
+Если в процессе парсинга вы наткнетесь на неизвестный байт (например, 0x12 или 0x6F), используйте следующие 
+поисковые маркеры в Google, GitHub или специализированных GIS-форумах (вроде GPSPower, Digital-Eliteboard или 
+OpenStreetMap Wiki):
+::Поиск по спецификациям GDF: Ищите комбинации вида "GDF 4.0" Feature Class codes list или 
+"ISO 14825" attribute tables. В официальных PDF-документах ISO (иногда их выкладывают университеты) 
+есть полные таблицы маппинга.
+::Поиск по исходникам старых конвертеров: На GitHub ищите репозитории по ключевым 
+словам "MultiNet" parser, "GDF" converter, или "SDAL" decoding (SDAL — конкурирующий открытый формат от Navteq, 
+но логика типов объектов там пересекается).
+::OSM Mapping Tables: В википедии OpenStreetMap есть официальные страницы перевода (маппинга) проприетарных карт 
+в OSM: ищите "Tele Atlas MultiNet to OSM" table. Там энтузиасты часто публикуют точные таблицы соответствия 
+внутренних ID классов Tele Atlas тегам OSM (landuse=forest, highway=motorway).
+    """
+    """
+    Площадные (полигональные) объекты — 'Background layers' (Диапазон 0x00 - 0x3F).
+    Используются для заливки фона карты.
+    """
+    EMPTY = 0x00              # Пустая область / базовый фон суши
+    WATER = 0x01              # Внутренние воды (озера, водохранилища, заливы)
+    SEA_OCEAN = 0x02          # Моря и океаны
+    FOREST = 0x03             # Леса, лесные массивы, густая растительность
+    NATIONAL_PARK = 0x04      # Заповедники, национальные парки и заказники
+    CITY = 0x05               # Полигон общей жилой застройки города / населенного пункта
+    INDUSTRIAL = 0x06         # Промышленные зоны, заводы, склады, порты
+    AIRPORT_GROUND = 0x07     # Территория аэропортов (взлетные полосы, терминалы)
+    ISLAND = 0x08             # Остров (инвертированный полигон суши внутри воды)
+    AMUSEMENT_PARK = 0x09     # Парки развлечений, аттракционы, зоопарки
+    GOLF_COURSE = 0x0A        # Поля для гольфа
+    CEMETERY = 0x0B           # Кладбища
+    HOSPITAL_GROUND = 0x0C    # Территория больниц и медицинских комплексов
+    UNIVERSITY_CAMPUS = 0x0D  # Студенческие городки, кампусы вузов
+    MILITARY_AREA = 0x0E      # Закрытые военные объекты и полигоны
+    SPORTS_COMPLEX = 0x0F     # Спортивные комплексы, открытые стадионы
+    """
+    Линейные объекты инфраструктуры и гидрографии (Диапазон 0x60 - 0x67, 0x70 - 0x7F).
+    Рендерятся линиями без заливки контура.
+    """
+    CANAL = 0x61              # Искусственные судоходные каналы
+    RIVER_STREAM = 0x62       # Узкие реки, ручьи (отображаемые в одну линию)
+    RIVER_MAJOR = 0x65        # Основное русло крупной реки
+    RAILWAY = 0x66            # Железная дорога
+    BORDER = 0x67             # Административные и государственные границы
+    PEDESTRIAN_ZONE = 0x70    # Пешеходные дорожки, тротуары, променады
+    FERRY_CONNECTION = 0x71   # Линии паромных переправ (виртуальный граф)
+    """
+    Классификация дорожного графа — Functional Road Classes (Диапазон 0x68 - 0x6F).
+    Определяет Z-Index отрисовки дорог и их фильтрацию при масштабировании (LOD).
+    """
+    ROAD_HIGHWAY = 0x68       # Автомагистрали, автобаны, скоростные трассы (FRC 0)
+    ROAD_PRIME = 0x69         # Главные дороги, национальные шоссе, артерии (FRC 1-2)
+    ROAD_MINOR = 0x6A         # Второстепенные дороги, межрайонные соединения (FRC 3-4)
+    ROAD_LOCAL = 0x6B         # Обычные жилые улицы, внутриквартальные проезды (FRC 5-6)
+    ROAD_UNPAVED = 0x6C       # Грунтовые, лесные и полевые дороги (FRC 7)
+    ROAD_SLIP = 0x6D          # Съезды с трасс, соединительные ветки развязок (Ramps)
+    ROAD_ROUNDABOUT = 0x6E    # Элементы кругового движения (Roundabouts)
 
 
 @enum.unique

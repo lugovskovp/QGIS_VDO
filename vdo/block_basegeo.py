@@ -153,6 +153,28 @@ class block_basegeo(block_base):
 
             # <<<<<<<<<< POI
             # <<<<<<<<<< VERTEX
+            # а вот дальше запакованы вертексы, и, вероятно, хаффманом
+            if self.toc.li_vrtx.cnt:
+                huffman_lookup = self.vdo.get_block(0).lookup
+                decoded_output = b''
+                current_bits = ""
+                # cnt_vrtx * 4 - побайтово
+                for num in range(self.toc.li_vrtx.cnt * 4):
+                    #
+                    # # Шаг 3: Побитовое чтение и сопоставление со сгенерированным словарем # noqa
+                    # for bit in buffer.buffer:
+                    #     current_bits += str(bit)
+                    #     if current_bits in huffman_lookup:
+                    #         char = huffman_lookup[current_bits]
+                    #         # if char == "[EOS]":
+                    #         #     break
+                    #         #decoded_output.append(char)
+                    #         decoded_output += struct.pack(">B", char)
+                    #         current_bits = ""  # Очистка буфера под следующий символ
+                            
+                    # bs = BYTESTRUCT(decoded_output)
+                    # print(bs.hex)
+                    pass
             # G
             # локально константами
 

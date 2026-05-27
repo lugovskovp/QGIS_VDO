@@ -28,16 +28,25 @@ from vdo.enums import BlockType       # noqa
 
 vdo = get_vdo()
 
+tos_bl = vdo.get_block(0)
+
+# [1D:MAP__10k400]
+chouse = 'last'
+chouse = 'first'
+bla_bl = tos_bl.cd_map[BlockType(0x04)][chouse]
+bl__04 = vdo.get_block(bla_bl)
+print(bl__04.hex)
+
 '''bmw_a_1d = vf.block(0xE2A2A00)'''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)
 block_packed = vdo.get_block(bla_bl)
 '''bmw_a_1d = vf.block(0xE2A2A00) unk: 0x5000900
                 01 00 00 3c
                 00 00 00 8c
-    08 c0 00 a0 40 01 8d 00 3e 8b 4f f4 14 62 9e 01 00 00 08 b0
-    08 d3 02 98 40 02 3f f0 3f d4 0f e0 14 3e b2 69 00 00 08 b4
-    08 e5 03 44 40 04 2b 13 3e 75 79 94 13 e8 ef 5a 00 00 08 b8
-    08 f6 07 70 40 12 e8 aa 3b 0e bb 42 12 26 61 83 00 00 08 bc
+    08 c0 00 a0 40 01 8d 00 3e 8b 4f f4 14 62 9e 01 00 00 08 b0  WATER:[126] 
+    08 d3 02 98 40 02 3f f0 3f d4 0f e0 14 3e b2 69 00 00 08 b4  WATER:[43] 
+    08 e5 03 44 40 04 2b 13 3e 75 79 94 13 e8 ef 5a 00 00 08 b8  WATER:[267] 
+    08 f6 07 70 40 12 e8 aa 3b 0e bb 42 12 26 61 83 00 00 08 bc  WATER:[80] 
     00 00 08 b0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 08 c0
                 shp 003C:0004 cnt:4
                 lin 0000:0000 cnt:0
@@ -45,6 +54,8 @@ block_packed = vdo.get_block(bla_bl)
                 vrt 00A0:0204 cnt:516
                 tst 08B0:0004 cnt:4
                 str 08c0
+
+
                 '''
 
 

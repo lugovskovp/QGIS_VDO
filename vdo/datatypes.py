@@ -15,6 +15,7 @@ BLSTART
 import os.path
 import struct
 import importlib
+import heapq
 
 from vdo.enums import BlockType
 
@@ -135,6 +136,104 @@ class VDO_FILE():
         bl_instance = bl_class(head.bladdr)
         return bl_instance
 
+    def get_huffman_weight(self) -> dict:
+        """
+        в первом блоке, 0х12 есть таблица весов для дерева хаффмана
+        по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
+        Таблица одна на весь файл - и логично не привязывать её к блоку
+        Returns:
+            weight: dict {key_id : value_weight}
+        """
+        OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
+        # начальный адрес таблицы весов и количество элементов.
+        HUFFMAN_PAIR_SIZE = 4
+        WORD_PAIR_struct = struct.Struct(">HH")
+
+        weights = {}
+        bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
+        (ptr, cnt) = WORD_PAIR_struct.unpack(bytes_list)
+        for _ in range(cnt):
+            (key_id, value_weight) = WORD_PAIR_struct.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
+            #if 0 <= key_id <= 0xFFFF:
+            # Нам нужны только символы с реальным весом > 0
+            if value_weight > 0:
+                weights[key_id] = value_weight
+            ptr += HUFFMAN_PAIR_SIZE
+        return weights
+        """
+
+
+        """
+
+    def generate_huffman_lookup(self, weights_table: dict) -> dict:
+        """
+        Автоматически строит дерево Хаффмана на основе таблицы весов
+        для ключей в диапазоне от 0x0000 до 0xA000.
+        Args:
+            weights_table: dict - таблица весов
+        Returns:
+            словарь соответствия: { 'бинарный_код_строкой': декодированное_значение }
+        """
+        # Очередь с приоритетами (куча) для сборки дерева
+        heap = []
+        counter = 0
+        
+        for key_title, weight in weights_table.items():
+            node = {'id': key_title, 'left': None, 'right': None}
+            # Формат элемента: (вес, уникальный_счетчик, узел_дерева)
+            heapq.heappush(heap, (weight, counter, node))
+            counter += 1
+
+        if not heap:
+            return {}
+
+        # Построение дерева Хаффмана путем слияния минимальных узлов
+        while len(heap) > 1:
+            weight1, _, node1 = heapq.heappop(heap)
+            weight2, _, node2 = heapq.heappop(heap)
+            
+            parent_node = {'id': None, 'left': node1, 'right': node2}
+            parent_weight = weight1 + weight2
+            
+            heapq.heappush(heap, (parent_weight, counter, parent_node))
+            counter += 1
+
+        # Корень финального дерева
+        _, _, root_node = heapq.heappop(heap)       # там 1 элемент, heap[0]
+        # _, _, root_node = heapq.heappop(heap)  #  heap
+        huffman_lookup = {}
+        
+        # Рекурсивный обход дерева для генерации префиксных битовых кодов
+        def walk_tree(node, current_code):
+            if node['id'] is not None:
+                val_id = node['id']
+                
+                # Логика интерпретации ID в конечный символ или токен
+                # if val_id == 0x00:
+                #     char_out = "[EOS]"                      # Маркер конца строки
+                # elif 0x41 <= val_id <= 0x5A:
+                #     char_out = chr(val_id).lower()          # Перевод латиницы A-Z в нижний регистр a-z
+                # elif 32 <= val_id <= 126:
+                #     char_out = chr(val_id)                  # Остальной печатный ASCII
+                # elif 0x0400 <= val_id <= 0x04FF:
+                #     char_out = chr(val_id)                  # Кириллица (Unicode), если присутствует в СНГ-версии
+                # else:
+                #     char_out = f"[Token_0x{val_id:04X}]"    # Крупные токены координат или гео-префиксов
+                    
+                # huffman_lookup[current_code] = char_out
+                huffman_lookup[current_code] = val_id
+                return
+            
+            # Левая ветка кодируется нулем, правая — единицей
+            if node['left']:
+                walk_tree(node['left'], current_code + "0")
+            if node['right']:
+                walk_tree(node['right'], current_code + "1")
+
+        # Запускаем обход от корня
+        walk_tree(root_node, "")
+        return huffman_lookup
+
     def empty(self):
         """
         Args:
@@ -168,8 +267,23 @@ class BYTESTRUCT():
     
     @property
     def hex(self):
-        he = " ".join("0x{:02x}".format(c) for c in self._raw)
-        return he
+        he = " ".join("{:02x}".format(c) for c in self._raw)
+        hex_list = [f"{c:02X}" for c in self._raw]
+        result_lines = []
+
+        for i in range(0, len(hex_list), 16):
+            # Номер строки в HEX (0000, 0010, 0020 и т.д.)
+            line_number = f"{i:04X}: "
+            # 8 + " " + 8 HEX-значений текущей строки
+            # hex_chunk = " ".join(hex_list[i : i + 16])
+            hex_chunk0 = " ".join(hex_list[i : i + 8])
+            hex_chunk1 = " ".join(hex_list[i + 8 : i + 16])
+            # Собираем строку воедино
+            result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
+        # Объединяем все строки
+        cr = f"\n"
+        result = cr.join(result_lines)
+        return result
 
     @property
     def len(self):

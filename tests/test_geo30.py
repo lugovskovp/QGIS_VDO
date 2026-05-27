@@ -1,5 +1,7 @@
 import struct       # noqa: F401
 from vdo.datatypes import VDO_FILE, UINT_struct, BLADDR
+from vdo.blocks import block_0x12
+from vdo.enums import BlockType
 
 
 def get_vdo():
@@ -17,20 +19,79 @@ def get_vdo():
 
     vdo = vdobmv
     #vdo = vdo34
-    #vdo = vdoRu
+    vdo = vdoRu
     vdo = vdo30
     return vdo
 
 
-#--------------------------------------
+def write(fname, buffer):
+    with open(f"c:/temp/{fname}.txt", "bw") as f:
+        f.write(buffer)
 
+
+#--------------------------------------
 vdo = get_vdo()
+
+
+
+
 # ru 0x1E6EA000 === 03cdd401 14 0000 [14:MAP__05k200]
-geo_bl = vdo.get_block(0x1E6EA000)      # ru 0x1E6EA000
+# geo_bl = vdo.get_block(0x1E6EA000)      # ru 0x1E6EA000
+
+# with open("c:/temp/0x1E6EA000.txt", "bw") as f:
+#     f.write(geo_bl._raw)
 
 blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
 blak = BLADDR(blnum, vdo)
 geo_bl = vdo.get_block(blak)
+write("1c_ru30___09k100", geo_bl._raw)
+
+
+# abstract file info
+abl__abstract: block_0x12 = vdo.get_block(0)
+
+chouse = 'first'
+# chouse = 'last'
+
+
+# [14:MAP__05k200]
+if abl__abstract.cd_map:
+    bla_bl = abl__abstract.cd_map[BlockType(0x14)][chouse]
+    bl__05k200 = vdo.get_block(bla_bl)
+    del bla_bl
+    write("14_MAP__05k200", bl__05k200._raw)
+
+# [15:MAP__06k80]
+bla_bl = abl__abstract.cd_map[BlockType(0x15)][chouse]
+bl__06k80 = vdo.get_block(bla_bl)
+del bla_bl
+write("15_MAP__06k80", bl__06k80._raw)
+
+# [16:MAP__07k40]
+bla_bl = abl__abstract.cd_map[BlockType(0x16)][chouse]
+bl__07k40 = vdo.get_block(bla_bl)
+del bla_bl
+write("16_MAP__07k40", bl__06k80._raw)
+
+# [1C:MAP__09k100]
+# bnl: {'first': 017fce 01, 'last': 018008 01, 'idxidx08': 017fc8 01} # noqa
+bla_bl = abl__abstract.cd_map[BlockType(0x1c)][chouse]
+bl__09k100 = vdo.get_block(bla_bl)
+del bla_bl
+write("1C_MAP__09k100", bl__09k100._raw)
+
+# [1D:MAP__10k400]
+bla_bl = abl__abstract.cd_map[BlockType(0x1d)][chouse]
+bl__10k400 = vdo.get_block(bla_bl)
+del bla_bl
+write("1d_MAP__10k400", bl__09k100._raw)
+
+# [1E:MAP__11k_11]
+bla_bl = abl__abstract.cd_map[BlockType(0x1e)][chouse]
+bl__11k_11 = vdo.get_block(bla_bl)
+del bla_bl
+
+
 
 
 ss = geo_bl.read(geo_bl.toc.li_str.ptr, 16)  # облом 0x7c - b'\x00\x80\x02\x00atlantic oce' # noqa: E501

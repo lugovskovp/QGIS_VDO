@@ -18,10 +18,10 @@ import struct
 
 from vdo.datatypes import BYTESTRUCT
 from vdo.datatypes import DOUBLE_BYTES_CNT, UINT_struct
-from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
+from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
-GEO_CATEGORY_struct = struct.Struct(">bbHxxH")
+GEO_CATEGORY_struct = struct.Struct(">bbHxbH")
 
 # use: (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
 GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
@@ -32,6 +32,8 @@ GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
 
 # use: (x, y) = VERTEX_struct.unpack(buf)
 VERTEX_struct = struct.Struct(">HH")
+
+TSTR_struct = struct.Struct(">Hbb")
 
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
@@ -136,13 +138,16 @@ class GEO_CATEGORY(BYTESTRUCT):
         size = 4, но в следующих 4 есть следующий CAT, с ptr, и по их разнице
                 получим количество элементов этой категории
         """
-        (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buffer)
+        (cat, draw, ptr, next_draw, next_ptr) = GEO_CATEGORY_struct.unpack(buffer)
         # 4 важны, для инициализации нужны ещё ptr следущего
         super().__init__(buffer[:self.size])
         self.category = en_GEO_CATEGORY(cat)
         self.draw = en_DRAW_TYPE(draw)
         self.obj_size = 0x10 if draw else 0x14  # 0x10 if POLILINE else if SHAPE 0x14
         self.cnt = int((next_ptr - ptr) / self.obj_size)
+        # последний полигон, если не нулевой след полилайн - пустой по значениям
+        if not draw and next_draw:  # draw = 0 and next_draw=1
+            self.cnt -= 1
         self.ptr = ptr
 
     def __repr__(self):
@@ -164,7 +169,7 @@ class GEO_SHAPE(BYTESTRUCT):
         2h - ptr2vertexes (first=first vert)
         4h - id [0000 7685]
         8h - LON_LAT
-        2h = 00 00 - aligment
+        2h = 00 00 - aligment (??? or POI?)
         2h - ptr2 list strPtr
     '''
     size: int = 0x14              # ptr ptr dword qword w ptr
@@ -173,9 +178,9 @@ class GEO_SHAPE(BYTESTRUCT):
     def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
         OFFSET_COORD = 8
         VRTX_OBJ_SIZE = 4       # word x, word y
-        (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
+        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
         super().__init__(buffer[:self.size])  # первые 0x14 в raw, для инициализации нужны ещё ptr следущего # noqa: E501
-        self.ptr_str = ptr_str    # begin zero-ended string
+        self.p_str_name = p_str_name    # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.id = id
@@ -198,17 +203,14 @@ class GEO_LINE(BYTESTRUCT):
     '''
     # noqa: E501
     Geo segment of line - poligon
-        PTR         p_str_name <bgcolor=cGreen>;
-        PTR         p_vertexes_obj;
-            local WORD vertex_cnt <format=hex> = 0;
-                // ReadUInt(FTell() = 0 in last
-            if( ReadUInt( FTell() ) ) vertex_cnt = (ReadUShort(FTell()+0eh) - p_vertexes_obj.Ptr )/4;
-        DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
-        // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
-        PTR   p_line_sign; // Or start pstr
-        WORD  b_or_c;
-        PTR   p_p_str_name; // ptr to GEO_OBJ_STR
-        WORD   or_38_or_0_b_country;
+        2h - PTR         p_str_name - ptr2str/0;
+        2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
+        4h - DWORD       id
+                // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
+        2h - PTR   tstr_regi      ptr_linesign, p_line_sign; // Or start pstr
+        2h - WORD  or_b_or_c;
+        2h - PTR   tstr_name         ptr_tstr     p_p_str_name; // ptr to GEO_OBJ_STR
+        4h - WORD   or_38_or_0_b_country;
     '''
     size: int = 0x10              # ptr ptr dword qword w ptr
     name: str = ''
@@ -216,25 +218,48 @@ class GEO_LINE(BYTESTRUCT):
 
     def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
         VRTX_OBJ_SIZE = 4       # word x, word y
-        (ptr_str,
+        (p_str_name,
          ptr_vrtx,
          id,
-         ptr_linesign,
-         ptr_unk2,
-         ptr_tstr,
-         ptr_unk3,
+         tstr_regi,      # p_line_sign; // Or start pstr
+         or_b_or_c,
+         tstr_name,      # p_p_str_name; // ptr to GEO_OBJ_STR
+         or_38_or_0_b_country,
          next_ptr_vrtx) = GEO_LINE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
         super().__init__(buffer[:self.size])  # первые 0x10 в raw
-        self.ptr_str = ptr_str           # begin zero-ended string
+        self.p_str_name = p_str_name           # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx         # begin vertexes
         self.id = id
-        self.ptr_unk1 = ptr_linesign      # ptstr - but strange, unkn
-        self.ptr_unk2 = ptr_unk2   # named as "b or c" but bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
-        self.ptr_tstr = ptr_tstr    # ptr to GEO_OBJ_STR
-        self.ptr_unk3 = ptr_unk3    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501
+        self.tstr_regi = tstr_regi      # ptstr - but strange, unkn
+        self.or_b_or_c = or_b_or_c   # named as "b or c" but bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
+        self.tstr_name = tstr_name    # ptr to GEO_OBJ_STR
+        self.or_38_or_0_b_country = or_38_or_0_b_country    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.name = "Proto line. Need read from parent"
         self.cat = category
+        """
+        blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
+        self.or_b_or_c
+        
+        [1C98 011C, 1F0F 0021]
+        679 - расстояние по пифагору
+        0xdb 219 - значение
+
+        0 0x10:[noLang]: e77
+        [1A06 0082, 1BE1 0000]
+        [1A06,0082], [1BE1, 0000]
+        492
+        0x95 149
+
+        ROAD_HIGHWAY:[2] e77
+        [7F83 3040, 80A4 2FD0]
+        [7F83,3040], [80A4,2FD0]
+        309,94
+        0x80  128
+
+        вообще похоже на оценочную длинну? время?
+        """
+        return
     
     def __repr__(self):
         ''' View while debug value '''
@@ -250,6 +275,9 @@ class VERTEX(BYTESTRUCT):
 
     def __init__(self, buffer: bytearray) -> None:
         """ """
+        if len(buffer) < self.size:
+            (self._x, self._y) = (None, None)
+            return
         super().__init__(buffer[:self.size])
         (self._x, self._y) = VERTEX_struct.unpack(buffer)
         # self.x = self.ushort(0)
@@ -272,6 +300,37 @@ class VERTEX(BYTESTRUCT):
         return val
     pass    # VERTEX_PROTO
 
+
+# ----
+class TSTR(BYTESTRUCT):
+    """
+    прототип TSTR - набора переводов/синонимов 
+            typedef struct{
+            PTR p_str;
+            en_LANGUAGE lang;
+            en_GEO_OBJ_STR str_type;
+            typedef enum <uchar>{
+                __shape =   0,
+                __alias =   2,
+                __street =  8,
+                __poliline =0x10
+            }en_GEO_OBJ_STR
+    """
+    size: int = 4   # размер элемента класса в байтах
+
+    def __init__(self, buffer: bytearray) -> None:
+        """ """
+        super().__init__(buffer[:self.size])
+        (self.p_str, lang, obj_type) = TSTR_struct.unpack(self._raw)
+        self.lang = en_CARINET_LANGUAGE(lang)
+        self.geotype = hex(obj_type)
+        self.name = "Proto. Name set where called"
+
+    def __repr__(self):
+        ''' View while debug value '''
+        val = f"{self.lang.value} {self.geotype}:[{self.lang.name}]: {self.name}"
+        return val
+    pass    # GEO_LINE_PROTO
 
 # -------------------------------------------------------------------------
 # functions

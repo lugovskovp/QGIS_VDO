@@ -170,8 +170,17 @@ class block_base(BYTESTRUCT):
         """
         # offset = 0 -> нет строки
         if offset:
-            return self.read(offset, MAX_STR_LEN).decode('cp1250').split('\x00')[0]
+            string = self.read(offset, MAX_STR_LEN)
+            return string.decode('cp1250').split('\x00')[0]
         return ''
+
+    def write_raw(self, name: str = "base_block.txt"):
+        """
+        сохранить текущее в файл
+        """
+        fname = "c:/temp/" + name
+        with open(fname, "bw") as f:
+            f.write(self._raw)
 
 
 # --------------------------------------------------------

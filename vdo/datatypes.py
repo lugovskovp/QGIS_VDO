@@ -207,7 +207,8 @@ class VDO_FILE():
         def walk_tree(node, current_code):
             if node['id'] is not None:
                 val_id = node['id']
-                
+                """
+                # noqa:
                 # Логика интерпретации ID в конечный символ или токен
                 # if val_id == 0x00:
                 #     char_out = "[EOS]"                      # Маркер конца строки
@@ -219,7 +220,7 @@ class VDO_FILE():
                 #     char_out = chr(val_id)                  # Кириллица (Unicode), если присутствует в СНГ-версии
                 # else:
                 #     char_out = f"[Token_0x{val_id:04X}]"    # Крупные токены координат или гео-префиксов
-                    
+                """
                 # huffman_lookup[current_code] = char_out
                 huffman_lookup[current_code] = val_id
                 return
@@ -267,10 +268,9 @@ class BYTESTRUCT():
     
     @property
     def hex(self):
-        he = " ".join("{:02x}".format(c) for c in self._raw)
+        # he = " ".join("{:02x}".format(c) for c in self._raw)
         hex_list = [f"{c:02X}" for c in self._raw]
         result_lines = []
-
         for i in range(0, len(hex_list), 16):
             # Номер строки в HEX (0000, 0010, 0020 и т.д.)
             line_number = f"{i:04X}: "
@@ -281,7 +281,7 @@ class BYTESTRUCT():
             # Собираем строку воедино
             result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
         # Объединяем все строки
-        cr = f"\n"
+        cr = "{}".format("\n")
         result = cr.join(result_lines)
         return result
 

@@ -2,7 +2,7 @@
 block_basegeo - Базовый тип для - карт   00 16 15 1c 14 1d 1e # noqa: E116
 bitstream - class wrapper for bitarray
 """
-import struct
+
 from bitarray import bitarray   # https://pypi.org/project/bitarray/
 # https://github.com/ilanschnell/bitarray/blob/master/doc/buffer.rst
 from bitarray.util import ba2int
@@ -12,7 +12,7 @@ from vdo.block_base import block_base
 from vdo.datatypes import BLADDR, LIST, BYTESTRUCT
 from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
 from vdo.geotypes import MAP_AREA, GEO_CATEGORY, GEO_SHAPE, GEO_LINE, VERTEX, TSTR
-from vdo.datatypes import UINT_struct, USHORT_struct    # BYTE_struct, 
+from vdo.datatypes import UINT_struct, USHORT_struct    # BYTE_struct,
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -139,7 +139,7 @@ class block_basegeo(block_base):
             print(f"str {self.toc.START_TXT:04x}")
             # <<<<<<<<<< GEO_LINE
 
-            bi2b = buffer.buffer.tobytes()
+            # bi2b = buffer.buffer.tobytes()
             if self.toc.li_lin.cnt:
                 # для каждой полилинии
                 """
@@ -155,9 +155,9 @@ class block_basegeo(block_base):
             # <<<<<<<<<< VERTEX
             # а вот дальше запакованы вертексы, и, вероятно, хаффманом
             if self.toc.li_vrtx.cnt:
-                huffman_lookup = self.vdo.get_block(0).lookup
-                decoded_output = b''
-                current_bits = ""
+                # huffman_lookup = self.vdo.get_block(0).lookup
+                # decoded_output = b''
+                # current_bits = ""
                 # cnt_vrtx * 4 - побайтово
                 for num in range(self.toc.li_vrtx.cnt * 4):
                     #
@@ -192,13 +192,14 @@ class block_basegeo(block_base):
         
     def max_PTR_bits(self):
         '''
+         # noqa
         Max число значащих бит в near offs в блоке из 
         seg_cnt сегментов размером по seg_size
         Максимальная длинна указателя в битах 
         (по размеру блока, на 1 меньше - word wrap)
         '''
-        #max_addr = self._const_segsize  * seg_cnt - 1   
-        # # Максимально возможное значение адреса; 2 -> 0x800*2=0xfff 
+        #max_addr = self._const_segsize  * seg_cnt - 1
+        # # Максимально возможное значение адреса; 2 -> 0x800*2=0xfff
         self_size = self.head.sizeofblock
         max_addr = self_size - 1    # self.size = self._const_segsize * self.unarc_segcn
         max_adr_bin = "{:b}".format(max_addr)
@@ -292,6 +293,7 @@ class block_basegeo(block_base):
 
     def line(self, offset: int, category: en_GEO_CATEGORY) -> GEO_LINE:
         """
+        # noqa
         Geo segment of line - poligon
             2h - PTR         p_str_name - ptr2str/0;
             2h - PTR         p_vertexes_obj; ptr2vertexes
@@ -395,7 +397,7 @@ class bitstream():
     result: bytearray       # распакованные данные
 
     def __init__(self, barray: bytes,
-                 max_PTR_bits: int, 
+                 max_PTR_bits: int,
                  start_vrtx_ptr: int,
                  li_tstr: LIST) -> None:
         """
@@ -410,7 +412,7 @@ class bitstream():
         self.max_PTR_bits = max_PTR_bits    # max possible bits in near offset
         self.start_vrtx_ptr = start_vrtx_ptr
         # self.li_tstr = li_tstr
-        self.offset_tstr = li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1
+        self.offset_tstr = li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1  # noqa
         self.counter_tstr_table_str = 0
         pass
     
@@ -450,14 +452,14 @@ class bitstream():
             left_shift: int=0 - qty left shift result
             bool_save: bool save into self.result
         """
-        res = self.pop(bit_compressed)  # pop bits from buffer 
-        val = bitarray((bit_goal - (res.nbytes * 8 - res.padbits)) * '0')  # leading zeroes
+        res = self.pop(bit_compressed)  # pop bits from buffer
+        val = bitarray((bit_goal - (res.nbytes * 8 - res.padbits)) * '0')  # leading zeroes  # noqa
         val += res                      # append lead zero with result
         val <<= left_shift              # left shift if lsch > 0
         # можно не сохранять - если значение надо интерпретировать перед сохранением
         if not bool_save:
             return val  # но тогда возвращать bitearray
-        # в последовательность байтов   bres = val.tobytes() - только значащие байты, увы.
+        # в последовательность байтов   bres = val.tobytes() - только значащие байты, увы.  # noqa
         bres = val.tobytes()
         self.result += bres
         str_res = ''
@@ -519,7 +521,7 @@ class bitstream():
         flag_calc_ptr2tstr = self.unpack(BITS_IN_WORD, self.max_PTR_bits, 0) != '0000'
         
         # /1/ word, ptr 2 first vertex
-        # запакованы не offs, а номера вертексов vertnum, 
+        # запакованы не offs, а номера вертексов vertnum,
         # т.е. off2vertex0 + 4*vertnum = offset распакованный
         # макс. число бит для архивированного значения - в vertex.cnt
         # -2: надо в 4 раза меньше бит, т.к. ptr vrtx кратен 4
@@ -549,12 +551,12 @@ class bitstream():
         self.result += b'\x00' * 2
         
         # /5/ word - ptr2table
-        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
+        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr  # noqa
         off_tstr = self.offset_tstr
         self.result += USHORT_struct.pack(off_tstr)
         self.offset_tstr += TSTR.size
         # ---- old
-        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
+        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr  # noqa
         # if flag_calc_ptr2tstr or self.counter_tstr_table_str == self.li_tstr.cnt:
         #     # num_shape - рассчитать номер в table tstr, из него - offset
             
@@ -601,6 +603,7 @@ class bitstream():
 
         """
         """
+         # noqa
         Geo segment of line - poligon
         0:    2h - PTR         p_str_name - ptr2str/0;
         2:    2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
@@ -623,7 +626,7 @@ class bitstream():
             str 0520  = 0101 0010 0000
         05 20 00 9c 40 04 5a a0 09 3c ac fb 0b e5 61 6f 00 00 05 18
         00 00 04 ac 00 00 00 00 00 00 00 00 00 00 00 00 00 00 05 1c
-      > xx xx 04 ac 
+      > xx xx 04 ac
 > p_str_name > 0520
 ptr<<2 = 530
 > ptr_vrtx ?? == 04ac?  num 260 dec | 104h
@@ -664,15 +667,15 @@ ptr<<2 = 530
 
         # /4/ > word or_b_or_c - какое-то число?
         # bitarray('0001000000000000 1000111110000000000000001100000000
-        i4_or_b_or_c = self.unpack(16, 16)        # '05 31  04 ac  3b 34 00 22  05 38   10 00'
+        i4_or_b_or_c = self.unpack(16, 16)        # '05 31  04 ac  3b 34 00 22  05 38   10 00'  # noqa
 
         # /5/ > tstr_name     (0520 ????)
         #  bitarray('100011111000000000000000110000000000000000010000100000001110010
         self.pop(1)
-        i5_p_tstr_name = self.unpack(16, 11)       # '05 31 04 ac 3b 34 00 22 05 38 10 00 f880'
+        i5_p_tstr_name = self.unpack(16, 11)       # '05 31 04 ac 3b 34 00 22 05 38 10 00 f880'  # noqa
 
         # /6/ > word or_38_or_0_b_country
-        # 
+        #
         i6_or_38_or_0_b_country = self.unpack(16, 16)
 
         #==============================
@@ -690,7 +693,7 @@ ptr<<2 = 530
 
         # /2/ > word id ?? (есть ли проверка на существование?)
         # bitarray('00111011001101000000000000100010')
-        id = self.unpack(32, 32)        #  = '05 31  04 ac  3b 34 00 22'
+        id = self.unpack(32, 32)        # = '05 31  04 ac  3b 34 00 22'
 
         # /3/ > tstr_regi > tst 0518  (? < str 0520 ??)
         # bitarray('01 10100111000 00010
@@ -705,14 +708,13 @@ ptr<<2 = 530
         #  bitarray('100011111000000000000000110000000000000000010000100000001110010
         i_tstr_name = self.unpack(16, 16)
 
-
         print(BYTESTRUCT(self.result))
         self.result.clear()
-
 
         print(self.v_byte8)
         print(BYTESTRUCT(self.result))
         """
+         # noqa
         bitarray('
         4ac 010010101100
         p_start_vrtx_num = 260 = 104h =  000100000100
@@ -733,27 +735,4 @@ ptr<<2 = 530
         """
         pass
 
-
-
-    def unpack_old(self, bit_goal:int, bit_compressed:int, left_shift:int=0, bool_save: bool=True) -> bytes:
-        ''' Pop bit_compressed from buffer, left shift, extend to bit_goal. If bool_save self.result += bres'''
-        if bit_goal not in (8, 16, 32):
-            raise Exception(f"vdo_pack:unpack: Goal must be byte, word or dword, err qti bits:'{bit_goal}'\'")
-        res = self.pop(bit_compressed) # pop bits from buffer 
-        val = bitarray((bit_goal - (res.nbytes*8 - res.padbits)) * '0')  # leading zeroes
-        #val = val.extend(res)
-        val += res                      # append lead zero with result
-        val <<= left_shift              # left shift if lsch > 0
-        # можно не сохранять - если значение надо интерпретировать перед сохранением
-        if not bool_save:
-            return val  # но тогда возвращать bitearray
-        
-        # в последовательность байтов   bres = val.tobytes() - только значащие байты, увы.
-        bres = val.tobytes()
-        self.result += bres
-        str_res = ''
-        for h in bres:
-            str_res += "{:02x}".format(h)   # str_res - for debug ))))
-        return str_res #bres
-    
-    pass # class unpack_type_one():
+    pass   # class unpack_type_one():

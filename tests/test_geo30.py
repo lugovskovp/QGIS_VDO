@@ -33,8 +33,6 @@ def write(fname, buffer):
 vdo = get_vdo()
 
 
-
-
 # ru 0x1E6EA000 === 03cdd401 14 0000 [14:MAP__05k200]
 # geo_bl = vdo.get_block(0x1E6EA000)      # ru 0x1E6EA000
 
@@ -90,9 +88,6 @@ write("1d_MAP__10k400", bl__09k100._raw)
 bla_bl = abl__abstract.cd_map[BlockType(0x1e)][chouse]
 bl__11k_11 = vdo.get_block(bla_bl)
 del bla_bl
-
-
-
 
 ss = geo_bl.read(geo_bl.toc.li_str.ptr, 16)  # облом 0x7c - b'\x00\x80\x02\x00atlantic oce' # noqa: E501
 st = geo_bl.read_tstr(geo_bl.toc.li_str.ptr)

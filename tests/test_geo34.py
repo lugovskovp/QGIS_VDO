@@ -1,5 +1,5 @@
 import struct       # noqa: F401
-from vdo.datatypes import VDO_FILE, UINT_struct, BLADDR
+from vdo.datatypes import VDO_FILE, BLADDR    # UINT_struct,
 
 
 def get_vdo():
@@ -40,7 +40,9 @@ print(bl__04.hex)
 '''bmw_a_1d = vf.block(0xE2A2A00)'''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)
 block_packed = vdo.get_block(bla_bl)
-'''bmw_a_1d = vf.block(0xE2A2A00) unk: 0x5000900
+'''
+# noqa
+bmw_a_1d = vf.block(0xE2A2A00) unk: 0x5000900
                 01 00 00 3c
                 00 00 00 8c
     08 c0 00 a0 40 01 8d 00 3e 8b 4f f4 14 62 9e 01 00 00 08 b0  WATER:[126] 
@@ -61,7 +63,8 @@ block_packed = vdo.get_block(bla_bl)
 
 # vdoRu  08a06b02 ru34 packed
 #bla_bl = BLADDR(UINT_struct.pack(0x08a06b02), vdo)  # 08a06b02 ru34 packed
-# block_packed = vdo.get_block(bla_bl.next_block_offset())        # unk beg pack = 0x0e00 0900
+# block_packed = vdo.get_block(bla_bl.next_block_offset())
+# # unk beg pack = 0x0e00 0900
 block_packed = vdo.get_block(0)        # unk beg pack = 0x0e00 0900
 with open("c:/temp/bmw txt 0x12.txt", "w") as f:
     f.write(block_packed.hex)
@@ -135,14 +138,13 @@ bl__11k_11 = vdo.get_block(bla_bl)
 del bla_bl
 
 
-
 # geo_bl = vdo.get_block(0x1E6EA000)      # ru30 0x1E6EA000
 
 pass
 #===================================
 # blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
 # blak = BLADDR(blnum, vdo)
-# geo_bl = vdo.get_block(blak)  '08 b9 30 00  0b 9a 50 00  09 19 30 00  0b fa 50 00  00 01 00 07'
+# geo_bl = vdo.get_block(blak)  '08 b9 30 00  0b 9a 50 00  09 19 30 00  0b fa 50 00  00 01 00 07'  # noqa
 
 
 pass

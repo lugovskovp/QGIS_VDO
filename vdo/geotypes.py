@@ -304,7 +304,7 @@ class VERTEX(BYTESTRUCT):
 # ----
 class TSTR(BYTESTRUCT):
     """
-    прототип TSTR - набора переводов/синонимов 
+    прототип TSTR - набора переводов/синонимов
             typedef struct{
             PTR p_str;
             en_LANGUAGE lang;
@@ -331,6 +331,7 @@ class TSTR(BYTESTRUCT):
         val = f"{self.lang.value} {self.geotype}:[{self.lang.name}]: {self.name}"
         return val
     pass    # GEO_LINE_PROTO
+
 
 # -------------------------------------------------------------------------
 # functions

@@ -3,12 +3,15 @@ block_basegeo - Базовый тип для - карт   00 16 15 1c 14 1d 1e #
 bitstream - class wrapper for bitarray
 """
 
+# flake8: noqa F841  на время отладки отключить предупреждения о неиспользуемых
+
+
 from bitarray import bitarray   # https://pypi.org/project/bitarray/
 # https://github.com/ilanschnell/bitarray/blob/master/doc/buffer.rst
 from bitarray.util import ba2int
 
 
-from vdo.block_base import block_base
+from vdo.block_base import block_base   
 from vdo.datatypes import BLADDR, LIST, BYTESTRUCT
 from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
 from vdo.geotypes import MAP_AREA, GEO_CATEGORY, GEO_SHAPE, GEO_LINE, VERTEX, TSTR
@@ -476,7 +479,7 @@ class bitstream():
         """
         if qty_bit > BITS_IN_BYTE:
             raise ValueError(qty_bit, f"Значение больше {BITS_IN_BYTE}")
-        str_res = self.unpack(BITS_IN_BYTE, qty_bit, left_shift)
+        str_res = self.unpack(BITS_IN_BYTE, qty_bit, left_shift)  
         pass
 
     def ptr(self, left_shift: int = 0) -> None:

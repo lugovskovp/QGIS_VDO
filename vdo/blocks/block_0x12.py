@@ -76,7 +76,7 @@ class block_0x12(block_base):
         vdo: VDO_FILE = unused_bladdr.vdo
         bladdr0x12 = BLADDR(b'\x00\x00\x00\x01', vdo)
         super().__init__(bladdr0x12)
-
+        self.cd_map = None
         # в русской версии, где dbrev == 30  карты вообще нет
         if self.get_dbrev == 34:
             # карта размещения групп блоков на CD, кроме 08, 09, 19, 1a, 1b, 1f

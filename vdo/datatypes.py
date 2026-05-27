@@ -34,6 +34,7 @@ DOUBLE_BYTES_CNT = 8
 ZERO_DWORD = b'\x00\x00\x00\x00'
 MAX_STR_LEN = 63    # 255
 
+BYTE_struct = struct.Struct(">c")
 UINT_struct = struct.Struct(">L")
 USHORT_struct = struct.Struct(">H")
 
@@ -167,7 +168,7 @@ class BYTESTRUCT():
     
     @property
     def hex(self):
-        he = " ".join("{:02x}".format(c) for c in self._raw)
+        he = " ".join("0x{:02x}".format(c) for c in self._raw)
         return he
 
     @property

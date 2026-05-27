@@ -62,6 +62,7 @@ class BlockType(enum.Enum):
 #!"Nederlands=1, English=2, French=3, Deutch=4, Italian=5, Spanish=6, Swedish=7"
 @enum.unique
 class en_CARINET_LANGUAGE(enum.Enum):
+    noLang = 0
     Holland = 1             # //01 (1) 	 nederland, belgie - Dutch
     English = 2             # //02 (2) 	 united kingdom, eire
     French = 3              # //03 (3) 	 france, luxembourg

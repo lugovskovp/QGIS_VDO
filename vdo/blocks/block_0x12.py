@@ -216,7 +216,7 @@ if __name__ == '__main__':
     vdo = vdoRu
     bla = BLADDR(b'\x00\x00\x00\x01', vdo)
 
-    tos = block_0x12(vdo)
+    tos = block_0x12(bla)
     li0 = tos.list(b'\x01\x00\x00\x10')
     li_WORLD_SCALES = tos.list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
 

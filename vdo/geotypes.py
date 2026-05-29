@@ -203,14 +203,14 @@ class GEO_LINE(BYTESTRUCT):
     '''
     # noqa: E501
     Geo segment of line - poligon
-        2h - PTR         p_str_name - ptr2str/0;
+        2h - PTR         p_str_name - ptr2str/0;    nullable
         2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
         4h - DWORD       id
                 // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
         2h - PTR   tstr_regi      ptr_linesign, p_line_sign; // Or start pstr
-        2h - WORD  or_b_or_c;
-        2h - PTR   tstr_name         ptr_tstr     p_p_str_name; // ptr to GEO_OBJ_STR
-        4h - WORD   or_38_or_0_b_country;
+        2h - WORD  or_b_or_c;   (??? lenght? time for drive???)
+        2h - PTR   tstr_name         ptr_tstr   gbr border - 04  p_p_str_name; // ptr to GEO_OBJ_STR
+        4h - WORD   or_38_or_0_b_country; ???en_country??? gbr border - 0
     '''
     size: int = 0x10              # ptr ptr dword qword w ptr
     name: str = ''

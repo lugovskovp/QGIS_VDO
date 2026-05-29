@@ -273,16 +273,17 @@ class BYTESTRUCT():
         result_lines = []
         for i in range(0, len(hex_list), 16):
             # Номер строки в HEX (0000, 0010, 0020 и т.д.)
-            line_number = f"{i:04X}: "
+            #   line_number = f"{i:04X}: "
             # 8 + " " + 8 HEX-значений текущей строки
             # hex_chunk = " ".join(hex_list[i : i + 16])
             hex_chunk0 = " ".join(hex_list[i : i + 8])
             hex_chunk1 = " ".join(hex_list[i + 8 : i + 16])
             # Собираем строку воедино
-            result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
+            #result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
+            result_lines.append(f"{hex_chunk0}  {hex_chunk1}")
         # Объединяем все строки
-        cr = "{}".format("\n")
-        result = cr.join(result_lines)
+        # cr = "{}".format("\n")
+        result = "   ".join(result_lines)
         return result
 
     @property

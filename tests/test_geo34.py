@@ -38,7 +38,7 @@ tos_bl = vdo.get_block(0)
 # print(bl__04.hex)
 
 '''bmw_a_1d = vf.block(0xE2A2A00)'''
-bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400]
+bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400] 0500 0900
 from vdo.block_base import block_base    # noqa
 from vdo.datatypes import BLADDR
 
@@ -46,7 +46,7 @@ block_packed: block_base
 block_packed = vdo.get_block(bla_bl)
 
 next = block_packed.head.bladdr.offset + block_packed.head.bladdr.segcnt * block_packed.vdo.segsize
-bla_bl = BLADDR(vdo.read(next, 4), vdo)
+bla_bl = BLADDR(vdo.read(next, 4), vdo)  # next off=0xe2a320 bl=0x07151903 unk= 0500 0900
 block_packed2 = vdo.get_block(bla_bl)   # 67.880639N 125.307310E  76.940337N 134.367008E
 pass
 '''

@@ -43,6 +43,9 @@ def decode_zone1_dual_escapes(zone1_bytes, weights_table, max_bytes=2064):
     """
     lookup = generate_original_huffman_lookup(weights_table)
     
+
+    look_str = "".join(f"'{key}': {val}\t|{val:02X}\n" for (key, val) in lookup.items())
+    # print(look_str)
     # Разворачиваем весь бинарный буфер Зоны 1 в битовую ленту
     bit_string = "".join(f"{byte:08b}" for byte in zone1_bytes)
     bit_iterator = iter(bit_string)

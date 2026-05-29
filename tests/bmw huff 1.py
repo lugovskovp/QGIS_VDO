@@ -96,6 +96,8 @@ def decode_bit_stream(hex_compressed, weights_table):
             
     return "".join(decoded_output)
 
+
+
 # --- ИСХОДНЫЕ ДАННЫЕ ДЛЯ ПРОВЕРКИ ---
 
 # Наш ранее собранный huffman_table (результат работы функции parse_carin_slice)
@@ -111,11 +113,14 @@ sample_huffman_table = {
     "0x59 ('Y')": 4, "0x5A ('Z')": 2
 }
 
+from vdo.constants import huffman_bytes_weights_table
+
 # Тестовый фрагмент бинарного потока
 compressed_data_hex = "04604820f0f9c23c58400f4eeec3d7a3"
 
 # Запуск декодирования с автоматической генерацией кодового дерева
-result_text = decode_bit_stream(compressed_data_hex, sample_huffman_table)
+# result_text = decode_bit_stream(compressed_data_hex, sample_huffman_table)
+result_text = decode_bit_stream(compressed_data_hex, huffman_bytes_weights_table)
 
 print("--- ТЕСТ АВТОМАТИЧЕСКОЙ СБОРКИ И ДЕКОДИРОВАНИЯ ---")
 print("Сгенерированные бинарные коды (примеры в памяти):")

@@ -70,7 +70,7 @@ def decode_bit_stream(hex_compressed, weights_table):
     # Для обеспечения распаковки 'kolymskaya' мапим пути весов на символы нижнего регистра
     huffman_lookup = {
         # Примеры битовых путей, сгенерированных из частот вашего файла:
-        "0100": "k", "0101": "o", "1100": "l", "1101": "y", 
+        "00000100": "k", "0101": "o", "1100": "l", "1101": "y", 
         "1110": "m", "1111": "s", "0010": "a", "0011": "a",
         "0001": "a" # и так далее для суффикса 'skaya'
     }
@@ -129,7 +129,9 @@ tt = b'\xf0\xf9\xc2<X@\x0fN\xeec\xd7\xa3x\xd0g\xea\x182\xa7\xeat\x96\x8f\xd7\xa1
 
 # Выполнение
 extracted_weights = parse_carin_weights(header_hex, 0xA6, 0x21A)
-decoded_text = decode_bit_stream(tt, extracted_weights)
+from vdo.constants import huffman_bytes_weights_table
+extracted_weights = huffman_bytes_weights_table
+# decoded_text = decode_bit_stream(tt, extracted_weights)
 decoded_text = decode_bit_stream(test_stream, extracted_weights)
 
 print("--- РЕЗУЛЬТАТ РАСПАКОВКИ ИЗ СТРИМА ---")

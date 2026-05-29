@@ -91,6 +91,7 @@ class block_basegeo(block_base):
             self.unk_beg_arch_dword = UINT_struct.unpack(barray[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4])[0]  # noqa
             # Всё остальное в buffer - поток битов, которые надо распаковать
             buffer = bitstream(barray[OFFSET_PACKED_DATA + 4:],  # + unk_beg_arch_dword # noqa
+                               OFFSET_PACKED_DATA,   # вот с этого офсета будем заполнять
                                self.max_PTR_bits(),
                                self.toc.li_vrtx.ptr,  # не ошибка, нужен offset vrtx
                                self.toc.li_tstr)       # и list tstr тоже надо
@@ -110,7 +111,7 @@ class block_basegeo(block_base):
                     buffer.unpack_category()
                     print(BYTESTRUCT(buffer.result))
                     self._raw += buffer.result
-                    buffer.result.clear()
+                    buffer.clear_result()
 
             # <<<<<<<<<< GEO_SHAPE
             # '01 00 00 44 65 01 00 6c 67 01 00 7c 00 00 00 8c'
@@ -131,7 +132,7 @@ class block_basegeo(block_base):
                     buffer.unpack_shape()
                     print(BYTESTRUCT(buffer.result))
                     self._raw += buffer.result
-                    buffer.result.clear()
+                    buffer.clear_result()
 
             print(f"cat {self.toc.li_cat}")
             print(f"shp {self.toc.li_shp}")
@@ -140,10 +141,13 @@ class block_basegeo(block_base):
             print(f"vrt {self.toc.li_vrtx}")
             print(f"tst {self.toc.li_tstr}")
             print(f"str {self.toc.START_TXT:04x}")
+            print(f"prev dword = {self.unk_beg_arch_dword:04x}")
+
+            self.bit_tail = buffer
             # <<<<<<<<<< GEO_LINE
 
             # bi2b = buffer.buffer.tobytes()
-            if self.toc.li_lin.cnt:
+            if self.toc.li_lin.cnt and False:
                 # для каждой полилинии
                 """
                 
@@ -152,7 +156,7 @@ class block_basegeo(block_base):
                     buffer.unpack_lines()
 
                     self._raw += buffer.result
-                    buffer.result.clear()
+                    buffer.clear_result()
 
             # <<<<<<<<<< POI
             # <<<<<<<<<< VERTEX
@@ -186,6 +190,9 @@ class block_basegeo(block_base):
         # =====================================================
         # записать распакованное
         self.write_raw()
+        print(f"tail_{self.head.bladdr}.bin")
+        with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
+            f.write(self.bit_tail.buffer.tobytes()) 
         # и, наконец, всё содержимое
         self.arr_shapes = []
         # self.lines = []
@@ -400,18 +407,21 @@ class bitstream():
     result: bytearray       # распакованные данные
 
     def __init__(self, barray: bytes,
+                 offset: int,
                  max_PTR_bits: int,
                  start_vrtx_ptr: int,
                  li_tstr: LIST) -> None:
         """
         Args:
             barray: bytes
+            offset: int         offset от начала блока, который сейчас будет распаковываться
             max_PTR_bits: int   макс число бит в near offset
             vrtx_ptr: int       стартовый offset vertexes
             li_tstr: LIST       ptr-cnt на TSTR - объекты подписей на карте
         """
         self.buffer = bitarray(buffer=barray, endian='big').copy()    # copy - else read only memory # noqa
         self.result = bytearray()   # empty
+        self.offset_start = offset
         self.max_PTR_bits = max_PTR_bits    # max possible bits in near offset
         self.start_vrtx_ptr = start_vrtx_ptr
         # self.li_tstr = li_tstr
@@ -419,6 +429,23 @@ class bitstream():
         self.counter_tstr_table_str = 0
         pass
     
+    @property
+    def av_head(self):
+        """ Начало битов - 40 штук """
+        res = self.touch(40).to01()
+        return res
+    
+    def clear_result(self):
+        """ Актуализирует стартовый оффсет и очищает результат """
+        self.offset_start = int(self.av_offs, 16)
+        self.result.clear()
+
+    @property
+    def av_offs(self):
+        current_offset = self.offset_start + len(self.result)
+        res = f"{current_offset:04x}"
+        return res
+
     @property
     def v_byte8(self):
         res = self.touch(8)
@@ -502,7 +529,7 @@ class bitstream():
         # /0/
         self.byte(BITS_IN_CATEGORY_TYPE)    # 7 bit на # en_GEO_CATEGORY
         # /1/
-        self.byte(1)    # 1 бит на полигон/полилиния  # en_DRAW_TYPE
+        self.byte(1)    # 1 бит на полигон0/полилиния1  # en_DRAW_TYPE
         # /2/
         # left shift 1 - т.к. last = 0 always in this ptr
         self.ptr(1)    # максимальное к-во бит для near ссылки word
@@ -526,13 +553,13 @@ class bitstream():
         # /1/ word, ptr 2 first vertex
         # запакованы не offs, а номера вертексов vertnum,
         # т.е. off2vertex0 + 4*vertnum = offset распакованный
-        # макс. число бит для архивированного значения - в vertex.cnt
+        # макс. число для архивированного значения - в vertex.cnt
         # -2: надо в 4 раза меньше бит, т.к. ptr vrtx кратен 4
-        p_start_vrtx_num = self.unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
-        p_start_vrtx_num = ba2int(p_start_vrtx_num)     # номер 0-го vrtx объекта
-        print(f"p_start_vrtx_num = {p_start_vrtx_num}")
+        start_vrtx_num = self.unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
+        start_vrtx_num = ba2int(start_vrtx_num)     # номер 0-го vrtx объекта
+        print(f"start_vrtx_num = {start_vrtx_num}")
         # 4* num = offset from start vertexes
-        vrtx_off = self.start_vrtx_ptr + VERTEX.size * p_start_vrtx_num
+        vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
         self.result += USHORT_struct.pack(vrtx_off)     # vertx offs 2word, save
 
         # /2/  dword, id -
@@ -683,7 +710,7 @@ ptr<<2 = 530
 
         #==============================
         print(BYTESTRUCT(self.result))
-        self.result.clear()
+        self.clear_result()
         self.unpack(16, 12)     # 12? max_PTR_bits = 11  или << а след бит - флаг?
 
         # /1/  ptr_vrtx ?? == 04ac?  num 260 dec | 104h
@@ -712,7 +739,7 @@ ptr<<2 = 530
         i_tstr_name = self.unpack(16, 16)
 
         print(BYTESTRUCT(self.result))
-        self.result.clear()
+        self.clear_result()
 
         print(self.v_byte8)
         print(BYTESTRUCT(self.result))

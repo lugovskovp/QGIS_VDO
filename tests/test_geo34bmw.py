@@ -1,5 +1,5 @@
 import struct       # noqa: F401
-from vdo.datatypes import VDO_FILE, BLADDR    # UINT_struct,    # noqa
+from vdo.datatypes import VDO_FILE, BLADDR, UINT_struct    # noqa
 from vdo.block_base import block_base        # noqa
 from vdo.datatypes import BLADDR        # noqa
 
@@ -12,8 +12,9 @@ from vdo.test_vdo import vdobmv as vdo
 
 tos_bl = vdo.get_block(0)
 
-'''bmw_a_1d = vf.block(0xE2A2A00)'''
+'''bmw_a_1d = vf.block(0xE2A2A00)  0x07154f02 '''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400] 0500 0900 распаковкаОК  # noqa
+bla_bl = BLADDR(UINT_struct.pack(0x07154f02), vdo)    # //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
 block_packed: block_base
 block_packed = vdo.get_block(bla_bl)
 
@@ -21,63 +22,37 @@ next = block_packed.head.bladdr.offset + block_packed.head.bladdr.segcnt * block
 bla_bl = BLADDR(vdo.read(next, 4), vdo)  # next off=0xe2a320 bl=0x07151903 unk= 0500 0900        # noqa
 block_packed2 = vdo.get_block(bla_bl)   # 67.880639N 125.307310E  76.940337N 134.367008E
 pass
+
 '''
 # noqa
-bmw_a_1d = vf.block(0xE2A2A00) unk: 0x5000900
-                01 00 00 3c
-                00 00 00 8c
-    08 c0 00 a0 40 01 8d 00 3e 8b 4f f4 14 62 9e 01 00 00 08 b0  WATER:[126] 
-    08 d3 02 98 40 02 3f f0 3f d4 0f e0 14 3e b2 69 00 00 08 b4  WATER:[43] 
-    08 e5 03 44 40 04 2b 13 3e 75 79 94 13 e8 ef 5a 00 00 08 b8  WATER:[267] 
-    08 f6 07 70 40 12 e8 aa 3b 0e bb 42 12 26 61 83 00 00 08 bc  WATER:[80] 
-    00 00 08 b0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 08 c0
-                shp 003C:0004 cnt:4
-                lin 0000:0000 cnt:0
-                poi 0000:0000 cnt:0
-                vrt 00A0:0204 cnt:516
-                tst 08B0:0004 cnt:4
-                str 08c0
+c:\DIY\VDO\db_src\bmw34-2010\DB\DB_0
+07154f 02  BlockType.MAP__10k400: 0x1d
 
+Max PTR bites: 11
+cat 0034:0002 cnt:2     next ptr: 0040
+shp 0040:0004 cnt:4     next ptr: 00A4
+lin 0000:0000 cnt:0 
+poi 0000:0000 cnt:0 
+vrt 00A4:011A cnt:282   next ptr: 050C
+tst 050C:0003 cnt:3     next ptr: 0518
+strs from 0518
+begin word = 0500:0900
+Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A  
 
+01 00 00 40  
+01 00 00 54  
+00 00 00 90  
+
+0000 00A4 400d9206  387EEDF5 1AF37D90  0000 050C    start_vrtx_num = 0
+0518 00B4 400cd65c  3F579717 18395941  0000 050C    start_vrtx_num = 4
+0518 04E8 400cd65c  3F579717 18395941  0000 0510    start_vrtx_num = 273
+0518 04F4 400cd65c  3F579717 18395941  0000 0514    start_vrtx_num = 276
+0000 050C 00000000  00000000 00000000  0000 0518    start_vrtx_num = 282
+tail_07154f 02.bin
+SHAPE WATER[1] :0x40
+SHAPE WATER[3] :0x54
                 '''
 
-
-# vdoRu  08a06b02 ru34 packed
-#bla_bl = BLADDR(UINT_struct.pack(0x08a06b02), vdo)  # 08a06b02 ru34 packed
-# block_packed = vdo.get_block(bla_bl.next_block_offset())
-# # unk beg pack = 0x0e00 0900
-block_packed = vdo.get_block(0)        # unk beg pack = 0x0e00 0900
-with open("c:/temp/bmw txt 0x12.txt", "w") as f:
-    f.write(block_packed.hex)
-
-with open("c:/temp/0x08a06b02.txt", "bw") as f:
-    f.write(block_packed._raw)
-"""
-# 08a06b02 ru34 packed
-01 00 00 44
-65 01 00 6c
-67 01 00 7c
-00 00 00 8c
-05 20 00 9c 40 04 5a a0 09 3c ac fb 0b e5 61 6f 00 00 05 18
-00 00 04 ac 00 00 00 00 00 00 00 00 00 00 00 00 00 00 05 1c
-> а следующий - распакованные линии.
-
-> p_str_name > 0520
-> ptr_vrtx ?? == 04ac?
-> word id ?? (есть ли проверка на существование?)
-> ptr_linesign > tst 0518  (? < str 0520 ??)
-> word or_b_or_c - какое-то число?
-> ptr_tstr     p_p_str_name ??
-> word or_38_or_0_b_country
-
-cat 0034:0003 cnt:3
-shp 0044:0001 cnt:1
-lin 006C:0002 cnt:2
-poi 0000:0000 cnt:0
-vrt 009C:011F cnt:287
-tst 0518:0002 cnt:2
-str 0520
-"""
 
 # [[04:bl_0x4]]
 # chouse = 'last'

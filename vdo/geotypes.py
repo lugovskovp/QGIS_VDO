@@ -16,9 +16,10 @@ functions:
 import re
 import struct
 
-from vdo.datatypes import BYTESTRUCT
-from vdo.datatypes import DOUBLE_BYTES_CNT, UINT_struct
-from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE
+from vdo.datatypes import BYTESTRUCT, FAR_LIST
+from vdo.datatypes import DOUBLE_BYTES_CNT
+from vdo.datatypes import UINT_struct     # , USHORT_TWICE_struct
+from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
 GEO_CATEGORY_struct = struct.Struct(">bbHxbH")
@@ -333,6 +334,42 @@ class TSTR(BYTESTRUCT):
     pass    # GEO_LINE_PROTO
 
 
+class POI_CATEGORY(BYTESTRUCT):
+    """
+    POI_CATEGORY 3*DWORD
+        QWORD   POIs  FAR_LIST
+        WORD    en_POI_CATEGORY - enum тип, категория POI
+        WORD    reference_addr_start  В 0x0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
+    """
+    bytescnt: int = 12  # 3*DWORD 0a 0c размер элемента класса в байтах
+
+    def __init__(self, buffer: bytearray, parent_vdo: struct) -> None:
+        """ """
+        super().__init__(buffer[:self.size])
+        self.fl_POIs = FAR_LIST(self.read(0, FAR_LIST.bytescnt), parent_vdo)
+        self.poi_type = en_POI_CAT(self.ushort(8))  # offs en_POI_CATEGORY - enum тип, категория POI # noqa
+        self.p_str = self.ushort(10)
+        self.name = "Proto. Name set where called"
+
+    # @property
+    # def fl_POIs(self):
+    #     ''' QWORD   POIs  FAR_LIST '''
+    #     res = FAR_LIST(self.read(0, FAR_LIST.bytescnt), )
+    #     return res
+    # @property
+    # def poi_cat(self):
+    #     ''' WORD    en_POI_CATEGORY - enum тип, категория POI '''
+    #     res = self.read(FAR_LIST.bytescnt+1 , 1) # from FAR_LIST.bytescnt, zero, enum
+    #     return en_POI_CATEGORY( struct.unpack('>B', res)[0] )
+    # @property
+    # def pname(self):
+    #     ''' WORD    reference_addr_start  В 0X0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ ''' # noqa
+    #     return self.ushort(0x0a)
+    #     barr = self.read(10, 2)
+    #     res = struct.unpack('>H', barr)[0]
+    #     return res
+
+
 # -------------------------------------------------------------------------
 # functions
 
@@ -467,32 +504,6 @@ if __name__ == '__main__':
 # noqa: E501, W291
 
 
-class POI_CATEGORY(BYTESTRUCT):     #   
-    ''' POI_CATEGORY 3*DWORD
-        QWORD   POIs  FAR_LIST
-        WORD    en_POI_CATEGORY - enum тип, категория POI 
-        WORD    reference_addr_start  В 0X0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ ''' 
-    bytescnt: int = 12  # 3*DWORD 0a 0c
-    def __init__(self, bytes_arr) -> None:
-        if (len(bytes_arr) < self.bytescnt):
-            raise TypeError(f"Размер массива байтов {len(bytes_arr)} меньше требуемого {self.bytescnt}")
-        super().__init__(bytes_arr[:self.bytescnt]) # 12 - self.bytescnt
-    @property
-    def fl_poi(self):
-        ''' QWORD   POIs  FAR_LIST '''
-        res = FAR_LIST(self.read(0, FAR_LIST.bytescnt)) 
-        return res
-    @property
-    def poi_cat(self):
-        ''' WORD    en_POI_CATEGORY - enum тип, категория POI '''
-        res = self.read(FAR_LIST.bytescnt+1 , 1) # from FAR_LIST.bytescnt, zero, enum
-        return en_POI_CATEGORY( struct.unpack('>B', res)[0] )
-    @property
-    def pname(self):
-        ''' WORD    reference_addr_start  В 0X0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
-        return self.ushort(0x0a) 
-        barr = self.read(10, 2)
-        res = struct.unpack('>H', barr)[0]
-        return res
+    
 
 """

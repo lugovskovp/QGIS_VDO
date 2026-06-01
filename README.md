@@ -99,7 +99,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] GEO_LINES
     * [x] VERTEXES
     * [ ] POI
-    * [ ] TSTR
+    * [x] TSTR
 - [ ] блоки карт - 0x14, 0x15, 0x16, 0x1C, 0x1D, 0x1E
     * [x] vdo.block(offset | bladdr) - создание объекта блока
     * [x] базовый гео-блок MVP
@@ -111,7 +111,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] полилинии - lines
         - [x] vertex
         - [ ] poi
-        - [ ] tstr_array_ объекта
+        - [x] tstr_array_ объекта
     * [x] блоки карт - childs базового гео-блока
         - [x] 0x14, 
         - [x] 0x15, 
@@ -120,10 +120,10 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] 0x1D, 
         - [x] 0x1E
     * [ ] list(blarray, blarray) - vrtx from shapes, lines 
-- [ ] archives
+- [ ] archives - распаковка
     * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
-        - [ ] categories
-        - [ ] shapes
+        - [x] categories
+        - [x] shapes (для 500 900)
         - [ ] polilines
         - [ ] vertex
         - [ ] tstr
@@ -164,7 +164,27 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [wiki/Web_Mercator_projection](https://en.wikipedia.org/wiki/Web_Mercator_projection)
 - [30-й меридиан восточной долготы](https://ru.wikipedia.org/wiki/30-%D0%B9_%D0%BC%D0%B5%D1%80%D0%B8%D0%B4%D0%B8%D0%B0%D0%BD_%D0%B2%D0%BE%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%BE%D0%B9_%D0%B4%D0%BE%D0%BB%D0%B3%D0%BE%D1%82%D1%8B)
 - [NDF: an effective mobile GIS physical storage model](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/6754/67541W/NDF-an-effective-mobile-GIS-physical-storage-model/10.1117/12.764932.short)
+- Торрент лохматого 2007 года. Единственная найденная "ручная" карта РФ VDO/Siemens GPS Россия Беларусь (СНГ + Европа) [ISO](https://rutracker.org/forum/viewtopic.php?t=894615 "Рутрекер")
 
+- VDO Dayton non C-IQ Europa 2013/2014 (BMW, Renault, Opel, Rover) CD70 / DVD90 [ISO](https://rutracker.org/forum/viewtopic.php?t=4694537)
+это диск из комплекта европа состоящего из 10 дисков и называеться он VDO Dayton non C-IQ Europa 2012-2013 (BMW, Renault, Opel, Rover)
+Страны покрытия:
+скрытый текст
+		10 CDs v.2012 - 2013
+		CD 1 Benelux
+		CD 2 Central-Europa
+		CD 3 East-Europa
+		CD 4 France
+		CD 5 Great Britain & Irlande
+		CD 6 Germany
+		CD 7 Italia/Greece
+		CD 8 Scandinavia
+		CD 9 Spain & Portugal
+		CD 10 Major Roads of Europe
+
+- Карты для устройств VDO/Siemens Dayton non C-IQ CD 2012/2013 Alpen - Австрия, Швейцария, Германия, Франция, Италия [ISO](https://rutracker.org/forum/viewtopic.php?t=4185746)
+
+- Обновление операционной системы для навигатора VDO Dayton MS5000-Os Update-MO5076 [ISO](https://rutracker.org/forum/viewtopic.php?t=1729907)
 
 # unicode color symbols
 КРАСНОЕ ЯБЛОКО (&#x1F34E;): 🍎

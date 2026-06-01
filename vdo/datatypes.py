@@ -38,6 +38,7 @@ MAX_STR_LEN = 63    # 255
 BYTE_struct = struct.Struct(">c")
 UINT_struct = struct.Struct(">L")
 USHORT_struct = struct.Struct(">H")
+USHORT_TWICE_struct = struct.Struct(">HH")
 
 
 def setup_known_types():
@@ -309,17 +310,17 @@ class BYTESTRUCT():
         return self.read(ptr, max_len).decode('cp1250').split('\x00')[0]
     
     def uchar(self, near_offset: int = 0) -> int:
-        ''' Return uchar, offset from block begin'''
+        ''' Return uchar, offset from _raw begin'''
         #uc = self.read(near_offset, UCHAR_BYTES_CNT)
         uc = self._raw[near_offset]
         return uc
 
     def ushort(self, near_offset: int = 0) -> int:
-        ''' Return unsigned short (2 bytes, word), offset from block begin'''
+        ''' Return unsigned short (2 bytes, word), offset from _raw begin'''
         return USHORT_struct.unpack_from(self._raw[near_offset:])[0]
     
     def uint(self, near_offset: int = 0) -> int:
-        ''' Return unsigned int (4 bytes, dword), offset from block begin'''
+        ''' Return unsigned int (4 bytes, dword), offset from _raw begin'''
         return UINT_struct.unpack_from(self._raw[near_offset:])[0]
 
     # def list(self, near_offset: int = 0) -> LIST:

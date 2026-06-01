@@ -5,9 +5,9 @@ import enum
 BlockType
 en_CARINET_LANGUAGE
 en_POI_CAT
-en_TeleAtlasRegion
-    en_GEO_CATEGORY
-    en_DRAW_TYPE
+en_TeleAtlasRegion (ex en_GEO_CATEGORY)
+en_GEO_CATEGORY
+en_DRAW_TYPE
 '''
 
 # flake8: noqa E221

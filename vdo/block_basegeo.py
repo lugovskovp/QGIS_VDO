@@ -209,6 +209,7 @@ class block_basegeo(block_base):
             # чтобы при чвстичной распаковке нормально работал сетап - добиваем нулями
             self._raw += b'\x00' * (self.head.sizeofblock - len(self._raw))
         # =====================================================
+        print(f"Максимальные Х и У: {self.max_bounds}")
         # записать распакованное
         self.write_raw()
         if not self.is_unpacked:
@@ -221,6 +222,24 @@ class block_basegeo(block_base):
         # self.cats = []
         self.setup_objects()
         #self.setup_all_objects()
+
+    @property
+    def max_bounds(self):
+        x_b = self.max_x()
+        y_b = self.max_y()
+        return f"{x_b:04X} x {y_b:04X}"
+
+    def max_x(self):
+        """ максимально возможное значение x """
+        delta = self.map.rigth_top._hlat - self.map.left_bottom._hlat
+        delta = delta >> self.shift_scale
+        return delta
+
+    def max_y(self):
+        """ максимально возможное значение x """
+        delta = self.map.rigth_top._hlon - self.map.left_bottom._hlon
+        delta = delta >> self.shift_scale
+        return delta
         
     def max_PTR_bits(self):
         '''

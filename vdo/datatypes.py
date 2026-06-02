@@ -137,7 +137,7 @@ class VDO_FILE():
         bl_instance = bl_class(head.bladdr)
         return bl_instance
 
-    def get_huffman_weight(self) -> dict:
+    def get_huffman_weights(self) -> dict:
         """
         в первом блоке, 0х12 есть таблица весов для дерева хаффмана
         по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
@@ -161,10 +161,58 @@ class VDO_FILE():
                 weights[key_id] = value_weight
             ptr += HUFFMAN_PAIR_SIZE
         return weights
-        """
 
+    def generate_canonical_lookup(self, weights_table):
+        """Строит каноническую lookup-мапу: { бинарная_строка: int_байт }"""
+        full_weights = {b: 1 for b in range(256)}
+        #for key_hex, weight in weights_table.items():
+        for byte_id, weight in weights_table.items():
+            try:
+                #byte_id = int(key_hex, 16)
+                if 0 <= byte_id <= 255:
+                    full_weights[byte_id] = weight
+            except ValueError:
+                continue
 
-        """
+        heap = []
+        counter = 0
+        for byte_id, weight in full_weights.items():
+            heapq.heappush(heap, (weight, counter, {'id': byte_id, 'left': None, 'right': None}))  # noqa
+            counter += 1
+
+        while len(heap) > 1:
+            w1, _, n1 = heapq.heappop(heap)
+            w2, _, n2 = heapq.heappop(heap)
+            heapq.heappush(heap, (w1 + w2, counter, {'id': None, 'left': n1, 'right': n2}))  # noqa
+            counter += 1
+
+        _, _, root_node = heapq.heappop(heap)
+        code_lengths = {}
+        
+        def collect_lengths(node, current_depth):
+            if node['id'] is not None:
+                code_lengths[node['id']] = current_depth
+                return
+            if node['left']: collect_lengths(node['left'], current_depth + 1)  # noqa
+            if node['right']: collect_lengths(node['right'], current_depth + 1)  # noqa
+
+        collect_lengths(root_node, 0)
+        sorted_elements = sorted(code_lengths.items(), key=lambda x: (x[1], x[0]))
+
+        canonical_lookup = {}
+        current_code_int = 0
+        last_length = 0
+
+        for byte_id, length in sorted_elements:
+            if length == 0: continue  # noqa
+            if last_length > 0:
+                current_code_int <<= (length - last_length)
+            bit_code = f"{current_code_int:0{length}b}"
+            canonical_lookup[bit_code] = byte_id
+            current_code_int += 1
+            last_length = length
+
+        return canonical_lookup
 
     def generate_huffman_lookup(self, weights_table: dict) -> dict:
         """

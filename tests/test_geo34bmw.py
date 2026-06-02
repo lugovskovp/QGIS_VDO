@@ -15,6 +15,7 @@ tos_bl = vdo.get_block(0)
 '''bmw_a_1d = vf.block(0xE2A2A00)  0x07154f02 '''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400] 0500 0900 распаковкаОК  # noqa
 bla_bl = BLADDR(UINT_struct.pack(0x07154f02), vdo)    # //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
+# bla_bl = BLADDR(UINT_struct.pack(0x07152605), vdo)    # 07152605 -1dp6 =2/6/0/276/0/6  # noqa
 block_packed: block_base
 block_packed = vdo.get_block(bla_bl)
 

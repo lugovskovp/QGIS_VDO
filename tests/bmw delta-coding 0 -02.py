@@ -75,12 +75,13 @@ class PointsDecoder:
         # --- Шаг 1:  РАСЧЕТ ПРЕФИКСА - СКОЛЬКО БАЙТ ЧИТАТЬ
         # - control prefix? если координата не меняется. Самый длинный 111? 
         BtR = {                 # bytes to read
-                '0': 4,         # Префикс '0' -> Микро-смещение (4 бита)
-                '10': 8,        # Префикс '10' -> Малое смещение (8 бит)
-                # '11': 16
-                '110': 12,      # Префикс '110' -> Среднее смещение (12 бит) :на первом шаге 14 валит в -?
-                '111': 16       # Префикс '111' -> Макси-смещение / Прыжок (16 бит)
+                '0': 9,         # Префикс '0' -> Микро-смещение (4 бита)
+                '10': 13,        # Префикс '10' -> Малое смещение (8 бит)
+                '11': 16        # считать все 16 бит, как значение. []
+                # '110': 13,      # Префикс '110' -> Среднее смещение (12 бит) :на первом шаге 14 валит в -?
+                # '111': 16       # Префикс '111' -> Макси-смещение / Прыжок (16 бит)
                                 # TODO а 1110/1111 - не загрузка ли следующих 16 бит в координату???
+                                # TODO или "оставить значение"?
                 }
         bits_to_read = 0            # обнуляем кво битов для чтения
         str_prefix = self._pop(1)             # берём самый первый
@@ -90,89 +91,119 @@ class PointsDecoder:
                 continue
             str_prefix += self._pop(1)
 
-
         # Шаг 2: Считываем само закодированное значение
         bi_toread = self._touch(bits_to_read).to01()
-        bi_ttafter = self._touch(20, bits_to_read).to01()
-        bi_z = bi_toread + " " + bi_ttafter
+        bi_ttafter = self._touch(18, len(bi_toread)).to01()
+        bi_z = str_prefix.to01() + " " + bi_toread + " " + bi_ttafter
+        if str_prefix.to01() == '11':
+            mode = 'load'
+        else:
+            mode = 'delta'
         encoded_val = self._read_bits(bits_to_read)
         
         # Шаг 3: Декодируем из ZigZag обратно в знаковое число
-        zz = self._decode_zigzag(encoded_val)
-        return zz
+        if mode != 'load':
+            zz = self._decode_zigzag(encoded_val)
+        else:
+            zz = encoded_val
+
+        return zz, mode
 
     def decode_polygon(self, count_vertices: int) -> list:
         """
         Декодирует цепочку вершин полигона.
         :param count_vertices: Количество следующих точек (пар X, Y) для чтения.
         :return: Список абсолютных координат [(x0, y0), (x1, y1), ...]
+
+        c0 00 39 5f 90 03
+        07154d02
+            c000 95f9  0089 c000  c000 c000
+            0000 2a82  1145 2621  1131 2533  0f47 2508
         """
         # Первая точка всегда абсолютная (из заголовка тайла)
         vertices = [(self.current_x, self.current_y)]
         
         for _ in range(count_vertices):
             # Последовательно извлекаем дельту для X и для Y
-            delta_x = self._read_delta()
-            delta_y = self._read_delta()
+            delta_x, mode = self._read_delta()
+            if mode == 'load':
+                self.current_x = delta_x
+            else:
+                # Прибавляем смещения к текущему положению (аккумулятор координат)
+                self.current_x += delta_x
+            delta_y, mode = self._read_delta()
+            if mode == 'load':
+                self.current_y = delta_y
+            else:
+                # Прибавляем смещения к текущему положению (аккумулятор координат)
+                self.current_y += delta_y
 
-            if delta_x == delta_y == 0:
-                # raise ValueError(f"ZERO delta_x: {delta_x} and delta_y: {delta_y}")
-                print(f"ZERO delta_x: {delta_x} and delta_y: {delta_y}")
+            # if delta_x == delta_y == 0:
+            #     # raise ValueError(f"ZERO delta_x: {delta_x} and delta_y: {delta_y}")
+            #     print(f"ZERO delta_x: {delta_x} and delta_y: {delta_y}")
             
             # Прибавляем смещения к текущему положению (аккумулятор координат)
-            self.current_x += delta_x
-            self.current_y += delta_y
+            # self.current_x += delta_x
+            # self.current_y += delta_y
 
-            curr_point = f"{self.current_x:04x} {self.current_y:04x}"   # debug
+            # curr_point = f"{self.current_x:04x} {self.current_y:04x}"   # debug
 
-            if self.current_x > self.max_x_y or self.current_x < 0:
-                raise ValueError(f"x: 0 > {self.current_x} > {self.max_x_y}, x")
-            if self.current_y > self.max_x_y or self.current_y < 0:
-                raise ValueError(f"y: 0 > {self.current_y} > {self.max_x_y}, y")
+            if self.current_x > self.max_x_y:
+                raise ValueError(self.current_x, f"X: too big {self.current_x:04X} > {self.max_x_y:04X}")
+            if self.current_y > self.max_x_y:
+                raise ValueError(self.current_y, f"Y: too big {self.current_y:04X} > {self.max_x_y:04X}")
+            if self.current_x < 0:
+                raise ValueError(self.current_x, f"X: less zero: {self.current_x:04X} ")
+            if self.current_y < 0:
+                raise ValueError(self.current_y, f"Y: less zero: {self.current_y:04X} ")
             
             vertices.append((self.current_x, self.current_y))
-            print(f"({self.current_x:04x}, {self.current_y:04x})")
+            print(f"({self.current_x:04x}, {self.current_y:04x})  ={delta_x}={delta_y}=")
             
         return vertices
 
 """
 07154f 02  BlockType.MAP__10k400: 0x1d
 
-Max PTR bites: 11
-cat 0034:0002 cnt:2     next ptr: 0040
-shp 0040:0004 cnt:4     next ptr: 00A4
-lin 0000:0000 cnt:0 
-poi 0000:0000 cnt:0 
-vrt 00A4:011A cnt:282   next ptr: 050C
-tst 050C:0003 cnt:3     next ptr: 0518
-strs from 0518 
-begin word = 0500:0900
-Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A  
+    Max PTR bites: 11
+    cat 0034:0002 cnt:2     next ptr: 0040
+    shp 0040:0004 cnt:4     next ptr: 00A4
+    lin 0000:0000 cnt:0 
+    poi 0000:0000 cnt:0 
+    vrt 00A4:011A cnt:282   next ptr: 050C
+    tst 050C:0003 cnt:3     next ptr: 0518
+    strs from 0518 
+    begin word = 0500:0900
+    Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A  
 
-01 00 00 40  
-01 00 00 54  
-00 00 00 90  
-start_vrtx_num = 0
-0000 00A4 400d9206  387EEDF5 1AF37D90  0000 050C  - первый полигон 4 точки
-0518 00B4 400cd65c  3F579717 18395941  0000 050C    start_vrtx_num = 4
-0518 04E8 400cd65c  3F579717 18395941  0000 0510    start_vrtx_num = 273
-0518 04F4 400cd65c  3F579717 18395941  0000 0514    start_vrtx_num = 276
-0000 050C 00000000  00000000 00000000  0000 0518    start_vrtx_num = 282
-tail_07154f 02.bin
+    01 00 00 40  
+    01 00 00 54  
+    00 00 00 90  
+    start_vrtx_num = 0
+    0000 00A4 400d9206  387EEDF5 1AF37D90  0000 050C  - первый полигон 4 точки
+    0518 00B4 400cd65c  3F579717 18395941  0000 050C    start_vrtx_num = 4
+    0518 04E8 400cd65c  3F579717 18395941  0000 0510    start_vrtx_num = 273
+    0518 04F4 400cd65c  3F579717 18395941  0000 0514    start_vrtx_num = 276
+    0000 050C 00000000  00000000 00000000  0000 0518    start_vrtx_num = 282
+    tail_07154f 02.bin
 
-more laptevykh
-vostochno sibirskoe more
+    more laptevykh
+    vostochno sibirskoe more
 
-07152401
-0000 aacf  c000 aacf  c000 0e0b  0000 0c2f
-0000 15dc  c000 13f4  c000 0000  0000 0000
+    07152401
+    0000 aacf  c000 aacf  c000 0e0b  0000 0c2f
+    0000 15dc  c000 13f4  c000 0000  0000 0000
 
-07152501
-0000 aacf  c000 aacf  c000 0fe7  0000 0e0b
+    07152501
+    0000 aacf  c000 aacf  c000 0fe7  0000 0e0b
 
-07154d02
-c000 95f9  0089 c000  c000 c000
-0000 2a82  1145 2621  1131 2533  0f47 2508
+    07154d02
+    c000 95f9  0089 c000  c000 c000
+    0000 2a82  1145 2621  1131 2533  0f47 2508
+
+    07155101
+    0000 aacf  c000 aacf  c000 0000  0089 0000
+    0000 001e  0000 06cb  2153 0000  0000 0000
 """
 # ==========================================
 # ПРИМЕР РАБОТЫ ДЕКОДЕРА
@@ -198,29 +229,34 @@ if __name__ == "__main__":
     # - NO! beg A, B,  !!! rus34, 0x08a06b02 begAB=0e00 0900, но макс ХУ = 0хс000 
     # для одинаковых значений нет проблем с очередностью
 
-    # TILE_BASE_X = 0x500
-    # TILE_BASE_Y = 0x900
+    TILE_BASE_X = 0x500
+    TILE_BASE_Y = 0x900
 
     import struct
 
-    # TILE_BASE_X = struct.unpack(">H", compressed_bitstream[0:2])[0]
-    # TILE_BASE_Y = struct.unpack(">H", compressed_bitstream[2:4])[0]
+    # а если первые 4 байта - незапакованная координата?
+    TILE_BASE_X = struct.unpack(">H", compressed_bitstream[0:2])[0]
+    TILE_BASE_Y = struct.unpack(">H", compressed_bitstream[2:4])[0]
+    compressed_bitstream = compressed_bitstream[4:]
 
     MAX_XY_VAL = 0xC000
-    TILE_BASE_X = 0
-    TILE_BASE_Y = 0
+    # TILE_BASE_X = 0
+    # TILE_BASE_Y = 0
 
     # Инициализируем низкоуровневый декодер
     print(f"({TILE_BASE_X:04x}, {TILE_BASE_Y:04x})")
     decoder = PointsDecoder(compressed_bitstream, TILE_BASE_X, TILE_BASE_Y, MAX_XY_VAL)
 
-    decoder2 = PointsDecoder(compressed_bitstream, TILE_BASE_Y, TILE_BASE_X, MAX_XY_VAL)
+    #  decoder2 = PointsDecoder(compressed_bitstream, TILE_BASE_Y, TILE_BASE_X, MAX_XY_VAL)
     
 
     # Декодируем следующие вершины
-    polyline = decoder.decode_polygon(count_vertices=10)
+    # 07154d02
+    # c000 95f9  0089 c000  c000 c000
+    # 0000 2a82  1145 2621  1131 2533  0f47 2508
+    polyline = decoder.decode_polygon(count_vertices=4)
     print()
-    polyline2 = decoder2.decode_polygon(count_vertices=10)
+    
     
     # print("--- Результат декодирования ---")
     # print(f"Стартовая точка P0: {polyline[0]}")

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://opengis.net">
+  <Document>
+    <Placemark>
+      <name>Прямоугольник Чукотка</name>
+      <Style>
+        <LineStyle>
+          <color>ff0000ff</color>
+          <width>3</width>
+        </LineStyle>
+        <PolyStyle>
+          <color>400000ff</color>
+        </PolyStyle>
+      </Style>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              170.605798,76.940337,0
+              179.665496,76.940337,0
+              179.665496,67.880639,0
+              170.605798,67.880639,0
+              170.605798,76.940337,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

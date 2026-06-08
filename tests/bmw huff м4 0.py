@@ -42,6 +42,7 @@ beringovo more
 0518 1500 0518 1500 0518 1500 
 
 00 c10c 10 c10c 10 c10c 1f  
+
 ---
 07153803 =1dp4 =3/8/0/157/0/5
 beringovo more

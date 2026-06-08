@@ -75,9 +75,9 @@ class PointsDecoder:
         # --- Шаг 1:  РАСЧЕТ ПРЕФИКСА - СКОЛЬКО БАЙТ ЧИТАТЬ
         # - control prefix? если координата не меняется. Самый длинный 111? 
         BtR = {                 # bytes to read
-                '0': 9,         # Префикс '0' -> Микро-смещение (4 бита)
-                '10': 13,        # Префикс '10' -> Малое смещение (8 бит)
-                '11': 16        # считать все 16 бит, как значение. []
+                '0': 9,         # 9 Префикс '0' -> Микро-смещение (4 бита)
+                '10': 9,        # 4(16-FF5F) 5(10-F12A) 6(7-E09C) 7(16-F5FB) 8(29-E4B1) 9(276=0xc0b7)   11 12 13 Префикс '10' -> Малое смещение (8 бит)
+                '11': 16        # 16 считать все 16 бит, как значение. []
                 # '110': 13,      # Префикс '110' -> Среднее смещение (12 бит) :на первом шаге 14 валит в -?
                 # '111': 16       # Префикс '111' -> Макси-смещение / Прыжок (16 бит)
                                 # TODO а 1110/1111 - не загрузка ли следующих 16 бит в координату???
@@ -92,9 +92,10 @@ class PointsDecoder:
             str_prefix += self._pop(1)
 
         # Шаг 2: Считываем само закодированное значение
+        bi_prefix = str_prefix.to01()
         bi_toread = self._touch(bits_to_read).to01()
         bi_ttafter = self._touch(18, len(bi_toread)).to01()
-        bi_z = str_prefix.to01() + " " + bi_toread + " " + bi_ttafter
+        bi_z = bi_prefix + " " + bi_toread + " " + bi_ttafter
         if str_prefix.to01() == '11':
             mode = 'load'
         else:
@@ -107,7 +108,8 @@ class PointsDecoder:
         else:
             zz = encoded_val
 
-        return zz, mode
+        print(f"{str_prefix.to01()} \t{zz:04X}: {zz} :: {encoded_val:02x}:{encoded_val:b}")
+        return zz, mode     # на 75й итерации - '0 100010101 001000110100000101', on 126
 
     def decode_polygon(self, count_vertices: int) -> list:
         """
@@ -115,7 +117,8 @@ class PointsDecoder:
         :param count_vertices: Количество следующих точек (пар X, Y) для чтения.
         :return: Список абсолютных координат [(x0, y0), (x1, y1), ...]
 
-        c0 00 39 5f 90 03
+        07154f02       1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'
+            ... c0 00 39 5f 90 03
         07154d02
             c000 95f9  0089 c000  c000 c000
             0000 2a82  1145 2621  1131 2533  0f47 2508
@@ -158,7 +161,7 @@ class PointsDecoder:
                 raise ValueError(self.current_y, f"Y: less zero: {self.current_y:04X} ")
             
             vertices.append((self.current_x, self.current_y))
-            print(f"({self.current_x:04x}, {self.current_y:04x})  ={delta_x}={delta_y}=")
+            print(f"({self.current_x:04x}, {self.current_y:04x})[{len(vertices)}]  ={delta_x}={delta_y}=")
             
         return vertices
 
@@ -175,6 +178,8 @@ class PointsDecoder:
     strs from 0518 
     begin word = 0500:0900
     Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A  
+    67.880639N 170.605798E  76.940337N 179.665496E 
+    'C000 x C000'
 
     01 00 00 40  
     01 00 00 54  
@@ -246,19 +251,31 @@ if __name__ == "__main__":
     # Инициализируем низкоуровневый декодер
     print(f"({TILE_BASE_X:04x}, {TILE_BASE_Y:04x})")
     decoder = PointsDecoder(compressed_bitstream, TILE_BASE_X, TILE_BASE_Y, MAX_XY_VAL)
-
-    #  decoder2 = PointsDecoder(compressed_bitstream, TILE_BASE_Y, TILE_BASE_X, MAX_XY_VAL)
     
 
     # Декодируем следующие вершины
     # 07154d02
     # c000 95f9  0089 c000  c000 c000
     # 0000 2a82  1145 2621  1131 2533  0f47 2508
-    polyline = decoder.decode_polygon(count_vertices=4)
+    # vrt 00A4:011A cnt:282
+    # polyline = decoder.decode_polygon(count_vertices=282-1)
+    polyline = decoder.decode_polygon(count_vertices=275)
     print()
     
+    # --- --- Результат декодирования ---
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    # 2. Создаем DataFrame
+    df = pd.DataFrame(data, columns=['X', 'Y'])
+
+    # 3. Строим график
+    df.plot(x='X', y='Y', marker='o', color='b')
+
+    # 4. Показываем график
+    plt.show()
     
-    # print("--- Результат декодирования ---")
+    # print("")
     # print(f"Стартовая точка P0: {polyline[0]}")
     # print(f"Декодированная точка P1: {polyline[1]}")
     # print(f"Ожидалось смещение (-1, +3): {polyline[1][0] - polyline[0][0] == -1 and polyline[1][1] - polyline[0][1] == 3}")

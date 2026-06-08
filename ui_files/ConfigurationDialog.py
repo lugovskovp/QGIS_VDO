@@ -16,7 +16,7 @@ import os
 from qgis.PyQt import uic
 from qgis.PyQt.QtWidgets import QDialog, QWidget
 
-from .settings import Settings
+from QGIS_VDO.settings import Settings
 
 
 FORM_CLASS = uic.loadUiType(

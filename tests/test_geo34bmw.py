@@ -15,7 +15,7 @@ tos_bl = vdo.get_block(0)
 '''bmw_a_1d = vf.block(0xE2A2A00)  0x07154f02 '''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400] 0500 0900 распаковкаОК  # noqa
 bla_bl = BLADDR(UINT_struct.pack(0x07154f02), vdo)    # //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
-# bla_bl = BLADDR(UINT_struct.pack(0x07152605), vdo)    # 07152605 -1dp6 =2/6/0/276/0/6  # noqa
+bla_bl = BLADDR(UINT_struct.pack(0x07152605), vdo)    # 07152605 -1dp6 =2/6/0/276/0/6  # noqa
 block_packed: block_base
 block_packed = vdo.get_block(bla_bl)
 
@@ -40,18 +40,20 @@ strs from 0518
 begin word = 0500:0900
 Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A  
 
-01 00 00 40  
-01 00 00 54  
-00 00 00 90  
+01 00 00 40  : 54-40 / 14 = 1 == 1 stuck
+01 00 00 54  : 90-54/14 = 3 stuck
+00 00 00 90  :
 
-0000 00A4 400d9206  387EEDF5 1AF37D90  0000 050C    start_vrtx_num = 0
-0518 00B4 400cd65c  3F579717 18395941  0000 050C    start_vrtx_num = 4
-0518 04E8 400cd65c  3F579717 18395941  0000 0510    start_vrtx_num = 273
-0518 04F4 400cd65c  3F579717 18395941  0000 0514    start_vrtx_num = 276
-0000 050C 00000000  00000000 00000000  0000 0518    start_vrtx_num = 282
+40:  0000 00A4 400d9206  387EEDF5 1AF37D90  0000 050C    start_vrtx_num = 0 океан без подписи?
+54:  0518 00B4 400cd65c  3F579717 18395941  0000 050C    start_vrtx_num = 4
+68:  0518 04E8 400cd65c  3F579717 18395941  0000 0510    start_vrtx_num = 273
+7c:  0518 04F4 400cd65c  3F579717 18395941  0000 0514    start_vrtx_num = 276
+90:  0000 050C 00000000  00000000 00000000  0000 0518    start_vrtx_num = 282
 tail_07154f 02.bin
 SHAPE WATER[1] :0x40
 SHAPE WATER[3] :0x54
+
+
                 '''
 
 

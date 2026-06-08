@@ -105,7 +105,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] базовый гео-блок MVP
     * [ ] гео-объекты генерируются в базовом гео-блоке
         - [x] ТОС и область карты
-        - [ ] все объекты - lines & shapes
+        - [ ] все объекты - lines & shapes & poi
         - [x] список категорий
         - [x] полигоны - shapes
         - [x] полилинии - lines
@@ -126,6 +126,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] shapes (для 500 900)
         - [ ] polilines
         - [ ] vertex
+        - [ ] poi
         - [ ] tstr
         - [ ] str
         - [ ] странное число после ТОС

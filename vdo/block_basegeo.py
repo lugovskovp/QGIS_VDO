@@ -151,8 +151,8 @@ class block_basegeo(block_base):
             '''
             # если есть shapes - замкнутые полигоны - распаковываем
             if self.toc.li_shp.cnt:
-                # Для каждой геокатегории
-                
+                # raise ValueError("toc.li_shp: ", self.toc.li_shp, " но GEO_SHAPE еще не реализован")
+                # Для каждого шейпа (полигона) из toc.list_shape:
                 for _ in range(self.toc.li_shp.cnt + 1):     # +1 - всегда есть завершающий итем, нулевой # noqa
                     buffer.unpack_shape()
                     #----------------
@@ -172,6 +172,8 @@ class block_basegeo(block_base):
                 """
                 
                 """
+                # а пока что не реализовано
+                raise ValueError("toc.li_lin: ", self.toc.li_lin, " но GEO_LINE еще не реализован")
                 for _ in range(self.toc.li_lin.cnt + 1):     # +1 - всегда есть завершающий итем, нулевой # noqa
                     buffer.unpack_lines()
 
@@ -179,9 +181,14 @@ class block_basegeo(block_base):
                     buffer.clear_result()
 
             self.bit_tail = buffer
+
             # <<<<<<<<<< POI
+            if self.toc.li_poi.cnt:
+                # а пока что не реализовано
+                raise ValueError("toc.li_poi: ", self.toc.li_poi, " но POI еще не реализован")
+
             # <<<<<<<<<< VERTEX
-            # а вот дальше запакованы вертексы, и, вероятно, хаффманом
+            # а вот дальше запакованы вертексы, и, вероятно, хаффманом UPD: delta-coding
             if self.toc.li_vrtx.cnt:
                 # huffman_lookup = self.vdo.get_block(0).lookup
                 # decoded_output = b''

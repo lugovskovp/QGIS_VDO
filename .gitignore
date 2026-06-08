@@ -3,3 +3,6 @@
 d0*.py
 __pycache__
 examples
+
+tail_*.bin
+

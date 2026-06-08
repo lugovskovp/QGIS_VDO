@@ -16,22 +16,22 @@ class block_0x13(block_base):
 
     @property
     def str_label(self):
-        return self.read_str(OFFSET_LIST_STR_LABEL)
+        return self.read_li_str(OFFSET_LIST_STR_LABEL)
 
     @property
     def str_description(self):
-        return self.read_str(OFFSET_LIST_STR_DESCRIPTION)
+        return self.read_li_str(OFFSET_LIST_STR_DESCRIPTION)
 
     @property
     def str_information(self):
-        return self.read_str(OFFSET_LIST_STR_INFORMATION)
+        return self.read_li_str(OFFSET_LIST_STR_INFORMATION)
 
 
 # -------------------------------------------------------------------------
 
 if __name__ == '__main__':
     from vdo.datatypes import VDO_FILE, BYTESTRUCT
-    from vdo.blocks.block_0x12 import block_0x12
+    from vdo.blocks import block_0x12
 
     fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
     vdo30 = VDO_FILE(fpath30)
@@ -42,8 +42,12 @@ if __name__ == '__main__':
     fpathbmw = 'c:\\DIY\\VDO\\db_src\\bmw34-2010\\DB\\DB_0'
     vdobmv = VDO_FILE(fpathbmw)
 
+    fpathRu = 'c:\\DIY\\VDO\\db_src\\ru_2013\\ru\\carindb'
+    vdoRu = VDO_FILE(fpathRu)
+
     vdo = vdobmv
     vdo = vdo34
+    vdo = vdoRu
     bla = BLADDR(b'\x00\x00\x00\x01', vdo)
 
     #
@@ -60,14 +64,17 @@ if __name__ == '__main__':
     interest = BYTESTRUCT(inf.read(0x2c, 0x10))
     
     print()
-    # print(inf.str_information)
+    print(inf.str_information)
     # bnl : 1.  name:                     bnl_nok_nok_12q4_20130128p.
     #       2.  content:                  benelux (benelux)
     #       3.  oem:                      nok
-    # rus : 1.  name:                     bal_ad_nod_45051_20050210k.
+    # old : 1.  name:                     bal_ad_nod_45051_20050210k.
     #       2.  content:                  baltics (europe)
     #       3.  oem:                      aftersales
     # bmw : 1.  name:                     rus_hw_ntq_opel_09q4_20100305p21.
+    #       2.  content:                  russia (russia)
+    #       3.  oem:                      opel
+    # rus : 1.  name:                     rus_hw_ntq_opel_11q4_20120416p23.
     #       2.  content:                  russia (russia)
     #       3.  oem:                      opel
 

@@ -6,8 +6,8 @@
 import zlib             # распаковка архивов типа 2 и 3
 
 # from vdo.enums import BlockType
-from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST
-from vdo.datatypes import ZERO_DWORD
+from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX
+from vdo.datatypes import ZERO_DWORD, MAX_STR_LEN
 from vdo.geotypes import COORD
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
@@ -32,6 +32,9 @@ class block_base(BYTESTRUCT):
             self._raw = zero
             return
         #
+        self.dbrev = addr.vdo.dbrev
+        self.path = addr.vdo.path
+        #
         self.vdo = addr.vdo
         # и тут инициировать BYTESTRUCT
         size = addr.sizeofblock if addr.offset else BLOCK_0x12_SIZE
@@ -40,6 +43,7 @@ class block_base(BYTESTRUCT):
         # property self.head = - информация о блоке: тип, архивирован ли, размер(ы)
         self._raw = buffer[:BLSTART.size]
         # при необходимости, распаковать
+        self.is_unpacked = True
         if self.head.arch_type == 0:
             super().__init__(buffer)
             return
@@ -51,18 +55,20 @@ class block_base(BYTESTRUCT):
             # распаковать запакованное
             unarc_raw += zlib.decompress(buffer[ZLIB_BEGIN_OFFSET:],
                                          bufsize=self.head.segcnt * self.vdo.segsize)
-            #self._raw = unarc_raw
             super().__init__(unarc_raw)
             return
         elif self.head.arch_type == 1:
             # ВОТ ТУТ САМОЕ ПЕЧАЛЬНОЕ
+            #raise ValueError("пока что вот так, запаковано")
+            self.is_unpacked = False
             pass
         super().__init__(buffer)
         
         pass
 
     def __repr__(self) -> str:
-        return self.head.__repr__()
+        packed = '@ ' if self.head.arch_type else ''
+        return packed + self.head.__repr__()
 
     @property
     def head(self) -> BLSTART:
@@ -73,6 +79,16 @@ class block_base(BYTESTRUCT):
             BLSTART: structure
         """
         return BLSTART(self.read(0, BLSTART.size), self.vdo)
+
+    def offset_next(self) -> int:
+        """
+        offset следующего блока (да, если последний - то и упс)
+        """
+        if not len(self.vdo.path):
+            return None
+        # if filesize < next ????
+        next = self.head.bladdr.offset + (self.vdo.segsize * self.head.segcnt)
+        return next
 
     def bladdr(self, value: bytearray | int) -> BLADDR:
         """
@@ -121,22 +137,55 @@ class block_base(BYTESTRUCT):
         """
         return COORD(self.read(offset, COORD.size))
 
-    def read_str(self, ptr_list_str: int):
+    def ch_idx(self, ptr_ch_idx: int) -> CH_IDX:
+        """
+        CH_IDX указатель на список букв или (страны, города, улицы, poi)
+        Args:
+            ptr_ch_idx: offset
+        Returns:
+            CH_IDX: object
+        """
+        buf = self.read(ptr_ch_idx, CH_IDX.size)
+        return CH_IDX(buf, self.vdo)
+
+    def read_li_str(self, ptr_list_str: int):
         """
         Строка, адрес и размер которой в LIST по offset
         Args:
-            ptr_list_str: int offset ptr-cnt
+            ptr_list_str: int offset to ptr-cnt
         Returns:
             str: строка
         """
         li = self.list(ptr_list_str)
-        # -1: 'no label\x00'
+        # -1: 'no label\x00', последний char \x00
         return self.read(li.ptr, li.cnt - 1).decode('cp1250')
+
+    def read_str(self, offset: int) -> str:
+        """
+        Чтение строки, в vdo_file не выйдет, запакованные блоки
+        Args:
+            offset: offset в текущем блоке
+        Returns:
+            str: 0-ended строка
+        """
+        # offset = 0 -> нет строки
+        if offset:
+            string = self.read(offset, MAX_STR_LEN)
+            return string.decode('cp1250').split('\x00')[0]
+        return ''
+
+    def write_raw(self, name: str = "base_block.txt"):
+        """
+        сохранить текущее в файл
+        """
+        fname = "c:/temp/" + name
+        with open(fname, "bw") as f:
+            f.write(self._raw)
 
 
 # --------------------------------------------------------
 if __name__ == "__main__":
-    from vdo.datatypes import VDO_FILE
+    from vdo.vdo import VDO_FILE
 
     fpath = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
     vdo = VDO_FILE(fpath)

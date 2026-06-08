@@ -45,36 +45,40 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 from vdo.enums import BlockType
 from vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
 from vdo.datatypes import OFFSET_ONE_SEG_SIZE, OFFSET_DB_REVISION
-from vdo.geotypes import COORD      # noqa: F401 (Ignores only "unused import")
+from vdo.geotypes import COORD
 from vdo.block_base import block_base
 
 
 OFFSET_LIST_PTR_07_LST_WORLD_SCALES = 0x08      # 00 34 00 01
 
-OFFSET_FARLIST_0B_CH_COUNTRYES = 0x0C      # RU 00 00 03 01 00 0c 00 14
-OFFSET_FARLIST_0B_CH_COUNTRYES_num2 = 0x44
+OFFSET_FARLIST_0B_CH_COUNTRYES = 0x0C       # RU 00 00 03 01 00 0c 00 14
+OFFSET_FARLIST_0B_CH_COUNTRYES_num2 = 0x44  # only in dbrev 34
 
 OFFSET_BLADDR_13_BIBLIOGR = 0x14      # RU 00 00 01 01 00 01 00 1e
 
-OFFSET_CD_MAP_BLOCKS = 0x4c
-
-OFFSET_MAX_SEGS_PACKED_SH = 0x1e
+OFFSET_ALLWAYS_12 = 0x1e
 OFFSET_MAX_SEGS_UNPACKED_SH = 0x22
-OFFSET_KNOWN_BLOCK_TYPES = 0x24
-OFFSET_MAY_BE_HUFFMAN_THREE = 0x28
 
+# only in dbrev 34
+OFFSET_CD_MAP_BLOCKS = 0x4c
 OFFSET_AREA_A = 0x34
 OFFSET_AREA_B = 0x50
+
+OFFSET_KNOWN_BLOCK_TYPES = 0x24     # list(0068 001F) - типы блоков по возрастанию от 00 до 1E # noqa 
+
+OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28  # list(00a6 005d) - похоже на список весов дерева хафмана  # noqa 
+# начальный адрес таблицы весов и количество элементов.
 
 
 class block_0x12(block_base):
     ''' Самый первый, 0й, уникальный блок type = 0x12 '''
 
-    def __init__(self, vdo: VDO_FILE) -> None:
+    def __init__(self, unused_bladdr: BLADDR) -> None:
         """ --- """
+        vdo: VDO_FILE = unused_bladdr.vdo
         bladdr0x12 = BLADDR(b'\x00\x00\x00\x01', vdo)
         super().__init__(bladdr0x12)
-        #
+        self.cd_map = None
         # в русской версии, где dbrev == 30  карты вообще нет
         if self.get_dbrev == 34:
             # карта размещения групп блоков на CD, кроме 08, 09, 19, 1a, 1b, 1f
@@ -91,6 +95,8 @@ class block_0x12(block_base):
                 self.cd_map[type] = {"first" : first,
                                      "last" : last,
                                      "idxidx08" : idxidx08}
+
+                pass
             pass
             
     # -------------------------------------------------------
@@ -106,13 +112,13 @@ class block_0x12(block_base):
         return self.ushort(OFFSET_DB_REVISION)
 
     @property
-    def get_max_segs_in_bl(self) -> int:
+    def likely_const_ALLWAYS_12(self) -> int:
         """ not sure: max segments in unpacked block """
-        return self.ushort(OFFSET_MAX_SEGS_PACKED_SH)
+        return self.ushort(OFFSET_ALLWAYS_12)
 
     @property
-    def get_max_segs_in_unpack_bl(self) -> int:
-        """ not sure: max segments in unpacked block """
+    def likely_MAX_SEGS_UNPACKED(self) -> int:
+        """ вероятно, максимальное количество сегментов в распакованном"""
         return self.ushort(OFFSET_MAX_SEGS_UNPACKED_SH)
 
     @property
@@ -150,18 +156,47 @@ class block_0x12(block_base):
         """
         return self.get_farlist_ch_country().bladdr
 
-    def get_area_1(self):
+    @property
+    def area_A(self):
         """
 
         """
-        pass
+        if self.dbrev != 34:
+            # db_rev=30 - w|o rectangle area
+            return None
+        lb = self.coord(OFFSET_AREA_A)                    # left bottom
+        rt = self.coord(OFFSET_AREA_A + COORD.size)       # right top
+        return (lb, rt)
+
+    @property
+    def area_B(self):
+        """
+
+        """
+        if self.dbrev != 34:
+            # db_rev=30 - w|o rectangle area
+            return None
+        lb = self.coord(OFFSET_AREA_B)                    # left bottom
+        rt = self.coord(OFFSET_AREA_A + COORD.size)       # right top
+        return (lb, rt)
 
 
+"""
+# noqa: E501
+
+
+    def get_huf_pair(self):
+        ''' DEBUG '''
+        l_ht = self.list(OFFSET_MAY_BE_HUFFMAN_THREE)
+        PAIR_REC_LEN = 4
+        for off in range(l_ht.ptr, l_ht.ptr+(PAIR_REC_LEN * l_ht.cnt), PAIR_REC_LEN):
+            (ch, val) = (self.ushort(off), self.ushort(off+2))
+            yield (ch, val)
+"""
 # -------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from vdo.datatypes import VDO_FILE
-
+    
     vdo2 = VDO_FILE()
 
     fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
@@ -169,15 +204,19 @@ if __name__ == '__main__':
 
     fpath34 = 'c:\\DIY\\VDO\\db_src\\1. BNL_13_14\\carindb'
     vdo34 = VDO_FILE(fpath34)
-    
+
+    fpathRu = 'c:\\DIY\\VDO\\db_src\\ru_2013\\ru\\carindb'
+    vdoRu = VDO_FILE(fpathRu)
+
     fpathbmw = 'c:\\DIY\\VDO\\db_src\\bmw34-2010\\DB\\DB_0'
     vdobmv = VDO_FILE(fpathbmw)
 
     vdo = vdobmv
     vdo = vdo34
+    vdo = vdoRu
     bla = BLADDR(b'\x00\x00\x00\x01', vdo)
 
-    tos = block_0x12(vdo)
+    tos = block_0x12(bla)
     li0 = tos.list(b'\x01\x00\x00\x10')
     li_WORLD_SCALES = tos.list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
 
@@ -195,6 +234,15 @@ if __name__ == '__main__':
     fl_CH_COUNTRYES = tos.farlist(OFFSET_FARLIST_0B_CH_COUNTRYES)
     fl_CH_COUNTRYES2 = tos.farlist(OFFSET_FARLIST_0B_CH_COUNTRYES_num2)
     
+    # bmw
+    # a (35.317104N 9.161808W, 70.479517N 93.151702E)
+    # b (41.282694N 19.767135E, 70.479517N 93.151702E)
+    # bnl
+    # a (49.450295N 1.478463E, 55.251335N 7.226644E)
+    # b (49.450295N 2.555703E, 55.251335N 7.226644E)
+    # rus
+    # a (35.317104N 9.161808W, 70.479517N 149.996368E)
+    # b (41.282694N 19.767135E, 70.479517N 149.996368E)
     pass
 
 '''

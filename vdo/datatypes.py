@@ -1,9 +1,6 @@
-import struct
-import os.path
-from vdo.enums import BlockType
+"""
 
-
-'''
+классы:
 VDO_FILE
 BYTESTRUCT
 BL_ADDR  DWORD, Структура адреса блока
@@ -12,8 +9,18 @@ LIST
 FAR_LIST
 CH_IDX
 BLSTART
+"""
 
-'''
+
+import os.path
+import struct
+import importlib
+import heapq
+
+from vdo.enums import BlockType
+
+
+OFFSET_TOC = 0x08
 
 OFFSET_DB_REVISION = 0x1a
 DEFAULT_DB_REVISION = 0x1e
@@ -25,15 +32,39 @@ USHORT_BYTES_CNT = 2
 UINT_BYTES_CNT = 4
 DOUBLE_BYTES_CNT = 8
 
-USHORT_struct = struct.Struct(">H")
-UINT_struct = struct.Struct(">L")
-
 ZERO_DWORD = b'\x00\x00\x00\x00'
+MAX_STR_LEN = 63    # 255
+
+BYTE_struct = struct.Struct(">c")
+UINT_struct = struct.Struct(">L")
+USHORT_struct = struct.Struct(">H")
+USHORT_TWICE_struct = struct.Struct(">HH")
+
+
+def setup_known_types():
+    """ """
+    # 'C:\\Work\\QGIS_VDO\\vdo'
+    plugin_dir = os.path.dirname(os.path.realpath(__file__))
+    # 'C:\\Work\\QGIS_VDO\\vdo\\blocks'
+    dirname = os.path.join(plugin_dir, "blocks")
+    # список файлов в директории - только файлы
+    files = [f for f in os.listdir(dirname) if os.path.isfile(os.path.join(dirname, f))]
+    # оставить только файлы, начинающемися на 'block_', без расширений [0:-3]
+    block_files = [f[0:-3] for f in files if f[0:6] == 'block_']
+    # 'block_0x0B', 'block_0x12' ...
+    # '0x0B' '0x12' '0x13' '0xEE' - block types
+    known_types = dict([(int(t[-4:], 16), t) for t in block_files])
+    # {(11, 'block_0x0B'), (18, 'block_0x12'), (19, 'block_0x13')...}
+    return known_types
+
+
+# создается список блоков, для которых уже есть классы
+KNOWN_BLOCKS = setup_known_types()
 
 
 # ----
 class VDO_FILE():
-    """ --- """
+    """ класс работы с файлом формата carindb """
     path: os.path
     # :path: full filepath, os.path or None
     dbrev: int
@@ -65,7 +96,194 @@ class VDO_FILE():
             f.seek(offset)
             return f.read(size)
         return None
-    
+
+    def get_block(self, addr: int) -> object:
+        """
+        Возвращает блок по offset addr или из BLADDR adr
+        Args:
+            addr: int offset | BLADDR block address
+        Returns:
+            Block: block base structure needed type (if possible)
+        """
+        if type(addr) is int:
+            offset = addr
+        elif type(addr) is BLADDR:
+            if not UINT_struct.unpack(addr._raw)[0]:       # == 0
+                # raise ValueError(addr, " bladdr 00 00 00 00")
+                return None
+            offset = addr.offset
+        else:
+            # только offset начала блока или BLADDR
+            raise ValueError(addr, " Тип не int и не bladdr")
+        head = BLSTART(self.read(offset, BLSTART.size), self)
+        if head.bladdr.offset != offset:
+            # а это и не блок вовсе
+            return None
+        # а описан ли тип этого блока?
+        if head.bltype.value in KNOWN_BLOCKS.keys():
+            bl = KNOWN_BLOCKS[head.bltype.value]
+            # импорт класса bl из модуля
+            bl_class = getattr(importlib.import_module('vdo.blocks.' + bl), bl)
+            bl_class.type = head.bltype.value
+            bl_class.type_name = bl
+        else:
+            # no this type in known blocks
+            bl_class = getattr(importlib.import_module('vdo.block_base'), 'block_base')
+            #return block_base(head.bladdr, self)
+            bl_class.type = head.bltype.value
+            bl_class.type_name = 'block_base'
+            pass
+        #
+        bl_instance = bl_class(head.bladdr)
+        return bl_instance
+
+    def get_huffman_weights(self) -> dict:
+        """
+        в первом блоке, 0х12 есть таблица весов для дерева хаффмана
+        по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
+        Таблица одна на весь файл - и логично не привязывать её к блоку
+        Returns:
+            weight: dict {key_id : value_weight}
+        """
+        OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
+        # начальный адрес таблицы весов и количество элементов.
+        HUFFMAN_PAIR_SIZE = 4
+        WORD_PAIR_struct = struct.Struct(">HH")
+
+        weights = {}
+        bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
+        (ptr, cnt) = WORD_PAIR_struct.unpack(bytes_list)
+        for _ in range(cnt):
+            (key_id, value_weight) = WORD_PAIR_struct.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
+            #if 0 <= key_id <= 0xFFFF:
+            # Нам нужны только символы с реальным весом > 0
+            if value_weight > 0:
+                weights[key_id] = value_weight
+            ptr += HUFFMAN_PAIR_SIZE
+        return weights
+
+    def generate_canonical_lookup(self, weights_table):
+        """Строит каноническую lookup-мапу: { бинарная_строка: int_байт }"""
+        full_weights = {b: 1 for b in range(256)}
+        #for key_hex, weight in weights_table.items():
+        for byte_id, weight in weights_table.items():
+            try:
+                #byte_id = int(key_hex, 16)
+                if 0 <= byte_id <= 255:
+                    full_weights[byte_id] = weight
+            except ValueError:
+                continue
+
+        heap = []
+        counter = 0
+        for byte_id, weight in full_weights.items():
+            heapq.heappush(heap, (weight, counter, {'id': byte_id, 'left': None, 'right': None}))  # noqa
+            counter += 1
+
+        while len(heap) > 1:
+            w1, _, n1 = heapq.heappop(heap)
+            w2, _, n2 = heapq.heappop(heap)
+            heapq.heappush(heap, (w1 + w2, counter, {'id': None, 'left': n1, 'right': n2}))  # noqa
+            counter += 1
+
+        _, _, root_node = heapq.heappop(heap)
+        code_lengths = {}
+        
+        def collect_lengths(node, current_depth):
+            if node['id'] is not None:
+                code_lengths[node['id']] = current_depth
+                return
+            if node['left']: collect_lengths(node['left'], current_depth + 1)  # noqa
+            if node['right']: collect_lengths(node['right'], current_depth + 1)  # noqa
+
+        collect_lengths(root_node, 0)
+        sorted_elements = sorted(code_lengths.items(), key=lambda x: (x[1], x[0]))
+
+        canonical_lookup = {}
+        current_code_int = 0
+        last_length = 0
+
+        for byte_id, length in sorted_elements:
+            if length == 0: continue  # noqa
+            if last_length > 0:
+                current_code_int <<= (length - last_length)
+            bit_code = f"{current_code_int:0{length}b}"
+            canonical_lookup[bit_code] = byte_id
+            current_code_int += 1
+            last_length = length
+
+        return canonical_lookup
+
+    def generate_huffman_lookup(self, weights_table: dict) -> dict:
+        """
+        Автоматически строит дерево Хаффмана на основе таблицы весов
+        для ключей в диапазоне от 0x0000 до 0xA000.
+        Args:
+            weights_table: dict - таблица весов
+        Returns:
+            словарь соответствия: { 'бинарный_код_строкой': декодированное_значение }
+        """
+        # Очередь с приоритетами (куча) для сборки дерева
+        heap = []
+        counter = 0
+        
+        for key_title, weight in weights_table.items():
+            node = {'id': key_title, 'left': None, 'right': None}
+            # Формат элемента: (вес, уникальный_счетчик, узел_дерева)
+            heapq.heappush(heap, (weight, counter, node))
+            counter += 1
+
+        if not heap:
+            return {}
+
+        # Построение дерева Хаффмана путем слияния минимальных узлов
+        while len(heap) > 1:
+            weight1, _, node1 = heapq.heappop(heap)
+            weight2, _, node2 = heapq.heappop(heap)
+            
+            parent_node = {'id': None, 'left': node1, 'right': node2}
+            parent_weight = weight1 + weight2
+            
+            heapq.heappush(heap, (parent_weight, counter, parent_node))
+            counter += 1
+
+        # Корень финального дерева
+        _, _, root_node = heapq.heappop(heap)       # там 1 элемент, heap[0]
+        # _, _, root_node = heapq.heappop(heap)  #  heap
+        huffman_lookup = {}
+        
+        # Рекурсивный обход дерева для генерации префиксных битовых кодов
+        def walk_tree(node, current_code):
+            if node['id'] is not None:
+                val_id = node['id']
+                """
+                # noqa:
+                # Логика интерпретации ID в конечный символ или токен
+                # if val_id == 0x00:
+                #     char_out = "[EOS]"                      # Маркер конца строки
+                # elif 0x41 <= val_id <= 0x5A:
+                #     char_out = chr(val_id).lower()          # Перевод латиницы A-Z в нижний регистр a-z
+                # elif 32 <= val_id <= 126:
+                #     char_out = chr(val_id)                  # Остальной печатный ASCII
+                # elif 0x0400 <= val_id <= 0x04FF:
+                #     char_out = chr(val_id)                  # Кириллица (Unicode), если присутствует в СНГ-версии
+                # else:
+                #     char_out = f"[Token_0x{val_id:04X}]"    # Крупные токены координат или гео-префиксов
+                """
+                # huffman_lookup[current_code] = char_out
+                huffman_lookup[current_code] = val_id
+                return
+            
+            # Левая ветка кодируется нулем, правая — единицей
+            if node['left']:
+                walk_tree(node['left'], current_code + "0")
+            if node['right']:
+                walk_tree(node['right'], current_code + "1")
+
+        # Запускаем обход от корня
+        walk_tree(root_node, "")
+        return huffman_lookup
+
     def empty(self):
         """
         Args:
@@ -83,7 +301,7 @@ class VDO_FILE():
         self.segsize = DEFAULT_ONE_SEG_SIZE
 
 
-# ----
+# ================================================
 class BYTESTRUCT():
     """ Base for other data structures """
 
@@ -93,10 +311,29 @@ class BYTESTRUCT():
             return
         self._raw = buffer
     
+    def __repr__(self) -> str:
+        # ss = "B " + self.hex
+        return self.hex
+    
     @property
     def hex(self):
-        he = " ".join("{:02x}".format(c) for c in self._raw)
-        return he
+        # he = " ".join("{:02x}".format(c) for c in self._raw)
+        hex_list = [f"{c:02X}" for c in self._raw]
+        result_lines = []
+        for i in range(0, len(hex_list), 16):
+            # Номер строки в HEX (0000, 0010, 0020 и т.д.)
+            #   line_number = f"{i:04X}: "
+            # 8 + " " + 8 HEX-значений текущей строки
+            # hex_chunk = " ".join(hex_list[i : i + 16])
+            hex_chunk0 = " ".join(hex_list[i : i + 8])
+            hex_chunk1 = " ".join(hex_list[i + 8 : i + 16])
+            # Собираем строку воедино
+            #result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
+            result_lines.append(f"{hex_chunk0}  {hex_chunk1}")
+        # Объединяем все строки
+        # cr = "{}".format("\n")
+        result = "   ".join(result_lines)
+        return result
 
     @property
     def len(self):
@@ -107,20 +344,38 @@ class BYTESTRUCT():
         """ read from inner bytes array """
         ret = self._raw[offset: offset + cnt]
         return ret
+
+    def read_str(self, ptr: int, max_len: int = None) -> str:
+        """
+        Args:
+            ptr: offset в текущем _raw
+        Returns:
+            str: 0-ended строка
+        """
+        # ??? struct.unpack("s*")
+        if not max_len:
+            max_len = MAX_STR_LEN
+        return self.read(ptr, max_len).decode('cp1250').split('\x00')[0]
     
     def uchar(self, near_offset: int = 0) -> int:
-        ''' Return uchar, offset from block begin'''
+        ''' Return uchar, offset from _raw begin'''
         #uc = self.read(near_offset, UCHAR_BYTES_CNT)
         uc = self._raw[near_offset]
         return uc
 
     def ushort(self, near_offset: int = 0) -> int:
-        ''' Return unsigned short (2 bytes, word), offset from block begin'''
+        ''' Return unsigned short (2 bytes, word), offset from _raw begin'''
         return USHORT_struct.unpack_from(self._raw[near_offset:])[0]
     
     def uint(self, near_offset: int = 0) -> int:
-        ''' Return unsigned int (4 bytes, dword), offset from block begin'''
+        ''' Return unsigned int (4 bytes, dword), offset from _raw begin'''
         return UINT_struct.unpack_from(self._raw[near_offset:])[0]
+
+    # def list(self, near_offset: int = 0) -> LIST:
+    #     return LIST(self._raw[near_offset:LIST.size])
+
+    # def coord(self, near_offset: int = 0) -> COORD:
+    #     return COORD(self._raw[near_offset:COORD.size])
     
 
 # ----
@@ -328,7 +583,8 @@ class CH_IDX(BYTESTRUCT):
 
     def __repr__(self):
         ''' View while debug value'''
-        val = self.hex
+        # val = self.hex
+        val = f"{self.ch} {self.is_out} {self.bladdr} {self.list}"
         return val
     
     @property
@@ -421,6 +677,13 @@ class BLSTART(BYTESTRUCT):
         if self.arch_type:
             return self.segcnt * self.vdo.segsize
         return self.bladdr.sizeofblock
+
+# class PSTR(PTR):
+#     ''' PSTR    WORD, nearPTR на zero-ended строку '''
+#     strval:str
+#     bytescnt: int = 2  # CH_IDX size = 3 * DWORD
+#     def __init__(self, bytes_arr) -> None:
+#         super().__init__(bytes_arr[:self.bytescnt]) # 4 - self.bytescnt
 
 
 # =========================================================================

@@ -8,9 +8,14 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 # Версии ПО
+ OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
+ 1991 - 2005 SiemensVDO Automotive AG
+ 
 - QGIS 3.44.10 ltr
 - VDO Dayton CD Carindb v.30
 - VDO Dayton CD Carindb v.34
+
+- pip install bitarray
 
 
 # Функциональность
@@ -80,11 +85,52 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] блок х12
     * [x] блок х13
 - [ ] работа со строковыми данными
-    * [ ] блок CH_country / country
+    * [x] блок CH_country / country
+    * [ ] поиск по наименованию - функция для отладки/тестов
     * [ ] CH_city / city
     * [ ] CH_road / road
     * [ ] CH_poi / poi
     * [ ] keyboard
+- [ ] GEO структуры
+    * [x] TOC
+    * [x] MAP_AREA
+    * [x] GEO_CATEGORIES
+    * [x] GEO_SHAPES
+    * [x] GEO_LINES
+    * [x] VERTEXES
+    * [ ] POI
+    * [x] TSTR
+- [ ] блоки карт - 0x14, 0x15, 0x16, 0x1C, 0x1D, 0x1E
+    * [x] vdo.block(offset | bladdr) - создание объекта блока
+    * [x] базовый гео-блок MVP
+    * [ ] гео-объекты генерируются в базовом гео-блоке
+        - [x] ТОС и область карты
+        - [ ] все объекты - lines & shapes & poi
+        - [x] список категорий
+        - [x] полигоны - shapes
+        - [x] полилинии - lines
+        - [x] vertex
+        - [ ] poi
+        - [x] tstr_array_ объекта
+    * [x] блоки карт - childs базового гео-блока
+        - [x] 0x14, 
+        - [x] 0x15, 
+        - [x] 0x16, 
+        - [x] 0x1C, 
+        - [x] 0x1D, 
+        - [x] 0x1E
+    * [ ] list(blarray, blarray) - vrtx from shapes, lines 
+- [ ] archives - распаковка
+    * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
+        - [x] categories
+        - [x] shapes (для 500 900)
+        - [ ] polilines
+        - [ ] vertex
+        - [ ] poi
+        - [ ] tstr
+        - [ ] str
+        - [ ] странное число после ТОС
+    * [x] type 2, 3
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
     * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
     * [ ] виджет рабочего поля - открыть/создать при загрузке файла
@@ -118,7 +164,28 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [Начинаем работать с цифровыми картами (ГИС)](https://habr.com/ru/companies/bft/articles/773814/)
 - [wiki/Web_Mercator_projection](https://en.wikipedia.org/wiki/Web_Mercator_projection)
 - [30-й меридиан восточной долготы](https://ru.wikipedia.org/wiki/30-%D0%B9_%D0%BC%D0%B5%D1%80%D0%B8%D0%B4%D0%B8%D0%B0%D0%BD_%D0%B2%D0%BE%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%BE%D0%B9_%D0%B4%D0%BE%D0%BB%D0%B3%D0%BE%D1%82%D1%8B)
+- [NDF: an effective mobile GIS physical storage model](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/6754/67541W/NDF-an-effective-mobile-GIS-physical-storage-model/10.1117/12.764932.short)
+- Торрент лохматого 2007 года. Единственная найденная "ручная" карта РФ VDO/Siemens GPS Россия Беларусь (СНГ + Европа) [ISO](https://rutracker.org/forum/viewtopic.php?t=894615 "Рутрекер")
 
+- VDO Dayton non C-IQ Europa 2013/2014 (BMW, Renault, Opel, Rover) CD70 / DVD90 [ISO](https://rutracker.org/forum/viewtopic.php?t=4694537)
+это диск из комплекта европа состоящего из 10 дисков и называеться он VDO Dayton non C-IQ Europa 2012-2013 (BMW, Renault, Opel, Rover)
+Страны покрытия:
+скрытый текст
+		10 CDs v.2012 - 2013
+		CD 1 Benelux
+		CD 2 Central-Europa
+		CD 3 East-Europa
+		CD 4 France
+		CD 5 Great Britain & Irlande
+		CD 6 Germany
+		CD 7 Italia/Greece
+		CD 8 Scandinavia
+		CD 9 Spain & Portugal
+		CD 10 Major Roads of Europe
+
+- Карты для устройств VDO/Siemens Dayton non C-IQ CD 2012/2013 Alpen - Австрия, Швейцария, Германия, Франция, Италия [ISO](https://rutracker.org/forum/viewtopic.php?t=4185746)
+
+- Обновление операционной системы для навигатора VDO Dayton MS5000-Os Update-MO5076 [ISO](https://rutracker.org/forum/viewtopic.php?t=1729907)
 
 # unicode color symbols
 КРАСНОЕ ЯБЛОКО (&#x1F34E;): 🍎

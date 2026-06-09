@@ -22,7 +22,8 @@ from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileD
 from qgis.gui import QgisInterface
 
 from .settings import Settings
-from .ConfigurationDialog import ConfigurationDialog
+from .ui_files.ConfigurationDialog import ConfigurationDialog
+from .ui_files.QgisVdoDockwidget import QgisVdoDockwidget
 
 #import logging
 
@@ -187,12 +188,17 @@ class VDOExplorerPlugin:
         # self.log.debug('RegenerateMenu >')
 
     def run(self):
-        # if self.dockwidget == None:
-        #     # Create the dockwidget (after translation) and keep reference
-        #     self.dockwidget = Ui_VDODockWidget()
-        #     pass
-        self.iface
+        """Run method that loads and starts the plugin"""
+        if not self.pluginIsActive:
+            self.pluginIsActive = True
 
+            # dockwidget may not exist if:
+            #    first run of plugin
+            #    removed on close (see self.onClosePlugin method)
+            if self.dockwidget == None:
+                # Create the dockwidget (after translation) and keep reference
+                self.dockwidget = QgisVdoDockwidget()
+        
     def openConfigWindow(self):
         """Open the configuration dialog."""
         # self.log.debug('openConfigWindow <')
@@ -241,7 +247,7 @@ class VDOExplorerPlugin:
         return False
 
     def isCarinb(self, filePath: os.path) -> bool:
-        """ А carindb ли файл?
+        """ А carindb ли формата файл?
 
         :param path: A path for checking carindb file.
         :type path: os.path

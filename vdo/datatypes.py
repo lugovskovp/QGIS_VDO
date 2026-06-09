@@ -81,7 +81,7 @@ class VDO_FILE():
         self.empty()
 
     def __repr__(self):
-        s = f'VDOv{self.dbrev}[{self.segsize}]:{self.path}'
+        s = f'VDO v.{self.dbrev}[{self.segsize}]:{self.path}'
         return s
 
     def read(self, offset: int, size: int) -> bytearray:

@@ -125,7 +125,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] categories
         - [x] shapes (для 500 900)
         - [ ] polilines
-        - [ ] vertex
+        - [x] vertex
         - [ ] poi
         - [ ] tstr
         - [ ] str
@@ -135,6 +135,13 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
     * [ ] виджет рабочего поля - открыть/создать при загрузке файла
     * [ ] закрытие виджета выгружает carindb?
+- [ ] отрисовка геообъектов
+    * [ ] функция возвращения геообъекта - набора координат точек
+    * [ ] архитектура представления геообъектов - по категориям
+    * [ ] класс родитель со свойствами раскраски для полилиний и полигонов
+    * [ ] раскраска полилиний
+    * [ ] раскраска полигонов
+
 
 
 

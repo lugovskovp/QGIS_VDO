@@ -169,16 +169,19 @@ class block_basegeo(block_base):
             # а вот дальше запакованы вертексы, и, вероятно, delta-coding
             if self.toc.li_vrtx.cnt:
                 # первые2 значения - рассматриваем, как xy начальных точек.
-                buffer._unpack_short()                       # x
-                prev = int(buffer._unpack_short(), 16)       # y
+                prev_x = int(buffer._unpack_short(), 16)                       # x
+                prev_y = int(buffer._unpack_short(), 16)       # y
+                self._raw += buffer.result
+                buffer.clear_result()
+                # ==================== debug print last 10h values
+                # self.print_last8word()
+                # ==================== debug print last 10h values
                 # распаковка дельта-кодированных локальных координат
                 for num in range(self.toc.li_vrtx.cnt - 1):     # minus 1st xy
                     # x    
-                    prev = buffer._unpack_half_vertex(prev)
-                    prev = int(prev, 16)       
+                    prev_x = int(buffer._unpack_half_vertex(prev_x), 16)       
                     # y
-                    prev = buffer._unpack_half_vertex(prev)
-                    prev = int(prev, 16) 
+                    prev_y = int(buffer._unpack_half_vertex(prev_y), 16) 
                     self._raw += buffer.result
                     buffer.clear_result()
 
@@ -202,10 +205,47 @@ class block_basegeo(block_base):
                 print(f"{head_offs:04x}: {hex_val}")
                 # ==================== debug print last 10h values
                 pass
+            
+            # <<<<<<<<<< zero ended strings
+            """
+                В запакованном блоке сначала идут строки. И только потом - запакованые tstr.
+                Max_PTR_bits - начальный адрес строк
+                Max_PTR_bits - окончание строк, адрес конца всех строк
+                    маска?
+                    запакованный текст
+                заканчивается (0)*x 1 (0)*многоХ, х - вариабелен, и 7 и 10 видел.
+            """
 
             # <<<<<<<<<< TSTRs
+            """
+                # noqa
+                071515 04  BlockType.MAP__10k400: 0x1d
+                Max PTR bits: 12
+               самый хвост
+                0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
 
-            # <<<<<<<<<< zero ended strings
+                8c0 15 00   delta 13/19
+                1 100011000000 1 00010101 1 00000    1100011000000100010101100000 
+                1 100011010011 00   8D3  delta 12/18 
+                1 100011100101 00   8E5  delta 11/17
+                1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
+                8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
+                10001011000 10001011010 10001011100 10001011110 100011000000
+                12-1 len(align word), 4 stucks
+
+                4 штуки
+                1 - флаг загружать, или 0 использовать прошлые
+                ptr = max_ptr_bits
+                lang = 8 bit
+                last_byte = 5 bit
+
+                затем идут адреса, в которые надо перенести сгенерированные
+                эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
+                (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
+                самое последнее - адрес, на котором окончится tstr и начнётся массив строк
+            """
+
+            
 
 
 
@@ -657,31 +697,30 @@ class bitstream():
         Returns:
             int: short значение координаты x или y
         """
+        bits_to_read = 9   # wtf? why?
         prefix = self._pop(2).to01()
-        bits_to_read = self.BITS_TO_READ[prefix]
+        # bits_to_read = self.BITS_TO_READ[prefix]
+        
         if prefix == '11':
             # load full short
             res = self._unpack_short()
             return res
+
         if prefix == '10':
             # read 9 бит, вычесть значение из предыдущего
-            val = self._unpack(BITS_IN_WORD, bits_to_read, 0, False) 
-            val = ba2int(val)
-            # val = ba2int(self._pop(bits_to_read))
-            val = prev - val
+            val = -ba2int(self._unpack(BITS_IN_WORD, bits_to_read, 0, False))
+
         elif prefix == '01':
-            # read 8 бит, и ????
-            val = self._pop(bits_to_read)
-            val = ba2int(val)
-            # val = ba2int(self._pop(bits_to_read))
-            val = prev - val
+            # read 8 бит, и +добавить 9й
+            val = ba2int(self._unpack(BITS_IN_WORD, bits_to_read - 1, 0, False))
+            val = 0b100000000 | val
+
         elif prefix == '00':
-            # read 8 бит, и ????
-            val = self._pop(bits_to_read)
-            val = ba2int(val)
-            # val = ba2int(self._pop(bits_to_read))
-            val = prev + val
-        # 
+            # read 8 бит, и 9й - всё равно 0
+            val = ba2int(self._unpack(BITS_IN_WORD, bits_to_read - 1, 0, False))
+
+        # 0 - сложить, 10-вычесть, 11 - уже вернули
+        val = prev + val
         res = USHORT_struct.pack(val)
         self.result += res
         ret = ""
@@ -868,7 +907,7 @@ Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07
         # self._pop(1)
         start_vrtx_num = self.unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
         start_vrtx_num = ba2int(start_vrtx_num)     # номер from 0-го vrtx объекта
-        print(f"start_vrtx_num = {start_vrtx_num}/0x{start_vrtx_num:02x}")
+        print(f"line: start_vrtx_num = {start_vrtx_num}/0x{start_vrtx_num:02x}")
         # 4* num = offset from start vertexes
         vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
         self.result += USHORT_struct.pack(vrtx_off)     # vertx offs 2word, save

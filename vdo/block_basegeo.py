@@ -222,41 +222,73 @@ class block_basegeo(block_base):
                 заканчивается множественными 0-ми
                 подробно - см. bitstream.unpack_str
             """
-            unpacked_strings = buffer.unpack_str()
-            print(f"\n{unpacked_strings}\n")
-            # <<<<<<<<<< TSTRs
-            """
-                # noqa
-                071515 04  BlockType.MAP__10k400: 0x1d
-                Max PTR bits: 12
-               самый хвост
-                0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
+            if self.toc.li_tstr.cnt:
+                # нет tstr - нет и строк для распаковки
+                unpacked_bin_strings = buffer.unpack_str()
+                print(f"\n{unpacked_bin_strings}\n")
 
-                8c0 15 00   delta 13/19
-                1 100011000000 1 00010101 1 00000    1100011000000100010101100000 
-                1 100011010011 00   8D3  delta 12/18 
-                1 100011100101 00   8E5  delta 11/17
-                1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
-                8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
-                10001011000 10001011010 10001011100 10001011110 100011000000
-                12-1 len(align word), 4 stucks
+                # <<<<<<<<<< TSTRs
+                """
+                    # noqa
+                    071515 04  BlockType.MAP__10k400: 0x1d
+                    Max PTR bits: 12
+                самый хвост
+                    0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
 
-                4 штуки
-                1 - флаг загружать, или 0 использовать прошлые
-                ptr = max_ptr_bits
-                lang = 8 bit
-                last_byte = 5 bit
+                    8c0 15 00   delta 13/19
+                    1 100011000000 1 00010101 1 00000    1100011000000100010101100000 
+                    1 100011010011 00   8D3  delta 12/18 
+                    1 100011100101 00   8E5  delta 11/17
+                    1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
+                    8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
+                    10001011000 10001011010 10001011100 10001011110 100011000000
+                    12-1 len(align word), 4 stucks
 
-                затем идут адреса, в которые надо перенести сгенерированные
-                эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
-                (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
-                самое последнее - адрес, на котором окончится tstr и начнётся массив строк
-            """
+                    4 штуки
+                    1 - флаг загружать, или 0 использовать прошлые
+                    ptr = max_ptr_bits
+                    lang = 8 bit
+                    last_byte = 5 bit
 
-            
+                    затем идут адреса, в которые надо перенести сгенерированные
+                    эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
+                    (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
+                    самое последнее - адрес, на котором окончится tstr и начнётся массив строк
+                """
+                # убрать незначащие лидирующие 0
+                marker_TSTR = '0000000000000001'
+                find = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
+                del marker_TSTR
+                buffer._pop(find)   
+                del find
+                
+                # распаковка
+                s_ptr = '0'
+                s_lang = '0'
+                s_type = '0'
+                for _ in range(self.toc.li_tstr.cnt):
+                    # ptr_2_str
+                    if ba2int(buffer._pop(1)):
+                        s_ptr = buffer._unpack_ptr()
+                    # language
+                    if ba2int(buffer._pop(1)):
+                        s_lang = buffer._unpack_byte(8)
+                    # type
+                    if ba2int(buffer._pop(1)):
+                        s_type = buffer._unpack_byte(5)
+                    # ------------------------- debug
+                    print(f"{buffer.av_offs}: {s_ptr} {s_lang} {s_type}")
+                    # ------------------------- debug
+                    
 
+            self._raw += buffer.result
+            buffer.clear_result()
 
+            # texts
+            self._raw += unpacked_bin_strings
 
+            # собственно оставшееся в буфере можно и не распаковывать
+            # там окончание куда tstr раскидывать
             self.bit_tail = buffer
             # локально константами
 
@@ -267,9 +299,12 @@ class block_basegeo(block_base):
         # записать распакованное
         self.write_raw()
         if not self.is_unpacked:
-            print(f"Save into tail_{self.head.bladdr}.bin")
+            print(f"Save tail into tail_{self.head.bladdr}.bin")
             with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
                 f.write(self.bit_tail.buffer.tobytes()) 
+            print(f"Save unpacked into raw_{self.head.bladdr}.bin")
+            with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
+                f.write(self._raw) 
         # и, наконец, всё содержимое
         self.arr_shapes = []
         # self.lines = []
@@ -646,7 +681,7 @@ class bitstream():
             str_res += "{:02x}".format(h)   # str_res - for debug ))))
         return str_res   # bres
 
-    def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> None:
+    def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> str:
         """
         unpack one byte from bit_compressed to self.buffer
         Args:
@@ -656,9 +691,9 @@ class bitstream():
         if bit_compressed > BITS_IN_BYTE:
             raise ValueError(bit_compressed, f"Значение больше {BITS_IN_BYTE}, _unpack_byte")
         str_res = self._unpack(BITS_IN_BYTE, bit_compressed, left_shift)  
-        pass
+        return str_res
     
-    def _unpack_word(self, bit_compressed: int=BITS_IN_WORD) -> None:
+    def _unpack_word(self, bit_compressed: int=BITS_IN_WORD) -> str:
         """
         Распаковывает BITS_IN_WORD(16 бит), как short и добавляет значение в self.result.
         Args:
@@ -671,7 +706,7 @@ class bitstream():
         res = self._unpack(BITS_IN_WORD, bit_compressed, 0)
         return res
 
-    def _unpack_uint(self, bit_compressed: int=BITS_IN_UINT) -> None:
+    def _unpack_uint(self, bit_compressed: int=BITS_IN_UINT) -> str:
         """
         Распаковывает BITS_IN_UINT (32 бита) и добавляет значение в self.result.
         Args:   
@@ -682,7 +717,7 @@ class bitstream():
         res = self._unpack(BITS_IN_UINT, bit_compressed, 0)
         return res
 
-    def _unpack_ptr(self, left_shift: int = 0) -> None:
+    def _unpack_ptr(self, left_shift: int = 0) -> str:
         """
         unpack word (packed len=max_bits_ptr) to self.buffer
         Args:
@@ -692,7 +727,7 @@ class bitstream():
         str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits, left_shift)
         return str_res
 
-    def _unpack_vertex_offset(self) -> None:
+    def _unpack_vertex_offset(self) -> int:
         """
         Упакованы не смещения, а номера вертексов в общем списке.
         """

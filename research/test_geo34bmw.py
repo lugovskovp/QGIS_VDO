@@ -1,5 +1,5 @@
 import struct       # noqa: F401
-from vdo.datatypes import VDO_FILE, BLADDR, UINT_struct    # noqa
+from vdo.datatypes import VDO_FILE, BLADDR    # noqa
 from vdo.block_base import block_base        # noqa
 from vdo.datatypes import BLADDR        # noqa
 
@@ -7,6 +7,7 @@ from vdo.blocks import block_0x12       # noqa
 from vdo.enums import BlockType       # noqa
 
 from vdo.test_vdo import vdobmv as vdo
+from vdo.consts import struct_UINT
 
 #--------------------------------------
 
@@ -14,9 +15,9 @@ tos_bl = vdo.get_block(0)
 
 '''bmw_a_1d = vf.block(0xE2A2A00)  0x07154f02 '''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400] 0500 0900 распаковкаОК  # noqa
-# bla_bl = BLADDR(UINT_struct.pack(0x07154f02), vdo)    # //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
-# bla_bl = BLADDR(UINT_struct.pack(0x07152605), vdo)    # 07152605 -1dp6 =2/6/0/276/0/6  # noqa
-bla_bl = BLADDR(UINT_struct.pack(0x07151504), vdo)    # 07151504 -1dp5 =1/4/0/204/0/4  # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x07154f02), vdo)    # //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x07152605), vdo)    # 07152605 -1dp6 =2/6/0/276/0/6  # noqa
+bla_bl = BLADDR(struct_UINT.pack(0x07151504), vdo)    # 07151504 -1dp5 =1/4/0/204/0/4  # noqa
 block_packed: block_base
 block_packed = vdo.get_block(bla_bl)
 
@@ -27,7 +28,7 @@ pass
 
 '''
 # noqa
-c:\DIY\VDO\db_src\bmw34-2010\DB\DB_0
+c:/DIY/VDO/db_src/bmw34-2010/DB/DB_0
 07154f 02  BlockType.MAP__10k400: 0x1d
 
 Max PTR bites: 11
@@ -108,7 +109,7 @@ del bla_bl
 
 pass
 #===================================
-# blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
+# blnum = struct_UINT.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
 # blak = BLADDR(blnum, vdo)
 # geo_bl = vdo.get_block(blak)  '08 b9 30 00  0b 9a 50 00  09 19 30 00  0b fa 50 00  00 01 00 07'  # noqa
 

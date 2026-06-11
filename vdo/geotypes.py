@@ -18,7 +18,7 @@ import struct
 
 from vdo.datatypes import BYTESTRUCT, FAR_LIST
 from vdo.datatypes import DOUBLE_BYTES_CNT
-from vdo.datatypes import UINT_struct     # , USHORT_TWICE_struct
+from vdo.consts import struct_UINT     # , USHORT_TWICE_struct
 from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
@@ -58,8 +58,8 @@ class COORD(BYTESTRUCT):
         # === bytearray
         super().__init__(buffer[:DOUBLE_BYTES_CNT])   # 8 - self.size
 
-        self._hlon = UINT_struct.unpack(self._raw[:4])[0]
-        self._hlat = UINT_struct.unpack(self._raw[4:8])[0]
+        self._hlon = struct_UINT.unpack(self._raw[:4])[0]
+        self._hlat = struct_UINT.unpack(self._raw[4:8])[0]
         if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit =1 -> minus val.
             # self.hlo = ctypes.c_int32(self._hlon).value
             self._hlon = 0 - (0xffffffff - self._hlon + 1)
@@ -239,7 +239,7 @@ class GEO_LINE(BYTESTRUCT):
         self.name = "Proto line. Need read from parent"
         self.cat = category
         """
-        blnum = UINT_struct.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
+        blnum = struct_UINT.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
         self.or_b_or_c
         
         [1C98 011C, 1F0F 0021]
@@ -384,8 +384,8 @@ def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
     if hex_longtude < 0:                        # Negative val
         hex_longtude = 0x80000000 | (-hex_longtude)
 
-    coo_by = (UINT_struct.pack(">L", hex_longtude)
-              + UINT_struct.pack(">L", hex_latitude))
+    coo_by = (struct_UINT.pack(">L", hex_longtude)
+              + struct_UINT.pack(">L", hex_latitude))
     res = COORD(coo_by)
     '''    #int DWORD со знаком в старшем бите
     if 0x80000000 & self._hlon:     # hi bit =1 -> minus val.

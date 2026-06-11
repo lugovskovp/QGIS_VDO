@@ -11,34 +11,23 @@ CH_IDX
 BLSTART
 """
 
-
 import os.path
 import struct
 import importlib
 import heapq
 
 from vdo.enums import BlockType
-
+from vdo.consts import struct_WORD, struct_UINT
+from vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
+from vdo.blocks.block_0x12 import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
 
 OFFSET_TOC = 0x08
 
-OFFSET_DB_REVISION = 0x1a
 DEFAULT_DB_REVISION = 0x1e
-OFFSET_ONE_SEG_SIZE = 0x2c
 DEFAULT_ONE_SEG_SIZE = 0x800
 
-#UCHAR_BYTES_CNT = 1
-USHORT_BYTES_CNT = 2
-UINT_BYTES_CNT = 4
-DOUBLE_BYTES_CNT = 8
 
-ZERO_DWORD = b'\x00\x00\x00\x00'
 MAX_STR_LEN = 63    # 255
-
-BYTE_struct = struct.Struct(">c")
-UINT_struct = struct.Struct(">L")
-USHORT_struct = struct.Struct(">H")
-USHORT_TWICE_struct = struct.Struct(">HH")
 
 
 def setup_known_types():
@@ -75,8 +64,8 @@ class VDO_FILE():
         """ """
         if path:
             self.path = path
-            self.dbrev = USHORT_struct.unpack(self.read(OFFSET_DB_REVISION, 2))[0]
-            self.segsize = USHORT_struct.unpack(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
+            self.dbrev = struct_WORD.unpack(self.read(OFFSET_DB_REVISION, 2))[0]
+            self.segsize = struct_WORD.unpack(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
             return
         self.empty()
 
@@ -108,7 +97,7 @@ class VDO_FILE():
         if type(addr) is int:
             offset = addr
         elif type(addr) is BLADDR:
-            if not UINT_struct.unpack(addr._raw)[0]:       # == 0
+            if not struct_UINT.unpack(addr._raw)[0]:       # == 0
                 # raise ValueError(addr, " bladdr 00 00 00 00")
                 return None
             offset = addr.offset
@@ -148,13 +137,13 @@ class VDO_FILE():
         OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
         # начальный адрес таблицы весов и количество элементов.
         HUFFMAN_PAIR_SIZE = 4
-        WORD_PAIR_struct = struct.Struct(">HH")
+        struct_WORD_TWICE = struct.Struct(">HH")
 
         weights = {}
         bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
-        (ptr, cnt) = WORD_PAIR_struct.unpack(bytes_list)
+        (ptr, cnt) = struct_WORD_TWICE.unpack(bytes_list)
         for _ in range(cnt):
-            (key_id, value_weight) = WORD_PAIR_struct.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
+            (key_id, value_weight) = struct_WORD_TWICE.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
             #if 0 <= key_id <= 0xFFFF:
             # Нам нужны только символы с реальным весом > 0
             if value_weight > 0:
@@ -365,11 +354,11 @@ class BYTESTRUCT():
 
     def ushort(self, near_offset: int = 0) -> int:
         ''' Return unsigned short (2 bytes, word), offset from _raw begin'''
-        return USHORT_struct.unpack_from(self._raw[near_offset:])[0]
+        return struct_WORD.unpack_from(self._raw[near_offset:])[0]
     
     def uint(self, near_offset: int = 0) -> int:
         ''' Return unsigned int (4 bytes, dword), offset from _raw begin'''
-        return UINT_struct.unpack_from(self._raw[near_offset:])[0]
+        return struct_UINT.unpack_from(self._raw[near_offset:])[0]
 
     # def list(self, near_offset: int = 0) -> LIST:
     #     return LIST(self._raw[near_offset:LIST.size])
@@ -408,7 +397,7 @@ class BLADDR(BYTESTRUCT):
     @property
     def blocknumber(self) -> int:
         ''' Номер блока, первые 3 байта'''
-        return UINT_struct.unpack(b'\x00' + self._raw[:3])[0]
+        return struct_UINT.unpack(b'\x00' + self._raw[:3])[0]
     
     @property
     def segcnt(self) -> int:
@@ -481,7 +470,7 @@ class PTR(BYTESTRUCT):
     @property
     def value(self) -> int:
         ''' Near ptr to begin list'''
-        #p = USHORT_struct.unpack(self._raw)[0]
+        #p = struct_WORD.unpack(self._raw)[0]
         return self.ushort()
     
     @property

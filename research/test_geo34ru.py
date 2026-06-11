@@ -18,6 +18,7 @@ block_packed: block_base
 bla_bl = BLADDR(struct_UINT.pack(0x08a06b02), vdo)  # 08a06b02 ru34 packed (mar mediterráneo? andor oceano atlântico )   # noqa
 # bla_bl = BLADDR(struct_UINT.pack(0x06cc8b05), vdo)  # //16p7 =2/9/1/2b9/0/0a + oceano atlântico id= 4005d71   # noqa
 # bla_bl = BLADDR(struct_UINT.pack(0x094fa401), vdo)  # lzw
+bla_bl = BLADDR(struct_UINT.pack(0x07bbaf08), vdo)  # //16p11 5/2c/8/3a2/0/1c
 
 block_packed = vdo.get_block(bla_bl)
 

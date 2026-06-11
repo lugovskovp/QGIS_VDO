@@ -15,7 +15,8 @@ from vdo.block_base import block_base
 from vdo.datatypes import BLADDR, LIST, BYTESTRUCT
 from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
 from vdo.geotypes import MAP_AREA, GEO_CATEGORY, GEO_SHAPE, GEO_LINE, VERTEX, TSTR
-from vdo.datatypes import UINT_struct, USHORT_struct, USHORT_TWICE_struct    # BYTE_struct,
+from vdo.consts import struct_UINT, struct_WORD, struct_WORD_TWICE    # BYTE_struct,
+from vdo.consts import BITS_IN_ASCII, LOOKUP_CHARS
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -89,9 +90,9 @@ class block_basegeo(block_base):
             self._raw = barray[:OFFSET_PACKED_DATA]    # до 0x34 - не запакованы, потом идёт непонятный ?? DWORD # noqa
             # первые 2 word - назначение неизвестно. 83888384 = 5000 9000
             # ?
-            self.beg_arch_word_A = USHORT_struct.unpack(barray[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 2])[0]  # noqa 
+            self.beg_arch_word_A = struct_WORD.unpack(barray[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 2])[0]  # noqa 
             # ?
-            self.beg_arch_word_B =  USHORT_struct.unpack(barray[OFFSET_PACKED_DATA + 2:OFFSET_PACKED_DATA + 4])[0]  # noqa 
+            self.beg_arch_word_B =  struct_WORD.unpack(barray[OFFSET_PACKED_DATA + 2:OFFSET_PACKED_DATA + 4])[0]  # noqa 
             # остальное в buffer - поток битов, которые будем распаковывать
             buffer = bitstream(barray[OFFSET_PACKED_DATA + 4:],  # + unk_beg_arch_dword # noqa
                                OFFSET_PACKED_DATA,   # вот с этого офсета будем заполнять
@@ -136,10 +137,10 @@ class block_basegeo(block_base):
                     buffer.unpack_shape()
                     #----------------
                     bs = buffer.result     # _for_print
-                    pp = f"{USHORT_struct.unpack(bs[0:2])[0]:04X} {USHORT_struct.unpack(bs[2:4])[0]:04X}"
-                    pp += f" {UINT_struct.unpack(bs[4:8])[0]:08x}"
-                    pp += f"  {UINT_struct.unpack(bs[8:12])[0]:08X} {UINT_struct.unpack(bs[12:16])[0]:08X}"
-                    pp += f"  {USHORT_struct.unpack(bs[16:18])[0]:04X} {USHORT_struct.unpack(bs[18:20])[0]:04X}"
+                    pp = f"{struct_WORD.unpack(bs[0:2])[0]:04X} {struct_WORD.unpack(bs[2:4])[0]:04X}"
+                    pp += f" {struct_UINT.unpack(bs[4:8])[0]:08x}"
+                    pp += f"  {struct_UINT.unpack(bs[8:12])[0]:08X} {struct_UINT.unpack(bs[12:16])[0]:08X}"
+                    pp += f"  {struct_WORD.unpack(bs[16:18])[0]:04X} {struct_WORD.unpack(bs[18:20])[0]:04X}"
                     print(pp)
                     #---------------
                     self._raw += buffer.result
@@ -191,8 +192,8 @@ class block_basegeo(block_base):
                         last_vals = self._raw[head_offs:]
                         hex_val = ''
                         for i in range(0, 0x10, 2):
-                            hex_val += f"{USHORT_struct.unpack(last_vals[i:i+2])[0]:04x} "
-                        print(f"{head_offs:04x}: {hex_val}")
+                            hex_val += f"{struct_WORD.unpack(last_vals[i:i+2])[0]:04x} "
+                        # print(f"{head_offs:04x}: {hex_val}")
                     # ==================== debug print last 10h values
 
                 # ==================== debug print last 10h values
@@ -201,21 +202,25 @@ class block_basegeo(block_base):
                 last_vals = self._raw[head_offs:]
                 hex_val = ''
                 for i in range(0, las_vrtxes, 2):
-                    hex_val += f"{USHORT_struct.unpack(last_vals[i:i+2])[0]:04x} "
-                print(f"{head_offs:04x}: {hex_val}")
+                    hex_val += f"{struct_WORD.unpack(last_vals[i:i+2])[0]:04x} "
+                # debug
+                # print(f"{head_offs:04x}: {hex_val}")
                 # ==================== debug print last 10h values
                 pass
             
-            # <<<<<<<<<< zero ended strings
+            # <<<<<<<<<< zero ended strings unpack, but write only after TSTRrs
             """
                 В запакованном блоке сначала идут строки. И только потом - запакованые tstr.
+                .
                 Max_PTR_bits - начальный адрес строк
                 Max_PTR_bits - окончание строк, адрес конца всех строк
-                    маска?
-                    запакованный текст
-                заканчивается (0)*x 1 (0)*многоХ, х - вариабелен, и 7 и 10 видел.
+                6 сокращений - преамбула. 
+                собственно запакованный текст
+                заканчивается множественными 0-ми
+                подробно - см. bitstream.unpack_str
             """
-
+            unpacked_strings = buffer.unpack_str()
+            print(f"\n{unpacked_strings}\n")
             # <<<<<<<<<< TSTRs
             """
                 # noqa
@@ -404,7 +409,7 @@ class block_basegeo(block_base):
         buff = self.read(offset, GEO_SHAPE.size * 2)
         # if hlat == 0 -> tail of category
         # '00 00 0a ac 00 00 00 00 00 00 00 00 00 00 00 00 00 00 12 18'
-        # hlat = UINT_struct.unpack(buff[8:12])[0]
+        # hlat = struct_UINT.unpack(buff[8:12])[0]
         # if hlat:
         #     res = GEO_SHAPE(buff, category)
         res = GEO_SHAPE(buff, category)
@@ -721,7 +726,7 @@ class bitstream():
 
         # 0 - сложить, 10-вычесть, 11 - уже вернули
         val = prev + val
-        res = USHORT_struct.pack(val)
+        res = struct_WORD.pack(val)
         self.result += res
         ret = ""
         for h in res:
@@ -739,7 +744,7 @@ class bitstream():
         str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 1, left_shift)
         return str_res
 
-    def ptr_d(self, left_shift: int = 0) -> None:
+    def ptr_dword(self, left_shift: int = 0) -> None:
         """
         ptr, выровненный по dword
         unpack word (len=max_bits_ptr - 2) to self.buffer
@@ -796,7 +801,7 @@ class bitstream():
         # 4* num = offset from start vertexes
         vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
         print(f"start_vrtx num: {start_vrtx_num} offset: {vrtx_off:04x}")
-        self.result += USHORT_struct.pack(vrtx_off)     # vertx offs 2word, save
+        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
         """
         ptr2string, ptr2firstVertex
         begin word = 0500:0900   self.ptr(), calc_vrtx_offs, 
@@ -844,7 +849,7 @@ class bitstream():
         # /5/ word - ptr2table
         # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr  # noqa
         off_tstr = self.offset_tstr
-        self.result += USHORT_struct.pack(off_tstr)
+        self.result += struct_WORD.pack(off_tstr)
         if flag_increment_ptr2tstr:
             self.offset_tstr += TSTR.size
 
@@ -910,7 +915,7 @@ Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07
         print(f"line: start_vrtx_num = {start_vrtx_num}/0x{start_vrtx_num:02x}")
         # 4* num = offset from start vertexes
         vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
-        self.result += USHORT_struct.pack(vrtx_off)     # vertx offs 2word, save
+        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
         # '0531 04ac ' cool! 04ac as tail shp, bingo
 
         # /2/ > word id ?? (есть ли проверка на существование?
@@ -965,7 +970,7 @@ Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07
         print(f"start_vrtx_num = {start_vrtx_num}")
         # 4* num = offset from start vertexes
         vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
-        self.result += USHORT_struct.pack(vrtx_off)     # vertx offs 2word, save
+        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
 
         # /2/ > word id ?? (есть ли проверка на существование?)
         # bitarray('00111011001101000000000000100010')
@@ -1010,5 +1015,89 @@ Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07
                     str 0520  = 0101 0010 0000   010100100000
         """
         pass
+
+    def unpack_str(self) -> bytes:
+        """
+        Распаковывает строку
+        Returns:
+            bin_str: бинарное представление строковой части zero-ended строк 
+        """
+        # первыми 2 ptr - начало и окончание строки
+        ptr_start = int(self._unpack_ptr(), 16)
+        ptr_end = int(self._unpack_ptr(), 16)
+        strings_length = ptr_end - ptr_start
+        del ptr_end
+        del ptr_start
+        
+        # self.res на этом месте - 4 байта
+        # clear. вааобще то сюда tstr надо, которые еще не распаковывались) # noqa 
+        self.result.clear()
+
+        # далее - подготовка преамбулы для хаффмановского декодирования
+        # преамбула - словарь из 6 элементов с ключами от 110100001 до 110100110
+        # но 11 это преамбула, поэтому от 0100001 до 0100110
+        preambula = {}
+        for k in range(0b0100001, 0b0100111):
+            # первые 3 бита = 000
+            if beg_marker := ba2int(self._pop(3)):             # val.to01() != '000':
+                raise ValueError(f"WTF? В начале строк преамбулы ожидалось 000, а не '{beg_marker:3b}'")    # noqa
+            del beg_marker
+
+            # затем 2 бита - количество ascii chars для чтения
+            if not (n := ba2int(self._pop(2))):         #  11 и 01 точно да, а остальные варианты - хз.  # noqa
+                # Вроде 00 не может быть - иначе зачем 6 шт где не кодируется ничего?
+                raise ValueError(f"WTF? В количестве ch преамбулы не ожидалось 00, а тут '{n:2b}'")    # noqa
+            #теперь загрузить n chars
+            val = ''
+            for _ in range(n):
+                # и грузятся ascii коды по 7 бит
+                ch = chr(ba2int(self._pop(BITS_IN_ASCII)))
+                val += ch
+                # ba = self._pop(BITS_IN_ASCII)
+                # bi = ba2int(ba)
+                # bb = ba.tobytes()
+                # bch = struct_BYTE.unpack(bb)[0]
+                # print(bch)
+                # #ch_code = ba2int()
+                # ch = chr(bi)
+                # # bch = struct_BYTE.pack(ch_code)
+                # val += ch
+                pass
+            preambula[f"{k:07b}"] = val
+
+        # и вот только теперь пошли буквы, закодированные ....эммм.
+        # .. хафманом, но с нюансами
+        res = ''
+        for _ in range(strings_length):
+            prefix = self._pop(2)
+            if prefix.to01() == '11':
+                ba = self._pop(BITS_IN_ASCII)
+                if ba.to01() in preambula:
+                    # о, сокращённенькое из преамбулы
+                    pre_chars = preambula[ba.to01()]
+                    # но если из преамбулы возвращается А
+                    if pre_chars == 'A':
+                        res += chr(ba2int(ba))
+                    else:
+                        res += pre_chars
+                else:
+                    # или ascii код буквы
+                    res += chr(ba2int(ba))
+                continue        # всё, данные итерации загружены
+            elif prefix.to01() == '00':
+                prefix += self._pop(1)
+            elif prefix.to01() == '01':
+                prefix += self._pop(2)
+            else:       # elif prefix.to01() == '10':
+                prefix += self._pop(3)
+            # вытаскиваем, что получилось, из дерева и добавляем к результату
+            res += LOOKUP_CHARS[prefix.to01()]
+        # всё, упакованные буквы окончились
+
+        # подрезать хвосты - по длинне могло подрасти из-за использования преамбулы
+        bin_str = res.encode('cp1251')
+        bin_str = bin_str[:strings_length]
+        # res = bin_str.decode('cp1251')
+        return bin_str
 
     pass   # class unpack_type_one():

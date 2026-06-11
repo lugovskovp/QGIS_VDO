@@ -44,7 +44,7 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 
 from vdo.enums import BlockType
 from vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
-from vdo.datatypes import OFFSET_ONE_SEG_SIZE, OFFSET_DB_REVISION
+from vdo.datatypes import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
 from vdo.geotypes import COORD
 from vdo.block_base import block_base
 
@@ -52,26 +52,27 @@ from vdo.block_base import block_base
 OFFSET_LIST_PTR_07_LST_WORLD_SCALES = 0x08      # 00 34 00 01
 
 OFFSET_FARLIST_0B_CH_COUNTRYES = 0x0C       # RU 00 00 03 01 00 0c 00 14
-OFFSET_FARLIST_0B_CH_COUNTRYES_num2 = 0x44  # only in dbrev 34
 
 OFFSET_BLADDR_13_BIBLIOGR = 0x14      # RU 00 00 01 01 00 01 00 1e
 
 OFFSET_ALLWAYS_12 = 0x1e
 OFFSET_MAX_SEGS_UNPACKED_SH = 0x22
 
-# only in dbrev 34
-OFFSET_CD_MAP_BLOCKS = 0x4c
-OFFSET_AREA_A = 0x34
-OFFSET_AREA_B = 0x50
 
 OFFSET_KNOWN_BLOCK_TYPES = 0x24     # list(0068 001F) - типы блоков по возрастанию от 00 до 1E # noqa 
 
 OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28  # list(00a6 005d) - похоже на список весов дерева хафмана  # noqa 
 # начальный адрес таблицы весов и количество элементов.
 
+# -------- only in dbrev 34
+OFFSET_FARLIST_0B_CH_COUNTRYES_num2 = 0x44  # only in dbrev 34
+OFFSET_CD_MAP_BLOCKS = 0x4c
+OFFSET_AREA_A = 0x34
+OFFSET_AREA_B = 0x50
+
 
 class block_0x12(block_base):
-    ''' Самый первый, 0й, уникальный блок type = 0x12 '''
+    ''' Самый первый, 0й, уникальный и единственный блок type = 0x12 '''
 
     def __init__(self, unused_bladdr: BLADDR) -> None:
         """ --- """

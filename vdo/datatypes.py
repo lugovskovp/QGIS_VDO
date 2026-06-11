@@ -19,13 +19,13 @@ import heapq
 from vdo.enums import BlockType
 from vdo.consts import struct_WORD, struct_UINT
 from vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
-from vdo.blocks.block_0x12 import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
 
 OFFSET_TOC = 0x08
 
 DEFAULT_DB_REVISION = 0x1e
 DEFAULT_ONE_SEG_SIZE = 0x800
-
+OFFSET_ONE_SEG_SIZE = 0x2c
+OFFSET_DB_REVISION = 0x1a
 
 MAX_STR_LEN = 63    # 255
 

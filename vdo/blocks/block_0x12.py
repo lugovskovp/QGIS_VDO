@@ -44,6 +44,7 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 
 from vdo.enums import BlockType
 from vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
+from vdo.datatypes import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
 from vdo.geotypes import COORD
 from vdo.block_base import block_base
 
@@ -54,11 +55,9 @@ OFFSET_FARLIST_0B_CH_COUNTRYES = 0x0C       # RU 00 00 03 01 00 0c 00 14
 
 OFFSET_BLADDR_13_BIBLIOGR = 0x14      # RU 00 00 01 01 00 01 00 1e
 
-OFFSET_DB_REVISION = 0x1a
-
 OFFSET_ALLWAYS_12 = 0x1e
 OFFSET_MAX_SEGS_UNPACKED_SH = 0x22
-OFFSET_ONE_SEG_SIZE = 0x2c
+
 
 OFFSET_KNOWN_BLOCK_TYPES = 0x24     # list(0068 001F) - типы блоков по возрастанию от 00 до 1E # noqa 
 

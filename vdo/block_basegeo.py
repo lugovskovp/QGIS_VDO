@@ -154,6 +154,7 @@ class block_basegeo(block_base):
                 """
                 # а пока что не реализовано
                 raise ValueError("toc.li_lin: ", self.toc.li_lin, " но GEO_LINE еще не реализован")
+                pass
 
                 for _ in range(self.toc.li_lin.cnt + 1):     # +1 - всегда есть завершающий итем, нулевой # noqa
                     buffer.unpack_line()

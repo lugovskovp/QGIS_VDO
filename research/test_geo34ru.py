@@ -1,7 +1,8 @@
 import struct       # noqa: F401
-from vdo.datatypes import VDO_FILE, BLADDR    # UINT_struct,    # noqa
+from vdo.datatypes import VDO_FILE, BLADDR    # struct_UINT,    # noqa
 from vdo.block_base import block_base        # noqa
-from vdo.datatypes import BLADDR, UINT_struct        # noqa
+# from vdo.datatypes import BLADDR
+from vdo.consts import struct_UINT        # noqa
 
 from vdo.blocks import block_0x12       # noqa
 from vdo.enums import BlockType       # noqa
@@ -14,9 +15,9 @@ tos_bl = vdo.get_block(0)
 
 ''' '''
 block_packed: block_base
-bla_bl = BLADDR(UINT_struct.pack(0x08a06b02), vdo)  # 08a06b02 ru34 packed (mar mediterráneo? andor oceano atlântico )   # noqa
-# bla_bl = BLADDR(UINT_struct.pack(0x06cc8b05), vdo)  # //16p7 =2/9/1/2b9/0/0a + oceano atlântico id= 4005d71   # noqa
-# bla_bl = BLADDR(UINT_struct.pack(0x094fa401), vdo)  # lzw
+bla_bl = BLADDR(struct_UINT.pack(0x08a06b02), vdo)  # 08a06b02 ru34 packed (mar mediterráneo? andor oceano atlântico )   # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x06cc8b05), vdo)  # //16p7 =2/9/1/2b9/0/0a + oceano atlântico id= 4005d71   # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x094fa401), vdo)  # lzw
 
 block_packed = vdo.get_block(bla_bl)
 

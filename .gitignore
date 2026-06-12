@@ -6,7 +6,9 @@ examples
 
 tail_*.bin
 raw_*.bin
+begin word*
 
 ui_files/vdo_explorer_dockwidget_base.ui
 ui_files/citroen_kbd_dialog.ui
+
 

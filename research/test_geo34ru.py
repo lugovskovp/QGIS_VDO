@@ -29,7 +29,7 @@ pass
 
 """
   # noqa
-c:\DIY\VDO\db_src\ru_2013\ru\carindb
+c:/DIY/VDO/db_src/ru_2013/ru/carindb
 08a06b 02  BlockType.MAP__06k80: 0x15
 
 Max PTR bites: 11

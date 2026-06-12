@@ -267,19 +267,29 @@ class block_basegeo(block_base):
                 s_lang = '0'
                 s_type = '0'
                 for _ in range(self.toc.li_tstr.cnt):
+                    off_from = buffer.av_offs
                     # ptr_2_str
                     if ba2int(buffer._pop(1)):
                         s_ptr = buffer._unpack_ptr()
+                    else:
+                        # use prev value
+                        buffer.result += struct_WORD.pack(int(s_ptr, 16))
                     # language
                     if ba2int(buffer._pop(1)):
                         s_lang = buffer._unpack_byte(8)
+                    else:
+                        # use prev value
+                        buffer.result += int(s_lang, 16).to_bytes()
                     # type
                     if ba2int(buffer._pop(1)):
                         s_type = buffer._unpack_byte(5)
+                    else:
+                        # use prev value
+                        buffer.result += int(s_lang, 16).to_bytes()
                     # ------------------------- debug
-                    print(f"{buffer.av_offs}: {s_ptr} {s_lang} {s_type}")
+                    print(f"{off_from}: {s_ptr} {s_lang} {s_type}")
                     # ------------------------- debug
-                    
+                del s_ptr, s_lang, s_type, off_from
 
             self._raw += buffer.result
             buffer.clear_result()
@@ -451,7 +461,7 @@ class block_basegeo(block_base):
         # if hlat:
         #     res = GEO_SHAPE(buff, category)
         res = GEO_SHAPE(buff, category)
-        if self.is_unpacked:
+        if True or self.is_unpacked:
             res.name = self.read_str(res.p_str_name)
             #
             vrtx = []
@@ -503,7 +513,7 @@ class block_basegeo(block_base):
 
         """
         res = None
-        if self.is_unpacked:
+        if True of self.is_unpacked:
             buff = self.read(offset, VERTEX.size)
             res = VERTEX(buff)
             # TODO - а может при создании вертекса сюда же еще и реальные координаты?
@@ -514,7 +524,7 @@ class block_basegeo(block_base):
 
         """
         res = None
-        if self.is_unpacked:
+        if True or self.is_unpacked:
             buff = self.read(offset, TSTR.size)
             if offset < self.toc.START_TXT:
                 res = TSTR(buff)
@@ -723,6 +733,8 @@ class bitstream():
         Args:
             qty_bit:  Количество бит для интерпретации, как байт
             left_shift: сдвиг влево после распаковки
+        Returns:
+            str: string with hex value
         """
         str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits, left_shift)
         return str_res
@@ -817,7 +829,7 @@ class bitstream():
         WORD  ptr_to_category PTR <--- max_PTR_bits-1 bits
         """
         # /0/
-        self._unpack_byte(BITS_IN_CATEGORY_TYPE)    # 7 bit на 
+        res = self._unpack_byte(BITS_IN_CATEGORY_TYPE)    # 7 bit на 
         
         # en_GEO_CATEGORY
         # /1/

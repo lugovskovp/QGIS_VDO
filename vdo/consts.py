@@ -6,6 +6,10 @@ import struct
 
 # constants values
 BITS_IN_ASCII = 7
+BITS_IN_BYTE = 8
+BITS_IN_WORD = 16
+BITS_IN_UINT = 32
+
 USHORT_BYTES_CNT = 2
 UINT_BYTES_CNT = 4
 DOUBLE_BYTES_CNT = 8

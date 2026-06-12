@@ -14,9 +14,20 @@ from bitarray.util import ba2int
 from vdo.block_base import block_base   
 from vdo.datatypes import BLADDR, LIST, BYTESTRUCT
 from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
-from vdo.geotypes import MAP_AREA, GEO_CATEGORY, GEO_SHAPE, GEO_LINE, VERTEX, TSTR
-from vdo.consts import struct_UINT, struct_WORD, struct_WORD_TWICE    # BYTE_struct,
-from vdo.consts import BITS_IN_ASCII, LOOKUP_CHARS
+from vdo.geotypes import (MAP_AREA,
+                          GEO_CATEGORY,
+                          GEO_SHAPE,
+                          GEO_LINE,
+                          VERTEX,
+                          TSTR)
+from vdo.consts import (struct_UINT,
+                        struct_WORD,
+                        struct_WORD_TWICE,
+                        BITS_IN_ASCII,
+                        BITS_IN_BYTE,
+                        BITS_IN_WORD,
+                        BITS_IN_UINT,
+                        LOOKUP_CHARS)
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -30,10 +41,7 @@ OFFSET_PACKED_DATA = 0x34  # ТИПЫ БЛОКОВ archived type_1_vdo_pack
                             # bmw ee bnl:  00 16 15 1c 14 1d 1e # noqa: E116
                             # в них незапакованы первые 0х34 # noqa: E116
 
-BITS_IN_CATEGORY_TYPE = 7   # packed cat type len = 7 bit
-BITS_IN_BYTE = 8
-BITS_IN_WORD = 16
-BITS_IN_UINT = 32
+BITS_IN_CATEGORY_TYPE = BITS_IN_BYTE - 1   # packed cat type len = 7 bit
 
 TSTR_ITEM_SIZE = 4
 
@@ -513,7 +521,7 @@ class block_basegeo(block_base):
 
         """
         res = None
-        if True of self.is_unpacked:
+        if True or self.is_unpacked:
             buff = self.read(offset, VERTEX.size)
             res = VERTEX(buff)
             # TODO - а может при создании вертекса сюда же еще и реальные координаты?

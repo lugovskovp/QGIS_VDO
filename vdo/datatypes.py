@@ -73,7 +73,7 @@ class VDO_FILE():
         s = f'VDO v.{self.dbrev}[{self.segsize}]:{self.path}'
         return s
 
-    def read(self, offset: int, size: int) -> bytearray:
+    def read(self, offset: int, size: int) -> bytearray | None:
         """ Return bytearray[size] from self.path.offset
         Args:
             offset: offset in file path

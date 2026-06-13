@@ -14,9 +14,21 @@ from bitarray.util import ba2int
 from vdo.block_base import block_base   
 from vdo.datatypes import BLADDR, LIST, BYTESTRUCT
 from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
-from vdo.geotypes import MAP_AREA, GEO_CATEGORY, GEO_SHAPE, GEO_LINE, VERTEX, TSTR
-from vdo.consts import struct_UINT, struct_WORD, struct_WORD_TWICE    # BYTE_struct,
-from vdo.consts import BITS_IN_ASCII, LOOKUP_CHARS
+from vdo.geotypes import (MAP_AREA,
+                          GEO_CATEGORY,
+                          GEO_SHAPE,
+                          GEO_LINE,
+                          VERTEX,
+                          TSTR)
+from vdo.consts import (struct_UINT,
+                        struct_WORD,
+                        struct_WORD_TWICE,
+                        struct_4BYTES,
+                        BITS_IN_ASCII,
+                        BITS_IN_BYTE,
+                        BITS_IN_WORD,
+                        BITS_IN_UINT,
+                        LOOKUP_CHARS)
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -30,10 +42,7 @@ OFFSET_PACKED_DATA = 0x34  # ТИПЫ БЛОКОВ archived type_1_vdo_pack
                             # bmw ee bnl:  00 16 15 1c 14 1d 1e # noqa: E116
                             # в них незапакованы первые 0х34 # noqa: E116
 
-BITS_IN_CATEGORY_TYPE = 7   # packed cat type len = 7 bit
-BITS_IN_BYTE = 8
-BITS_IN_WORD = 16
-BITS_IN_UINT = 32
+BITS_IN_CATEGORY_TYPE = BITS_IN_BYTE - 1   # packed cat type len = 7 bit
 
 TSTR_ITEM_SIZE = 4
 
@@ -88,20 +97,18 @@ class block_basegeo(block_base):
             del self._raw       # в _raw - будут именно распакованные данные
             del CUT_ZERO_BYTES_CNT
             self._raw = barray[:OFFSET_PACKED_DATA]    # до 0x34 - не запакованы, потом идёт непонятный ?? DWORD # noqa
-            # первые 2 word - назначение неизвестно. 83888384 = 5000 9000
-            # ?
-            self.beg_arch_word_A = struct_WORD.unpack(barray[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 2])[0]  # noqa 
-            # ?
-            self.beg_arch_word_B =  struct_WORD.unpack(barray[OFFSET_PACKED_DATA + 2:OFFSET_PACKED_DATA + 4])[0]  # noqa 
             # остальное в buffer - поток битов, которые будем распаковывать
-            buffer = bitstream(barray[OFFSET_PACKED_DATA + 4:],  # + unk_beg_arch_dword # noqa
-                               OFFSET_PACKED_DATA,   # вот с этого офсета будем заполнять
+            buffer = bitstream(barray[OFFSET_PACKED_DATA:],  # + unk_beg_arch_dword # noqa
+                               OFFSET_PACKED_DATA,      # вот с этого офсета будем заполнять
                                self.max_PTR_bits(),
-                               self.toc.li_vrtx.ptr,  # не ошибка, нужен offset vrtx
-                               self.toc.li_tstr)       # и list tstr тоже надо
+                               self.toc.li_vrtx,    # не ошибка, нужен offset vrtx
+                               self.toc.li_tstr        # и list tstr тоже надо
+                               )       
 
             # суммарная уже известная на данный момент информация
             self.show_main_info()
+            print(f"\tMax VERTEX bites: {buffer.max_bit_in_vrtx_num}")
+            print(f" begin word = {buffer.word_a:02x} {buffer.word_b:02x} {buffer.word_c:02x} {buffer.word_d:02x} ")  # noqa
 
             # <<<<<<<<<< GEO_CATEGORY
             '''
@@ -158,7 +165,9 @@ class block_basegeo(block_base):
 
                 for _ in range(self.toc.li_lin.cnt + 1):     # +1 - всегда есть завершающий итем, нулевой # noqa
                     buffer.unpack_line()
+                    # ------------------------------ <debug
 
+                    # ------------------------------ debug>
                     self._raw += buffer.result
                     buffer.clear_result()
 
@@ -171,8 +180,8 @@ class block_basegeo(block_base):
             # а вот дальше запакованы вертексы, и, вероятно, delta-coding
             if self.toc.li_vrtx.cnt:
                 # первые2 значения - рассматриваем, как xy начальных точек.
-                prev_x = int(buffer._unpack_short(), 16)                       # x
-                prev_y = int(buffer._unpack_short(), 16)       # y
+                prev_x = int(buffer._unpack_word(), 16)                       # x
+                prev_y = int(buffer._unpack_word(), 16)       # y
                 self._raw += buffer.result
                 buffer.clear_result()
                 # ==================== debug print last 10h values
@@ -220,41 +229,83 @@ class block_basegeo(block_base):
                 заканчивается множественными 0-ми
                 подробно - см. bitstream.unpack_str
             """
-            unpacked_strings = buffer.unpack_str()
-            print(f"\n{unpacked_strings}\n")
-            # <<<<<<<<<< TSTRs
-            """
-                # noqa
-                071515 04  BlockType.MAP__10k400: 0x1d
-                Max PTR bits: 12
-               самый хвост
-                0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
+            if self.toc.li_tstr.cnt:
+                # нет tstr - нет и строк для распаковки
+                unpacked_bin_strings = buffer.unpack_str()
+                print(f"\n{unpacked_bin_strings}\n")
 
-                8c0 15 00   delta 13/19
-                1 100011000000 1 00010101 1 00000    1100011000000100010101100000 
-                1 100011010011 00   8D3  delta 12/18 
-                1 100011100101 00   8E5  delta 11/17
-                1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
-                8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
-                10001011000 10001011010 10001011100 10001011110 100011000000
-                12-1 len(align word), 4 stucks
+                # <<<<<<<<<< TSTRs
+                """
+                    # noqa
+                    071515 04  BlockType.MAP__10k400: 0x1d
+                    Max PTR bits: 12
+                самый хвост
+                    0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
 
-                4 штуки
-                1 - флаг загружать, или 0 использовать прошлые
-                ptr = max_ptr_bits
-                lang = 8 bit
-                last_byte = 5 bit
+                    8c0 15 00   delta 13/19
+                    1 100011000000 1 00010101 1 00000    1100011000000100010101100000 
+                    1 100011010011 00   8D3  delta 12/18 
+                    1 100011100101 00   8E5  delta 11/17
+                    1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
+                    8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
+                    10001011000 10001011010 10001011100 10001011110 100011000000
+                    12-1 len(align word), 4 stucks
 
-                затем идут адреса, в которые надо перенести сгенерированные
-                эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
-                (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
-                самое последнее - адрес, на котором окончится tstr и начнётся массив строк
-            """
+                    4 штуки
+                    1 - флаг загружать, или 0 использовать прошлые
+                    ptr = max_ptr_bits
+                    lang = 8 bit
+                    last_byte = 5 bit
 
-            
+                    затем идут адреса, в которые надо перенести сгенерированные
+                    эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
+                    (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
+                    самое последнее - адрес, на котором окончится tstr и начнётся массив строк
+                """
+                # убрать незначащие лидирующие 0
+                marker_TSTR = '0000000000000001'
+                find = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
+                del marker_TSTR
+                buffer._pop(find)   
+                del find
+                
+                # распаковка
+                s_ptr = '0'
+                s_lang = '0'
+                s_type = '0'
+                for _ in range(self.toc.li_tstr.cnt):
+                    off_from = buffer.av_offs
+                    # ptr_2_str
+                    if ba2int(buffer._pop(1)):
+                        s_ptr = buffer._unpack_ptr()
+                    else:
+                        # use prev value
+                        buffer.result += struct_WORD.pack(int(s_ptr, 16))
+                    # language
+                    if ba2int(buffer._pop(1)):
+                        s_lang = buffer._unpack_byte(8)
+                    else:
+                        # use prev value
+                        buffer.result += int(s_lang, 16).to_bytes()
+                    # type
+                    if ba2int(buffer._pop(1)):
+                        s_type = buffer._unpack_byte(5)
+                    else:
+                        # use prev value
+                        buffer.result += int(s_lang, 16).to_bytes()
+                    # ------------------------- debug
+                    print(f"{off_from}: {s_ptr} {s_lang} {s_type}")
+                    # ------------------------- debug
+                del s_ptr, s_lang, s_type, off_from
 
+            self._raw += buffer.result
+            buffer.clear_result()
 
+            # texts
+            self._raw += unpacked_bin_strings
 
+            # собственно оставшееся в буфере можно и не распаковывать
+            # там окончание куда tstr раскидывать
             self.bit_tail = buffer
             # локально константами
 
@@ -265,15 +316,19 @@ class block_basegeo(block_base):
         # записать распакованное
         self.write_raw()
         if not self.is_unpacked:
-            print(f"Save into tail_{self.head.bladdr}.bin")
+            print(f"Save tail into tail_{self.head.bladdr}.bin")
             with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
                 f.write(self.bit_tail.buffer.tobytes()) 
+            print(f"Save unpacked into raw_{self.head.bladdr}.bin")
+            with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
+                f.write(self._raw) 
         # и, наконец, всё содержимое
         self.arr_shapes = []
         # self.lines = []
         # self.cats = []
         self.setup_objects()
         #self.setup_all_objects()
+        pass
 
     @property
     def data_size(self) -> int:
@@ -325,7 +380,6 @@ class block_basegeo(block_base):
         debug function for printing main information
         """
         print(f"\n{self.vdo.path}\n{self.head.bladdr}  {self.head.bltype}: 0x{self.head.bltype.value:02x}")
-        print(f"\nMax PTR bites: {self.max_PTR_bits()}")
         end = f"\tnext ptr: {(self.toc.li_cat.cnt + 1) * 4 + self.toc.li_cat.ptr:04X}" if self.toc.li_cat.cnt else ""  # noqa
         print(f"cat {self.toc.li_cat} {end}")
         end = f"\tnext ptr: {(self.toc.li_shp.cnt + 1) * 0x14 + self.toc.li_shp.ptr:04X}" if self.toc.li_shp.cnt else ""  # noqa
@@ -340,10 +394,10 @@ class block_basegeo(block_base):
         end = f"\tnext ptr: {(self.toc.li_tstr.cnt) * 4 + self.toc.li_tstr.ptr:04X}" if self.toc.li_tstr.cnt else ""  # noqa
         print(f"tst {self.toc.li_tstr} {end}")
         print(f"   strs from {self.toc.START_TXT:04X}")
-        print(f"begin word = {self.beg_arch_word_A:04X}:{self.beg_arch_word_B:04X}")
         print(f"Map_hex: {self.map.hex}")
         print(f"{self.map}")
         print(f"Максимальные Х и У: {self.max_bounds} \n")
+        print(f"\nMax PTR bites: {self.max_PTR_bits()}")
         pass
 
     def setup_toc(self) -> None:
@@ -414,7 +468,7 @@ class block_basegeo(block_base):
         # if hlat:
         #     res = GEO_SHAPE(buff, category)
         res = GEO_SHAPE(buff, category)
-        if self.is_unpacked:
+        if True or self.is_unpacked:
             res.name = self.read_str(res.p_str_name)
             #
             vrtx = []
@@ -466,7 +520,7 @@ class block_basegeo(block_base):
 
         """
         res = None
-        if self.is_unpacked:
+        if True or self.is_unpacked:
             buff = self.read(offset, VERTEX.size)
             res = VERTEX(buff)
             # TODO - а может при создании вертекса сюда же еще и реальные координаты?
@@ -477,7 +531,7 @@ class block_basegeo(block_base):
 
         """
         res = None
-        if self.is_unpacked:
+        if True or self.is_unpacked:
             buff = self.read(offset, TSTR.size)
             if offset < self.toc.START_TXT:
                 res = TSTR(buff)
@@ -537,7 +591,7 @@ class bitstream():
     def __init__(self, barray: bytes,
                  offset: int,
                  max_PTR_bits: int,
-                 start_vrtx_ptr: int,
+                 li_vrtx: LIST,
                  li_tstr: LIST) -> None:
         """
         Args:
@@ -547,19 +601,34 @@ class bitstream():
             vrtx_ptr: int       стартовый offset vertexes
             li_tstr: LIST       ptr-cnt на TSTR - объекты подписей на карте
         """
+        # Похоже работает только в конкретном наборе 0500 0900, 0516 0900
+        # первые 2 word - назначение неизвестно. 83888384 = 5000 9000
+        # [ ] 05: a - ?
+        # [x] 12: b - для id shape (+line?) - сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
+        # [x] 09: c - 9 -столько бит в дельте XY (8, 9, a)
+        # [ ] 00: d - ?
+        (self.word_a, self.word_b, self.word_c, self.word_d)  = struct_4BYTES.unpack(barray[:4])
+        barray = barray[4:]
+        # debug raises
+        if self.word_a not in [5]:
+            raise ValueError(self.word_a, f"0x{self.word_a} self.word_a")
+        if self.word_c not in [8, 9, 0x0a]:
+            raise ValueError(self.word_c, f"0x{self.word_c} self.word_c")
+        if self.word_d not in [0]:
+            raise ValueError(self.word_d, f"0x{self.word_d} self.word_d")
+
         self.buffer = bitarray(buffer=barray, endian='big').copy()    # copy - else read only memory # noqa
         self.result = bytearray()   # empty
         self.offset_start = offset
         self.max_PTR_bits = max_PTR_bits    # max possible bits in near offset
-        self.start_vrtx_ptr = start_vrtx_ptr
+        self.start_vrtx_ptr = li_vrtx.ptr   # start_vrtx_ptr
         self.offset_tstr = li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1  # noqa
         self.counter_tstr_table_str = 0
-        # для распаковки vertexes по префиксам
-        self.BITS_TO_READ = {'00' : 8,       # 8
-                            '01' : 8,        # 8
-                            '10': 9,         # прочитать 9 бит, вычесть значение из предыдущего
-                            '11': 16         # 16 считать все 16 бит, как значение. []
-                            }
+
+        # 05576f 02  BlockType.MAP__07k40: 0x16:: max_bit_ptr = 11,
+        # but maxnum vrtx = FF (8, not 9)
+        self.max_bit_in_vrtx_num = len(f"{li_vrtx.cnt:b}")
+        
         pass
     
     @property
@@ -619,6 +688,14 @@ class bitstream():
         val = self.buffer[start:start + qty_bits].copy()
         return val
 
+    def next_bit_true(self):
+        """
+        pop бит, и если = 1 вернуть True, else False
+        """
+        if self._pop(1) == bitarray('1'):
+            return True
+        return False
+
     def _unpack(self, bit_goal: int, bit_compressed: int, left_shift: int=0, bool_save: bool=True) -> str | bitarray:  # noqa:
         """
         Args:
@@ -644,7 +721,7 @@ class bitstream():
             str_res += "{:02x}".format(h)   # str_res - for debug ))))
         return str_res   # bres
 
-    def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> None:
+    def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> str:
         """
         unpack one byte from bit_compressed to self.buffer
         Args:
@@ -654,9 +731,9 @@ class bitstream():
         if bit_compressed > BITS_IN_BYTE:
             raise ValueError(bit_compressed, f"Значение больше {BITS_IN_BYTE}, _unpack_byte")
         str_res = self._unpack(BITS_IN_BYTE, bit_compressed, left_shift)  
-        pass
+        return str_res
     
-    def _unpack_short(self, bit_compressed: int=BITS_IN_WORD) -> None:
+    def _unpack_word(self, bit_compressed: int=BITS_IN_WORD) -> str:
         """
         Распаковывает BITS_IN_WORD(16 бит), как short и добавляет значение в self.result.
         Args:
@@ -665,11 +742,11 @@ class bitstream():
 
         """
         if bit_compressed > BITS_IN_WORD:
-            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_WORD}, _unpack_short")
+            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_WORD}, _unpack_word")
         res = self._unpack(BITS_IN_WORD, bit_compressed, 0)
         return res
 
-    def _unpack_uint(self, bit_compressed: int=BITS_IN_UINT) -> None:
+    def _unpack_uint(self, bit_compressed: int=BITS_IN_UINT) -> str:
         """
         Распаковывает BITS_IN_UINT (32 бита) и добавляет значение в self.result.
         Args:   
@@ -680,15 +757,31 @@ class bitstream():
         res = self._unpack(BITS_IN_UINT, bit_compressed, 0)
         return res
 
-    def _unpack_ptr(self, left_shift: int = 0) -> None:
+    def _unpack_ptr(self, left_shift: int = 0) -> str:
         """
         unpack word (packed len=max_bits_ptr) to self.buffer
         Args:
             qty_bit:  Количество бит для интерпретации, как байт
             left_shift: сдвиг влево после распаковки
+        Returns:
+            str: string with hex value
         """
         str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits, left_shift)
         return str_res
+
+    def _unpack_vertex_offset(self) -> int:
+        """
+        Упакованы не смещения, а номера вертексов в общем списке.
+        """
+        # номер самого первого, 0-го vrtx объекта не сохранять в result!  # noqa
+        # -2: надо в 4 раза меньше бит, т.к. ptr vrtx кратен 4 -> self.max_PTR_bits - 2
+        num_first_vrtx = self._unpack(BITS_IN_WORD, self.max_bit_in_vrtx_num, 0, False)  # не сохранять в result!  # noqa
+        num_first_vrtx = ba2int(num_first_vrtx)     # номер 0-го vrtx объекта
+        # 4* num = offset from start vertexes
+        vrtx_off = self.start_vrtx_ptr + VERTEX.size * num_first_vrtx
+        print(f"    start_vrtx num: {num_first_vrtx} offset: {vrtx_off:04x}")
+        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save 
+        return vrtx_off
 
     def _unpack_half_vertex(self, prev: int) -> int:
         """
@@ -703,13 +796,24 @@ class bitstream():
         Returns:
             int: short значение координаты x или y
         """
-        bits_to_read = 9   # wtf? why?
+
+        # if self.word_B == 0x900:        # 500 900, 512 900, 516 900
+        #     bits_to_read = 9   # wtf? why?
+        # elif self.word_B == 0x800:        #  512 800, 
+        #     bits_to_read = 8
+        # elif self.word_B == 0xA00:        #  0557A302 00 16 01: 513 a00
+        #     bits_to_read = 10
+        # else:
+        #     raise ValueError(self.word_B, f"{self.word_B} self.word_B")
+        
+        # третий байт первого uint - к-во бит 
+        bits_to_read = self.word_c
+
         prefix = self._pop(2).to01()
-        # bits_to_read = self.BITS_TO_READ[prefix]
         
         if prefix == '11':
             # load full short
-            res = self._unpack_short()
+            res = self._unpack_word()
             return res
 
         if prefix == '10':
@@ -717,9 +821,9 @@ class bitstream():
             val = -ba2int(self._unpack(BITS_IN_WORD, bits_to_read, 0, False))
 
         elif prefix == '01':
-            # read 8 бит, и +добавить 9й
+            # read 8 бит, и +добавить ~9й~ старший
             val = ba2int(self._unpack(BITS_IN_WORD, bits_to_read - 1, 0, False))
-            val = 0b100000000 | val
+            val = (1 << bits_to_read) | val       # 0b100000000 | val
 
         elif prefix == '00':
             # read 8 бит, и 9й - всё равно 0
@@ -735,7 +839,7 @@ class bitstream():
         return ret
         
 
-    def _unpack_ptr_w(self, left_shift: int = 0) -> None:
+    def _unpack_ptr_word(self, left_shift: int = 0) -> None:
         """
         ptr, выровненный по word
         unpack word (len=max_bits_ptr - 1) to self.buffer
@@ -745,15 +849,15 @@ class bitstream():
         str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 1, left_shift)
         return str_res
 
-    def ptr_dword(self, left_shift: int = 0) -> None:
-        """
-        ptr, выровненный по dword
-        unpack word (len=max_bits_ptr - 2) to self.buffer
-        Args:
-            left_shift: сдвиг влево после распаковки
-        """
-        str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 2, left_shift)
-        return str_res
+    # def DELETE_THIS_ptr_dword(self, left_shift: int = 0) -> None:
+    #     """
+    #     ptr, выровненный по dword
+    #     unpack word (len=max_bits_ptr - 2) to self.buffer
+    #     Args:
+    #         left_shift: сдвиг влево после распаковки
+    #     """
+    #     str_res = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 2, left_shift)
+    #     return str_res
 
     #---------------------------------------------------
     def unpack_category(self) -> None:
@@ -763,12 +867,16 @@ class bitstream():
         WORD  ptr_to_category PTR <--- max_PTR_bits-1 bits
         """
         # /0/
-        self._unpack_byte(BITS_IN_CATEGORY_TYPE)    # 7 bit на # en_GEO_CATEGORY
+        res = self._unpack_byte(BITS_IN_CATEGORY_TYPE)    # 7 bit на 
+        
+        # en_GEO_CATEGORY
         # /1/
-        self._unpack_byte(1)    # 1 бит на полигон0/полилиния1  # en_DRAW_TYPE
+        self._unpack_byte(1)    # 1 бит на полигон0/полилиния1  
+        
+        # en_DRAW_TYPE
         # /2/
         # left shift 1 - т.к. last = 0 always in this ptr
-        self._unpack_ptr_w(1)    # максимальное к-во бит для near ссылки word
+        self._unpack_ptr_word(1)    # максимальное к-во бит для near ссылки word
 
     def unpack_shape(self) -> None:
         """
@@ -781,7 +889,8 @@ class bitstream():
         WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
         == # в хвостовом vertex = ptrStrTable, последний pstrt = pstrt + 4*pstr.cnt
         """
-        # /0/ WORD - ptr2string <--- word, ptr 2 zero-ended string
+
+        # /0/ WORD - ptr2string <--- word, ptr to zero-ended string
         # if 0 - zero tail ptr2table str -- вот кстати вопрос - на точно ли так надо ваще????
         # flag_calc_ptr2tstr = self.unpack(BITS_IN_WORD, self.max_PTR_bits, 0) != '0000'
         flag_increment_ptr2tstr = self._unpack_ptr() != '0000'
@@ -794,30 +903,43 @@ class bitstream():
 
         # /1/ word, ptr 2 first vertex
         # запакованы не offs, а номера вертексов vertnum,
-        # т.е. off2vertex0 + 4*vertnum = offset распакованный
-        # макс. число для архивированного значения - в vertex.cnt
+        #       v_off = self._unpack_vertex_offset()
         # -2: надо в 4 раза меньше бит, т.к. ptr vrtx кратен 4 -> self.max_PTR_bits - 2
-        start_vrtx_num = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
-        start_vrtx_num = ba2int(start_vrtx_num)     # номер 0-го vrtx объекта
+        num_first_vrtx = self._unpack(BITS_IN_WORD, self.max_bit_in_vrtx_num, 0, False)  # не сохранять в result!  # noqa
+        num_first_vrtx = ba2int(num_first_vrtx)     # номер 0-го vrtx объекта
         # 4* num = offset from start vertexes
-        vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
-        print(f"start_vrtx num: {start_vrtx_num} offset: {vrtx_off:04x}")
+        vrtx_off = self.start_vrtx_ptr + VERTEX.size * num_first_vrtx
+        print(f"start_vrtx num: {num_first_vrtx} offset: {vrtx_off:04x}")
         self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
-        """
-        ptr2string, ptr2firstVertex
-        begin word = 0500:0900   self.ptr(), calc_vrtx_offs, 
-        
-        tst 08B0:0004 cnt:4     next ptr: 8c0  strs from 08c0  100011000000  max_PTR_bits=12
-        """
 
-        # /2/  dword, id -
-        #self._pop(1)
-        #id - если следующий бит = 1, ЕСТЬ ID, иначе пропустить
-        if self._pop(1) == bitarray('1'):
+
+        # ========================== debug
+        # print(f"start_vrtx num: {num_first_vrtx} offset: {vrtx_off:04x}")
+        # ========================== debugt
+
+        # /2/  dword, id
+        ## Похоже работает только в конкретном наборе 0500 0900, 0516 0900
+        # if self.word_A == 0x500:                # 500 900, 
+        #     bits_to_unpack_then_zero = 0
+        # elif self.word_A == 0x516:              # 516, 800, 
+        #     bits_to_unpack_then_zero = 22   # эмпирика чистой воды, 16х=20
+        # elif self.word_A == 0x512:              # 512 900, 512 800, 
+        #     bits_to_unpack_then_zero = 18   # эмпирика, 12х=18
+        # elif self.word_A == 0x513:              # 0513 0800 
+        #     bits_to_unpack_then_zero = 19   # эмпирика, 13х=19
+        # elif self.word_A == 0x515:              # 0513 0800 
+        #     bits_to_unpack_then_zero = 21   # попытка 0х15 = 21
+        # else:
+        #     raise ValueError(self.word_A, f"wA: 0x{self.word_A:x}, bits_to_unpack_then_zero")
+
+        bits_to_unpack_then_zero = self.word_b
+
+        #id - если следующий бит = 1, ЕСТЬ 32бит ID, иначе bits_to_unpack_then_zero
+        if self.next_bit_true():
             self._unpack_uint()
         else:
-            # id в архиве нет, ID = 00 00 00 00
-            self.result += b'\x00' * 4
+            self._unpack_uint(bits_to_unpack_then_zero)
+
         """
         ptr2string, ptr2firstVertex, id
         begin word = 0500:0900   self.ptr(), calc_vrtx_offs, 
@@ -826,7 +948,7 @@ class bitstream():
         """
 
         # /3/  dword dword - coord, here '08 c0 00 a0 40 01 8d 00'
-        # координаты - они есть, всегда. Просто лежат без упаковки
+        # координаты - они есть, всегда. Просто лежат без упаковки  '0010010001110101000001011000010011100010'
         self._unpack_uint()        # _lon
         self._unpack_uint()        # _lat
         """
@@ -842,7 +964,6 @@ class bitstream():
         8d3 (prev str + 13), vrtx_n = 7e
         '100011010011 0001111110 101000000000000100'
         """
-        
 
         # /4/  word align
         self.result += b'\x00' * 2
@@ -853,71 +974,73 @@ class bitstream():
         self.result += struct_WORD.pack(off_tstr)
         if flag_increment_ptr2tstr:
             self.offset_tstr += TSTR.size
+    # -------------------------- unpack shp
 
     def unpack_line(self) -> None:
         """
 
         """
         """
-         # noqa
-        Geo segment of line - poligon
-        0:    2h - PTR         p_str_name - ptr2str/0;
-        2:    2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
-        4:    4h - DWORD       id
-                    // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
-        6:    2h - PTR   ptr_linesign, p_line_sign; // Or start pstr
-        8:    2h - WORD  or_b_or_c;
-        10:   2h - PTR   ptr_tstr     p_p_str_name; // ptr to GEO_OBJ_STR
-        12:   4h - WORD   or_38_or_0_b_country;
-        GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
+        # noqa
+            Geo segment of line - poligon
+            0:    2h - PTR         p_str_name - ptr2str/0;
+            2:    2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
+            4:    4h - DWORD       id
+                        // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
+            6:    2h - PTR   ptr_linesign, p_line_sign; // Or start pstr
+            8:    2h - WORD  or_b_or_c;
+            10:   2h - PTR   ptr_tstr     p_p_str_name; // ptr to GEO_OBJ_STR
+            12:   4h - WORD   or_38_or_0_b_country;
+            GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
 
-> p_str_name > 0520
-ptr<<2 = 530
-> ptr_vrtx ?? == 04ac?  num 260 dec | 104h
-> word id ?? (есть ли проверка на существование?)
-> tstr_regi > tst 0518  (? < str 0520 ??)
-> word or_b_or_c - какое-то число?
-> tstr_name     (0520 ????)
-> word or_38_or_0_b_country
+                > p_str_name > 0520
+                ptr<<2 = 530
+                > ptr_vrtx ?? == 04ac?  num 260 dec | 104h
+                > word id ?? (есть ли проверка на существование?)
+                > tstr_regi > tst 0518  (? < str 0520 ??)
+                > word or_b_or_c - какое-то число?
+                > tstr_name     (0520 ????)
+                > word or_38_or_0_b_country
 
-c:/DIY/VDO/db_src/ru_2013/ru/carindb
-08a06b 02  BlockType.MAP__06k80: 0x15
+                c:/DIY/VDO/db_src/ru_2013/ru/carindb
+                08a06b 02  BlockType.MAP__06k80: 0x15
 
-Max PTR bites: 11
-cat 0034:0003 cnt:3     next ptr: 0044
-shp 0044:0001 cnt:1     next ptr: 006C - only one shape.
-lin 006C:0002 cnt:2     next ptr: 009C - two lines
-poi 0000:0000 cnt:0 
-vrt 009C:011F cnt:287   next ptr: 0518
-tst 0518:0002 cnt:2     next ptr: 0520
-strs from 0520
-begin word = 0E00:0900
-Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07  
-518 -> str520 - 'mar mediterráneo' +\x00
-51c -> str531 - river name  ? Уэд-Мудуйа ? море Альборан? Oued Kert ?
-01 00 00 44  WATER
-65 01 00 6C  RIVER_MAJOR
-67 01 00 7C  BORDER
-00 00 00 8C   EMPTY
+                Max PTR bites: 11
+                cat 0034:0003 cnt:3     next ptr: 0044
+                shp 0044:0001 cnt:1     next ptr: 006C - only one shape.
+                lin 006C:0002 cnt:2     next ptr: 009C - two lines
+                poi 0000:0000 cnt:0 
+                vrt 009C:011F cnt:287   next ptr: 0518
+                tst 0518:0002 cnt:2     next ptr: 0520
+                strs from 0520
+                begin word = 0E00:0900
+                Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07  
+                518 -> str520 - 'mar mediterráneo' +\x00
+                51c -> str531 - river name  ? Уэд-Мудуйа ? море Альборан? Oued Kert ?
+                01 00 00 44  WATER
+                65 01 00 6C  RIVER_MAJOR
+                67 01 00 7C  BORDER
+                00 00 00 8C   EMPTY
         """
         # /0/  p_str_name >= 0520
-        # '10100110001 10000010000111011001101000000'
+        # '10100110001 10000010000111011001101000000' '1010011000110000010000111011001101000000'
         # p_str_name = 05 31
-        i0_p_str_name = self.ptr()
+        i0_p_str_name = self._unpack_ptr()
         # '0531 ' cool! 520 + len 'mar mediterráneo' +\x00
 
-        # /1/  ptr_vrtx ?? shp:009C-04AC,  lines=4ac-0518 
-        # bitarray('100000100 00111011001101000000000000100010011
+        # /1/  ptr_vrtx ?? shp:009C-04AC,  lines=4ac-0518 010010101100 100101011 - 010100011000 101000110
+        # 104 000100000100
         # vrtx_num = 260 dec | 104h
         # vrtx_off = 04 ac
         # self._pop(1)
-        start_vrtx_num = self.unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
+        start_vrtx_num = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
         start_vrtx_num = ba2int(start_vrtx_num)     # номер from 0-го vrtx объекта
         print(f"line: start_vrtx_num = {start_vrtx_num}/0x{start_vrtx_num:02x}")
         # 4* num = offset from start vertexes
         vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
         self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
         # '0531 04ac ' cool! 04ac as tail shp, bingo
+       
 
         # /2/ > word id ?? (есть ли проверка на существование?
         # и есть ли макс ид для линий?)
@@ -925,13 +1048,14 @@ Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07
         #k = self._pop(1)
         if True or k != '1':
             #
-            i2_id = self.unpack(32, 32)        # map = '08B9 3000 0B9A 5000  0919 3000 0BFA  5000'\
+            i2_id = self._unpack_uint()        # map = '08B9 3000 0B9A 5000  0919 3000 0BFA  5000'\
                                                # 35.039236N 3.656246W  36.171698N 2.523783W
         else:
             i2_id = '0'
             self.result += b'\x00' * 4
         # '0531 04ac 3b340022'
         # '05 31 04 ac ec d0 00 89' + _pop(2) - 00
+        pass
 
         # /3/ > tstr_regi > tst 0518  (? < str 0520 ??)  <<2, т.к. сразу за vortex
         # 518 0 101000110 00 -> 520
@@ -941,15 +1065,17 @@ Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07
         # 538 '1010011100000010000000000001000111110000'
         #   i_z = self._pop(2) 400c 0100000000001100
         # '0111011001101000000000000100010011010011'
-        i3_p_tstr_regi = self.unpack(16, 11)
+        # i3_p_tstr_regi = self._unpack_ptr_word()         # unpack(16, 11)
+        self._pop(2)  # 01
+        i3_p_tstr_regi = self._unpack_ptr()         # unpack(16, 11)
+        pass
         # '0538' -like ptr 2 string - but early _pop 00
         # 00111011001101000000000000100010
         # 01101001110000001000000000000100011111000000000000000110000000000000000010000100000001110010110100101100000000000100 101000110 010110110100010011110001001010101110001010101101011100110011010011010110 101000111 0000110001111010000100100111000001001110000000110011001001111110100101001001110001011001101111100011001111001001110000101010100001100011101100110101001101010110011001100001011110000000011110110011011100010111110001101100100111111010011110011100101110001
-        # bitarray('001110110011010000000000001000100110100111000000100000000000010001111100000000000000011000000000000000001000010000000111001011010010110000000000010010100011001011011010001001111000100101010111000101010110101110011001101001101011010100011100001100011110100001001001110000010011100000001100110010011111101001010010011100010110011011111000110011110010011100001010101000011000111011001101010011010101100110011000010111100000000111101100110111000101111100011011001001111110100111100111001011100010001111001001111111001111101101010010101100111111101010000001001000101101001101011000001010011001010111001110001101010101011101111000101011111111111100100110001001010110011001001000100111000100001110110001101001111000110010000000010001000000100011100000100010101000000000001001100001000100110001001110110000110010111001010111100110101101001001000101101101011101111101001000111100010110110101101000100100100100001011001011100101001000001000011110001000100111000000110001000100100011101011001001000000101011110010111011000111001100000010100010110001001110010000100010111001001010100110101000000100010100000001010110000100101101110110001011110100111001101000001100110010110101001110000010010011101010000001010000100100000101111110010101010001101111110001101100001011001100001010100101010001010010101001011000011001110000000111010010010000110000101111001011101101011010111100011100111001111100101100010101001000000100010000111000100111110000001101101000011010001001001100001101100011000001000110110110001000010100101011100110011011100010110010010110110100011100110011110111101010100010000110111100010111110001100110101000100010001110011100001100100000101011000101010110001111001001111110110000111100000100000110100010000010101001010001001001000100101010100011100001101010110001001001000101000010011100101001101011010101110001010100001110100110010010010010010101001101010100010100111101110101101001001000100000110100101000110110100111101011000100111000010011010010000001101011111011001101011000100101101000010000010000010100001100000010011001010100001001001000011001010011000000001010111100011101001001111101110010001000100000011001000100010010001110110100000111110010001101100101110011000000011100000100110001001011001010001101001110001001000111010011111000100110001000000100110000000110100011100011000100101010000110011100100101110011000001000110010100010110101000111000110000000111100000000010010001010001000010100000111110000001010000000101100001001011000001111000010000110001101111100001111101000100011110001101101000001001100000001100001001011000110110110000101111100100001100000111110000101001000011001010001100100000001111100100001111000110001100100111110000101000000011111010001111100100000101000010011000100000111110000100100101010000110000010111100011000010001001110100010011000100010001100110000010001001010101000010000011000001000101110101000100011001100010100010100011001101000001000110011001101101000110100011001100001001010011000011111010011101100010011001000001110111010010000110001111010010100101001010011010000000001100001110001001001100100111101000001001111010101000100111111110011101111100101101100011101110010100100111001111011110111110001111010000010011110010010111001101000110001101101100000001010001111010011001110011011101111001011000111110001000111001001101111111011001000100110111111001000110010000011000100000100101000101111110111101100001010010010011110011101000110111101110000000011000001000000100001101111001011001100000001101000111000110000011000100111101000000100100100111010011000101101110001110010101000110001001110101010001111001100001101110000110001100010010101001011110110011011111010100110110010011111100010010001001011110110101010100000111001000011100111000111011100000001101010110010111011010101010001011001101100011011010000011001100110100011011101111111001100101010100110011111111101010111001000110011110011101110101000111011011001011110011011010101001000011000001001110001110111100111001101001100001010010110000100110001101010111111010101101011100110101001001010111010001100001100001111001010111100010010101110100111110001001001010110100111011100010101011001001100010000011001101110100110011011111100100100010011101110101110001110010000001100010101011000111110100010000111000110110110001100111100011100101001110011010010101111100001001001000111011010110011100110010010101100100101000001001010001101110011100110100110001111000011011110001101101110100111111001001110010000010100010101110001101001001011010011100110100101011111010011010000000001011001001001000101011011001110110010000110111101100010101001110000010100110101000010110011010001001010110010011110101100010101011000011001010110000011100101000001001001111000000000001011100011010000110011101010000011000011001110110001001100011001001010010111110000110010101001101001001001101110010011110100001010001000100111010000110010100101000111001110010110001001000100010100001010011101110010100100101011111011001000100010100111011100001010001011100110000010010011001001100000001011001010011010100001101101011100000000000011011001010001100000111011010011010110000011001101001010010000110000110010011001111001001001010010010011101000000111010100101010001000111110010011110000010011110100110000010101111110110011011100011100111010001110110001010001110001110101110101100011110101100011000100001000101001011101110101100011000001100111001000000110100100101000110011001000101000101010001001000110001000111110111000100111110110010101000100111010100010001100000100101011001010100001100011100001011100100000010100011100011110010000101001101100111110011100111100011110010000100100101100010000010101100100101110010100001101100111010110010100001100111111100000110100101100111110100011110101000100000001011011100110000000010010111101001000010010100101100010001010000100001000000000011110000000000000011110000000000000000000000001101110100100011011100101011110000000011010110100100100010000111011000111000100101001100000001001001000110110010010000010010001110000101101001011000110010111100010100010110001001010101001110010000111111100110101110011010011101000011010000011100100100000010010000111100101001101000000110110001000110100011001011001100100100011001111101111011001101111100100111011011111011001010110010111111101111111111000101001110010011101010011101111011101001001110001100100100000100100001011001000011110010000101101100000100010000111000100110111000000001010000111001011001011001001001101010001101100101110111001100101000000001011110110100100000101001110110000110000010000110000010000110000010000110000010000110000010000110000011111011010000110100001111011010011000110100010100101100110110000001101100011011101110110110001100101111000010001001100001011101101011101110000101100000000000000000000000000000000000000000000000000000000000000000000000000001010001100010100011000101000110001101001000001000001101000001101001100010010100011001010001110101000111010100100001010010000001000000000000000000000000000000000000000000000000000000')
 
         # /4/ > word or_b_or_c - какое-то число?
         # '0001000000000000 100011111000000000000000'
-        i4_or_b_or_c = self.unpack(16, 16)        # '05 31  04 ac  3b 34 00 22  05 38   10 00'  # noqa
+        i4_or_b_or_c = self._unpack_word()        # '05 31  04 ac  3b 34 00 22  05 38   10 00'  # noqa
 
         # /5/ > tstr_name     (0520 ????)
         #  '1000111110000000000000001100000000000000'

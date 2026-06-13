@@ -10,23 +10,32 @@ from vdo.test_vdo import vdobmv as vdo
 from vdo.consts import struct_UINT
 
 #--------------------------------------
-
+block_packed: block_base
 tos_bl = vdo.get_block(0)
 
 '''bmw_a_1d = vf.block(0xE2A2A00)  0x07154f02 '''
 bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10k400] 0500 0900 распаковкаОК  # noqa
 # bla_bl = BLADDR(struct_UINT.pack(0x07154f02), vdo)    # //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
 # bla_bl = BLADDR(struct_UINT.pack(0x07152605), vdo)    # 07152605 -1dp6 =2/6/0/276/0/6  # noqa
-bla_bl = BLADDR(struct_UINT.pack(0x07151504), vdo)    # 07151504 -1dp5 =1/4/0/204/0/4  # noqa
-bla_bl = BLADDR(struct_UINT.pack(0x07151903), vdo)   # noqa
-bla_bl = BLADDR(struct_UINT.pack(0x07155302), vdo)   # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x07151504), vdo)    # 07151504 -1dp5 =1/4/0/204/0/4  # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x07151903), vdo)   # noqa
+# bla_bl = BLADDR(struct_UINT.pack(0x07155302), vdo)   # noqa  (((( strange))))
 
-block_packed: block_base
+# bla_bl = BLADDR(struct_UINT.pack(0x05576F02), vdo)   # noqa  05576F02 00 16 01: 516 900
+# bla_bl = BLADDR(struct_UINT.pack(0x0557D208), vdo)   # noqa  0557D208 00 16 01: 512 900
+# bla_bl = BLADDR(struct_UINT.pack(0x05578413), vdo)   # noqa  05578413 00 16 01: 512 800
+# bla_bl = BLADDR(struct_UINT.pack(0x0557FC08), vdo)   # noqa  0557FC08 00 16 01: 513 800
+# bla_bl = BLADDR(struct_UINT.pack(0x05583E06), vdo)   # noqa  05583E06 00 16 01: 515 800
+bla_bl = BLADDR(struct_UINT.pack(0x0557A302), vdo)   # noqa  0557A302 00 16 01: 513 a00
+
+
+#
+#
 block_packed = vdo.get_block(bla_bl)
 
 next = block_packed.head.bladdr.offset + block_packed.head.bladdr.segcnt * block_packed.vdo.segsize    # noqa
-bla_bl = BLADDR(vdo.read(next, 4), vdo)  # next off=0xe2a320 bl=0x07151903 unk= 0500 0900        # noqa
-block_packed2 = vdo.get_block(bla_bl)   # 67.880639N 125.307310E  76.940337N 134.367008E
+# bla_bl = BLADDR(vdo.read(next, 4), vdo)  # next off=0xe2a320 bl=0x07151903 unk= 0500 0900        # noqa
+# block_packed2 = vdo.get_block(bla_bl)   # 67.880639N 125.307310E  76.940337N 134.367008E    # noqa
 pass
 
 '''
@@ -72,40 +81,41 @@ SHAPE WATER[3] :0x54
 # abstract file info
 abl__abstract: block_0x12 = vdo.get_block(0)
 
-chouse = 'first'
-# chouse = 'last'
 
+def alter():
+    chouse = 'first'
+    # chouse = 'last'
 
-# [14:MAP__05k200]
-bla_bl = abl__abstract.cd_map[BlockType(0x14)][chouse]
-bl__05k200 = vdo.get_block(bla_bl)
-del bla_bl
+    # [14:MAP__05k200]
+    bla_bl = abl__abstract.cd_map[BlockType(0x14)][chouse]
+    bl__05k200 = vdo.get_block(bla_bl)         # noqa
+    del bla_bl
 
-# [15:MAP__06k80]
-bla_bl = abl__abstract.cd_map[BlockType(0x15)][chouse]
-bl__06k80 = vdo.get_block(bla_bl)
-del bla_bl
+    # [15:MAP__06k80]
+    bla_bl = abl__abstract.cd_map[BlockType(0x15)][chouse]
+    bl__06k80 = vdo.get_block(bla_bl)          # noqa
+    del bla_bl
 
-# [16:MAP__07k40]
-bla_bl = abl__abstract.cd_map[BlockType(0x16)][chouse]
-bl__07k40 = vdo.get_block(bla_bl)
-del bla_bl
+    # [16:MAP__07k40]
+    bla_bl = abl__abstract.cd_map[BlockType(0x16)][chouse]
+    bl__07k40 = vdo.get_block(bla_bl)          # noqa
+    del bla_bl
 
-# [1C:MAP__09k100]
-# bnl: {'first': 017fce 01, 'last': 018008 01, 'idxidx08': 017fc8 01} # noqa
-bla_bl = abl__abstract.cd_map[BlockType(0x1c)][chouse]
-bl__09k100 = vdo.get_block(bla_bl)
-del bla_bl
+    # [1C:MAP__09k100]
+    # bnl: {'first': 017fce 01, 'last': 018008 01, 'idxidx08': 017fc8 01} # noqa
+    bla_bl = abl__abstract.cd_map[BlockType(0x1c)][chouse]
+    bl__09k100 = vdo.get_block(bla_bl)         # noqa
+    del bla_bl
 
-# [1D:MAP__10k400]
-bla_bl = abl__abstract.cd_map[BlockType(0x1d)][chouse]
-bl__10k400 = vdo.get_block(bla_bl)
-del bla_bl
+    # [1D:MAP__10k400]
+    bla_bl = abl__abstract.cd_map[BlockType(0x1d)][chouse]
+    bl__10k400 = vdo.get_block(bla_bl)         # noqa
+    del bla_bl
 
-# [1E:MAP__11k_11]
-bla_bl = abl__abstract.cd_map[BlockType(0x1e)][chouse]
-bl__11k_11 = vdo.get_block(bla_bl)
-del bla_bl
+    # [1E:MAP__11k_11]
+    bla_bl = abl__abstract.cd_map[BlockType(0x1e)][chouse]
+    bl__11k_11 = vdo.get_block(bla_bl)         # noqa
+    del bla_bl
 
 
 # geo_bl = vdo.get_block(0x1E6EA000)      # ru30 0x1E6EA000

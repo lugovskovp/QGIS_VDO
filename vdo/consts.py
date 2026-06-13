@@ -16,6 +16,7 @@ DOUBLE_BYTES_CNT = 8
 
 # const structures
 struct_BYTE = struct.Struct(">c")
+struct_4BYTES = struct.Struct(">BBBB")
 struct_WORD = struct.Struct(">H")
 struct_WORD_TWICE = struct.Struct(">HH")
 struct_UINT = struct.Struct(">L")

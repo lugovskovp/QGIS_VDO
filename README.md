@@ -123,8 +123,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [ ] archives - распаковка
     * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
         - [x] categories
-        - [x] shapes (для 500 900)
-        - [ ] polilines
+        - [x] shapes
+        - [ ] lines
         - [x] vertex
         - [ ] poi
         - [x] tstr

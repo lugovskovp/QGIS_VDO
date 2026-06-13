@@ -23,9 +23,14 @@ bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10
 
 # bla_bl = BLADDR(struct_UINT.pack(0x05576F02), vdo)   # noqa  05576F02 00 16 01: 516 900
 # bla_bl = BLADDR(struct_UINT.pack(0x0557D208), vdo)   # noqa  0557D208 00 16 01: 512 900
-bla_bl = BLADDR(struct_UINT.pack(0x05578413), vdo)   # noqa  05578413 00 16 01: 512 800
+# bla_bl = BLADDR(struct_UINT.pack(0x05578413), vdo)   # noqa  05578413 00 16 01: 512 800
+# bla_bl = BLADDR(struct_UINT.pack(0x0557FC08), vdo)   # noqa  0557FC08 00 16 01: 513 800
+# bla_bl = BLADDR(struct_UINT.pack(0x05583E06), vdo)   # noqa  05583E06 00 16 01: 515 800
+bla_bl = BLADDR(struct_UINT.pack(0x0557A302), vdo)   # noqa  0557A302 00 16 01: 513 a00
 
 
+#
+#
 block_packed = vdo.get_block(bla_bl)
 
 next = block_packed.head.bladdr.offset + block_packed.head.bladdr.segcnt * block_packed.vdo.segsize    # noqa

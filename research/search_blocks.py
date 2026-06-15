@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
         hex_list = [f"{c:02X}" for c in v_search.data._raw[:OFFSET_PACKED_DATA]]
         str_bla = "".join(hex_list[0 : 4])
-        str_bla_t = f"{str_bla} {hex_list[5]}"
+        str_bla_t = f"0x{str_bla}  # {hex_list[5]}"
 
         cnt_shp = v_search.cnt_shp
         cnt_lin = v_search.cnt_lin
@@ -145,7 +145,7 @@ if __name__ == "__main__":
         hex_list = [f"{c:02X}" for c in v_search.data._raw[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4]]  # noqa
         unk_bytes = " ".join(hex_list)
 
-        print(f"{str_bla_t}: {unk_bytes}\t shp: {cnt_shp}\tlin: {cnt_lin}\tpoi: {cnt_poi}\t")
+        print(f"{str_bla_t}:  {unk_bytes}\t shp: {cnt_shp}\tlin: {cnt_lin}\tpoi: {cnt_poi}\t")  # noqa
         i += 1
 
         if i > 50:

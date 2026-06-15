@@ -28,7 +28,7 @@ from vdo.consts import (struct_UINT,
                         BITS_IN_BYTE,
                         BITS_IN_WORD,
                         BITS_IN_UINT,
-                        LOOKUP_CHARS)
+                        LOOKUP_CHAR_BYTES)
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -258,7 +258,7 @@ class block_basegeo(block_base):
             if self.toc.li_tstr.cnt:
                 # нет tstr - нет и строк для распаковки
                 unpacked_bin_strings = buffer.unpack_str()
-                print(f"\n{unpacked_bin_strings}\n{unpacked_bin_strings.decode('cp1250')}")
+                print(f"\n{unpacked_bin_strings}\n{unpacked_bin_strings.decode('cp1250')}\n")
 
                 # <<<<<<<<<< TSTRs
                 """
@@ -290,10 +290,9 @@ class block_basegeo(block_base):
                 """
                 # убрать незначащие лидирующие 0
                 marker_TSTR = '0000000000000001'
-                find = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
-                del marker_TSTR
-                buffer._pop(find)   
-                del find
+                empty_zero = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
+                buffer._pop(empty_zero)   
+                del empty_zero, marker_TSTR
                 
                 # распаковка
                 s_ptr = '0'
@@ -650,17 +649,15 @@ class bitstream():
         self.buffer = bitarray(buffer=barray, endian='big').copy()    # copy - else read only memory # noqa
         self.result = bytearray()   # empty
 
-        self.offset_start = offset      # TODO а нафига он нужен?
-
-        self.max_PTR_bits = parent.max_PTR_bits()    # max possible bits in near offset
-        self.start_vrtx_ptr = parent.toc.li_vrtx.ptr           # start_vrtx_ptr стартовый offset vertexes
-        self.offset_tstr = parent.toc.li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1  # noqa
-        
+        self.offset_start = offset      # текущий offset складывается из _raw и buffer.result
         self.counter_tstr_table_str = 0
 
         # 05576f 02  BlockType.MAP__07k40: 0x16:: max_bit_ptr = 11, but maxnum vrtx = FF (8, not 9) # noqa
         self.max_bits_num_vrtx = len(f"{parent.toc.li_vrtx.cnt:b}")
-        
+        self.max_PTR_bits = parent.max_PTR_bits()    # max possible bits in near offset
+        self.start_vrtx_ptr = parent.toc.li_vrtx.ptr           # start_vrtx_ptr стартовый offset vertexes
+        self.offset_tstr = parent.toc.li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1  # noqa
+
         pass    # __init__
     
     @property
@@ -1072,16 +1069,17 @@ class bitstream():
                 # Вроде 00 не может быть - иначе зачем 6 шт где не кодируется ничего?
                 raise ValueError(f"WTF? В количестве ch преамбулы не ожидалось 00, а тут '{n:2b}'")    # noqa
             #теперь загрузить n chars
-            val = ''
-            for _ in range(n):
+            val = b''
+            for _ in range(n):  
                 # и грузятся ascii коды по 7 бит
-                ch = chr(ba2int(self._pop(BITS_IN_ASCII)))
-                val += ch
+                ascii = ba2int(self._pop(BITS_IN_ASCII))
+                bch = ascii.to_bytes(1, byteorder='big')
+                val += bch
             preambula[f"{k:07b}"] = val
 
         # и вот только теперь пошли буквы, закодированные ....эммм.
         # .. как бы хафманом, но с нюансами
-        res = ''
+        res = b''
         for _ in range(strings_length):
             prefix = self._pop(2)
             if prefix.to01() == '11':
@@ -1090,8 +1088,8 @@ class bitstream():
                     # о, сокращённенькое из преамбулы
                     pre_chars = preambula[ba.to01()]
                     # но если из преамбулы возвращается А
-                    if pre_chars == 'A':
-                        res += chr(ba2int(ba))
+                    if pre_chars == b'A':
+                        res += ba2int(ba).to_bytes(1, byteorder='big')
                     else:
                         res += pre_chars
                 elif ba2int(ba) < 32:       # похоже загрузить ascii до ' '
@@ -1099,11 +1097,13 @@ class bitstream():
                     ISO 8859-2 xor win1250?
                     """
                     # а это 1250
-                    val = 0xe1 + ba2int(ba)  # угу, эмпирическое волшебное число 0xe1
-                    res += chr(val)
+                    code = 0xe1 + ba2int(ba)  # угу, эмпирическое волшебное число 0xe1
+                    ascii = code.to_bytes(1, byteorder='big')
+                    res += code.to_bytes(1, byteorder='big')
                 else:
                     # или ascii код буквы
-                    res += chr(ba2int(ba))
+                    ascii = ba2int(ba)
+                    res += ba2int(ba).to_bytes(1, byteorder='big')
                 continue        # всё, данные итерации загружены
             elif prefix.to01() == '00':
                 prefix += self._pop(1)
@@ -1112,13 +1112,14 @@ class bitstream():
             else:       # elif prefix.to01() == '10':
                 prefix += self._pop(3)
             # вытаскиваем, что получилось, из дерева и добавляем к результату
-            res += LOOKUP_CHARS[prefix.to01()]
+            ch = LOOKUP_CHAR_BYTES[prefix.to01()]
+            res += LOOKUP_CHAR_BYTES[prefix.to01()]
         # всё, упакованные буквы окончились
 
         # подрезать хвосты - по длинне могло подрасти из-за использования преамбулы
-        bin_str = res.encode('cp1250')
-        bin_str = bin_str[:strings_length]
-        # res = bin_str.decode('cp1250')
-        return bin_str
+        res = res[:strings_length]
+        # unic = res.decode('cp1250')
+        # print(unic)
+        return res
 
     pass   # class unpack_type_one():

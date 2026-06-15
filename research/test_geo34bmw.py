@@ -39,7 +39,7 @@ bla_bl = BLADDR(vdo.read(0xE2A2A00, 4), vdo)    # @ 07151504 1d 0105 [1D:MAP__10
 """
 bl_addr = 0x04D6ED04  # 16:  0E 00 09 00   shp: 2  lin: 1  poi: 0
 bl_addr = 0x04D70011  # 16:  0F 16 08 00   shp: 29 lin: 8  poi: 0
-bl_addr = 0x04D6E005  # 16:  0D 00 08 00    shp: 3  lin: 2  poi: 0
+# bl_addr = 0x04D6E005  # 16:  0D 00 08 00    shp: 3  lin: 2  poi: 0
 
 
 bla_bl = BLADDR(struct_UINT.pack(bl_addr), vdo)   # noqa  04D6ED04 16: 0E 00 09 00 shp: 2 lin: 1  poi: 0

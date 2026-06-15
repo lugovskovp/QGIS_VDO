@@ -258,7 +258,7 @@ class block_basegeo(block_base):
             if self.toc.li_tstr.cnt:
                 # нет tstr - нет и строк для распаковки
                 unpacked_bin_strings = buffer.unpack_str()
-                print(f"\n{unpacked_bin_strings}\n")
+                print(f"\n{unpacked_bin_strings}\n{unpacked_bin_strings.decode('cp1250')}")
 
                 # <<<<<<<<<< TSTRs
                 """
@@ -1042,7 +1042,7 @@ class bitstream():
 
     def unpack_str(self) -> bytes:
         """
-        Распаковывает строку
+        Распаковывает все строки
         Returns:
             bin_str: бинарное представление строковой части zero-ended строк 
         """
@@ -1094,6 +1094,13 @@ class bitstream():
                         res += chr(ba2int(ba))
                     else:
                         res += pre_chars
+                elif ba2int(ba) < 32:       # похоже загрузить ascii до ' '
+                    """
+                    ISO 8859-2 xor win1250?
+                    """
+                    # а это 1250
+                    val = 0xe1 + ba2int(ba)  # угу, эмпирическое волшебное число 0xe1
+                    res += chr(val)
                 else:
                     # или ascii код буквы
                     res += chr(ba2int(ba))
@@ -1109,9 +1116,9 @@ class bitstream():
         # всё, упакованные буквы окончились
 
         # подрезать хвосты - по длинне могло подрасти из-за использования преамбулы
-        bin_str = res.encode('cp1251')
+        bin_str = res.encode('cp1250')
         bin_str = bin_str[:strings_length]
-        # res = bin_str.decode('cp1251')
+        # res = bin_str.decode('cp1250')
         return bin_str
 
     pass   # class unpack_type_one():

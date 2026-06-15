@@ -119,12 +119,11 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] 0x1C, 
         - [x] 0x1D, 
         - [x] 0x1E
-    * [ ] list(blarray, blarray) - vrtx from shapes, lines 
 - [ ] archives - распаковка
     * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
         - [x] categories
         - [x] shapes
-        - [ ] lines
+        - [x] lines
         - [x] vertex
         - [ ] poi
         - [x] tstr
@@ -135,9 +134,9 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
             * [x] программа разбора-распаковки преамбулы + основного массива.
             * [x] функцией класса bitstream в основную программу
         - [ ] странное число после ТОС  (05 12 09 00) (a b c d) - 
-            * [ ] 05: a - ?
-            * [x] 12: b - для id shape (+line?) - сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
-            * [x] 09: c - 9 -столько бит в дельте XY (8, 9, a)
+            * [x] 05: a - для id line - сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
+            * [x] 12: b - для id shape - сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
+            * [x] 09: c - 9 -столько бит в дельте XY vrtx (8, 9, a)
             * [ ] 00: d - ?
     * [x] type 2, 3
 - [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла

@@ -151,7 +151,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] раскраска полигонов
 
 
-[ ]
+[ ] почистить bitstream? av_, v_, ??
 [ ]
 [ ]
 [ ]

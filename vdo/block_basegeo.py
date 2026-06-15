@@ -293,8 +293,19 @@ class block_basegeo(block_base):
                 empty_zero = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
                 buffer._pop(empty_zero)   
                 del empty_zero, marker_TSTR
-                
-                # распаковка
+
+                # если есть линии - то дальше их количество +1 значения 
+                #  8:  2h - PTR   ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr) # noqa
+                if cnt := self.toc.li_lin.cnt:
+                    # 'bytes' object does not support item assignment
+                    mutable = bytearray(self._raw)
+                    for num in range(cnt + 1):
+                        ptr = ba2int(buffer._unpack(16, buffer.max_PTR_bits, 0, False))
+                        item_offset = self.toc.li_lin.ptr + num * GEO_LINE.size + 8
+                        mutable[item_offset:item_offset + 2] = ptr.to_bytes(2, byteorder='big')
+                    self._raw = bytes(mutable)
+
+                # распаковка TSTR
                 s_ptr = '0'
                 s_lang = '0'
                 s_type = '0'
@@ -322,9 +333,13 @@ class block_basegeo(block_base):
                     print(f"{off_from}: {s_ptr} {s_lang} {s_type}")
                     # ------------------------- debug
                 del s_ptr, s_lang, s_type, off_from
-
             self._raw += buffer.result
             buffer.clear_result()
+
+            # далее - значения ptr2table <<1  cnt = +1, +1
+            # shp - WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
+            # lin - 12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется.
+
 
             # texts
             self._raw += unpacked_bin_strings
@@ -1047,8 +1062,7 @@ class bitstream():
         ptr_start = int(self._unpack_ptr(), 16)
         ptr_end = int(self._unpack_ptr(), 16)
         strings_length = ptr_end - ptr_start
-        del ptr_end
-        del ptr_start
+        del ptr_end, ptr_start
         
         # self.res на этом месте - 4 байта
         # clear. вааобще то сюда tstr надо, которые еще не распаковывались) # noqa 
@@ -1098,11 +1112,11 @@ class bitstream():
                     """
                     # а это 1250
                     code = 0xe1 + ba2int(ba)  # угу, эмпирическое волшебное число 0xe1
-                    ascii = code.to_bytes(1, byteorder='big')
+                    # ascii = code.to_bytes(1, byteorder='big')
                     res += code.to_bytes(1, byteorder='big')
                 else:
                     # или ascii код буквы
-                    ascii = ba2int(ba)
+                    # ascii = ba2int(ba)
                     res += ba2int(ba).to_bytes(1, byteorder='big')
                 continue        # всё, данные итерации загружены
             elif prefix.to01() == '00':
@@ -1112,7 +1126,6 @@ class bitstream():
             else:       # elif prefix.to01() == '10':
                 prefix += self._pop(3)
             # вытаскиваем, что получилось, из дерева и добавляем к результату
-            ch = LOOKUP_CHAR_BYTES[prefix.to01()]
             res += LOOKUP_CHAR_BYTES[prefix.to01()]
         # всё, упакованные буквы окончились
 

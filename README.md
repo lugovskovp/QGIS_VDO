@@ -151,6 +151,11 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] раскраска полигонов
 
 
+[ ]
+[ ]
+[ ]
+[ ]
+
 где искать qtutils
 c:/OSGeo4W/apps/Qt5/bin/designer.exe 
 

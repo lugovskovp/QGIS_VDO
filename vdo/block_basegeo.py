@@ -28,7 +28,7 @@ from vdo.consts import (struct_UINT,
                         BITS_IN_BYTE,
                         BITS_IN_WORD,
                         BITS_IN_UINT,
-                        LOOKUP_CHARS)
+                        LOOKUP_CHAR_BYTES)
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -100,15 +100,18 @@ class block_basegeo(block_base):
             # остальное в buffer - поток битов, которые будем распаковывать
             buffer = bitstream(barray[OFFSET_PACKED_DATA:],  # + unk_beg_arch_dword # noqa
                                OFFSET_PACKED_DATA,      # вот с этого офсета будем заполнять
-                               self.max_PTR_bits(),
-                               self.toc.li_vrtx,    # не ошибка, нужен offset vrtx
-                               self.toc.li_tstr        # и list tstr тоже надо
-                               )       
+                               self)                    # себя - в качестве родителя
+                            #    self.max_PTR_bits(),
+                            #    self.toc.li_vrtx,    # не ошибка, нужен offset vrtx
+                            #    self.toc.li_tstr        # и list tstr тоже надо
+                            #    )       
 
             # суммарная уже известная на данный момент информация
             self.show_main_info()
-            print(f"\tMax VERTEX bites: {buffer.max_bit_in_vrtx_num}")
-            print(f" begin word = {buffer.word_a:02x} {buffer.word_b:02x} {buffer.word_c:02x} {buffer.word_d:02x} ")  # noqa
+            print(f"\tMax VERTEX bites: {buffer.max_bits_num_vrtx}")
+            print(f" begin word = {buffer.max_bits_id_line_if_0:02x} \
+                 {buffer.max_bits_id_shape_if_0:02x} \
+                 {buffer.max_bits_in_vertex_delta:02x} {buffer.word_d:02x} ")  # noqa
 
             # <<<<<<<<<< GEO_CATEGORY
             '''
@@ -139,9 +142,16 @@ class block_basegeo(block_base):
             # если есть shapes - замкнутые полигоны - распаковываем
             if self.toc.li_shp.cnt:
                 # raise ValueError("toc.li_shp: ", self.toc.li_shp, " но GEO_SHAPE еще не реализован")
+                # ------------------------------ <debug
+                print(f"\n p_str  p_vrtx  id  coord_lon  cood_lat  align  p_tstr")
+                # ------------------------------ debug>
                 # Для каждого шейпа (полигона) из toc.list_shape:
+                next_will_increment = False     # - самый первый не инкрементировать для распаковки
                 for _ in range(self.toc.li_shp.cnt + 1):     # +1 - всегда есть завершающий итем, нулевой # noqa
-                    buffer.unpack_shape()
+                    next_will_increment = buffer.unpack_shape(next_will_increment)
+                    #однако для самого последнего шейпа - следующего нет
+                    if _ == self.toc.li_shp.cnt:
+                        next_will_increment == False
                     #----------------
                     bs = buffer.result     # _for_print
                     pp = f"{struct_WORD.unpack(bs[0:2])[0]:04X} {struct_WORD.unpack(bs[2:4])[0]:04X}"
@@ -157,16 +167,32 @@ class block_basegeo(block_base):
             if self.toc.li_lin.cnt:
                 # для каждой полилинии
                 """
-                
+                Geo segment of line - poligon
+                0:  2h - PTR         p_str_name - ptr на 0-ended str; =max_ptr_bit_len
+                2:  2h - PTR         ptr_vrtx - vrtx num; =max_vrtx_num_bits_len
+                4:  4h - DWORD       id; 1 =32; 0 =max_bits_id_line_if_0 (word_a)
+                8:  2h - PTR   ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr)
+                10: 2h - (CALCULATE == \x00 ?(if not POI) )
+                12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется. 
+                        (Самый первый - 34B4 из последнего shp
+                14: 2h -# (CALCULATE == 2 байта совершенно неясной природы и назначения увы, 
+                    при распаковке - константу, пусть FFFF
                 """
                 # а пока что не реализовано
-                raise ValueError("toc.li_lin: ", self.toc.li_lin, " но GEO_LINE еще не реализован")
-                pass
-
+                #raise ValueError("toc.li_lin: ", self.toc.li_lin, " но GEO_LINE еще не реализован")
+                # ------------------------------ <debug
+                print(f"\n p_str  p_vrtx  id  p_beg_tstr  align  p_tstr  unkn")
+                # ------------------------------ debug>
+                next_will_increment = False # last shp ptstr =0, so, not uncrement first line
                 for _ in range(self.toc.li_lin.cnt + 1):     # +1 - всегда есть завершающий итем, нулевой # noqa
-                    buffer.unpack_line()
+                    next_will_increment = buffer.unpack_line(next_will_increment)
                     # ------------------------------ <debug
-
+                    bs = buffer.result     # _for_print
+                    pp = f"{struct_WORD.unpack(bs[0:2])[0]:04X} {struct_WORD.unpack(bs[2:4])[0]:04X}"
+                    pp += f" {struct_UINT.unpack(bs[4:8])[0]:08x}"
+                    pp += f" {struct_WORD.unpack(bs[8:10])[0]:04X} {struct_WORD.unpack(bs[10:12])[0]:04X}"
+                    pp += f" {struct_WORD.unpack(bs[12:14])[0]:04X} {struct_WORD.unpack(bs[14:16])[0]:04X}"
+                    print(pp)
                     # ------------------------------ debug>
                     self._raw += buffer.result
                     buffer.clear_result()
@@ -232,7 +258,7 @@ class block_basegeo(block_base):
             if self.toc.li_tstr.cnt:
                 # нет tstr - нет и строк для распаковки
                 unpacked_bin_strings = buffer.unpack_str()
-                print(f"\n{unpacked_bin_strings}\n")
+                print(f"\n{unpacked_bin_strings}\n{unpacked_bin_strings.decode('cp1250')}\n")
 
                 # <<<<<<<<<< TSTRs
                 """
@@ -264,12 +290,22 @@ class block_basegeo(block_base):
                 """
                 # убрать незначащие лидирующие 0
                 marker_TSTR = '0000000000000001'
-                find = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
-                del marker_TSTR
-                buffer._pop(find)   
-                del find
-                
-                # распаковка
+                empty_zero = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
+                buffer._pop(empty_zero)   
+                del empty_zero, marker_TSTR
+
+                # если есть линии - то дальше их количество +1 значения 
+                #  8:  2h - PTR   ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr) # noqa
+                if cnt := self.toc.li_lin.cnt:
+                    # 'bytes' object does not support item assignment
+                    mutable = bytearray(self._raw)
+                    for num in range(cnt + 1):
+                        ptr = ba2int(buffer._unpack(16, buffer.max_PTR_bits, 0, False))
+                        item_offset = self.toc.li_lin.ptr + num * GEO_LINE.size + 8
+                        mutable[item_offset:item_offset + 2] = ptr.to_bytes(2, byteorder='big')
+                    self._raw = bytes(mutable)
+
+                # распаковка TSTR
                 s_ptr = '0'
                 s_lang = '0'
                 s_type = '0'
@@ -297,9 +333,12 @@ class block_basegeo(block_base):
                     print(f"{off_from}: {s_ptr} {s_lang} {s_type}")
                     # ------------------------- debug
                 del s_ptr, s_lang, s_type, off_from
-
             self._raw += buffer.result
             buffer.clear_result()
+
+            # далее - значения ptr2table <<1  cnt = +1, +1
+            # shp - WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
+            # lin - 12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется.
 
             # texts
             self._raw += unpacked_bin_strings
@@ -590,46 +629,50 @@ class bitstream():
 
     def __init__(self, barray: bytes,
                  offset: int,
-                 max_PTR_bits: int,
-                 li_vrtx: LIST,
-                 li_tstr: LIST) -> None:
+                 parent) -> None:
         """
         Args:
             barray: bytes
             offset: int         offset от начала блока, который сейчас будет распаковываться
-            max_PTR_bits: int   макс число бит в near offset
-            vrtx_ptr: int       стартовый offset vertexes
-            li_tstr: LIST       ptr-cnt на TSTR - объекты подписей на карте
+            parent:        base_geo, в котором инициализируется    
         """
         # Похоже работает только в конкретном наборе 0500 0900, 0516 0900
-        # первые 2 word - назначение неизвестно. 83888384 = 5000 9000
-        # [ ] 05: a - ?
-        # [x] 12: b - для id shape (+line?) - сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
-        # [x] 09: c - 9 -столько бит в дельте XY (8, 9, a)
-        # [ ] 00: d - ?
-        (self.word_a, self.word_b, self.word_c, self.word_d)  = struct_4BYTES.unpack(barray[:4])
+        # первый dword - назначение неизвестно. 83888384 = 500 900
+        (word_a, word_b, word_c, self.word_d)  = struct_4BYTES.unpack(barray[:4])
         barray = barray[4:]
-        # debug raises
-        if self.word_a not in [5]:
-            raise ValueError(self.word_a, f"0x{self.word_a} self.word_a")
-        if self.word_c not in [8, 9, 0x0a]:
-            raise ValueError(self.word_c, f"0x{self.word_c} self.word_c")
-        if self.word_d not in [0]:
-            raise ValueError(self.word_d, f"0x{self.word_d} self.word_d")
+        # [x] 05: a - ? id line, сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
+        self.max_bits_id_line_if_0 = word_a
+        # [x] 12: b - для id shape (+line?) - сколько бит читать, если флаг показывает отсутствие - 1-32, 0-this
+        self.max_bits_id_shape_if_0 = word_b
+        # [x] 09: c - 9 -столько бит в дельте XY (8, 9, a)
+        self.max_bits_in_vertex_delta = word_c
+        # [ ] 00: d - ?   пока только 00 встречался. повесить raise
 
+        # debug raises
+        if word_a not in [5, 0xc, 0xd, 0xe, 0xf]:
+            raise ValueError(word_a, f"0x{self.word_a} .word_a")
+        if word_c not in [8, 9, 0x0a]:
+            raise ValueError(word_c, f"0x{self.word_c} .word_c")
+        if self.word_d not in [0]:
+            raise ValueError(self.word_d, f"0x{self.word_d} .word_d")
+
+        #
+        self.parent = parent
+
+        # Первый DWORD распакован. В буфер - всё, что далее
         self.buffer = bitarray(buffer=barray, endian='big').copy()    # copy - else read only memory # noqa
         self.result = bytearray()   # empty
-        self.offset_start = offset
-        self.max_PTR_bits = max_PTR_bits    # max possible bits in near offset
-        self.start_vrtx_ptr = li_vrtx.ptr   # start_vrtx_ptr
-        self.offset_tstr = li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1  # noqa
+
+        self.offset_start = offset      # текущий offset складывается из _raw и buffer.result
         self.counter_tstr_table_str = 0
 
-        # 05576f 02  BlockType.MAP__07k40: 0x16:: max_bit_ptr = 11,
-        # but maxnum vrtx = FF (8, not 9)
-        self.max_bit_in_vrtx_num = len(f"{li_vrtx.cnt:b}")
-        
-        pass
+        # 05576f 02  BlockType.MAP__07k40: 0x16:: max_bit_ptr = 11, but maxnum vrtx = FF (8, not 9) # noqa
+        self.max_bits_num_vrtx = len(f"{parent.toc.li_vrtx.cnt:b}")
+        self.max_PTR_bits = parent.max_PTR_bits()    # max possible bits in near offset
+        self.start_vrtx_ptr = parent.toc.li_vrtx.ptr           # start_vrtx_ptr стартовый offset vertexes
+        self.offset_tstr = parent.toc.li_tstr.ptr    # tstr стартует с этого смещения, каждый объект - + 1  # noqa
+
+        pass    # __init__
     
     @property
     def av_head(self):
@@ -647,30 +690,6 @@ class bitstream():
         current_offset = self.offset_start + len(self.result)
         res = f"{current_offset:04x}"
         return res
-
-
-
-    @property
-    def v_byte07(self):
-        res = self._touch(7)
-        #res = self.unpack(8, 7, 0, False)
-        return ba2int(res)
-
-    @property
-    def v_byte08(self):
-        res = self._touch(8)
-        #res = self.unpack(8, 8, 0, False)
-        return ba2int(res)
-
-    @property
-    def v_word15(self):
-        res = self._touch(15)
-        return ba2int(res)
-
-    @property
-    def v_word16(self):
-        res = self._touch(16)
-        return ba2int(res)
 
     @property
     def res(self):
@@ -775,13 +794,14 @@ class bitstream():
         """
         # номер самого первого, 0-го vrtx объекта не сохранять в result!  # noqa
         # -2: надо в 4 раза меньше бит, т.к. ptr vrtx кратен 4 -> self.max_PTR_bits - 2
-        num_first_vrtx = self._unpack(BITS_IN_WORD, self.max_bit_in_vrtx_num, 0, False)  # не сохранять в result!  # noqa
-        num_first_vrtx = ba2int(num_first_vrtx)     # номер 0-го vrtx объекта
-        # 4* num = offset from start vertexes
-        vrtx_off = self.start_vrtx_ptr + VERTEX.size * num_first_vrtx
-        print(f"    start_vrtx num: {num_first_vrtx} offset: {vrtx_off:04x}")
-        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save 
-        return vrtx_off
+        # UPD: no, need calc max till init
+        num_vrtx = self._unpack(BITS_IN_WORD, self.max_bits_num_vrtx, 0, False)  # не сохранять в result!  # noqa
+        num_vrtx = ba2int(num_vrtx)     # номер 0-го vrtx объекта
+        # 4* num  = offset from start vertexes, + tos.li_vrtx.ptr = near offset
+        vrtx_offset = self.start_vrtx_ptr + VERTEX.size * num_vrtx
+        print(f"    start_vrtx num: {num_vrtx} offset: {vrtx_offset:04x}")
+        self.result += struct_WORD.pack(vrtx_offset)     # vertx offs 2word, save 
+        return vrtx_offset
 
     def _unpack_half_vertex(self, prev: int) -> int:
         """
@@ -807,7 +827,7 @@ class bitstream():
         #     raise ValueError(self.word_B, f"{self.word_B} self.word_B")
         
         # третий байт первого uint - к-во бит 
-        bits_to_read = self.word_c
+        bits_to_read = self.max_bits_in_vertex_delta
 
         prefix = self._pop(2).to01()
         
@@ -878,8 +898,13 @@ class bitstream():
         # left shift 1 - т.к. last = 0 always in this ptr
         self._unpack_ptr_word(1)    # максимальное к-во бит для near ссылки word
 
-    def unpack_shape(self) -> None:
+    def unpack_shape(self, this_will_increment: bool) -> None:
         """
+        Args: 
+            this_will_increment: bool - инкрементировать текущий ptrst?
+        Returns:
+            do_next_increment bool:   инкрементировать следующий ptrst
+
         # noqa
         WORD - ptr2string <--- word, ptr 2 zero-ended string
         WORD ptr2firstVertex  <--- запакованы не offs, а номера вертексов, vertnum, надо расчитывать ptr - offset
@@ -893,7 +918,8 @@ class bitstream():
         # /0/ WORD - ptr2string <--- word, ptr to zero-ended string
         # if 0 - zero tail ptr2table str -- вот кстати вопрос - на точно ли так надо ваще????
         # flag_calc_ptr2tstr = self.unpack(BITS_IN_WORD, self.max_PTR_bits, 0) != '0000'
-        flag_increment_ptr2tstr = self._unpack_ptr() != '0000'
+        do_next_increment = self._unpack_ptr() != '0000'
+        #
         """
         begin word = 0500:0900   self.ptr()
         WORD - ptr2string
@@ -903,49 +929,14 @@ class bitstream():
 
         # /1/ word, ptr 2 first vertex
         # запакованы не offs, а номера вертексов vertnum,
-        #       v_off = self._unpack_vertex_offset()
-        # -2: надо в 4 раза меньше бит, т.к. ptr vrtx кратен 4 -> self.max_PTR_bits - 2
-        num_first_vrtx = self._unpack(BITS_IN_WORD, self.max_bit_in_vrtx_num, 0, False)  # не сохранять в result!  # noqa
-        num_first_vrtx = ba2int(num_first_vrtx)     # номер 0-го vrtx объекта
-        # 4* num = offset from start vertexes
-        vrtx_off = self.start_vrtx_ptr + VERTEX.size * num_first_vrtx
-        print(f"start_vrtx num: {num_first_vrtx} offset: {vrtx_off:04x}")
-        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
-
-
-        # ========================== debug
-        # print(f"start_vrtx num: {num_first_vrtx} offset: {vrtx_off:04x}")
-        # ========================== debugt
+        v_off = self._unpack_vertex_offset()
 
         # /2/  dword, id
-        ## Похоже работает только в конкретном наборе 0500 0900, 0516 0900
-        # if self.word_A == 0x500:                # 500 900, 
-        #     bits_to_unpack_then_zero = 0
-        # elif self.word_A == 0x516:              # 516, 800, 
-        #     bits_to_unpack_then_zero = 22   # эмпирика чистой воды, 16х=20
-        # elif self.word_A == 0x512:              # 512 900, 512 800, 
-        #     bits_to_unpack_then_zero = 18   # эмпирика, 12х=18
-        # elif self.word_A == 0x513:              # 0513 0800 
-        #     bits_to_unpack_then_zero = 19   # эмпирика, 13х=19
-        # elif self.word_A == 0x515:              # 0513 0800 
-        #     bits_to_unpack_then_zero = 21   # попытка 0х15 = 21
-        # else:
-        #     raise ValueError(self.word_A, f"wA: 0x{self.word_A:x}, bits_to_unpack_then_zero")
-
-        bits_to_unpack_then_zero = self.word_b
-
         #id - если следующий бит = 1, ЕСТЬ 32бит ID, иначе bits_to_unpack_then_zero
         if self.next_bit_true():
             self._unpack_uint()
         else:
-            self._unpack_uint(bits_to_unpack_then_zero)
-
-        """
-        ptr2string, ptr2firstVertex, id
-        begin word = 0500:0900   self.ptr(), calc_vrtx_offs, 
-
-        '1 010000000000000110001 101000000000011111'
-        """
+            self._unpack_uint(self.max_bits_id_shape_if_0)
 
         # /3/  dword dword - coord, here '08 c0 00 a0 40 01 8d 00'
         # координаты - они есть, всегда. Просто лежат без упаковки  '0010010001110101000001011000010011100010'
@@ -970,182 +961,76 @@ class bitstream():
         
         # /5/ word - ptr2table
         # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr  # noqa
-        off_tstr = self.offset_tstr
-        self.result += struct_WORD.pack(off_tstr)
-        if flag_increment_ptr2tstr:
+        
+        if this_will_increment:
             self.offset_tstr += TSTR.size
+        self.result += struct_WORD.pack(self.offset_tstr)
+
+        return do_next_increment
     # -------------------------- unpack shp
 
-    def unpack_line(self) -> None:
+    def unpack_line(self, this_will_increment: bool) -> None:
         """
+        Args: 
+            this_will_increment: bool - инкрементировать текущий ptrst?
+        Returns:
+            do_next_increment bool:   инкрементировать следующий ptrst
 
-        """
-        """
         # noqa
             Geo segment of line - poligon
-            0:    2h - PTR         p_str_name - ptr2str/0;
-            2:    2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
-            4:    4h - DWORD       id
-                        // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
-            6:    2h - PTR   ptr_linesign, p_line_sign; // Or start pstr
-            8:    2h - WORD  or_b_or_c;
-            10:   2h - PTR   ptr_tstr     p_p_str_name; // ptr to GEO_OBJ_STR
-            12:   4h - WORD   or_38_or_0_b_country;
-            GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
-
-                > p_str_name > 0520
-                ptr<<2 = 530
-                > ptr_vrtx ?? == 04ac?  num 260 dec | 104h
-                > word id ?? (есть ли проверка на существование?)
-                > tstr_regi > tst 0518  (? < str 0520 ??)
-                > word or_b_or_c - какое-то число?
-                > tstr_name     (0520 ????)
-                > word or_38_or_0_b_country
-
-                c:/DIY/VDO/db_src/ru_2013/ru/carindb
-                08a06b 02  BlockType.MAP__06k80: 0x15
-
-                Max PTR bites: 11
-                cat 0034:0003 cnt:3     next ptr: 0044
-                shp 0044:0001 cnt:1     next ptr: 006C - only one shape.
-                lin 006C:0002 cnt:2     next ptr: 009C - two lines
-                poi 0000:0000 cnt:0 
-                vrt 009C:011F cnt:287   next ptr: 0518
-                tst 0518:0002 cnt:2     next ptr: 0520
-                strs from 0520
-                begin word = 0E00:0900
-                Map_hex: 08 B9 30 00 0B 9A 50 00  09 19 30 00 0B FA 50 00   00 01 00 07  
-                518 -> str520 - 'mar mediterráneo' +\x00
-                51c -> str531 - river name  ? Уэд-Мудуйа ? море Альборан? Oued Kert ?
-                01 00 00 44  WATER
-                65 01 00 6C  RIVER_MAJOR
-                67 01 00 7C  BORDER
-                00 00 00 8C   EMPTY
+            0:  2h - PTR         p_str_name - ptr на 0-ended str; =max_ptr_bit_len
+            2:  2h - PTR         ptr_vrtx - vrtx num; =max_vrtx_num_bits_len
+            4:  4h - DWORD       id; 1 =32; 0 =max_bits_id_line_if_0 (word_a)
+            8:  2h - PTR   ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr)
+            10: 2h - (CALCULATE == \x00 ?(if not POI) )
+            12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется. 
+                     (Самый первый - 34B4 из последнего shp
+            14: 2h -# (CALCULATE == 2 байта совершенно неясной природы и назначения увы, 
+                    при распаковке - константу, пусть FFFF
+            для распакованного: EO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
+            print(f"\n p_str  p_vrtx  id  p_beg_tstr  align  p_tstr  unkn")
         """
-        # /0/  p_str_name >= 0520
-        # '10100110001 10000010000111011001101000000' '1010011000110000010000111011001101000000'
-        # p_str_name = 05 31
-        i0_p_str_name = self._unpack_ptr()
-        # '0531 ' cool! 520 + len 'mar mediterráneo' +\x00
+        # /0/  p_str_name - ptr на 0-ended str; =max_ptr_bit_len
+        do_next_increment = self._unpack_ptr() != '0000'
 
-        # /1/  ptr_vrtx ?? shp:009C-04AC,  lines=4ac-0518 010010101100 100101011 - 010100011000 101000110
-        # 104 000100000100
-        # vrtx_num = 260 dec | 104h
-        # vrtx_off = 04 ac
-        # self._pop(1)
-        start_vrtx_num = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
-        start_vrtx_num = ba2int(start_vrtx_num)     # номер from 0-го vrtx объекта
-        print(f"line: start_vrtx_num = {start_vrtx_num}/0x{start_vrtx_num:02x}")
-        # 4* num = offset from start vertexes
-        vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
-        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
-        # '0531 04ac ' cool! 04ac as tail shp, bingo
-       
+        # /1/  ptr_vrtx ??, запакованы не offs, а ПОРЯДКОВЫЕ номера вертексов vertnum,
+        vrtx_off = self._unpack_vertex_offset()
 
-        # /2/ > word id ?? (есть ли проверка на существование?
-        # и есть ли макс ид для линий?)
-        # mar mediterráneo id= 40045aa0 = mar mediterráneo
-        #k = self._pop(1)
-        if True or k != '1':
-            #
-            i2_id = self._unpack_uint()        # map = '08B9 3000 0B9A 5000  0919 3000 0BFA  5000'\
-                                               # 35.039236N 3.656246W  36.171698N 2.523783W
+        # /2/ > dword id ?? (полный ли DWORD? если нет, то сколько бит грузить?)
+        if self.next_bit_true():
+            self._unpack_uint(16)       # TODO 16??? Почему???
         else:
-            i2_id = '0'
-            self.result += b'\x00' * 4
-        # '0531 04ac 3b340022'
-        # '05 31 04 ac ec d0 00 89' + _pop(2) - 00
-        pass
-
-        # /3/ > tstr_regi > tst 0518  (? < str 0520 ??)  <<2, т.к. сразу за vortex
-        # 518 0 101000110 00 -> 520
-        # 51c 0 101000111 00 -> 531
-        # 520 0 101001000 00 
-        # 531 0 10100110001
-        # 538 '1010011100000010000000000001000111110000'
-        #   i_z = self._pop(2) 400c 0100000000001100
-        # '0111011001101000000000000100010011010011'
-        # i3_p_tstr_regi = self._unpack_ptr_word()         # unpack(16, 11)
-        self._pop(2)  # 01
-        i3_p_tstr_regi = self._unpack_ptr()         # unpack(16, 11)
-        pass
-        # '0538' -like ptr 2 string - but early _pop 00
-        # 00111011001101000000000000100010
-        # 01101001110000001000000000000100011111000000000000000110000000000000000010000100000001110010110100101100000000000100 101000110 010110110100010011110001001010101110001010101101011100110011010011010110 101000111 0000110001111010000100100111000001001110000000110011001001111110100101001001110001011001101111100011001111001001110000101010100001100011101100110101001101010110011001100001011110000000011110110011011100010111110001101100100111111010011110011100101110001
-
-        # /4/ > word or_b_or_c - какое-то число?
-        # '0001000000000000 100011111000000000000000'
-        i4_or_b_or_c = self._unpack_word()        # '05 31  04 ac  3b 34 00 22  05 38   10 00'  # noqa
-
-        # /5/ > tstr_name     (0520 ????)
-        #  '1000111110000000000000001100000000000000'
-        self._pop(1)
-        i5_p_tstr_name = self.unpack(16, 11)       # '05 31 04 ac 3b 34 00 22 05 38 10 00 f880'  # noqa
-
-        # /6/ > word or_38_or_0_b_country
-        # у границ = 0? 67
-        i6_or_38_or_0_b_country = self.unpack(16, 16)
-
-        #==============================
-        print(BYTESTRUCT(self.result))
-        self.clear_result()
-        self._unpack(16, 12)     # 12? max_PTR_bits = 11  или << а след бит - флаг?
-
-        # /1/  ptr_vrtx ?? == 04ac?  num 260 dec | 104h
-        start_vrtx_num = self._unpack(BITS_IN_WORD, self.max_PTR_bits - 2, 0, False)  # не сохранять в result!  # noqa
-        start_vrtx_num = ba2int(start_vrtx_num)     # номер from 0-го vrtx объекта
-        print(f"start_vrtx_num = {start_vrtx_num}")
-        # 4* num = offset from start vertexes
-        vrtx_off = self.start_vrtx_ptr + VERTEX.size * start_vrtx_num
-        self.result += struct_WORD.pack(vrtx_off)     # vertx offs 2word, save
-
-        # /2/ > word id ?? (есть ли проверка на существование?)
-        # bitarray('00111011001101000000000000100010')
-        id = self._unpack(32, 32)        # = '05 31  04 ac  3b 34 00 22'
-
-        # /3/ > tstr_regi > tst 0518  (? < str 0520 ??)
-        # bitarray('01 10100111000 00010
-        i_z = self._pop(2)
-        i_tstr_regi = self._unpack(16, 11)
-
-        # /4/ > word or_b_or_c - какое-то число?
-        # bitarray('0001000000000000 1000111110000000000000001100000000
-        ior_b_or_c = self._unpack(16, 16)
-
-        # /5/ > tstr_name     (0520 ????)
-        #  bitarray('100011111000000000000000110000000000000000010000100000001110010
-        i_tstr_name = self._unpack(16, 16)
-
-        print(BYTESTRUCT(self.result))
-        self.clear_result()
-
-        #print(self.v_byte8)
-        print(BYTESTRUCT(self.result))
-        """
-         # noqa
-        bitarray('
-        4ac 010010101100
-        p_start_vrtx_num = 260 = 104h =  000100000100
-        531
-        010100110001
-        p_start_vrtx_num = 260 = 104h =  000100000100
-        1000001       41h<<2=104    -> 04ac
-        id '0ecd0008'
-        0000111011001101 0000000000001000
+            self._unpack_uint(self.max_bits_id_line_if_0)    # bits_to_unpack_then_zero???
         
+        # /3/ CALC  ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr)
+        # self.result += b'\x00' * 2      # ptr_dw_TSTR? на самый первый TSTR везде?
+        self.result += struct_WORD.pack(self.parent.toc.li_tstr.ptr)
 
-100110100111000000100000000000010001111100000000000000011000000000000000001000010000000111001011010010110000
+        # /4/  align?
+        self.result += b'\x00' * 2      # word_or_b_or_c word align?
 
+        # /5/ ptr2table CALC  this_will_increment  CALC если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется. 
+        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr  # noqa
+        # TODO или зависит от типа категории? или типа блока?
+        if this_will_increment:
+            self.offset_tstr += TSTR.size
+        self.result += struct_WORD.pack(self.offset_tstr)
+         # если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется. Самый первый - 34B4 из последнего shp
+        
+        # /6/ CALC 2 байта совершенно неясной природы и назначения увы, 
+        # может, длинна линии? 
+        self.result += b'\xff' * 2      # при распаковке - константу, пусть FFFF
 
+        pass
+        # print(BYTESTRUCT(self.result))
 
-        tst 0518:0002 cnt:2     518=0101 0001 1000   010100011000 , 51c = 0101 0001 1100  010100011100
-                    str 0520  = 0101 0010 0000   010100100000
-        """
+        return do_next_increment
+
         pass
 
     def unpack_str(self) -> bytes:
         """
-        Распаковывает строку
+        Распаковывает все строки
         Returns:
             bin_str: бинарное представление строковой части zero-ended строк 
         """
@@ -1153,8 +1038,7 @@ class bitstream():
         ptr_start = int(self._unpack_ptr(), 16)
         ptr_end = int(self._unpack_ptr(), 16)
         strings_length = ptr_end - ptr_start
-        del ptr_end
-        del ptr_start
+        del ptr_end, ptr_start
         
         # self.res на этом месте - 4 байта
         # clear. вааобще то сюда tstr надо, которые еще не распаковывались) # noqa 
@@ -1175,26 +1059,17 @@ class bitstream():
                 # Вроде 00 не может быть - иначе зачем 6 шт где не кодируется ничего?
                 raise ValueError(f"WTF? В количестве ch преамбулы не ожидалось 00, а тут '{n:2b}'")    # noqa
             #теперь загрузить n chars
-            val = ''
-            for _ in range(n):
+            val = b''
+            for _ in range(n):  
                 # и грузятся ascii коды по 7 бит
-                ch = chr(ba2int(self._pop(BITS_IN_ASCII)))
-                val += ch
-                # ba = self._pop(BITS_IN_ASCII)
-                # bi = ba2int(ba)
-                # bb = ba.tobytes()
-                # bch = struct_BYTE.unpack(bb)[0]
-                # print(bch)
-                # #ch_code = ba2int()
-                # ch = chr(bi)
-                # # bch = struct_BYTE.pack(ch_code)
-                # val += ch
-                pass
+                ascii = ba2int(self._pop(BITS_IN_ASCII))
+                bch = ascii.to_bytes(1, byteorder='big')
+                val += bch
             preambula[f"{k:07b}"] = val
 
         # и вот только теперь пошли буквы, закодированные ....эммм.
-        # .. хафманом, но с нюансами
-        res = ''
+        # .. как бы хафманом, но с нюансами
+        res = b''
         for _ in range(strings_length):
             prefix = self._pop(2)
             if prefix.to01() == '11':
@@ -1203,13 +1078,22 @@ class bitstream():
                     # о, сокращённенькое из преамбулы
                     pre_chars = preambula[ba.to01()]
                     # но если из преамбулы возвращается А
-                    if pre_chars == 'A':
-                        res += chr(ba2int(ba))
+                    if pre_chars == b'A':
+                        res += ba2int(ba).to_bytes(1, byteorder='big')
                     else:
                         res += pre_chars
+                elif ba2int(ba) < 32:       # похоже загрузить ascii до ' '
+                    """
+                    ISO 8859-2 xor win1250?
+                    """
+                    # а это 1250
+                    code = 0xe1 + ba2int(ba)  # угу, эмпирическое волшебное число 0xe1
+                    # ascii = code.to_bytes(1, byteorder='big')
+                    res += code.to_bytes(1, byteorder='big')
                 else:
                     # или ascii код буквы
-                    res += chr(ba2int(ba))
+                    # ascii = ba2int(ba)
+                    res += ba2int(ba).to_bytes(1, byteorder='big')
                 continue        # всё, данные итерации загружены
             elif prefix.to01() == '00':
                 prefix += self._pop(1)
@@ -1218,13 +1102,13 @@ class bitstream():
             else:       # elif prefix.to01() == '10':
                 prefix += self._pop(3)
             # вытаскиваем, что получилось, из дерева и добавляем к результату
-            res += LOOKUP_CHARS[prefix.to01()]
+            res += LOOKUP_CHAR_BYTES[prefix.to01()]
         # всё, упакованные буквы окончились
 
         # подрезать хвосты - по длинне могло подрасти из-за использования преамбулы
-        bin_str = res.encode('cp1251')
-        bin_str = bin_str[:strings_length]
-        # res = bin_str.decode('cp1251')
-        return bin_str
+        res = res[:strings_length]
+        # unic = res.decode('cp1250')
+        # print(unic)
+        return res
 
     pass   # class unpack_type_one():

@@ -15,9 +15,9 @@ the Free Software Foundation; either version 2 of the License, or
 import os.path
 from functools import partial
 
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication   # , QObject
+from qgis.PyQt.QtCore import Qt, QSettings, QTranslator, QCoreApplication   # , QObject
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog
+from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog, QDockWidget   # noqa
 #from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgisInterface
 
@@ -55,6 +55,9 @@ class VDOExplorerPlugin:
 
     vdo: VDO_FILE = None
     """ vdo carindb file """
+
+    dockwidget: QDockWidget = None
+    """ main dockwidget """
 
     def __init__(self, iface: QgisInterface):
         # initialize plugin directory
@@ -234,7 +237,7 @@ class VDOExplorerPlugin:
         # self.log.debug('chooseNewCarindb >')
 
     def loadCarindb(self, path: os.path) -> bool:
-        """ Load carindb file
+        """ Load carindb file (if changed carindb)
 
         :param path: A path for loading carindb file.
         :type path: os.path
@@ -244,10 +247,19 @@ class VDOExplorerPlugin:
         self.RegenerateMenu()
 
         if os.path.exists(path):
+            # open vdo
+            if self.vdo is not None:
+                if self.vdo.path != path:
+                    self.vdo = VDO_FILE(path)
+            else:   # vdo None
+                self.vdo = VDO_FILE(path)
+
+            self.ShowMainWidget()
             return True
         # self.iface.messageBar().pushMessage(
         # self.tr('Plugin <b>{}</b> not found.').format(plugin),
         # Qgis.Warning, 1)
+        self.vdo = None
         return False
 
     def isCarinb(self, filePath: os.path) -> bool:
@@ -324,8 +336,7 @@ class VDOExplorerPlugin:
                 return
         #if file in path - not carindb file
         if not self.isCarinb(filePath):
-            msg = self.tr('This is not carindb by inner structure.\nDo you want\
- to remove path from recent?\n{}').format(filePath)
+            msg = self.tr('This is not carindb by inner structure.\nDo you want to remove path from recent?\n{}').format(filePath)  # noqa
             res = QMessageBox.question(None,
                                        self.tr('Delete from recent files'),
                                        msg,
@@ -353,6 +364,20 @@ class VDOExplorerPlugin:
         Settings.clearRecentFiles()
         self.RegenerateMenu()
         # self.log.debug('clearRecentList >')
+
+    def ShowMainWidget(self):
+        """открывает главный dockwidget"""
+        if self.vdo is not None:
+            # TODO - проверка на изменение vdo?
+            if self.dockwidget is None:
+                # Create the dockwidget (after translation) and keep reference
+                self.dockwidget = QgisVdoDockwidget(self, self.iface)
+                self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)  # noqa
+            #
+            self.dockwidget.show()
+            return
+
+        return
 
 
 '''

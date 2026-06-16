@@ -21,6 +21,7 @@ from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileD
 #from qgis.core import Qgis, QgsMessageLog
 from qgis.gui import QgisInterface
 
+from .vdo import VDO_FILE
 from .settings import Settings
 from .ui_files.ConfigurationDialog import ConfigurationDialog
 from .ui_files.QgisVdoDockwidget import QgisVdoDockwidget
@@ -51,6 +52,9 @@ class VDOExplorerPlugin:
     iconOpen = QIcon(os.path.join(os.path.dirname(__file__),
                                   ICON_PATH_PLUGIN_OPEN))
     """ Иконка открытия файла """
+
+    vdo: VDO_FILE = None
+    """ vdo carindb file """
 
     def __init__(self, iface: QgisInterface):
         # initialize plugin directory
@@ -158,7 +162,7 @@ class VDOExplorerPlugin:
         # Create files for recently processed Действия из ранее открывавшихся файлов
         self.actionForPlugin = {}
         for f in Settings.RecentFiles():
-            self.actionForPlugin[f] = self.createActionForPlugin(f)
+            self.actionForPlugin[f] = self.createActionForPath(f)
         # и добавить открыть новый файл
         self.actionForPlugin[ACTION_LOAD_NEW_CARINDB] = self.actionChooseNewCarindb
         # Очистка меню
@@ -260,7 +264,7 @@ class VDOExplorerPlugin:
                 return True
             return False
         
-    def createActionForPlugin(self, filePath: os.path) -> QAction:
+    def createActionForPath(self, filePath: os.path) -> QAction:
         """ Create action from path
 
         :param path: A path to carindb file for creating QAction.
@@ -297,8 +301,7 @@ class VDOExplorerPlugin:
         # self.log.debug('alertCarindb < ' + filePath)
         #if file carindb not found
         if not os.path.isfile(filePath):
-            msg = self.tr('Can`t find file.\nDo you want\
- to remove path from recent?\n{}').format(filePath)
+            msg = self.tr('Can`t find file.\nDo you want to remove path from recent?\n{}').format(filePath) # noqa
             res = QMessageBox.question(None,
                                        self.tr('Delete from recent files'),
                                        msg,

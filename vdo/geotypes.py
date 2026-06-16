@@ -16,10 +16,10 @@ functions:
 import re
 import struct
 
-from vdo.datatypes import BYTESTRUCT, FAR_LIST
-from vdo.datatypes import DOUBLE_BYTES_CNT
-from vdo.consts import struct_UINT     # , USHORT_TWICE_struct
-from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT
+from .datatypes import BYTESTRUCT, FAR_LIST
+from .datatypes import DOUBLE_BYTES_CNT
+from .consts import struct_UINT     # , USHORT_TWICE_struct
+from .enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
 GEO_CATEGORY_struct = struct.Struct(">bbHxbH")

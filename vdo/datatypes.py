@@ -16,9 +16,9 @@ import struct
 import importlib
 import heapq
 
-from vdo.enums import BlockType
-from vdo.consts import struct_WORD, struct_UINT
-from vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
+from .enums import BlockType
+from .consts import struct_WORD, struct_UINT
+from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
 
 OFFSET_TOC = 0x08
 

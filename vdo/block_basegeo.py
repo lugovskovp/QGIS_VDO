@@ -11,16 +11,16 @@ from bitarray import bitarray   # https://pypi.org/project/bitarray/
 from bitarray.util import ba2int
 
 
-from vdo.block_base import block_base   
-from vdo.datatypes import BLADDR, LIST, BYTESTRUCT
-from vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
-from vdo.geotypes import (MAP_AREA,
+from .block_base import block_base   
+from .datatypes import BLADDR, LIST, BYTESTRUCT
+from .enums import en_GEO_CATEGORY, en_DRAW_TYPE
+from .geotypes import (MAP_AREA,
                           GEO_CATEGORY,
                           GEO_SHAPE,
                           GEO_LINE,
                           VERTEX,
                           TSTR)
-from vdo.consts import (struct_UINT,
+from .consts import (struct_UINT,
                         struct_WORD,
                         struct_WORD_TWICE,
                         struct_4BYTES,

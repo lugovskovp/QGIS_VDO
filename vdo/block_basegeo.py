@@ -340,7 +340,6 @@ class block_basegeo(block_base):
             # shp - WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
             # lin - 12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется.
 
-
             # texts
             self._raw += unpacked_bin_strings
 
@@ -692,30 +691,6 @@ class bitstream():
         res = f"{current_offset:04x}"
         return res
 
-
-
-    @property
-    def v_byte07(self):
-        res = self._touch(7)
-        #res = self.unpack(8, 7, 0, False)
-        return ba2int(res)
-
-    @property
-    def v_byte08(self):
-        res = self._touch(8)
-        #res = self.unpack(8, 8, 0, False)
-        return ba2int(res)
-
-    @property
-    def v_word15(self):
-        res = self._touch(15)
-        return ba2int(res)
-
-    @property
-    def v_word16(self):
-        res = self._touch(16)
-        return ba2int(res)
-
     @property
     def res(self):
         ''' online see result values'''
@@ -1043,6 +1018,7 @@ class bitstream():
          # если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется. Самый первый - 34B4 из последнего shp
         
         # /6/ CALC 2 байта совершенно неясной природы и назначения увы, 
+        # может, длинна линии? 
         self.result += b'\xff' * 2      # при распаковке - константу, пусть FFFF
 
         pass

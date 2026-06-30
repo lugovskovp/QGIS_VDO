@@ -112,12 +112,12 @@ class VDO_FILE():
         if head.bltype.value in KNOWN_BLOCKS.keys():
             bl = KNOWN_BLOCKS[head.bltype.value]
             # импорт класса bl из модуля
-            bl_class = getattr(importlib.import_module('vdo.blocks.' + bl), bl)
+            bl_class = getattr(importlib.import_module('.blocks.' + bl, package="QGIS_VDO.vdo"), bl)  # noqa
             bl_class.type = head.bltype.value
             bl_class.type_name = bl
         else:
             # no this type in known blocks
-            bl_class = getattr(importlib.import_module('vdo.block_base'), 'block_base')
+            bl_class = getattr(importlib.import_module('.vdo.block_base'), 'block_base')
             #return block_base(head.bladdr, self)
             bl_class.type = head.bltype.value
             bl_class.type_name = 'block_base'
@@ -383,6 +383,7 @@ class BLADDR(BYTESTRUCT):
             self.vdo = VDO_FILE()
         else:
             self.vdo = vdo
+        pass
 
     def __repr__(self) -> str:
         ''' View while debug value'''

@@ -7,6 +7,7 @@
 # import struct
 
 from vdo.test_vdo import vdobmv as vdo
+# from vdo.test_vdo import vdo30 as vdo
 
 from vdo.consts import (struct_4BYTES,
                         struct_WORD
@@ -128,10 +129,17 @@ if __name__ == "__main__":
         
         if not v_search.is_valid_type:  # поиск в 6-ти тапах - картах
             continue
-        if not v_search.is_packed:  # не запакованные "1" - не надо
+
+        # if not v_search.is_packed:  # не запакованные "1" - не надо
+        #     continue
+
+        if v_search.is_packed:  # запакованные "1" - не надо
             continue
 
-        if v_search.is_empty_lines:  # тут отбраковывались с линиями
+        # if v_search.is_empty_lines:  # тут отбраковывались с линиями
+        #     continue
+
+        if v_search.is_empty_pois:
             continue
 
         hex_list = [f"{c:02X}" for c in v_search.data._raw[:OFFSET_PACKED_DATA]]
@@ -151,10 +159,13 @@ if __name__ == "__main__":
         if i > 50:
             pass
 
-        if v_search.is_empty_pois:
-            continue
+
 
         print(f"finded is_valid_type {i}")
 
     print("ok")
     pass
+
+# bmw
+# 0x06F55E02  # 1C:  01 00 00 48   shp: 1 lin: 10 poi: 7
+# 0x06F8B703  # 1C:  05 00 00 44   shp: 12        lin: 7  poi: 10

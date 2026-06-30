@@ -70,7 +70,12 @@ class searcher():
         return res
 
     @property
-    def is_packed(self):
+    def is_unpacked(self):
+        val = self.data.uchar(6) == 0  # only line packing
+        return val
+
+    @property
+    def is_packed_1(self):
         val = self.data.uchar(6) == 1  # only line packing
         return val
 
@@ -127,14 +132,14 @@ if __name__ == "__main__":
     i = 0
     for head in v_search.next_block():
         
-        if not v_search.is_valid_type:  # поиск в 6-ти тапах - картах
+        if not v_search.is_valid_type:  # поиск в 6-ти типах - картах
             continue
 
-        # if not v_search.is_packed:  # не запакованные "1" - не надо
+        if not v_search.is_packed_1:  # не запакованные "1" - не надо
+            continue
+
+        # if not v_search.is_unpacked:  # распакованные - не надо
         #     continue
-
-        if v_search.is_packed:  # запакованные "1" - не надо
-            continue
 
         # if v_search.is_empty_lines:  # тут отбраковывались с линиями
         #     continue
@@ -150,6 +155,9 @@ if __name__ == "__main__":
         cnt_lin = v_search.cnt_lin
         cnt_poi = v_search.cnt_poi
 
+        if cnt_poi > 50 and False:
+            continue
+
         hex_list = [f"{c:02X}" for c in v_search.data._raw[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4]]  # noqa
         unk_bytes = " ".join(hex_list)
 
@@ -158,8 +166,6 @@ if __name__ == "__main__":
 
         if i > 50:
             pass
-
-
 
         print(f"finded is_valid_type {i}")
 

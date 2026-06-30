@@ -574,8 +574,7 @@ class block_basegeo(block_base):
             2h - PTR         p_str_name - ptr2str/0;
             2h - PTR         p_vertexes_obj; ptr2vertexes
             4h - DWORD       id
-                    // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
-            2h - PTR   ptr_linesign, p_line_sign; // Or start pstr
+            2h - PTR   ptr_linesign, p_line_sign; // Or start pstr -=== POI
             2h - WORD  or_b_or_c;
             2h - PTR   p_p_str_name; // ptr to GEO_OBJ_STR
             4h - WORD   or_38_or_0_b_country;

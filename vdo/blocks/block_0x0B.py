@@ -3,8 +3,8 @@ CH_country = 0x0b  # fully parsed chars idxs
 0x0B -> 0x0D 0x0F 0x11
 """
 
-from vdo.block_base import block_base
-from vdo.datatypes import BLADDR, LIST, CH_IDX, OFFSET_TOC
+from QGIS_VDO.vdo.block_base import block_base
+from QGIS_VDO.vdo.datatypes import BLADDR, LIST, CH_IDX, OFFSET_TOC
 
 
 class block_0x0B(block_base):

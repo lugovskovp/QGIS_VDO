@@ -3,8 +3,8 @@ CH_city = 0x0d  # fully parsed chars idxs
 0x0B -> 0x0D 0x0F 0x11
 """
 
-from vdo.blocks import block_0x0B
-from vdo.datatypes import BLADDR
+from QGIS_VDO.vdo.blocks import block_0x0B
+from QGIS_VDO.vdo.datatypes import BLADDR
 
 
 class block_0x0D(block_0x0B):

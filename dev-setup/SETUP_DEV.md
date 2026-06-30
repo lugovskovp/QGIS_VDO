@@ -40,7 +40,7 @@ To handle 3rd-party pip dependencies in a QGIS plugin, you should either vendor 
 ```c:\work\dir\> md ext_libs```
 
 ### install modules
-```pip install pandas requests -t ./ext_libs```
+```pip install bitarray -t ./ext_libs```
 
 ### Update __init__.py to find the modules
 ```

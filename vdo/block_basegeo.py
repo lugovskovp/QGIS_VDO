@@ -5,22 +5,21 @@ bitstream - class wrapper for bitarray
 
 # flake8: noqa F841  на время отладки отключить предупреждения о неиспользуемых
 
-
 from bitarray import bitarray   # https://pypi.org/project/bitarray/
 # https://github.com/ilanschnell/bitarray/blob/master/doc/buffer.rst
 from bitarray.util import ba2int
 
 
-from .block_base import block_base   
-from .datatypes import BLADDR, LIST, BYTESTRUCT
-from .enums import en_GEO_CATEGORY, en_DRAW_TYPE
-from .geotypes import (MAP_AREA,
+from QGIS_VDO.vdo.block_base import block_base   
+from QGIS_VDO.vdo.datatypes import BLADDR, LIST, BYTESTRUCT
+from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
+from QGIS_VDO.vdo.geotypes import (MAP_AREA,
                           GEO_CATEGORY,
                           GEO_SHAPE,
                           GEO_LINE,
                           VERTEX,
                           TSTR)
-from .consts import (struct_UINT,
+from QGIS_VDO.vdo.consts import (struct_UINT,
                         struct_WORD,
                         struct_WORD_TWICE,
                         struct_4BYTES,

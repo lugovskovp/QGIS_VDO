@@ -1,6 +1,6 @@
 
-from vdo.block_base import block_base
-from vdo.datatypes import BLADDR
+from QGIS_VDO.vdo.block_base import block_base
+from QGIS_VDO.vdo.datatypes import BLADDR
 
 OFFSET_LIST_STR_LABEL = 0x14
 OFFSET_LIST_STR_DESCRIPTION = 0x18

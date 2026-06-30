@@ -34,6 +34,29 @@ pip 25.0.1 from c:\Work\QGIS_VDO\.venv\Lib\site-packages\pip (python 3.12)
 4. Настройка Flake8 - ``` pip install flake8 flake8-qgis flake8-qt-tr ```
 5. В QGIS установить [Инструменты разработки QGIS DevTool](https://plugins.qgis.org/plugins/devtools/). Документация(https://docs.nextgis.com/docs_ngqgis/source/devtools.html)
 
+## use 3rd party modules
+To handle 3rd-party pip dependencies in a QGIS plugin, you should either vendor the packages directly inside your plugin directory or programmatically install them using subprocess and pip into a localized folder upon plugin initialization. 
+### create lib dir
+```c:\work\dir\> md ext_libs```
+
+### install modules
+```pip install pandas requests -t ./ext_libs```
+
+### Update __init__.py to find the modules
+```
+import os
+import sys
+
+# Get the path to your plugin's 'ext_libs' folder
+plugin_dir = os.path.dirname(__file__)
+ext_libs_path = os.path.join(plugin_dir, "ext_libs")
+
+# Inject it into the system path if it isn't there already
+if ext_libs_path not in sys.path:
+    sys.path.insert(0, ext_libs_path)
+```
+
+
 
 # Полезные линки
 - [Отладка плагинов QGIS 3.x на Python в Windows 10 с помощью VS Code](https://gist.github.com/thbaumann/73c873d4c49d8c1add8dc97359cebabe)

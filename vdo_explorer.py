@@ -154,6 +154,9 @@ class VDOExplorerPlugin:
         if not self.menu:
             # The initGui() method was never called
             return
+        if self.dockwidget is not None:
+            self.iface.removeDockWidget(self.dockwidget)
+            self.dockwidget = None
         self.iface.pluginMenu().removeAction(self.menu.menuAction())
         self.toolButton.deleteLater()
     

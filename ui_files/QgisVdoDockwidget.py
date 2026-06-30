@@ -38,10 +38,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.vdo = parent_plugin.vdo
         
         self.setupUi(self)
+        # vdo info
+        bl_tos = self.vdo.get_block(0)
         #
         self.l_vdo_path.setText(self.vdo.path)
+        # self.l_vdo_path.
         pass
 
-    # def closeEvent(self, event):
-    #     self.closingPlugin.emit()
-    #     event.accept()
+    def closeEvent(self, event):
+        # self.closingPlugin.emit()
+        # event.accept()
+        pass

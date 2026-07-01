@@ -108,9 +108,10 @@ class block_basegeo(block_base):
             # суммарная уже известная на данный момент информация
             self.show_main_info()
             print(f"\tMax VERTEX bites: {buffer.max_bits_num_vrtx}")
-            print(f" begin word = {buffer.max_bits_id_line_if_0:02x} \
-                 {buffer.max_bits_id_shape_if_0:02x} \
-                 {buffer.max_bits_in_vertex_delta:02x} {buffer.word_d:02x} ")  # noqa
+            begin_word = f"{buffer.max_bits_id_line_if_0:02X} {buffer.max_bits_id_shape_if_0:02X}"
+            begin_word += f" {buffer.max_bits_in_vertex_delta:02X} {buffer.word_d:02X}"
+            print(f" begin word :: {begin_word}")
+            del begin_word
 
             # <<<<<<<<<< GEO_CATEGORY
             '''
@@ -238,8 +239,8 @@ class block_basegeo(block_base):
                 # ==================== debug print last 10h values
                 pass
 
-
-
+            # TODO: в raw после vrtx идут poi (if exists)
+              
             # <<<<<<<<<< zero ended strings unpack, but write only after TSTRrs
             """
                 В запакованном блоке сначала идут строки. И только потом - запакованые tstr.
@@ -254,7 +255,19 @@ class block_basegeo(block_base):
             if self.toc.li_tstr.cnt:
                 # нет tstr - нет и строк для распаковки
                 unpacked_bin_strings = buffer.unpack_str()
-                print(f"\n{unpacked_bin_strings}\n{unpacked_bin_strings.decode('cp1250')}\n")
+                unic = unpacked_bin_strings.replace(b"\x00", b".")
+                unic = unic.decode('cp1250')
+                print(f"\n{unpacked_bin_strings}\n\n{unic}\n")
+                del unic
+
+            # Убрать незначащие нули, необходимые для обеспечения пространства использования
+            #  преамбульных сокращений, а потом будет ptr на вертексы?
+            zero = buffer._touch(1)
+            Z = bitarray('0')
+            while zero == Z:
+                buffer._pop(1)
+                zero = buffer._touch(1)
+            del Z, zero
 
 
             # <<<<<<<<<< POI после вертексов, НО в запакованном виде -
@@ -291,105 +304,172 @@ class block_basegeo(block_base):
                 
                 00000000000000000000000000000000000000000111110100000001111101000000011111010010111000001100101110001001001011100011110010111001010100000011001101000100000111100000110011101001000000001100000000000001001010101001011001001011001001011001001011001001011101001100001001100101001101000010000000000000000010000000010100000000100000000000000000000000000000000000000000000000000000000
 
+                bl_addr = 0x06FF0606
+                    lin 0178:0009 cnt:9     next ptr: 0218
+                    poi 0C5C:0009 cnt:9     next ptr: 0C92
+                    vrt 0218:0291 cnt:657   next ptr: 0C5C
+                    tst 0C92:0010 cnt:16    next ptr: 0CD2
+                    strs from 0CD2
+                    Max PTR bites: 12
+                    Max VERTEX bites: 10
+                        begin word = 11  17  0a  00 
 
-                bitarray('10100110010011110001010011100001111000111000001111000100010100001111001000000100000001100011100001111001000000011111010000011100001111000110010011110001010011100001111000111010011110001010110100001111001000000100000001100011100001111001000000011111010000011100001111000110001011010001000011100001111000111000001111000010010100001111001000000100000001100011100001111001000000011111010000011100001111000110000001111000010111100001111
-                000111001011010001010010100001111
-                001000000100000001100011100001111
-                00100000001111010000011100001111
-                0001 100010110100010 100111 00001111
-                0001 110100111100010 100101 00001111
-                0010 000001000000011 000111 00001111
-                0010 000000111110100 000111 00001111
-                0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010110011000011110110110000011110111001000111010111001000011110111100000011110111111000011111000010000111011000010000000011100101110010000011110000011100110001000111001101100001110011100110011100111111000111010000101001110100011000000011101001001110000110001110100110111000001110111010100111100001100011101001101110000011101110101100011000000001100000001110101101000011101011000100000000111010110100001100001000110000101011000011001100001110110001000011000100101100010100110001011011000110001100011010110001110011000111101100100000110010000011001000101100100100110010011011001010001100101010110010110011001011100010000000011001100000001000000000100100010000000000000000000000000000000000000000000')
+                bitarray('011110011100101100011111001110100000111001100101100011111001100100000111001000111100011111010000000011110011100111100011111001110100000111001001101100011111001100101000100010100111100011111010000000011110011100111100011111000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000110001011100000011000101110000001100010111001100110001101110110011001000000010111100100100101011110010010010101111001001001010111100100100101011110010010010000011100110100101000101011000001110011100011001110011101111001110011110110001110100000000001110100010001100001110000011101000111101000101010000000000111010010111010000000011000000000011101001100110011101001101110011001001001110010010111100100110111001001111110010011111100100111111001001111110010100011100101001111001010101110010101111100101100111001011011110010111011100101111111001011111110010111111100101111111001100001110011000111100110010111001100101110011001011100110011111001101001001000000000000000001000000001010000000100000000101100010001000000000000000000000000000000000000')
 
+                0111100111 001011 00011111
+                0011 101000001110011 001011 00011111
+                00110 01000001110010 001111 00011111
+                01000 00000111100111 001111 00011111
+                00111 01000001110010 011011 00011111
+                00110 01010001000101 001111 00011111
+                01000 00000111100111 001111 00011111
 
                 """
+            # <<<<<<<<<< запакованные ссылки ptr на POI для lin (?)
+            # если есть линии - то дальше их количество +1 значения 
+            #  8:  2h - PTR   ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr) # noqa
+            """
+
+            """
+            if cnt := self.toc.li_lin.cnt:
+                # 'bytes' object does not support item assignment
+                mutable = bytearray(self._raw)
+                INNER_OFFSET_POI = 8
+                for num in range(cnt + 1):
+                    ptr = ba2int(buffer._unpack(16, buffer.max_PTR_bits, 0, False))
+                    item_offset = self.toc.li_lin.ptr + num * GEO_LINE.size + INNER_OFFSET_POI
+                    mutable[item_offset:item_offset + 2] = ptr.to_bytes(2, byteorder='big')
+                    print(f"ptr2poi: {ptr:02X}")
+                self._raw = bytes(mutable)
+                del INNER_OFFSET_POI, mutable, ptr, item_offset, num
 
             # <<<<<<<<<< TSTRs
-                """
-                    # noqa
-                    071515 04  BlockType.MAP__10k400: 0x1d
-                    Max PTR bits: 12
-                самый хвост
-                    0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
+            """
+                # noqa
+                071515 04  BlockType.MAP__10k400: 0x1d
+                Max PTR bits: 12
+            самый хвост
+                0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
 
-                    8c0 15 00   delta 13/19
-                    1 100011000000 1 00010101 1 00000    1100011000000100010101100000 
-                    1 100011010011 00   8D3  delta 12/18 
-                    1 100011100101 00   8E5  delta 11/17
-                    1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
-                    8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
-                    10001011000 10001011010 10001011100 10001011110 100011000000
-                    12-1 len(align word), 4 stucks
+                8c0 15 00   delta 13/19
+                1 100011000000 1 00010101 1 00000     1100011000000100010101100000
+                1 100011010011 00   8D3  delta 12/18 
+                1 100011100101 00   8E5  delta 11/17
+                1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
+                8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
+                10001011000 10001011010 10001011100 10001011110 100011000000
+                12-1 len(align word), 4 stucks
 
-                    4 штуки
-                    1 - флаг загружать, или 0 использовать прошлые
-                    ptr = max_ptr_bits
-                    lang = 8 bit
-                    last_byte = 5 bit
+                4 штуки
+                1 - флаг загружать, или 0 использовать прошлые
+                ptr = max_ptr_bits
+                lang = 8 bit
+                last_byte = 5 bit
 
-                    затем идут адреса, в которые надо перенести сгенерированные
-                    эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
-                    (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
-                    самое последнее - адрес, на котором окончится tstr и начнётся массив строк
-                """
-                # убрать незначащие лидирующие 0
-                marker_TSTR = '0000000000000001'
-                empty_zero = buffer.buffer.find(bitarray(marker_TSTR)) + len(marker_TSTR) - 1
-                buffer._pop(empty_zero)   
-                del empty_zero, marker_TSTR
+                затем идут адреса, в которые надо перенести сгенерированные
+                эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
+                (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
+                самое последнее - адрес, на котором окончится tstr и начнётся массив строк
+            """
+            
 
-                # если есть линии - то дальше их количество +1 значения 
-                #  8:  2h - PTR   ptr_linesign? ptr2first TSTR (CALCULATE == tos.li_tstr.ptr) # noqa
-                if cnt := self.toc.li_lin.cnt:
-                    # 'bytes' object does not support item assignment
-                    mutable = bytearray(self._raw)
-                    for num in range(cnt + 1):
-                        ptr = ba2int(buffer._unpack(16, buffer.max_PTR_bits, 0, False))
-                        item_offset = self.toc.li_lin.ptr + num * GEO_LINE.size + 8
-                        mutable[item_offset:item_offset + 2] = ptr.to_bytes(2, byteorder='big')
-                    self._raw = bytes(mutable)
-
-                # распаковка TSTR
-                s_ptr = '0'
-                s_lang = '0'
-                s_type = '0'
-                for _ in range(self.toc.li_tstr.cnt):
-                    off_from = buffer.av_offs
-                    # ptr_2_str
-                    if ba2int(buffer._pop(1)):
-                        s_ptr = buffer._unpack_ptr()
-                    else:
-                        # use prev value
-                        buffer.result += struct_WORD.pack(int(s_ptr, 16))
-                    # language
-                    if ba2int(buffer._pop(1)):
-                        s_lang = buffer._unpack_byte(8)
-                    else:
-                        # use prev value
-                        buffer.result += int(s_lang, 16).to_bytes()
-                    # type
-                    if ba2int(buffer._pop(1)):
-                        s_type = buffer._unpack_byte(5)
-                    else:
-                        # use prev value
-                        buffer.result += int(s_lang, 16).to_bytes()
-                    # ------------------------- debug
-                    print(f"{off_from}: {s_ptr} {s_lang} {s_type}")
-                    # ------------------------- debug
-                del s_ptr, s_lang, s_type, off_from
+            # далее собственно TSTR TODO: а не pois? 
+            s_ptr = '0'
+            s_lang = '0'
+            s_type = '0'
+            for _ in range(self.toc.li_tstr.cnt):
+                off_from = buffer.av_offs
+                # ptr_2_str
+                if ba2int(buffer._pop(1)):
+                    s_ptr = buffer._unpack_ptr()
+                else:
+                    # use prev value
+                    buffer.result += struct_WORD.pack(int(s_ptr, 16))
+                # language
+                if ba2int(buffer._pop(1)):
+                    s_lang = buffer._unpack_byte(8)
+                else:
+                    # use prev value
+                    buffer.result += int(s_lang, 16).to_bytes()
+                # type - last byte
+                if ba2int(buffer._pop(1)):
+                    s_type = buffer._unpack_byte(5)
+                else:
+                    # use prev value
+                    buffer.result += int(s_type, 16).to_bytes()
+                # ------------------------- debug
+                print(f"TSTR {off_from}: {s_ptr} {s_lang} {s_type}")
+                # ------------------------- debug
+            del s_ptr, s_lang, s_type, off_from
             self._raw += buffer.result
             buffer.clear_result()
-
-            # далее - значения ptr2table <<1  cnt = +1, +1
-            # shp - WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
-            # lin - 12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется.
 
             # texts
             self._raw += unpacked_bin_strings
 
-            # собственно оставшееся в буфере можно и не распаковывать
-            # там окончание куда tstr раскидывать
+            # далее - значения ptr2table <<1  cnt = +1, +1
+            #  Max PTR bites: 14-1 - т.к. выравнивание по чётному, со сдвигом на  
+            # shp - WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
+            # lin - 12: 2h - PTR ptr2table (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется.
+            """
+            bitarray('11011100000110111000101101110010011011100110000000000100000000001000000000010001000000000000000000000000000000000000000000000000')
+            11011100000 DC0
+            11011100010 DC4
+            11011100100 DC8
+            11011100110 DCC
+            00000000010 4
+            00000000010 4
+            00000000010 4
+            00100000000 200
+
+            000
+            cat 0034:0002 cnt:2     next ptr: 0040
+            shp 0040:0003 cnt:3     next ptr: 0090
+            lin 0090:0002 cnt:2     next ptr: 00C0
+            poi 0000:0000 cnt:0 
+            vrt 00C0:0340 cnt:832   next ptr: 0DC0
+            tst 0DC0:0003 cnt:3     next ptr: 0DCC
+            strs from 0DCC
+            Max PTR bites: 12
+                    Max VERTEX bites: 10
+            begin word :: 0D 00 08 00
+
+            """
+            # fill shp tstr (блин, а и не надо было пытаться рассчитывать)
+            if cnt := self.toc.li_shp.cnt:
+                # 'bytes' object does not support item assignment
+                mutable = bytearray(self._raw)
+                INNER_SHP_OFFSET_TSTR = 18
+                for num in range(cnt + 1):
+                    # ptr выровнен по word -> max_ptr_bits - 1
+                    ptr = ba2int(buffer._unpack(16, buffer.max_PTR_bits - 1, 1, False))
+                    item_offset = self.toc.li_shp.ptr + num * GEO_SHAPE.size + INNER_SHP_OFFSET_TSTR
+                    mutable[item_offset:item_offset + 2] = ptr.to_bytes(2, byteorder='big')
+                    print(f"shp ptr2tstr: {ptr:02X}")
+                self._raw = bytes(mutable)
+                del INNER_SHP_OFFSET_TSTR, mutable, ptr, item_offset, num
+
+            # fill lines ptr2tstr
+            """
+            12: 2h - PTR ptr2StrTable (CALCULATE == если p_str_name ПРЕДЫДУЩЕГО == 0, то НЕ инкрементируется. 
+                        (Самый первый - 34B4 из последнего shp
+                14: 2h -# (CALCULATE == 2 байта страны , 
+
+            """
+            if cnt := self.toc.li_lin.cnt:
+                # 'bytes' object does not support item assignment
+                mutable = bytearray(self._raw)
+                INNER_LIN_OFFSET_TSTR = 12
+                for num in range(cnt + 1):
+                    # ptr выровнен по word -> max_ptr_bits - 1
+                    ptr = ba2int(buffer._unpack(16, buffer.max_PTR_bits - 1, 1, False))
+                    item_offset = self.toc.li_lin.ptr + num * GEO_LINE.size + INNER_LIN_OFFSET_TSTR
+                    mutable[item_offset:item_offset + 2] = ptr.to_bytes(2, byteorder='big')
+                    print(f"lin ptr2tstr: {ptr:02X}")
+                self._raw = bytes(mutable)
+                del INNER_LIN_OFFSET_TSTR, mutable, ptr, item_offset, num
+
+            # buffer ('001000000000000000000000000000000000000000000000000')
             self.bit_tail = buffer
             # локально константами
 
@@ -693,7 +773,7 @@ class bitstream():
         # [ ] 00: d - ?   пока только 00 встречался. повесить raise
 
         # debug raises
-        if word_a not in [5, 0xc, 0xd, 0xe, 0xf]:
+        if word_a not in [5, 0xc, 0xd, 0xe, 0xf, 0x11]:
             raise ValueError(word_a, f"0x{self.word_a} .word_a")
         if word_c not in [8, 9, 0x0a]:
             raise ValueError(word_c, f"0x{self.word_c} .word_c")
@@ -1151,8 +1231,9 @@ class bitstream():
 
         # подрезать хвосты - по длинне могло подрасти из-за использования преамбулы
         res = res[:strings_length]
-        # unic = res.decode('cp1250')
-        # print(unic)
+        # unic = res.replace(b"\x00", b".")
+        # unic = unic.decode('cp1250')
+        # print(f"{unic}\n")
         return res
 
     pass   # class unpack_type_one():

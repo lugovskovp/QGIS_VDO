@@ -155,7 +155,7 @@ if __name__ == "__main__":
         cnt_lin = v_search.cnt_lin
         cnt_poi = v_search.cnt_poi
 
-        if cnt_poi > 50 and False:
+        if cnt_poi > 20:
             continue
 
         hex_list = [f"{c:02X}" for c in v_search.data._raw[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4]]  # noqa
@@ -173,5 +173,8 @@ if __name__ == "__main__":
     pass
 
 # bmw
-# 0x06F55E02  # 1C:  01 00 00 48   shp: 1 lin: 10 poi: 7
-# 0x06F8B703  # 1C:  05 00 00 44   shp: 12        lin: 7  poi: 10
+# 0x06B6FC0F  # 15:  10 17 09 00   shp: 28        lin: 58 poi: 6
+# finded is_valid_type 314
+# 0x06B9AF14  # 15:  10 17 09 00   shp: 64        lin: 99 poi: 10
+# finded is_valid_type 315
+# 0x06C68505  # 15:  10 00 0A 00   shp: 5 lin: 7  poi: 20

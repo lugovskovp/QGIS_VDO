@@ -222,7 +222,7 @@ class GEO_LINE(BYTESTRUCT):
         (p_str_name,
          ptr_vrtx,
          id,
-         tstr_regi,      # p_line_sign; // Or start pstr
+         POI_regi,      # p_line_sign; // Or start pstr // START POI
          or_b_or_c,
          tstr_name,      # p_p_str_name; // ptr to GEO_OBJ_STR
          or_38_or_0_b_country,
@@ -231,7 +231,7 @@ class GEO_LINE(BYTESTRUCT):
         self.p_str_name = p_str_name           # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx         # begin vertexes
         self.id = id
-        self.tstr_regi = tstr_regi      # ptstr - but strange, unkn
+        self.POI_regi = POI_regi      # ptstr - but strange, unkn
         self.or_b_or_c = or_b_or_c   # named as "b or c" but bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
         self.tstr_name = tstr_name    # ptr to GEO_OBJ_STR
         self.or_38_or_0_b_country = or_38_or_0_b_country    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501

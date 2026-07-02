@@ -110,7 +110,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] полигоны - shapes
         - [x] полилинии - lines
         - [x] vertex
-        - [ ] poi
+        - [ ] poi 
         - [x] tstr_array_ объекта
     * [x] блоки карт - childs базового гео-блока
         - [x] 0x14, 
@@ -119,13 +119,13 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
         - [x] 0x1C, 
         - [x] 0x1D, 
         - [x] 0x1E
-- [ ] archives - распаковка
-    * [ ] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
+- [x] archives - распаковка
+    * [x] type 1 for *0x14, 0x15, 0x16, *0x1C, 0x1D, 0x1E
         - [x] categories
         - [x] shapes
         - [x] lines
         - [x] vertex
-        - [ ] poi
+        - [x] poi - mock по количеству. Принцип упаковки НЕ ПОНЯТЕН
         - [x] tstr
         - [x] str - в основнной бекенд
             * [x] разобраться, где именно и как запакованы надписи

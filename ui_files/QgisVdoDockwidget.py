@@ -51,7 +51,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
             fsize = os.path.getsize(self.vdo.path)
             formatted = f"{fsize:,}".replace(',', ' ')
-            self.l_vdo_size_val.setText(formatted)
+            self.l_vdo_size_val.setText(f"0x{fsize:04X} / {formatted}")
             self.l_vdo_path_val.setText(self.vdo.path)
             # vdo info
             bl_toc: block_0x12 = self.vdo.get_block(0)

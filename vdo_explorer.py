@@ -253,6 +253,10 @@ class VDOExplorerPlugin:
             # open vdo
             if self.vdo is not None:
                 if self.vdo.path != path:
+                    # path поменялся
+                    # TODO: а открыт ли уже dockwidget?
+                    self.iface.removeDockWidget(self.dockwidget)
+                    self.dockwidget = None
                     self.vdo = VDO_FILE(path)
             else:   # vdo None
                 self.vdo = VDO_FILE(path)
@@ -272,7 +276,7 @@ class VDOExplorerPlugin:
         :type path: os.path
         """
         # self.log.debug('isCarinb <' + filePath)
-        #
+        # первые 8 байт любого carindb
         CORRECT_VDO_BEGIN = b'\x00\x00\x00\x01\x00\x12\x00\x00'
         with open(filePath, 'rb') as f:
             if f.read(8) == CORRECT_VDO_BEGIN:
@@ -370,15 +374,17 @@ class VDOExplorerPlugin:
 
     def ShowMainWidget(self):
         """открывает главный dockwidget"""
-        if self.vdo is not None:
-            # TODO - проверка на изменение vdo?
+        if self.vdo.path is not None:
             if self.dockwidget is None:
                 # Create the dockwidget (after translation) and keep reference
                 self.dockwidget = QgisVdoDockwidget(self, self.iface)
                 self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)  # noqa
-            #
+            # если widget есть, то показать
             self.dockwidget.show()
             return
+        else:
+            # self.vdo.path is None:
+            pass
 
         return
 

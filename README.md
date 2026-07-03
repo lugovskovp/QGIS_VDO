@@ -140,11 +140,23 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
             * [x] 00: d - ? неизвестное, raise, если не 0
         - [x] разбор хвостов tstr - дозаполнить уже распакованные shp/lin
     * [x] type 2, 3
-- [ ] Рабочее поле - папка с листами, кнопки настройки, открытия файла
-    * [ ] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
+- [x] Рабочее поле - папка с листами, кнопки настройки, открытия файла
+    * [x] при открытии проверяется - действительно ли это carindb, если нет - инфосообщение, fault
     * [x] виджет рабочего поля - открыть/создать при загрузке файла
     * [x] закрытие виджета выгружает vdo carindb? НЕТ
     * [x] при закрытии/перезагрузке плагина - удалять виджет
+- [ ] tab info
+    * [x] компоновка
+    * [x] свойства файла vdo
+    * [ ] area A B coords
+    * [x] area A B drawing
+    * [x] info from block 13
+- [ ] tab address
+    * [ ] 
+- [ ] tab topo
+    * [ ] 
+- [ ] tab block
+    * [ ] 
 - [ ] отрисовка геообъектов
     * [ ] функция возвращения геообъекта - набора координат точек
     * [ ] архитектура представления геообъектов - по категориям
@@ -154,8 +166,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 [ ] почистить bitstream? av_, v_, ??
-[ ]
-[ ]
+[ ] запрет commit при наличии ошибок flake8
+[ ] Settings show RecentFiles
 [ ]
 
 где искать qtutils

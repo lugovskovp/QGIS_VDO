@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>376</width>
-    <height>658</height>
+    <width>388</width>
+    <height>637</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+   <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -19,13 +19,13 @@
   <property name="minimumSize">
    <size>
     <width>340</width>
-    <height>658</height>
+    <height>626</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>524287</width>
-    <height>658</height>
+    <height>637</height>
    </size>
   </property>
   <property name="baseSize">
@@ -553,7 +553,7 @@
           </widget>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,40">
+          <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,20">
            <property name="spacing">
             <number>5</number>
            </property>
@@ -669,10 +669,22 @@
               </property>
               <item row="1" column="0">
                <widget class="QTextBrowser" name="textBrowser_info">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
                   <height>100</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>600</height>
                  </size>
                 </property>
                </widget>

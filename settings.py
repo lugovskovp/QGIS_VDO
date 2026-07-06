@@ -33,6 +33,7 @@ class Settings():
     NAME_LAST_PATH = 'LastFileNamePath'
     NAME_TOOL_BUTTON_TEXT = 'toolButtonTextEnabled'
     NAME_ENABLE_SHOW_CLEAR_ACTION = 'ShowClearRecentFilesEnabled'
+    NAME_CHECKED_GROUP_BOX = 'ShowGroupBoxEnabled'
 
     # RecentFilesCount
     @classmethod
@@ -130,3 +131,16 @@ class Settings():
     def setShowClearRecentFilesEnabled(cls, state: bool) -> None:
         """ Enable or disable to show clear recent files in menu """
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}', state)
+
+    # ------- tab_info CollapsibleGroupBox state into settings
+    # ShowGroupBox
+    @classmethod
+    def ShowGroupBoxEnabled(cls, gb_name: str) -> bool:
+        """ """
+        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_CHECKED_GROUP_BOX}/{gb_name}',
+                                 True, type=bool)
+
+    @classmethod
+    def setShowGroupBoxEnabled(cls, gb_name: str, state: bool) -> None:
+        """ Enable or disable to show clear recent files in menu """
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_CHECKED_GROUP_BOX}/{gb_name}', state)   # noqa

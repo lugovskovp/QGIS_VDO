@@ -722,7 +722,7 @@
   <customwidget>
    <class>CollapsibleGroupBox</class>
    <extends>QGroupBox</extends>
-   <header location="global">QGIS_VDO.vdo</header>
+   <header location="global">QGIS_VDO</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -15,6 +15,8 @@ the Free Software Foundation; either version 2 of the License, or
 import os
 import sys
 
+from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox    # noqa
+
 # Get the path to your plugin's 'ext_libs' folder
 plugin_dir = os.path.dirname(__file__)
 ext_libs_path = os.path.join(plugin_dir, "ext_libs")

@@ -7,12 +7,8 @@ import os
 
 from qgis.PyQt import QtWidgets, uic
 
-# from qgis.PyQt import QtGui, QtWidgets, uic
-# from qgis.PyQt.QtCore import pyqtSignal
-# from PyQt5.QtWidgets import QVBoxLayout, QPushButton        #QWidget, QPushButton, QHBoxLayout, QVBoxLayout # noqa
-
-# from .text_browser_dialog import TextBrowserDialog  # show Abstract, bibliogr, copyright files # noqa
-
+from QGIS_VDO.settings import Settings
+from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox
 from QGIS_VDO.vdo import VDO_FILE
 from QGIS_VDO.vdo.blocks import block_0x12, block_0x13
 
@@ -38,6 +34,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         
         self.setupUi(self)
+        # установить предыдуще установленную видимость groupBoxes
+        GB = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
+              'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information']
+        for gb in GB:
+            ch = Settings.ShowGroupBoxEnabled(gb)
+            wi = self.findChild(CollapsibleGroupBox, gb)
+            if wi is not None:
+                wi.setChecked(ch)
         
         self.vdo = parent_plugin.vdo
         #

@@ -87,7 +87,7 @@
        <enum>QTabWidget::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -701,6 +701,19 @@
        <attribute name="title">
         <string>Address</string>
        </attribute>
+       <widget class="QPushButton" name="pb_Action">
+        <property name="geometry">
+         <rect>
+          <x>220</x>
+          <y>10</y>
+          <width>93</width>
+          <height>28</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>PushButton</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QWidget" name="tab_block">
        <attribute name="title">

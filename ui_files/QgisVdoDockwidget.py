@@ -6,10 +6,16 @@
 import os
 
 from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtCore import QMetaType
+from qgis.PyQt.QtGui import QColor
+from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
+                       QgsSingleSymbolRenderer, QgsFillSymbol,
+                       QgsPointXY, QgsRectangle, QgsGeometry, QgsFeature)
 
 from QGIS_VDO.settings import Settings
 from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox
 from QGIS_VDO.vdo import VDO_FILE
+from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS
 from QGIS_VDO.vdo.blocks import block_0x12, block_0x13
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -53,9 +59,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             # overall info
             self.l_vdo_dbrev_val.setText(f"0x{self.vdo.dbrev:02X} / {self.vdo.dbrev}")
             self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
-            fsize = os.path.getsize(self.vdo.path)
-            formatted = f"{fsize:,}".replace(',', ' ')
-            self.l_vdo_size_val.setText(f"0x{fsize:04X} / {formatted}")
+            formatted = f"{self.vdo.file_size:,}".replace(',', ' ')
+            self.l_vdo_size_val.setText(f"0x{self.vdo.file_size:04X} / {formatted}")
             self.l_vdo_path_val.setText(self.vdo.path)
             # vdo info
             bl_toc: block_0x12 = self.vdo.get_block(0)
@@ -78,18 +83,161 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)
             self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
 
-        else:
-            # TODO: vdo None -> unactive fields
+            # привязать pb_Action
+            self.pb_Action.clicked.connect(self.pbActionEvent)
+
+            # ----------------------------------------------
+            # Проверить наличие открытого/активного сохранённого проекта
+            project = QgsProject.instance()
+            if project.fileName():
+                # 
+                pass
+            else:
+                pass
+                # Сообщение - что надо, чтобы был открыт проект.
+                self.iface.messageBar().pushMessage(
+                            self.tr('Open/create any qgis project and reopen VDO.'),   # noqa
+                            Qgis.Warning, 3)
             pass
 
-        # vdo info
-        #bl_tos = self.vdo.get_block(0)
-
-        # self.l_vdo_path.
-        
+        else:   # if self.vdo.path is not None:
+            # TODO: vdo None -> unactive fields
+            pass
         pass
 
     def closeEvent(self, event):
         # self.closingPlugin.emit()
         # event.accept()
+        pass
+    
+    def pbActionEvent(self, event):
+        # есть ли открытый проект
+        project = QgsProject.instance()
+        # fn = project.fileName()
+        if not project.fileName():
+            # Активного сохранённого проекта нет
+            return
+        # какая система координат?
+        # project_crs = QgsProject.instance().crs()
+        # 'EPSG:3395'  проекцию Меркатора на эллипсоид (в отличие от сферы, как в EPSG:3857). # noqa
+        # EPSG:3857 — это официальный идентификатор проекции Web Mercator
+        # auth_id = project_crs.authid()
+        # # description = project_crs.description()  # 'WGS 84 / World Mercator'
+        # if auth_id != 'EPSG:3395':
+        #     # TODO - предупреждение, что надо 3395
+        #     return
+        
+        #
+        group_name = self.vdo.QGISvdoGroupName
+
+        # Access the main root of the QGIS layer tree
+        root = project.layerTreeRoot()
+
+        # If it doesn't exist, create it
+        if not (root_group := root.findGroup(group_name)):
+            root_group = root.insertGroup(0, group_name)
+
+        # Настраиваем параметры нового слоя в памяти (Memory Layer)
+        # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
+        # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
+        geometry_type = "Polygon?crs=EPSG:4326"
+        layer_name = NAME_LAYER_GLOBAL_BOUNDS
+
+        #  Проверяем, существует ли уже слой с таким именем в проекте
+        # Перебираем только прямых потомков этой группы
+        found = False
+        for child in root_group.children():
+            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
+            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
+                found = True
+                # Получаем сам объект слоя, если он нужен для работы
+                layer = child.layer()
+                break
+
+        if not found:
+            # Создаем сам слой
+            layer = QgsVectorLayer(geometry_type, layer_name, "memory")
+
+            # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
+            provider = layer.dataProvider()
+            provider.addAttributes([
+                QgsField("id", QMetaType.Type.Int),            # noqa 
+                QgsField("name", QMetaType.Type.QString),      # noqa
+                QgsField("value", QMetaType.Type.QString)      # noqa Double
+            ])
+            # Обновляем поля в слое после их добавления в провайдер
+            layer.updateFields()
+
+            # Настраиваем стиль (Символогию)
+            # Создаем дефолтный символ для полигона
+            symbol = QgsFillSymbol.createSimple({'name': 'square'})
+            
+            # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
+            # 128 в конце означает 50% прозрачности (0 - полностью прозрачный, 255 - сплошной)  # noqa
+            fill_color = QColor(34, 139, 34, 20)   # Лесной зеленый с 20% прозрачностью
+            symbol.setColor(fill_color)
+            
+            # НАСТРОЙКА ГРАНИЦЫ
+            symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0, 255))  # Черный цвет границы (сплошной) # noqa
+            symbol.symbolLayer(0).setStrokeWidth(0.6)                   # Толщина границы в миллиметрах  # noqa
+            # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
+            
+            # НАСТРОЙКА ОБЩЕЙ ПРОЗРАЧНОСТИ СЛОЯ (Альтернативный вариант от 0.0 до 1.0)
+            # symbol.setOpacity(0.7) # 70% непрозрачности для всего символа целиком
+            
+            # 4. Применяем настроенный символ к рендереру слоя
+            renderer = QgsSingleSymbolRenderer(symbol)
+            layer.setRenderer(renderer)
+            
+            # Обновляем отображение слоя
+            layer.triggerRepaint()
+
+            # 5. Проверяем валидность и добавляем слой в нашу верхнюю группу
+            if layer.isValid():
+                # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
+                QgsProject.instance().addMapLayer(layer, False) # noqa
+                
+                # Вставляем слой на первое место внутри нашей новой группы
+                root_group.insertLayer(0, layer)
+                print("Новый слой успешно создан в памяти и добавлен наверх!")
+            else:
+                print("Не удалось создать новый слой.")
+        
+        #
+        if self.vdo.dbrev == 34:
+
+            #
+            bl_toc: block_0x12 = self.vdo.get_block(0)
+
+            #
+            p_lb = QgsPointXY(bl_toc.area_A[0].lon, bl_toc.area_A[0].lat)
+            p_rt = QgsPointXY(bl_toc.area_A[1].lon, bl_toc.area_A[1].lat)
+            # 3. Создаем геометрию прямоугольника
+            rect = QgsRectangle(p_lb, p_rt)
+            geom = QgsGeometry.fromRect(rect)
+            
+            # 4. Создаем новый объект (Feature) и присваиваем ему геометрию
+            feature = QgsFeature()
+            feature.setGeometry(geom)
+            
+            # Если в слое есть атрибуты, можно задать дефолтные значения (опционально)
+            # feature.setAttributes([1, "My Rectangle"])
+            feature.setAttributes([1, "Area_A", f"{bl_toc.area_A[0].__repr__()}, {bl_toc.area_A[1].__repr__()}"])  # noqa
+
+            # 5. Начинаем редактирование слоя и добавляем объект
+            layer.startEditing()
+            success = layer.addFeature(feature)
+
+            if success:
+                layer.commitChanges()    # Сохраняем изменения
+                layer.triggerRepaint()   # Обновляем карту
+                print("Прямоугольник успешно добавлен на слой!")
+            else:
+                layer.rollBack()     # Отменяем правки в случае ошибки
+                print("Не удалось добавить объект на слой.")
+        pass
+
+
+class vdo_map():
+    def __init__(self):
         pass

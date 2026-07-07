@@ -160,7 +160,7 @@ class block_0x12(block_base):
     @property
     def area_A(self):
         """
-
+        Return (coord(left_bott), coort(right_top))
         """
         if self.dbrev != 34:
             # db_rev=30 - w|o rectangle area
@@ -172,7 +172,7 @@ class block_0x12(block_base):
     @property
     def area_B(self):
         """
-
+        Return (coord(left_bott), coort(right_top))
         """
         if self.dbrev != 34:
             # db_rev=30 - w|o rectangle area

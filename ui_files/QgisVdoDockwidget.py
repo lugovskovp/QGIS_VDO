@@ -4,13 +4,15 @@
 """
 
 import os
+import re
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
                        QgsSingleSymbolRenderer, QgsFillSymbol,
-                       QgsPointXY, QgsRectangle, QgsGeometry, QgsFeature)
+                       QgsPointXY, QgsRectangle, QgsGeometry, QgsFeature,
+                       QgsLayerTreeGroup)
 
 from QGIS_VDO.settings import Settings
 from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox
@@ -184,7 +186,28 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                 print("Новый слой успешно создан в памяти и добавлен наверх!")
             else:
                 print("Не удалось создать новый слой.")
-        
+
+        # hide all another vdo root groups but root_group_name
+        if Settings.HideNonActiveVdoEnabled():
+            # 1. Задаем регулярное выражение для поиска
+            pattern = r"_0x[0-9a-f]{4,}$"
+            regex = re.compile(pattern, re.IGNORECASE)
+
+            for child in project.layerTreeRoot().children():
+                if isinstance(child, QgsLayerTreeGroup):
+                    if child.name() == root_group_name:
+                        child.setItemVisibilityChecked(True)
+                        continue
+                    # Проверяем имя группы через regexp
+                    if regex.search(child.name()):
+                        child.setItemVisibilityChecked(False)
+
+            pass
+
+        # # If it doesn't exist, create it
+        # if not (root_group := root.findGroup(root_group_name)):
+        #     root_group = root.insertGroup(0, root_group_name)
+
         #
         bl_toc: block_0x12 = self.vdo.get_block(0)
 

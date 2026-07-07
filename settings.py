@@ -150,12 +150,12 @@ class Settings():
     # ------- tab_info CollapsibleGroupBox state into settings
     # ShowGroupBox
     @classmethod
-    def ShowGroupBoxEnabled(cls, str) -> bool:
+    def ShowGroupBoxEnabled(cls, gb_name: str) -> bool:
         """ """
-        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_HIDE_NON_ACTIVE_VDO_GROUPS}',
+        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_CHECKED_GROUP_BOX}/{gb_name}',
                                  True, type=bool)
 
     @classmethod
-    def setShowGroupBoxEnabled(cls, state: bool) -> None:
+    def setShowGroupBoxEnabled(cls, gb_name: str, state: bool) -> None:
         """ Enable or disable to show clear recent files in menu """
-        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_HIDE_NON_ACTIVE_VDO_GROUPS}', state)   # noqa
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_CHECKED_GROUP_BOX}/{gb_name}', state)   # noqa

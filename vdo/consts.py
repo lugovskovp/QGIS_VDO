@@ -41,4 +41,4 @@ LOOKUP_CHAR_BYTES = {'000': b'a',
                      '10111': b'o'
                      }
 
-NAME_LAYER_GLOBAL_BOUNDS = "Carindb global bounds"
+NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"

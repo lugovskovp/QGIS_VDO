@@ -85,8 +85,8 @@ class VDO_FILE():
     @property
     def QGISvdoGroupName(self) -> str:
         """ Generate unique name for root group"""
-        ap = self.vdo.path.split("/")
-        res = f"{ap[-2]}_{ap[-1]}_0x{self.file_size:04X}"
+        ap = self.path.split("/")
+        res = f"{ap[-2]}_0x{self.file_size:04X}"
         return res
 
     def read(self, offset: int, size: int) -> bytearray | None:

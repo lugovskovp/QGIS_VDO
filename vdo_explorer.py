@@ -381,6 +381,7 @@ class VDOExplorerPlugin:
                 self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)  # noqa
             # если widget есть, то показать
             self.dockwidget.show()
+            self.dockwidget.DrawTocAreas()
             return
         else:
             # self.vdo.path is None:

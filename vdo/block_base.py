@@ -6,9 +6,9 @@
 import zlib             # распаковка архивов типа 2 и 3
 
 # from vdo.enums import BlockType
-from vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX
-from vdo.datatypes import ZERO_DWORD, MAX_STR_LEN
-from vdo.geotypes import COORD
+from .datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX
+from .datatypes import ZERO_DWORD, MAX_STR_LEN
+from .geotypes import COORD
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
 BLOCK_0x12_SIZE = 0x800

@@ -12,6 +12,19 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.'''
 
+import os
+import sys
+
+from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox    # noqa
+
+# Get the path to your plugin's 'ext_libs' folder
+plugin_dir = os.path.dirname(__file__)
+ext_libs_path = os.path.join(plugin_dir, "ext_libs")
+
+# Inject it into the system path if it isn't there already
+if ext_libs_path not in sys.path:
+    sys.path.insert(0, ext_libs_path)
+
 
 def classFactory(iface):
     """Load VDOExplorerPlugin class from file VDOExplorer.

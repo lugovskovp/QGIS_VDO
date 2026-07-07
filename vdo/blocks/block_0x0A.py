@@ -6,10 +6,10 @@ lzw packeble
 """
 import struct
 
-from vdo.block_base import block_base
-from vdo.datatypes import BYTESTRUCT, BLADDR, LIST, FAR_LIST, VDO_FILE
-from vdo.datatypes import OFFSET_TOC
-from vdo.enums import en_CARINET_LANGUAGE, en_POI_CAT, en_TeleAtlasRegion
+from QGIS_VDO.vdo.block_base import block_base
+from QGIS_VDO.vdo.datatypes import BYTESTRUCT, BLADDR, LIST, FAR_LIST, VDO_FILE
+from QGIS_VDO.vdo.datatypes import OFFSET_TOC
+from QGIS_VDO.vdo.enums import en_CARINET_LANGUAGE, en_POI_CAT, en_TeleAtlasRegion
 
 
 class BRIF_0xA(BYTESTRUCT):
@@ -295,7 +295,7 @@ if __name__ == '__main__':
     vdo = vdo30
     bla = BLADDR(b'\x00\x00\x00\x01', vdo)
 
-    tos = block_0x12(vdo)
+    tos = block_0x12(bla)
 
     # ba0x13 = tos.bladdr_bibliogr
     # ba0x07 = tos.bladdr_scales

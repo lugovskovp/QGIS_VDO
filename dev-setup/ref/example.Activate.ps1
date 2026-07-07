@@ -244,7 +244,16 @@ if (Test-Path -Path Env:PYTHONHOME) {
 
 # Add the venv to the PATH
 Copy-Item -Path Env:PATH -Destination Env:_OLD_VIRTUAL_PATH
-$Env:PATH = "$VenvExecDir$([System.IO.Path]::PathSeparator)$Env:PATH"
+# $Env:PATH = "$VenvExecDir$([System.IO.Path]::PathSeparator)$Env:PATH"
+# $env:PL_PATH = "C:/Users/plugo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins/"
+# $env:PL_PATH = "C:/Work/QGIS_VDO/;C:/Work/"
+$env:PL_PATH = "C:/Work/"
+# $Env:PATH = "$VenvExecDir$([System.IO.Path]::PathSeparator)$Env:PL_PATH([System.IO.Path]::PathSeparator)$Env:PATH"
+$Env:PATH = "$VenvExecDir$([System.IO.Path]::PathSeparator)$Env:PL_PATH$([System.IO.Path]::PathSeparator)$Env:PATH"
+$env:PYTHONPATH="c:\OSGeo4W\apps\qgis-ltr\python;"
+$Env:PYTHONPATH = "$Env:PL_PATH$([System.IO.Path]::PathSeparator)$Env:PYTHONPATH"
+
+
 
 # Add to the venv envirement vars 
 
@@ -274,7 +283,7 @@ $env:PDAL_DRIVER_PATH="c:\OSGeo4W\apps\pdal\plugins"
 $env:PROJ_DATA="c:\OSGeo4W\share\proj"
 
 $env:PYTHONHOME="c:\OSGeo4W\apps\Python312"
-$env:PYTHONPATH="c:\OSGeo4W\apps\qgis-ltr\python;"
+# $env:PYTHONPATH="c:\OSGeo4W\apps\qgis-ltr\python;"
 $env:PYTHONUTF8=1
 $env:QGIS_PREFIX_PATH="c:/OSGeo4W/apps/qgis-ltr"
 $env:QT_PLUGIN_PATH="c:\OSGeo4W\apps\qgis-ltr\qtplugins;c:\OSGeo4W\apps\qt5\plugins"

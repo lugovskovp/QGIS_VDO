@@ -41,6 +41,17 @@ bl_addr = 0x04D6ED04  # 16:  0E 00 09 00   shp: 2  lin: 1  poi: 0
 bl_addr = 0x04D70011  # 16:  0F 16 08 00   shp: 29 lin: 8  poi: 0
 # bl_addr = 0x04D6E005  # 16:  0D 00 08 00    shp: 3  lin: 2  poi: 0
 
+# bl_addr = 0x05412901    # block(0x05412603); // 16 0104  shp: 1 lin: 6  poi: 16
+bl_addr = 0x06F98C03  # achtung! some strange
+# bl_addr = 0x06FF0606  # 0x06FF0606  # 1C:  11 17 0A 00   shp: 14        lin: 9  poi: 9
+bl_addr = 0x06C68A03  # 0x06C68A03  # 15:  10 18 0A 00   shp: 10        lin: 10 poi: 13
+
+# bl_addr = 0x06B20810  # нет poi!!! 0x06B20810  # 15:  11 17 0A 00   shp: 47        lin: 23 poi: 8   # noqa
+# bl_addr = 0x06B2180A   # error 'H' format requires 0 <= number <= 65535 0x06B2180A  # 15:  0F 17 0A 00   shp: 34     # noqa      lin: 19 poi: 12
+# bl_addr = 0x06B30207    # 0x06B30207  # 15:  10 16 09 00   shp: 9 lin: 13 poi: 20   # noqa
+# bl_addr = 0x05B1DB0B     # 0x05B1DB0B  # 16:  10 11 09 00   shp: 38        lin: 17 poi: 8   # noqa
+# bl_addr = 0x05B1F80D     # 0x05B1F80D  # 16:  10 12 09 00   shp: 60        lin: 14 poi: 6   # noqa
+# bl_addr = 0x05B20B3A    # error 'H' format requires 0 <= number <= 6553 0x05B20B3A  # 16:  0E 13 08 00   shp: 453       lin: 81 poi: 10   # noqa
 
 bla_bl = BLADDR(struct_UINT.pack(bl_addr), vdo)   # noqa  04D6ED04 16: 0E 00 09 00 shp: 2 lin: 1  poi: 0
 

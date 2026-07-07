@@ -16,9 +16,9 @@ import struct
 import importlib
 import heapq
 
-from vdo.enums import BlockType
-from vdo.consts import struct_WORD, struct_UINT
-from vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
+from .enums import BlockType
+from .consts import struct_WORD, struct_UINT
+from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
 
 OFFSET_TOC = 0x08
 
@@ -112,12 +112,12 @@ class VDO_FILE():
         if head.bltype.value in KNOWN_BLOCKS.keys():
             bl = KNOWN_BLOCKS[head.bltype.value]
             # импорт класса bl из модуля
-            bl_class = getattr(importlib.import_module('vdo.blocks.' + bl), bl)
+            bl_class = getattr(importlib.import_module('.blocks.' + bl, package="QGIS_VDO.vdo"), bl)  # noqa
             bl_class.type = head.bltype.value
             bl_class.type_name = bl
         else:
             # no this type in known blocks
-            bl_class = getattr(importlib.import_module('vdo.block_base'), 'block_base')
+            bl_class = getattr(importlib.import_module('.vdo.block_base'), 'block_base')
             #return block_base(head.bladdr, self)
             bl_class.type = head.bltype.value
             bl_class.type_name = 'block_base'
@@ -383,6 +383,7 @@ class BLADDR(BYTESTRUCT):
             self.vdo = VDO_FILE()
         else:
             self.vdo = vdo
+        pass
 
     def __repr__(self) -> str:
         ''' View while debug value'''

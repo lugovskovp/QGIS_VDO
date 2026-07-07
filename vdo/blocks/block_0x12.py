@@ -42,11 +42,11 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 """
 # noqa: E501
 
-from vdo.enums import BlockType
-from vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
-from vdo.datatypes import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
-from vdo.geotypes import COORD
-from vdo.block_base import block_base
+from QGIS_VDO.vdo.enums import BlockType
+from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
+from QGIS_VDO.vdo.datatypes import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
+from QGIS_VDO.vdo.geotypes import COORD
+from QGIS_VDO.vdo.block_base import block_base
 
 
 OFFSET_LIST_PTR_07_LST_WORLD_SCALES = 0x08      # 00 34 00 01

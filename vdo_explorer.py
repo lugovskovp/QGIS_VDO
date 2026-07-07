@@ -18,7 +18,7 @@ from functools import partial
 from qgis.PyQt.QtCore import Qt, QSettings, QTranslator, QCoreApplication   # , QObject
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMenu, QToolButton, QMessageBox, QFileDialog, QDockWidget   # noqa
-#from qgis.core import Qgis, QgsMessageLog
+from qgis.core import Qgis  # , QgsMessageLog
 from qgis.gui import QgisInterface
 
 from .vdo import VDO_FILE
@@ -384,6 +384,10 @@ class VDOExplorerPlugin:
             return
         else:
             # self.vdo.path is None:
+            # Сообщение - что надо, чтобы был открыт file.
+            self.iface.messageBar().pushMessage(
+                        self.tr('Open any Carindb file.'),   # noqa
+                        Qgis.Warning, 3)
             pass
 
         return

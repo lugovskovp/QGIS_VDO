@@ -87,75 +87,56 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.pb_Action.clicked.connect(self.pbActionEvent)
 
             # ----------------------------------------------
-            # Проверить наличие открытого/активного сохранённого проекта
-            project = QgsProject.instance()
-            if project.fileName():
-                # 
-                pass
-            else:
-                pass
-                # Сообщение - что надо, чтобы был открыт проект.
-                self.iface.messageBar().pushMessage(
-                            self.tr('Open/create any qgis project and reopen VDO.'),   # noqa
-                            Qgis.Warning, 3)
             pass
-
         else:   # if self.vdo.path is not None:
-            # TODO: vdo None -> unactive fields
+            # TODO: vdo None -> unactivate fields?
             pass
         pass
 
-    def closeEvent(self, event):
-        # self.closingPlugin.emit()
-        # event.accept()
-        pass
-    
-    def pbActionEvent(self, event):
-        # есть ли открытый проект
+    def DrawTocAreas(self):
+        """Отображает на карте area_A, area_b"""
+        # Проверить наличие открытого/активного сохранённого проекта
         project = QgsProject.instance()
-        # fn = project.fileName()
         if not project.fileName():
-            # Активного сохранённого проекта нет
+            # Сообщение - что надо, чтобы был открыт проект.
+            self.iface.messageBar().pushMessage(
+                    self.tr('Open/create any qgis project and reopen Carindb.'),   # noqa
+                    Qgis.Warning, 3)
             return
-        # какая система координат?
-        # project_crs = QgsProject.instance().crs()
-        # 'EPSG:3395'  проекцию Меркатора на эллипсоид (в отличие от сферы, как в EPSG:3857). # noqa
-        # EPSG:3857 — это официальный идентификатор проекции Web Mercator
-        # auth_id = project_crs.authid()
-        # # description = project_crs.description()  # 'WGS 84 / World Mercator'
-        # if auth_id != 'EPSG:3395':
-        #     # TODO - предупреждение, что надо 3395
-        #     return
         
+        # old dbrev?
+        if self.vdo.dbrev != 34:
+            # Сообщение - что area a, b only in v.34
+            self.iface.messageBar().pushMessage(
+                    self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
+                    Qgis.Warning, 3)
+            return
         #
-        group_name = self.vdo.QGISvdoGroupName
-
+        root_group_name = self.vdo.QGISvdoGroupName
         # Access the main root of the QGIS layer tree
         root = project.layerTreeRoot()
-
         # If it doesn't exist, create it
-        if not (root_group := root.findGroup(group_name)):
-            root_group = root.insertGroup(0, group_name)
+        if not (root_group := root.findGroup(root_group_name)):
+            root_group = root.insertGroup(0, root_group_name)
 
-        # Настраиваем параметры нового слоя в памяти (Memory Layer)
-        # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
-        # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
-        geometry_type = "Polygon?crs=EPSG:4326"
         layer_name = NAME_LAYER_GLOBAL_BOUNDS
-
-        #  Проверяем, существует ли уже слой с таким именем в проекте
-        # Перебираем только прямых потомков этой группы
+        #  существует ли уже слой с таким именем в прямых потомках root группы
         found = False
         for child in root_group.children():
             # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
             if child.nodeType() == child.NodeLayer and child.name() == layer_name:
                 found = True
-                # Получаем сам объект слоя, если он нужен для работы
+                # Получаем сам объект слоя, он нужен для работы
                 layer = child.layer()
                 break
-
+        
         if not found:
             # Создаем сам слой
+
+            # Настраиваем параметры нового слоя в памяти (Memory Layer)
+            # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
+            # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
+            geometry_type = "Polygon?crs=EPSG:4326"
             layer = QgsVectorLayer(geometry_type, layer_name, "memory")
 
             # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
@@ -165,6 +146,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                 QgsField("name", QMetaType.Type.QString),      # noqa
                 QgsField("value", QMetaType.Type.QString)      # noqa Double
             ])
+
             # Обновляем поля в слое после их добавления в провайдер
             layer.updateFields()
 
@@ -204,40 +186,70 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                 print("Не удалось создать новый слой.")
         
         #
-        if self.vdo.dbrev == 34:
+        bl_toc: block_0x12 = self.vdo.get_block(0)
 
-            #
-            bl_toc: block_0x12 = self.vdo.get_block(0)
-
-            #
-            p_lb = QgsPointXY(bl_toc.area_A[0].lon, bl_toc.area_A[0].lat)
-            p_rt = QgsPointXY(bl_toc.area_A[1].lon, bl_toc.area_A[1].lat)
-            # 3. Создаем геометрию прямоугольника
-            rect = QgsRectangle(p_lb, p_rt)
-            geom = QgsGeometry.fromRect(rect)
-            
-            # 4. Создаем новый объект (Feature) и присваиваем ему геометрию
-            feature = QgsFeature()
-            feature.setGeometry(geom)
-            
-            # Если в слое есть атрибуты, можно задать дефолтные значения (опционально)
-            # feature.setAttributes([1, "My Rectangle"])
-            feature.setAttributes([1, "Area_A", f"{bl_toc.area_A[0].__repr__()}, {bl_toc.area_A[1].__repr__()}"])  # noqa
-
-            # 5. Начинаем редактирование слоя и добавляем объект
-            layer.startEditing()
-            success = layer.addFeature(feature)
-
-            if success:
-                layer.commitChanges()    # Сохраняем изменения
-                layer.triggerRepaint()   # Обновляем карту
-                print("Прямоугольник успешно добавлен на слой!")
-            else:
-                layer.rollBack()     # Отменяем правки в случае ошибки
-                print("Не удалось добавить объект на слой.")
+        # Area_A bigger
+        self._DrawArea(bl_toc.area_B, "Area_B", layer)
+        self._DrawArea(bl_toc.area_A, "Area_A", layer)
+        
         pass
 
+    def _DrawArea(self, area, area_name: str, layer: QgsVectorLayer) -> None:
+        """
+        Рисует прямоугольник в слое layer.
+        Args:
+            area (coord lb, coord rt)
+            area_name: str
+            layer: QgsVectorLayer
+        """
+        # если есть объект с таким именем - возврат
+        # Перебираем все объекты слоя
+        for feature in layer.getFeatures():
+            # feature.id() — уникальный внутренний номер объекта в QGIS
+            # feature.attributes() — список всех текстовых/числовых значений в таблице
+            if feature.attribute('name') == area_name:
+                return
+            print(f"ID: {feature.id()} | {feature.attribute('name')} | Данные: {feature.attributes()}")  # noqa
 
-class vdo_map():
-    def __init__(self):
+        # если слой не poligone - возврат
+        if not layer or layer.geometryType() != Qgis.GeometryType.Polygon:
+            print("Ошибка: Пожалуйста, выберите ПОЛИГОНАЛЬНЫЙ слой для прямоугольника!")
+            return
+
+        # координаты точек
+        p_lb = QgsPointXY(area[0].lon, area[0].lat)
+        p_rt = QgsPointXY(area[1].lon, area[1].lat)
+
+        # Создаем геометрию прямоугольника
+        rect = QgsRectangle(p_lb, p_rt)
+        geom = QgsGeometry.fromRect(rect)
+        
+        # Создаем новый объект (Feature) и присваиваем ему геометрию
+        feature = QgsFeature()
+        feature.setGeometry(geom)
+        
+        # Если в слое есть атрибуты, можно задать дефолтные значения (опционально)
+        feature.setAttributes([1, area_name, f"{area[0].__repr__()}, {area[1].__repr__()}"])  # noqa
+
+        # Начинаем редактирование слоя и добавляем объект
+        layer.startEditing()
+        success = layer.addFeature(feature)
+
+        if success:
+            layer.commitChanges()    # Сохраняем изменения
+            layer.triggerRepaint()   # Обновляем карту
+            print("Прямоугольник успешно добавлен на слой!")
+        else:
+            layer.rollBack()     # Отменяем правки в случае ошибки
+            print("Не удалось добавить объект на слой.")
+
+        pass
+
+    def closeEvent(self, event):
+        # self.closingPlugin.emit()
+        # event.accept()
+        pass
+
+    def pbActionEvent(self, event):
+        
         pass

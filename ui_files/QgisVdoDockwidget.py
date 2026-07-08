@@ -188,6 +188,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                 print("Не удалось создать новый слой.")
 
         # hide all another vdo root groups but root_group_name
+        self.iface.setActiveLayer(layer)
+        root_group.setItemVisibilityChecked(True)
         if Settings.HideNonActiveVdoEnabled():
             # 1. Задаем регулярное выражение для поиска
             pattern = r"_0x[0-9a-f]{4,}$"
@@ -195,12 +197,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
             for child in project.layerTreeRoot().children():
                 if isinstance(child, QgsLayerTreeGroup):
-                    if child.name() == root_group_name:
-                        child.setItemVisibilityChecked(True)
-                        continue
-                    # Проверяем имя группы через regexp
-                    if regex.search(child.name()):
-                        child.setItemVisibilityChecked(False)
+                    if child.name() != root_group_name:
+                        # Проверяем имя группы через regexp
+                        if regex.search(child.name()):
+                            child.setItemVisibilityChecked(False)
 
             pass
 
@@ -215,6 +215,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._DrawArea(bl_toc.area_B, "Area_B", layer)
         self._DrawArea(bl_toc.area_A, "Area_A", layer)
         
+        # # Масштаб по границам слоя
+        # # Получаем доступ к карте (холсту)
+        # canvas = self.iface.mapCanvas()
+        # # Устанавливаем масштаб карты по границам слоя
+        # canvas.setExtent(layer.extent())
+        # # Обновляем карту для отображения изменений
+        # canvas.refresh()
         pass
 
     def _DrawArea(self, area, area_name: str, layer: QgsVectorLayer) -> None:

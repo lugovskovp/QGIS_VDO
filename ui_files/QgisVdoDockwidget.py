@@ -12,7 +12,7 @@ from qgis.PyQt.QtGui import QColor
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
                        QgsSingleSymbolRenderer, QgsFillSymbol,
                        QgsPointXY, QgsRectangle, QgsGeometry, QgsFeature,
-                       QgsLayerTreeGroup)
+                       QgsLayerTreeGroup, QgsCoordinateTransform)
 
 from QGIS_VDO.settings import Settings
 from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox
@@ -215,13 +215,20 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self._DrawArea(bl_toc.area_B, "Area_B", layer)
         self._DrawArea(bl_toc.area_A, "Area_A", layer)
         
-        # # Масштаб по границам слоя
-        # # Получаем доступ к карте (холсту)
-        # canvas = self.iface.mapCanvas()
-        # # Устанавливаем масштаб карты по границам слоя
-        # canvas.setExtent(layer.extent())
-        # # Обновляем карту для отображения изменений
-        # canvas.refresh()
+        # Масштаб по границам слоя feat: приблизить карту по границам (содержимому) слоя
+        # Получаем доступ к карте (холсту)
+        canvas = self.iface.mapCanvas()
+        # Создаем трансформер координат
+        transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+        # Устанавливаем масштаб карты по границам слоя
+        # Трансформируем границы слоя в СК проекта
+        layer_extent = layer.extent()
+        layer_extent.scale(1.2)     # отступ +20% от границ
+        project_extent = transform.transformBoundingBox(layer_extent)
+        # Зумируем
+        canvas.setExtent(project_extent)
+        # Обновляем карту для отображения изменений
+        canvas.refresh()
         pass
 
     def _DrawArea(self, area, area_name: str, layer: QgsVectorLayer) -> None:

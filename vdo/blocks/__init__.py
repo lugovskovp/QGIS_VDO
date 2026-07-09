@@ -16,3 +16,6 @@ from QGIS_VDO.vdo.blocks.block_0x1C import block_0x1C    # noqa: F401
 from QGIS_VDO.vdo.blocks.block_0x1D import block_0x1D    # noqa: F401
 from QGIS_VDO.vdo.blocks.block_0x1E import block_0x1E    # noqa: F401
 # from vdo.blocks.block_0x00 import block_0x00    # noqa: F401
+
+#
+from QGIS_VDO.vdo.blocks.block_0x07 import block_0x07    # noqa: F401

@@ -13,6 +13,7 @@ functions:
     normLatLng
 """
 
+import ctypes
 import re
 import struct
 
@@ -53,19 +54,25 @@ class COORD(BYTESTRUCT):
     size: int = DOUBLE_BYTES_CNT     # 2*DWORD: lon lat
 
     def __init__(self, buffer: bytearray) -> None:
-        """ """
+        """ Инициализируется или bytearray, или TODO: парой float """
 
         # === bytearray
         super().__init__(buffer[:DOUBLE_BYTES_CNT])   # 8 - self.size
-
+        """
         self._hlon = struct_UINT.unpack(self._raw[:4])[0]
+        # self.hlo = ctypes.c_int32(self._hlon).value
         self._hlat = struct_UINT.unpack(self._raw[4:8])[0]
+        # self.hla = ctypes.c_int32(self._hlat).value
         if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit =1 -> minus val.
             # self.hlo = ctypes.c_int32(self._hlon).value
             self._hlon = 0 - (0xffffffff - self._hlon + 1)
         if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit =1 -> minus val.
             # self.hla = ctypes.c_int32(self._hlat).value
             self._hlat = 0 - (0xffffffff - self._hlat + 1)
+        """
+        self._hlon = ctypes.c_int32(struct_UINT.unpack(self._raw[:4])[0]).value
+        self._hlat = ctypes.c_int32(struct_UINT.unpack(self._raw[4:8])[0]).value
+
         self.lon = (self._hlon / MULCOORD) - 30     # e/w
         self.lat = self._hlat / MULCOORD            # n/s
 
@@ -83,6 +90,27 @@ class COORD(BYTESTRUCT):
         return "{:02.6f}{:s} {:02.6f}{:s}".format(abs(self.lat),
                                                   ch_lat, abs(self.lon),
                                                   ch_lon)
+
+    def __eq__(self, other) -> bool:
+        """
+        Сравнивает 2 COORD
+        """
+        if not isinstance(other, COORD):
+            return NotImplemented
+        return self._hlat == other._hlat and self._hlon == other._hlon
+
+    def delta(self, other):
+        """
+        Substract 2 coords
+        Returns:
+           str: (delta_lat, delta_lon)
+        """
+        if not isinstance(other, COORD):
+            return NotImplemented
+        d_lat = self.lat - other.lat
+        d_lon = self.lon - other.lon
+        res = f"lat:{d_lat:.2f}\u00B0 x lon:{d_lon:.2f}\u00B0"
+        return res
 
 
 class MAP_AREA(BYTESTRUCT):

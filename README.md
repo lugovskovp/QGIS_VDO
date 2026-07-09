@@ -145,10 +145,10 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] виджет рабочего поля - открыть/создать при загрузке файла
     * [x] закрытие виджета выгружает vdo carindb? НЕТ
     * [x] при закрытии/перезагрузке плагина - удалять виджет
-- [ ] tab info
+- [x] tab info
     * [x] компоновка
     * [x] свойства файла vdo
-    * [ ] area A B coords
+    * [x] area A B coords
     * [x] area A B drawing
     * [x] info from block 13
 - [ ] tab address
@@ -166,9 +166,14 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 [ ] почистить bitstream? av_, v_, ??
-[ ] запрет commit при наличии ошибок flake8
+[x] запрет commit при наличии ошибок flake8
 [ ] Settings show RecentFiles
-[ ]
+[x] dockWidget размер задается как мин+растягивание содержимым
+[x] tab содержимое - в scroll area
+[ ] 
+[ ] 
+[ ] 
+
 
 где искать qtutils
 c:/OSGeo4W/apps/Qt5/bin/designer.exe 

@@ -32,6 +32,7 @@ class ConfigurationDialog(QDialog, FORM_CLASS):
         self.setupUi(self)
         self.cbToolButtonText.setChecked(Settings.toolButtonTextEnabled())
         self.cbShowClearRecent.setChecked(Settings.ShowClearRecentFilesEnabled())
+        self.cbHideNonActiveVdo.setChecked(Settings.HideNonActiveVdoEnabled())
         if rpc := Settings.RecentFilesCount():
             self.sbRecentFilesCount.setValue(rpc)
 
@@ -40,4 +41,5 @@ class ConfigurationDialog(QDialog, FORM_CLASS):
         Settings.setToolButtonTextEnabled(self.cbToolButtonText.isChecked())
         Settings.setRecentFilesCount(self.sbRecentFilesCount.value())
         Settings.setShowClearRecentFilesEnabled(self.cbShowClearRecent.isChecked())
+        Settings.setHideNonActiveVdo(self.cbHideNonActiveVdo.isChecked())
         super().accept()

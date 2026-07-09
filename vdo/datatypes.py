@@ -73,6 +73,22 @@ class VDO_FILE():
         s = f'VDO v.{self.dbrev}[{self.segsize}]:{self.path}'
         return s
 
+    @property
+    def file_size(self) -> int:
+        """ Размер файла VDO """
+        if self.path is None:
+            return 0
+        if os.path.exists(self.path):
+            return os.path.getsize(self.path)
+        return 0
+
+    @property
+    def QGISvdoGroupName(self) -> str:
+        """ Generate unique name for root group"""
+        ap = self.path.split("/")
+        res = f"{ap[-2]}_0x{self.file_size:04X}"
+        return res
+
     def read(self, offset: int, size: int) -> bytearray | None:
         """ Return bytearray[size] from self.path.offset
         Args:
@@ -94,9 +110,11 @@ class VDO_FILE():
         Returns:
             Block: block base structure needed type (if possible)
         """
+        type_addr = type(addr)  # noqa
         if type(addr) is int:
             offset = addr
-        elif type(addr) is BLADDR:
+        # elif type(addr) is BLADDR:
+        elif isinstance(addr, BLADDR) or f"{type(addr)}" == "<class 'QGIS_VDO.vdo.datatypes.BLADDR'>":   # noqa
             if not struct_UINT.unpack(addr._raw)[0]:       # == 0
                 # raise ValueError(addr, " bladdr 00 00 00 00")
                 return None

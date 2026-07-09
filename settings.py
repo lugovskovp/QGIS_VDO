@@ -34,6 +34,7 @@ class Settings():
     NAME_TOOL_BUTTON_TEXT = 'toolButtonTextEnabled'
     NAME_ENABLE_SHOW_CLEAR_ACTION = 'ShowClearRecentFilesEnabled'
     NAME_CHECKED_GROUP_BOX = 'ShowGroupBoxEnabled'
+    NAME_HIDE_NON_ACTIVE_VDO_GROUPS = 'cbHideNonActiveVdo'
 
     # RecentFilesCount
     @classmethod
@@ -109,6 +110,8 @@ class Settings():
             buttonStyle = Qt.ToolButtonStyle.ToolButtonIconOnly
         return buttonStyle
     
+    # ---------------------------- check buttons
+    #
     @classmethod
     def toolButtonTextEnabled(cls) -> bool:
         """Whether to display text beside the toolbar icon."""
@@ -129,6 +132,18 @@ class Settings():
 
     @classmethod
     def setShowClearRecentFilesEnabled(cls, state: bool) -> None:
+        """ Enable or disable to show clear recent files in menu """
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}', state)
+
+    #cbHideNonActiveVdo
+    @classmethod
+    def HideNonActiveVdoEnabled(cls) -> bool:
+        """ Enable to show clear recent files in menu """
+        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}',
+                                 False, type=bool)
+
+    @classmethod
+    def setHideNonActiveVdo(cls, state: bool) -> None:
         """ Enable or disable to show clear recent files in menu """
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}', state)
 

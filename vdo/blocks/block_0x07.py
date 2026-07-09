@@ -22,6 +22,7 @@ from QGIS_VDO.vdo.enums import en_POI_CAT
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, BLADDR, OFFSET_TOC, VDO_FILE   # LIST,
 from QGIS_VDO.vdo.geotypes import COORD
+from QGIS_VDO.vdo.blocks import block_0x08
 
 
 OFFSET_TERR_DIVISIONS = 0x0C
@@ -58,9 +59,9 @@ class SCALE(BYTESTRUCT):
         super().__init__(byte_array)
         # area
         self.almanac_idx = BLADDR(self._raw[:4], vdo)
-        lb = COORD(self._raw[4:12])
-        rt = COORD(self._raw[12:20])
-        self.area = (lb, rt)
+        point_lb = COORD(self._raw[4:12])
+        point_rt = COORD(self._raw[12:20])
+        self.area = (point_lb, point_rt)
         # 20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
         self.val_A = self.ushort(20)
         # 22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
@@ -75,9 +76,43 @@ class SCALE(BYTESTRUCT):
         self.square_side = (self.area[1]._hlat - self.area[0]._hlat)
         self.d_delta = self.area[1].delta(self.area[0])
 
-        # Список idx
-        self.idxs = {}  # dict areas, key - block_0x09, val - area
+        return
+        # Список folders с areas покрытия
+        self.folders = {}  # dict areas, key - block_0x09, val - area
 
+        alm: block_0x08 = vdo.get_block(self.almanac_idx)
+        from_x = point_lb._hlon
+        to_x = point_rt._hlon
+        from_y = point_lb._hlat
+        # to_y = point_rt._hlat
+        x = from_x
+        y = from_y
+        i = 0
+        j = 0
+        for offset in range(alm.li_folders.ptr,
+                            alm.li_folders.ptr + BLADDR.size * alm.li_folders.cnt,
+                            BLADDR.size):
+            ffolder = alm.bladdr(offset)    # следующий folder
+            # lb rt area
+            if x + alm.side > to_x:
+                i = 0
+                j += 1
+                x = from_x
+                y += alm.side
+                # y и не проверяем
+            # Вот тут бы проверить - узкий-высокий...
+            lb = (x, y)
+            rt = (x + alm.side, y + alm.side)
+            i += 1
+            x += alm.side
+            if not ffolder.isZero:
+                self.folders[f"{ffolder}"] = (ffolder, lb, rt, i, j)
+                pass
+            pass
+        # -171088640 x  0x-a329b00
+        # 43008 y 0xa800
+        # 30.795958S 29.992259W lat-lon
+        # '00 00 A8 00 F5 CD 65 00  '
         pass
 
     def __repr__(self):
@@ -173,7 +208,7 @@ if __name__ == '__main__':
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
     scale_5 = block_07.scales[5]
-    bl_almanac = vdo.get_block(scale_5.almanac_idx)
+    block_almanac = vdo.get_block(scale_5.almanac_idx)
 
     # @ 00000201 13 0202 [13:BIBLIOGR]
     pass

@@ -1,14 +1,23 @@
 """
 0x07  SCALES
+
 Набор масштабов, начальный для определения по координатам
 и масштабу текущего отображения блока с геосодержимым.
+
+Перечень типов POI.
+
+Список стран на картах.*
+
+Территориальное деление стран.*
+
+* - only dbrev.34
 
 block_0x07
 SCALE
 
 """
 
-from QGIS_VDO.vdo.consts import struct_WORD  # struct_UINT
+# from QGIS_VDO.vdo.consts import struct_WORD  # struct_UINT
 from QGIS_VDO.vdo.enums import en_POI_CAT
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, BLADDR, OFFSET_TOC, VDO_FILE   # LIST,
@@ -18,6 +27,14 @@ from QGIS_VDO.vdo.geotypes import COORD
 OFFSET_TERR_DIVISIONS = 0x0C
 OFFSET_COUNTRY_LIST = 0x10
 SCALES_COUNT = 12
+
+
+class GEO_INDEX(BYTESTRUCT):
+    """
+    """
+    def __init__(self, byte_array: bytes) -> None:
+
+        pass
 
 
 class SCALE(BYTESTRUCT):
@@ -44,10 +61,13 @@ class SCALE(BYTESTRUCT):
         lb = COORD(self._raw[4:12])
         rt = COORD(self._raw[12:20])
         self.area = (lb, rt)
-        self.val_A = struct_WORD.unpack(self._raw[20:22])[0]
-        self.zoom_from = struct_WORD.unpack(self._raw[22:24])[0]
+        # 20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
+        self.val_A = self.ushort(20)
+        # 22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
+        self.zoom_from = self.ushort(22)
         if vdo.dbrev == 34:
-            self.zoom_to = struct_WORD.unpack(self._raw[24:26])[0]
+            # 24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
+            self.zoom_to = self.ushort(24)
         else:
             self.zoom_to = 0
 
@@ -81,7 +101,7 @@ class SCALE(BYTESTRUCT):
 
 
 class block_0x07(block_base):
-    """ CH_country type 0x0b  # fully parsed chars idxs """
+    """ SCALES =  type 0x07   """
 
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
@@ -117,7 +137,7 @@ class block_0x07(block_base):
         for offset in range(self.li_toc.ptr,
                             self.li_toc.ptr + POI_SIZE * self.li_toc.cnt,
                             POI_SIZE):
-            poi_code = struct_WORD.unpack(self.read(offset, 2))[0]
+            poi_code = self.ushort(offset)
             #
             en_poi = en_POI_CAT(poi_code)
             # try:
@@ -153,6 +173,7 @@ if __name__ == '__main__':
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
     scale_5 = block_07.scales[5]
+    bl_almanac = vdo.get_block(scale_5.almanac_idx)
 
     # @ 00000201 13 0202 [13:BIBLIOGR]
     pass

@@ -14,7 +14,7 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
 from QGIS_VDO.settings import Settings
-from QGIS_VDO.CollapsibleGroupBox import CollapsibleGroupBox
+from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
 from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS
 from QGIS_VDO.vdo.blocks import block_0x12, block_0x13
@@ -44,14 +44,15 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface = iface
         
         self.setupUi(self)
+
         # установить предыдуще установленную видимость groupBoxes
         GB = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
               'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information']
         for gb in GB:
             ch = Settings.ShowGroupBoxEnabled(gb)
-            wi = self.findChild(CollapsibleGroupBox, gb)
+            wi = self.findChild(AnimatedGroupBox, gb)
             if wi is not None:
-                wi.setChecked(ch)
+                wi.toggle_state(ch)
         
         self.vdo = parent_plugin.vdo
         #
@@ -88,7 +89,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
 
             # привязать pb_Action
-            self.pb_Action.clicked.connect(self.pbActionEvent)
+            # self.pb_Action.clicked.connect(self.pbActionEvent)
 
             # ----------------------------------------------
             pass

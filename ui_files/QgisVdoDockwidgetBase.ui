@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>419</width>
-    <height>226</height>
+    <width>662</width>
+    <height>719</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Maximum" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -53,7 +53,7 @@
      <height>200</height>
     </size>
    </property>
-   <layout class="QGridLayout" name="gridLayout_3">
+   <layout class="QHBoxLayout" name="horizontalLayout_3">
     <property name="leftMargin">
      <number>5</number>
     </property>
@@ -66,7 +66,7 @@
     <property name="bottomMargin">
      <number>5</number>
     </property>
-    <item row="1" column="0">
+    <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -87,7 +87,7 @@
        <enum>QTabWidget::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -156,13 +156,13 @@
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
-          <widget class="QWidget" name="scrollAreaWidgetContents">
+          <widget class="QWidget" name="scrollArea_infoContents">
            <property name="geometry">
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>374</width>
-             <height>509</height>
+             <width>617</width>
+             <height>652</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -171,29 +171,20 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_2">
-            <property name="spacing">
-             <number>2</number>
-            </property>
-            <property name="leftMargin">
-             <number>3</number>
-            </property>
-            <property name="topMargin">
-             <number>3</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>3</number>
-            </property>
+           <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,1,2">
             <item>
-             <widget class="CollapsibleGroupBox" name="groupBox_0veral">
+             <widget class="AnimatedGroupBox" name="groupBox_0veral">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="title">
                <string>DB file information</string>
               </property>
               <property name="checkable">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_3">
                <property name="leftMargin">
@@ -330,12 +321,18 @@
              </widget>
             </item>
             <item>
-             <widget class="CollapsibleGroupBox" name="groupBox_area_A">
+             <widget class="AnimatedGroupBox" name="groupBox_area_A">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="title">
                <string>Area A</string>
               </property>
               <property name="checkable">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
                <property name="leftMargin">
@@ -482,12 +479,18 @@
              </widget>
             </item>
             <item>
-             <widget class="CollapsibleGroupBox" name="groupBox_area_B">
+             <widget class="AnimatedGroupBox" name="groupBox_area_B">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="title">
                <string>Area B</string>
               </property>
               <property name="checkable">
-               <bool>true</bool>
+               <bool>false</bool>
               </property>
               <layout class="QGridLayout" name="gridLayout_6">
                <property name="leftMargin">
@@ -610,17 +613,23 @@
              </widget>
             </item>
             <item>
-             <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,20">
+             <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,5">
               <property name="spacing">
                <number>5</number>
               </property>
               <item>
-               <widget class="CollapsibleGroupBox" name="groupBox_i_label">
+               <widget class="AnimatedGroupBox" name="groupBox_i_label">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="title">
                  <string>Label</string>
                 </property>
                 <property name="checkable">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_9">
                  <property name="leftMargin">
@@ -649,7 +658,7 @@
                </widget>
               </item>
               <item>
-               <widget class="CollapsibleGroupBox" name="groupBox_i_description">
+               <widget class="AnimatedGroupBox" name="groupBox_i_description">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                   <horstretch>0</horstretch>
@@ -660,7 +669,7 @@
                  <string>Description</string>
                 </property>
                 <property name="checkable">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_8">
                  <property name="leftMargin">
@@ -695,9 +704,9 @@
                </widget>
               </item>
               <item>
-               <widget class="CollapsibleGroupBox" name="groupBox_i_information">
+               <widget class="AnimatedGroupBox" name="groupBox_i_information">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -706,10 +715,10 @@
                  <string>Information</string>
                 </property>
                 <property name="checkable">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                 <property name="checked">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </property>
                 <layout class="QGridLayout" name="gridLayout">
                  <property name="leftMargin">
@@ -751,6 +760,19 @@
               </item>
              </layout>
             </item>
+            <item>
+             <spacer name="verticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>102</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </widget>
          </widget>
@@ -758,45 +780,361 @@
        </layout>
       </widget>
       <widget class="QWidget" name="tab_addr">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <attribute name="title">
         <string>Address</string>
        </attribute>
-       <widget class="QPushButton" name="pb_Action">
-        <property name="geometry">
-         <rect>
-          <x>220</x>
-          <y>10</y>
-          <width>93</width>
-          <height>28</height>
-         </rect>
-        </property>
-        <property name="text">
-         <string>PushButton</string>
-        </property>
-       </widget>
-      </widget>
-      <widget class="QWidget" name="tab_block">
-       <attribute name="title">
-        <string>Block</string>
-       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_9">
+        <item>
+         <widget class="QScrollArea" name="scrollArea_address">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollArea_addressContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>622</width>
+             <height>636</height>
+            </rect>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_10">
+            <item alignment="Qt::AlignTop">
+             <widget class="AnimatedGroupBox" name="groupBoxAnimated">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>200</height>
+               </size>
+              </property>
+              <property name="title">
+               <string>GroupBox</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_11">
+               <item>
+                <widget class="QWidget" name="widget_2" native="true">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_12">
+                  <property name="spacing">
+                   <number>5</number>
+                  </property>
+                  <property name="sizeConstraint">
+                   <enum>QLayout::SetDefaultConstraint</enum>
+                  </property>
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QPushButton" name="pb_Action">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                    <property name="checkable">
+                     <bool>false</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pb_Action_2">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                    <property name="checkable">
+                     <bool>true</bool>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pb_Action_3">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pb_Action_4">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pb_Action_6">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="pb_Action_5">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                    <property name="checkable">
+                     <bool>true</bool>
+                    </property>
+                    <property name="checked">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="tab_topo">
        <attribute name="title">
         <string>Topography</string>
        </attribute>
-       <widget class="QSlider" name="horizontalSlider">
-        <property name="geometry">
-         <rect>
-          <x>160</x>
-          <y>40</y>
-          <width>160</width>
-          <height>22</height>
-         </rect>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <property name="leftMargin">
+         <number>3</number>
         </property>
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
+        <property name="topMargin">
+         <number>3</number>
         </property>
-       </widget>
+        <property name="rightMargin">
+         <number>3</number>
+        </property>
+        <property name="bottomMargin">
+         <number>3</number>
+        </property>
+        <item>
+         <widget class="QScrollArea" name="scrollArea">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents_2">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>638</width>
+             <height>652</height>
+            </rect>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_6">
+            <property name="spacing">
+             <number>3</number>
+            </property>
+            <property name="leftMargin">
+             <number>3</number>
+            </property>
+            <property name="topMargin">
+             <number>3</number>
+            </property>
+            <property name="rightMargin">
+             <number>3</number>
+            </property>
+            <property name="bottomMargin">
+             <number>3</number>
+            </property>
+            <item>
+             <widget class="QGroupBox" name="widget">
+              <layout class="QGridLayout" name="gridLayout_5">
+               <item row="0" column="0">
+                <layout class="QHBoxLayout" name="horizontalLayout">
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayout_7">
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_0">
+                     <property name="text">
+                      <string>RadioButton 0</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_1">
+                     <property name="text">
+                      <string>RadioButton 1</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_2">
+                     <property name="text">
+                      <string>RadioButton 2</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_3">
+                     <property name="text">
+                      <string>RadioButton 3</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_4">
+                     <property name="text">
+                      <string>RadioButton 4</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_5">
+                     <property name="text">
+                      <string>RadioButton 5</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                 <item>
+                  <layout class="QVBoxLayout" name="verticalLayout_8">
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_6">
+                     <property name="text">
+                      <string>RadioButton 6</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_7">
+                     <property name="text">
+                      <string>RadioButton 7</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_8">
+                     <property name="enabled">
+                      <bool>false</bool>
+                     </property>
+                     <property name="text">
+                      <string>RadioButton 8</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_9">
+                     <property name="text">
+                      <string>RadioButton 9</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_10">
+                     <property name="text">
+                      <string>RadioButton 10</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QRadioButton" name="radioButton_11">
+                     <property name="text">
+                      <string>RadioButton 11</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_block">
+       <attribute name="title">
+        <string>Block</string>
+       </attribute>
       </widget>
      </widget>
     </item>
@@ -805,9 +1143,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CollapsibleGroupBox</class>
+   <class>AnimatedGroupBox</class>
    <extends>QGroupBox</extends>
-   <header location="global">QGIS_VDO</header>
+   <header>QGIS_VDO</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

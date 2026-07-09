@@ -19,7 +19,7 @@ block_0x08
 
 """
 
-from QGIS_VDO.vdo.consts import struct_UINT  # struct_WORD  #
+# from QGIS_VDO.vdo.consts import struct_UINT  # struct_WORD  #
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR       # BYTESTRUCT,
 
@@ -33,6 +33,7 @@ class block_0x08(block_base):
     """
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
-        self.side = struct_UINT.unpack(OFFSET_FOLDER_SIZE)
+        # struct_UINT.unpack(self.read(OFFSET_FOLDER_SIZE, 4))[0]
+        self.side = self.uint(OFFSET_FOLDER_SIZE)
         self.li_folders = self.list(OFFSET_LIST_FOLDEFS)
         

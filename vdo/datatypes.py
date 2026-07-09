@@ -110,9 +110,11 @@ class VDO_FILE():
         Returns:
             Block: block base structure needed type (if possible)
         """
+        type_addr = type(addr)  # noqa
         if type(addr) is int:
             offset = addr
-        elif type(addr) is BLADDR:
+        # elif type(addr) is BLADDR:
+        elif isinstance(addr, BLADDR) or f"{type(addr)}" == "<class 'QGIS_VDO.vdo.datatypes.BLADDR'>":   # noqa
             if not struct_UINT.unpack(addr._raw)[0]:       # == 0
                 # raise ValueError(addr, " bladdr 00 00 00 00")
                 return None

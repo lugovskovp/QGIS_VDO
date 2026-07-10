@@ -496,6 +496,11 @@ class PTR(BYTESTRUCT):
     def hexptr(self) -> str:
         ''' ptr in hex string '''
         return "0x{:02X}".format(self.value)
+
+    @property
+    def isZero(self) -> bool:
+        """ ==0 -> empty"""
+        return self.value == 0
     
     
 # ----

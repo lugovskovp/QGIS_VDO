@@ -196,7 +196,7 @@ if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
     from vdo.test_vdo import vdo30, vdo34ee, vdobmv # noqa
     from vdo.consts import struct_UINT        # noqa
-    from vdo.blocks import block_0x12
+    from vdo.blocks import block_0x12, block_0x09
 
     vdo = vdo30
     # vdo = vdo34ee
@@ -208,7 +208,28 @@ if __name__ == '__main__':
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
     scale_5 = block_07.scales[5]
-    block_almanac = vdo.get_block(scale_5.almanac_idx)
+    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx)  # block_08
 
+    # block_08 content
+    for f in block_almanac._get_raw_content():
+        # print(f)
+        pass
+    
+    # block_08 content
+    bla_first = None
+    for (f, lb, rt) in block_almanac.folders(scale_5.area[0]):
+        if not bla_first:
+            bla_first = f
+        print((f, lb, rt))
+        pass
+    
+    # block_09 content
+    bl_folder: block_0x09 = vdo.get_block(bla_first.offset)
+        
+    for f in bl_folder._get_raw_content():
+        # print(f)
+        pass
+
+    # bl_ru_big_map = vdo.get_block(BLADDR(struct_UINT.pack(0x)))
     # @ 00000201 13 0202 [13:BIBLIOGR]
     pass

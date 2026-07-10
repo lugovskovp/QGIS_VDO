@@ -154,6 +154,14 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [ ] tab address
     * [ ] 
 - [ ] tab topo
+    * [x] block_0x07  SCALES
+    * [ ] block_0x08  ALMANSC
+    * [ ] block_0x09  FOLDER_MAPS
+    * [ ] tab groupButton scales
+    * [ ] tab 
+    * [ ] draw scale almanac
+    * [ ] draw folder maps
+    * [ ] draw in child layer
     * [ ] 
 - [ ] tab block
     * [ ] 
@@ -165,14 +173,15 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] раскраска полигонов
 
 
-[ ] почистить bitstream? av_, v_, ??
-[x] запрет commit при наличии ошибок flake8
-[ ] Settings show RecentFiles
-[x] dockWidget размер задается как мин+растягивание содержимым
-[x] tab содержимое - в scroll area
-[ ] 
-[ ] 
-[ ] 
+* [x] запрет commit при наличии ошибок flake8
+* [x] dockWidget размер задается как мин+растягивание содержимым
+* [x] tab содержимое - в scroll area
+
+* [ ] почистить bitstream? av_, v_, ??
+* [ ] Settings show RecentFiles
+* [ ] 
+* [ ] 
+* [ ] 
 
 
 где искать qtutils

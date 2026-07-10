@@ -45,15 +45,17 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         self.setupUi(self)
 
-        # установить предыдуще установленную видимость groupBoxes
+        # Восстановить из настроек видимость groupBoxes
         GB = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
-              'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information']
+              'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information'
+              ]
         for gb in GB:
             ch = Settings.ShowGroupBoxEnabled(gb)
             wi = self.findChild(AnimatedGroupBox, gb)
             if wi is not None:
                 wi.toggle_state(ch)
         
+        # vdo
         self.vdo = parent_plugin.vdo
         #
         if self.vdo.path is not None:
@@ -94,7 +96,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             # ----------------------------------------------
             pass
         else:   # if self.vdo.path is not None:
-            # TODO: vdo None -> unactivate fields?
+            # TODO: vdo None -> make unactive groupbox?
             pass
         pass
 
@@ -109,13 +111,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                     Qgis.Warning, 3)
             return
         
-        # old dbrev?
+        # Is dbrev old?
         if self.vdo.dbrev != 34:
             # Сообщение - что area a, b only in v.34
             self.iface.messageBar().pushMessage(
                     self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
                     Qgis.Warning, 3)
             return
+
         #
         root_group_name = self.vdo.QGISvdoGroupName
         # Access the main root of the QGIS layer tree
@@ -194,41 +197,32 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.iface.setActiveLayer(layer)
         root_group.setItemVisibilityChecked(True)
         if Settings.HideNonActiveVdoEnabled():
-            # 1. Задаем регулярное выражение для поиска
+            # 1. Задаем регулярное выражение для поиска корневых vdo групп
             pattern = r"_0x[0-9a-f]{4,}$"
             regex = re.compile(pattern, re.IGNORECASE)
-
             for child in project.layerTreeRoot().children():
                 if isinstance(child, QgsLayerTreeGroup):
                     if child.name() != root_group_name:
                         # Проверяем имя группы через regexp
                         if regex.search(child.name()):
                             child.setItemVisibilityChecked(False)
-
             pass
 
-        # # If it doesn't exist, create it
-        # if not (root_group := root.findGroup(root_group_name)):
-        #     root_group = root.insertGroup(0, root_group_name)
-
-        #
+        # Areas from TOC block
         bl_toc: block_0x12 = self.vdo.get_block(0)
-
-        # Area_A bigger
-        _DrawArea(bl_toc.area_B, "Area_B", layer)
+        _DrawArea(bl_toc.area_B, "Area_B", layer)   # Area_A is bigger
         _DrawArea(bl_toc.area_A, "Area_A", layer)
         
-        # Масштаб по границам слоя feat: приблизить карту по границам (содержимому) слоя
+        # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
         # Получаем доступ к карте (холсту)
         canvas = self.iface.mapCanvas()
         # Создаем трансформер координат
         transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
-        # Устанавливаем масштаб карты по границам слоя
         # Трансформируем границы слоя в СК проекта
         layer_extent = layer.extent()
         layer_extent.scale(1.2)     # отступ +20% от границ
         project_extent = transform.transformBoundingBox(layer_extent)
-        # Зумируем
+        # Зуммируем
         canvas.setExtent(project_extent)
         # Обновляем карту для отображения изменений
         canvas.refresh()
@@ -240,5 +234,5 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         pass
 
     def pbActionEvent(self, event):
-        
+        # action для кнопки
         pass

@@ -29,7 +29,7 @@ class BlockType(enum.Enum):
     POI = 0x10  # fully parsed, POI
     
     SCALE_ALMANAC = 0x08    # set of map folders 0x9.
-    FOLDER_MAPS = 0x09		# map folders 0x9.
+    FOLDER_MAPS = 0x09		# map folder - geo_blocks 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e.
     MAP__POLI_1 = 0x06  # scale 1
     MAP__POLI_2 = 0x01  # scale 2
     MAP__POLI_3 = 0x02  # scale 3

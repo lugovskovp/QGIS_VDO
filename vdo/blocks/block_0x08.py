@@ -36,7 +36,7 @@ class block_0x08(block_base):
         super().__init__(bl_addr)
         self.side = self.uint(OFFSET_FOLDER_SIZE)
         self.li_folders = self.list(OFFSET_LIST_FOLDEFS)
-        self.qty_side = self.li_folders.cnt ** 0.5      # sqrt of overall qty
+        self.qty_side = int(self.li_folders.cnt ** 0.5)      # sqrt of overall qty
 
     def folders(self, start: COORD):
         """

@@ -135,7 +135,7 @@ class VDO_FILE():
             bl_class.type_name = bl
         else:
             # no this type in known blocks
-            bl_class = getattr(importlib.import_module('.vdo.block_base'), 'block_base')
+            bl_class = getattr(importlib.import_module('QGIS_VDO.vdo.block_base'), 'block_base')  # noqa
             #return block_base(head.bladdr, self)
             bl_class.type = head.bltype.value
             bl_class.type_name = 'block_base'

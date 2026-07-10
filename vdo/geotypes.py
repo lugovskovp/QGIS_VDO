@@ -402,8 +402,23 @@ class POI_CATEGORY(BYTESTRUCT):
 # functions
 
 def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
-    ''' Ret COORD by hex_vdo values lo&la'''
-    res: COORD
+    """
+    Create COORD by hex_vdo values lo + la
+        Args:
+            
+        Returns:
+            res: COORD
+    """
+    # to unsigned dword
+    hex_latitude = ctypes.c_uint32(hex_latitude).value
+    hex_longtude = ctypes.c_uint32(hex_longtude).value
+
+    # to bytes
+    coo_by = (struct_UINT.pack(hex_longtude)
+              + struct_UINT.pack(hex_latitude))
+    res = COORD(coo_by)
+    return res
+    """
     hex_latitude = 0xffffffff & hex_latitude    # to dword
     if hex_latitude < 0:                        # Negative val
         hex_latitude = 0x80000000 | (-hex_latitude)
@@ -411,16 +426,7 @@ def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
     hex_longtude = 0xffffffff & hex_longtude    # to dword
     if hex_longtude < 0:                        # Negative val
         hex_longtude = 0x80000000 | (-hex_longtude)
-
-    coo_by = (struct_UINT.pack(">L", hex_longtude)
-              + struct_UINT.pack(">L", hex_latitude))
-    res = COORD(coo_by)
-    '''    #int DWORD со знаком в старшем бите
-    if 0x80000000 & self._hlon:     # hi bit =1 -> minus val.
-        self._hlon = 0 - (0xffffffff - self._hlon + 1)
-    if 0x80000000 & self._hlat:     # hi bit =1 -> minus val.
-        self._hlat = 0 - (0xffffffff - self._hlat + 1)    '''
-    return res
+    """
 
 
 def str2COORD(lon_lat: str) -> tuple:
@@ -430,7 +436,6 @@ def str2COORD(lon_lat: str) -> tuple:
     Returns:
         coordinates: tuple(N_lat: hlat, E_lng: hlon)
     '''
-        
     # lon_lat - типа 73.92N 54.30E, разделитель - пробел
     # вычистить мусор
 

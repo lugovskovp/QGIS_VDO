@@ -155,8 +155,9 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] 
 - [ ] tab topo
     * [x] block_0x07  SCALES
-    * [ ] block_0x08  ALMANSC
-    * [ ] block_0x09  FOLDER_MAPS
+    * [x] block_0x08  ALMANSC
+    * [x] block_0x09  FOLDER_MAPS
+    * [x] получение всего содержимого 08, 09 - с координатами
     * [ ] tab groupButton scales
     * [ ] tab 
     * [ ] draw scale almanac

@@ -37,22 +37,26 @@ class block_0x08(block_base):
     """
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
-        self.side = self.uint(OFFSET_FOLDER_SIZE)
-        self.li_folders = self.list(OFFSET_LIST_FOLDEFS)
-        self.qty_side = int(self.li_folders.cnt ** 0.5)      # sqrt of overall qty
+        # item - one valid folder maps
+        self.li_items = self.list(OFFSET_LIST_FOLDEFS)
+        self.item_side = self.uint(OFFSET_FOLDER_SIZE)
+        self.qty_items_on_side = int(self.li_items.cnt ** 0.5)   # sqrt of overall qty
+        self.area_side = self.item_side * self.qty_items_on_side
 
-    def folders(self, start: COORD):
+    def items(self, start: COORD):
         """
         Генератор
         Returns:
-            Folders с координатами углов
+            (bladdr_fldr, point_lb, point_rt) Folders с координатами углов
         """
+        start_lb_x = start._hlon    # 0xa800  x = 1
+        start_lb_y = start._hlat    # 0xf5cd6500  y = 1
         for (bladdr_fldr, x, y) in self._get_raw_content():
             #
-            lb_x = start._hlon + int(x * self.side)
-            lb_y = start._hlat + int(y * self.side)
-            rt_x = lb_x + self.side
-            rt_y = lb_y + self.side
+            lb_x = start_lb_x + x * self.item_side  # noqa 0xa800 + 1 * 0x14000000 = 0x1400a800
+            lb_y = start_lb_y + y * self.item_side  # noqa 0xf5cd6500 + 1 * 0x28000000 = 0x11dcd6500
+            rt_x = lb_x + self.item_side
+            rt_y = lb_y + self.item_side
             point_lb = hex2COORD(lb_x, lb_y)
             point_rt = hex2COORD(rt_x, rt_y)
             yield (bladdr_fldr, point_lb, point_rt)
@@ -63,18 +67,20 @@ class block_0x08(block_base):
         Returns:
             (bladdr_folder, x, y) - x, y - координаты в квадрате
         """
+        # "координаты" в квадрате ареа
         x = 0
         y = 0
-        for offset in range(self.li_folders.ptr,
-                            self.li_folders.ptr + BLADDR.size * self.li_folders.cnt,
+        for offset in range(self.li_items.ptr,
+                            self.li_items.ptr + BLADDR.size * self.li_items.cnt,
                             BLADDR.size):
             ffolder: BLADDR = self.bladdr(offset)
-            if x >= self.qty_side:
-                #
-                x = 0
-                y += 1
+            # приращение идёт по вертикали, по y
+            if y >= self.qty_items_on_side:
+                # следующий столбец
+                y = 0
+                x += 1
             res = (ffolder, x, y)
-            x += 1
+            y += 1
             if ffolder.isZero:
                 # пустые folders - значит информации нет
                 continue

@@ -1,6 +1,7 @@
 # scales and coordinates
 from QGIS_VDO.vdo.blocks.block_0x07 import block_0x07    # noqa  SCALES
 from QGIS_VDO.vdo.blocks.block_0x08 import block_0x08    # noqa  SCALE_ALMANAC = 0x08  
+from QGIS_VDO.vdo.blocks.block_0x09 import block_0x09    # noqa  SCALE_ALMANAC = 0x08  
 
 # address info
 from QGIS_VDO.vdo.blocks.block_0x0B import block_0x0B   # noqa # ch_idx country  

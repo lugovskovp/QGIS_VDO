@@ -21,7 +21,8 @@ block_0x08
 
 # from QGIS_VDO.vdo.consts import struct_UINT  # struct_WORD  #
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.datatypes import BLADDR       # BYTESTRUCT,
+from QGIS_VDO.vdo.datatypes import BLADDR       # BYTESTRUCT
+from QGIS_VDO.vdo.geotypes import COORD, hex2COORD
 
 
 OFFSET_LIST_FOLDEFS = 0x08
@@ -30,10 +31,60 @@ OFFSET_FOLDER_SIZE = 0x0c
 
 class block_0x08(block_base):
     """
+    0x08    LIST    li_folders  ptr_cnt на BLADDR | 0
+    0x0c    LIST    side    размер приращения _hlat на следующий folder
+    0x10    [BLADDR] - массив на папки-индексы гео-блоков
     """
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
-        # struct_UINT.unpack(self.read(OFFSET_FOLDER_SIZE, 4))[0]
-        self.side = self.uint(OFFSET_FOLDER_SIZE)
-        self.li_folders = self.list(OFFSET_LIST_FOLDEFS)
+        # item - one valid folder maps
+        self.li_items = self.list(OFFSET_LIST_FOLDEFS)
+        self.item_side = self.uint(OFFSET_FOLDER_SIZE)
+        self.qty_items_on_side = int(self.li_items.cnt ** 0.5)   # sqrt of overall qty
+        self.area_side = self.item_side * self.qty_items_on_side
+
+    def items(self, start: COORD):
+        """
+        Генератор
+        Returns:
+            (bladdr_fldr, point_lb, point_rt) Folders с координатами углов
+        """
+        start_lb_x = start._hlon    # 0xa800  x = 1
+        start_lb_y = start._hlat    # 0xf5cd6500  y = 1
+        for (bladdr_fldr, x, y) in self._get_raw_content():
+            #
+            lb_x = start_lb_x + x * self.item_side  # noqa 0xa800 + 1 * 0x14000000 = 0x1400a800
+            lb_y = start_lb_y + y * self.item_side  # noqa 0xf5cd6500 + 1 * 0x28000000 = 0x11dcd6500
+            rt_x = lb_x + self.item_side
+            rt_y = lb_y + self.item_side
+            point_lb = hex2COORD(lb_x, lb_y)
+            point_rt = hex2COORD(rt_x, rt_y)
+            yield (bladdr_fldr, point_lb, point_rt)
         
+    def _get_raw_content(self):
+        """
+        Генератор содержимого
+        Returns:
+            (bladdr_folder, x, y) - x, y - координаты в квадрате
+        """
+        # "координаты" в квадрате ареа
+        x = 0
+        y = 0
+        for offset in range(self.li_items.ptr,
+                            self.li_items.ptr + BLADDR.size * self.li_items.cnt,
+                            BLADDR.size):
+            ffolder: BLADDR = self.bladdr(offset)
+            # приращение идёт по вертикали, по y
+            if y >= self.qty_items_on_side:
+                # следующий столбец
+                y = 0
+                x += 1
+            res = (ffolder, x, y)
+            y += 1
+            if ffolder.isZero:
+                # пустые folders - значит информации нет
+                continue
+            yield res
+
+
+# All block tests in block_0x07

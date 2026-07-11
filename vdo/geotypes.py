@@ -66,15 +66,10 @@ class COORD(BYTESTRUCT):
         if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit =1 -> minus val.
             # self.hlo = ctypes.c_int32(self._hlon).value
             self._hlon = 0 - (0xffffffff - self._hlon + 1)
-        if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit =1 -> minus val.
-            # self.hla = ctypes.c_int32(self._hlat).value
-            self._hlat = 0 - (0xffffffff - self._hlat + 1)
-        """
-        self._hlon = ctypes.c_int32(struct_UINT.unpack(self._raw[:4])[0]).value
-        self._hlat = ctypes.c_int32(struct_UINT.unpack(self._raw[4:8])[0]).value
 
-        self.lon = (self._hlon / MULCOORD) - 30     # e/w
-        self.lat = self._hlat / MULCOORD            # n/s
+        """
+        self._hlon = ctypes.c_uint32(struct_UINT.unpack(self._raw[:4])[0]).value   # noqa x we
+        self._hlat = ctypes.c_uint32(struct_UINT.unpack(self._raw[4:8])[0]).value  # noqa y sn
 
         return
         # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
@@ -82,6 +77,27 @@ class COORD(BYTESTRUCT):
         # *90 = 2FAF07B0, *180 = 5F5E0F60,  *180=BEBC1EC0
         # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
         # 5555554 / 111362м = 49,88734038540974 - в одном метре
+
+    @property
+    def lon(self):
+        """ Longtitude, x, w|e"""
+        hlo = self._hlon
+        if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
+            hlo = self._hlon - 2 ** 32
+        res = (hlo / MULCOORD) - 30     # e/w
+        return res
+
+    @property
+    def lat(self):
+        """Latitude, y, s|e"""
+        # check sign
+        hla = self._hlat
+        if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
+            hla = self._hlat - 2 ** 32
+            # self.hla = ctypes.c_int32(self._hlat).value
+            # self._hlat = 0 - (0xffffffff - self._hlat + 1)
+        res = hla / MULCOORD            # n/s
+        return res
 
     def __repr__(self):
         ''' View while debug value'''
@@ -405,7 +421,7 @@ def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
     """
     Create COORD by hex_vdo values lo + la
         Args:
-            
+            # lon - x we, lat - y sn
         Returns:
             res: COORD
     """
@@ -466,13 +482,13 @@ def str2COORD(lon_lat: str) -> tuple:
 def float2COORD(n_latitude: float, e_longtude: float) -> tuple:
     ''' Координаты в градусах (широта, долгота)
     Args:
-        n_latitude: float   # Широта, latitude градусы
-        e_longtude: float   # Долгота, longtitude градусы
+        n_latitude: float   # Широта, S/N latitude градусы
+        e_longtude: float   # Долгота, E/W longtitude градусы
     Returns:
         coordinates: tuple(N_lat: hlat, E_lng: hlon)
         '''
     res: COORD
-    lat, lon = normLatLng(n_latitude, e_longtude)
+    lat, lon = normLatLng(n_latitude, e_longtude)   # lon - x we, lat - y sn
     hlon = int((lon + 30) * MULCOORD)   # self._lon = ( self._hlon / MULCOORD ) - 30
     hlat = int(lat * MULCOORD)          # self._lat =   self._hlat / MULCOORD
     res = hex2COORD(hlon, hlat)

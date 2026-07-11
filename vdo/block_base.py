@@ -6,7 +6,7 @@
 import zlib             # распаковка архивов типа 2 и 3
 
 # from vdo.enums import BlockType
-from .datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX
+from .datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX, PTR
 from .datatypes import ZERO_DWORD, MAX_STR_LEN
 from .geotypes import COORD
 
@@ -126,6 +126,17 @@ class block_base(BYTESTRUCT):
             return LIST(self.read(value, LIST.size))
         #bytearray
         return LIST(value)
+
+    def ptr(self, offset: int) -> PTR:
+        """
+        PTR по адресу
+        Args:
+            self: from _raw
+            offset: offset from block start
+        Returns:
+            PTR: structure
+        """
+        return PTR(self.read(offset, PTR.size))
 
     def coord(self, offset: int) -> COORD:
         """ Координаты - 8 байт блока

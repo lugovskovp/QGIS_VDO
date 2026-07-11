@@ -207,28 +207,46 @@ if __name__ == '__main__':
 
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
-    scale_5 = block_07.scales[5]
+    scale_5 = block_07.scales[6]
     block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx)  # block_08
 
     # block_08 content
+    print("block_08: block_0x09 : x : y")
     for f in block_almanac._get_raw_content():
-        # print(f)
+        print(f)
         pass
     
     # block_08 content
+    print("block_08: block_0x09 : COORD(lb) : COORD(rt)")
     bla_first = None
-    for (f, lb, rt) in block_almanac.folders(scale_5.area[0]):
+    for (f, lb, rt) in block_almanac.items(scale_5.area[0]):
         if not bla_first:
-            bla_first = f
+            bla_first = f   # noqa 03cdcc01 09 0000 [09:FOLDER_MAPS] - qty 16 area 0x1400 0000 item(fromFile) 0x140 0000
+            lb_f = lb
+            rt_f = rt
         print((f, lb, rt))
         pass
     
     # block_09 content
+    print("block_09: geo_block_0xXX : x : y")
     bl_folder: block_0x09 = vdo.get_block(bla_first.offset)
-        
+
+    print("block_08: block_0x09 : COORD(lb) : COORD(rt)")
     for f in bl_folder._get_raw_content():
-        # print(f)
+        print(f)
         pass
+
+    bl_map_first = None
+    for f in bl_folder.items(lb_f):     # 03cdcc01 09 0000 [09:FOLDER_MAPS]
+        if not bl_map_first:
+            (bl_map_first, lb_map, _) = f
+            print(f"map: {bl_map_first} lb_coord: {lb_map}")
+        pass
+    
+    # map
+    bl_map = vdo.get_block(bl_map_first)
+
+    print(f"infile map area: {bl_map.map}")
 
     # bl_ru_big_map = vdo.get_block(BLADDR(struct_UINT.pack(0x)))
     # @ 00000201 13 0202 [13:BIBLIOGR]

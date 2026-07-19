@@ -78,7 +78,7 @@ class block_0x09(block_base):
                 continue
             bladdr_geo = self.bladdr(self.read(ptr_2geoblock, BLADDR.size))
 
-            # а вообще бывают которые занимают 2 или 4 места?
+            # а вообще бывают которые занимают 2 и/или 4 места?
             if bladdr_geo in finded_early:
                 raise ValueError(finded_early, finded_early)
             finded_early.append(bladdr_geo)

@@ -27,7 +27,8 @@ FORM_CLASS, _ = uic.loadUiType(os.path.join(
 
 # list groupbox collapsible
 listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
-           'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information'
+           'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information',
+           'gb_CategoriesPOI'
            ]
 
 

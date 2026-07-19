@@ -25,6 +25,11 @@ from QGIS_VDO.ui_files.drawing import _DrawArea
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'QgisVdoDockwidgetBase.ui'))
 
+# list groupbox collapsible
+listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
+           'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information'
+           ]
+
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     """
@@ -42,18 +47,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
         # widgets-and-dialogs-with-auto-connect
         self.iface = iface
-        
         self.setupUi(self)
 
         # Восстановить из настроек видимость groupBoxes
-        GB = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
-              'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information'
-              ]
-        for gb in GB:
-            ch = Settings.ShowGroupBoxEnabled(gb)
-            wi = self.findChild(AnimatedGroupBox, gb)
-            if wi is not None:
-                wi.toggle_state(ch)
+        self._restoreGroupBoxVisibility()
         
         # vdo
         self.vdo = parent_plugin.vdo
@@ -236,3 +233,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     def pbActionEvent(self, event):
         # action для кнопки
         pass
+
+    def _restoreGroupBoxVisibility(self) -> None:
+        """
+        Восстанавливает ранее сохранённые настройки
+        свёрнутых/развёрнутых groupBoxCollapsible
+        """
+        for gb in listGBC:
+            state = Settings.ShowGroupBoxEnabled(gb)
+            widget = self.findChild(AnimatedGroupBox, gb)
+            if widget is not None:
+                widget.toggle_state(state)

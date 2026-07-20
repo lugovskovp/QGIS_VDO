@@ -18,7 +18,7 @@ def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
     Args:
         area (coord lb, coord rt)
         area_name: str
-        layer: QgsVectorLayer
+        layer: QgsVectorLayer Qgis.GeometryType.Polygon:
     """
     # если есть объект с таким именем - возврат
     # Перебираем все объекты слоя

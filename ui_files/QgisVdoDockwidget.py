@@ -14,7 +14,7 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
                        QgsSingleSymbolRenderer, QgsFillSymbol,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
-from QGIS_VDO.settings import Settings
+from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
 from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS
@@ -33,69 +33,80 @@ listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
            'gb_CategoriesPOI'
            ]
 RB_SCALE_NAME = 'rb_scale_'
-DEFAULT_SCALE = 5
+QTY_ALL_SCALES = 12
 
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     """
-
+    Главный рабочий виджет для отображения выбранного carindb
     """
     vdo: VDO_FILE = None
     """current vdo file"""
 
-    def _restoreScale(self):
+    def _restoreScale(self) -> None:
         """
         Собрать scale radioButtons в QButtonGroup
+        (к моменту вызова _restoreScale список масштабов уже есть)
         """
-        #
+        # определяем выбранный масштаб
+        checkScale = Settings.ChousedScale()
+        if self.scales[checkScale].isEmpty:
+            checkScale = DEFAULT_SCALE
+        if self.scales[checkScale].isEmpty:
+            for i in range(QTY_ALL_SCALES):
+                if not self.scales[i].isEmpty:
+                    checkScale = i
+                    break
+
         # Создаем ОБЩУЮ группу для всех радиокнопок
         self.button_group_scale = QButtonGroup(self)
         # добавляем в группу все кнопки rb_scale_[0..11]
-        for i in range(12):
-            rb_name = RB_SCALE_NAME + str(i)
+        for id in range(QTY_ALL_SCALES):
+            rb_name = RB_SCALE_NAME + str(id)
             rb = self.tabWidget.findChild(QRadioButton, rb_name)
-            
-            # Изменить подпись (к этому моменту список масштабов уже есть)
-            sc: SCALE = self.scales[i]
-            txt = "{}.{}: {} - {}".format(i, sc.value_a, sc.zoom_from, sc.zoom_to)
+            # Изменить подпись
+            sc: SCALE = self.scales[id]
+            txt = "{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to)
             rb.setText(f"{txt}")
             # Установить enabled|disabled
             rb.setEnabled(not sc.isEmpty)
-
-            # TODO 2 settings
-            rb.setChecked(i == DEFAULT_SCALE)
-                
-            self.button_group_scale.addButton(rb)
+            # добавляем в группу rb
+            self.button_group_scale.addButton(rb, id)
             pass
-
         # Connect the change signal button_group_scale
-        # self.button_group_scale.buttonClicked.connect(self.on_rb_scale_changed)
-        # pass
-
-        # # rb_horizontalLayout - layout with 2 horiz layouts w radioButtons scales
-        # for i in range(self.rb_horizontalLayout.count()):
-        #     item = self.rb_horizontalLayout.itemAt(i)
-
-        #     sub_layout = item.layout()
-        #     if sub_layout is not None:
-        #         layout_name = sub_layout.objectName()   # 'rb_child_lay0'
-
-        #     # n = item.ObjectName()
-        #     rb_widget = item.widget()
-        #     # Проверяем, что элемент — это кнопка QRadioButton
-        #     if isinstance(rb_widget, QRadioButton):
-        #         #
-
-        #         #
-        #         if rb_widget.isChecked():
-        #             print(f"Найдена активная кнопка: {rb_widget.text()}")
+        self.button_group_scale.buttonClicked.connect(self.on_rb_scale_changed)
+        # set from settings
+        self._setScale(checkScale)
         pass
+
+    def _setScale(self, idScale: int) -> None:
+        """
+        Установить, как checked scale
+        Attention! NOT checked enabled!!!
+        """
+        button = self.button_group_scale.button(idScale)
+        button.setChecked(True)
+        self.on_rb_scale_changed(button)
     
     def on_rb_scale_changed(self, button) -> None:
         """
         Triggered when any button in the group is clicked/changed
         """
+        # сохраняем номер масштаба в settings
+        Settings.setChousedScale(self.button_group_scale.id(button))
+        # отрисовать area альманахов
+        self.DrawAlmanacAreas()
+
+        # что то делаем
         print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
+
+    def DrawAlmanacAreas(self) -> None:
+        """
+        Добавляет слой Almanac, если не было его ранее
+        отрисовывает валидные альманахи
+        """
+
+        pass
 
     def __init__(self, parent_plugin, iface, parent=None):
         """Constructor."""
@@ -141,7 +152,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         """
         # Восстановить из настроек ранее установленный scale
         self._restoreScale()
-
+        
     def _initTabInfo(self) -> None:
         """
         Инициализация вкладки Info

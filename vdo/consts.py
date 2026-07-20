@@ -22,7 +22,7 @@ struct_WORD_TWICE = struct.Struct(">HH")
 struct_UINT = struct.Struct(">L")
 
 #
-ZERO_DWORD = b'\x00\x00\x00\x00'
+ZERO_DWORD = b'\x00' * 4
 
 #
 LOOKUP_CHAR_BYTES = {'000': b'a',
@@ -42,3 +42,5 @@ LOOKUP_CHAR_BYTES = {'000': b'a',
                      }
 
 NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"
+NAME_LAYER_ALMANACS = 'Almanac'
+NAME_LAYER_MAPS = ''

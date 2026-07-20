@@ -7,6 +7,7 @@ import os
 import re
 
 from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup
 from qgis.PyQt.QtCore import QMetaType
 from qgis.PyQt.QtGui import QColor
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
@@ -17,7 +18,8 @@ from QGIS_VDO.settings import Settings
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
 from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS
-from QGIS_VDO.vdo.blocks import block_0x12, block_0x13
+from QGIS_VDO.vdo.blocks import block_0x12, block_0x13, block_0x07
+from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 
 from QGIS_VDO.ui_files.drawing import _DrawArea
 
@@ -30,6 +32,8 @@ listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
            'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information',
            'gb_CategoriesPOI'
            ]
+RB_SCALE_NAME = 'rb_scale_'
+DEFAULT_SCALE = 5
 
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
@@ -38,6 +42,60 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     """
     vdo: VDO_FILE = None
     """current vdo file"""
+
+    def _restoreScale(self):
+        """
+        Собрать scale radioButtons в QButtonGroup
+        """
+        #
+        # Создаем ОБЩУЮ группу для всех радиокнопок
+        self.button_group_scale = QButtonGroup(self)
+        # добавляем в группу все кнопки rb_scale_[0..11]
+        for i in range(12):
+            rb_name = RB_SCALE_NAME + str(i)
+            rb = self.tabWidget.findChild(QRadioButton, rb_name)
+            
+            # Изменить подпись (к этому моменту список масштабов уже есть)
+            sc: SCALE = self.scales[i]
+            txt = "{}.{}: {} - {}".format(i, sc.value_a, sc.zoom_from, sc.zoom_to)
+            rb.setText(f"{txt}")
+            # Установить enabled|disabled
+            rb.setEnabled(not sc.isEmpty)
+
+            # TODO 2 settings
+            rb.setChecked(i == DEFAULT_SCALE)
+                
+            self.button_group_scale.addButton(rb)
+            pass
+
+        # Connect the change signal button_group_scale
+        # self.button_group_scale.buttonClicked.connect(self.on_rb_scale_changed)
+        # pass
+
+        # # rb_horizontalLayout - layout with 2 horiz layouts w radioButtons scales
+        # for i in range(self.rb_horizontalLayout.count()):
+        #     item = self.rb_horizontalLayout.itemAt(i)
+
+        #     sub_layout = item.layout()
+        #     if sub_layout is not None:
+        #         layout_name = sub_layout.objectName()   # 'rb_child_lay0'
+
+        #     # n = item.ObjectName()
+        #     rb_widget = item.widget()
+        #     # Проверяем, что элемент — это кнопка QRadioButton
+        #     if isinstance(rb_widget, QRadioButton):
+        #         #
+
+        #         #
+        #         if rb_widget.isChecked():
+        #             print(f"Найдена активная кнопка: {rb_widget.text()}")
+        pass
+    
+    def on_rb_scale_changed(self, button) -> None:
+        """
+        Triggered when any button in the group is clicked/changed
+        """
+        print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
 
     def __init__(self, parent_plugin, iface, parent=None):
         """Constructor."""
@@ -52,41 +110,17 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Восстановить из настроек видимость groupBoxes
         self._restoreGroupBoxVisibility()
-        
+
         # vdo
         self.vdo = parent_plugin.vdo
-        #
         if self.vdo.path is not None:
-            # path above overall info
-            ap = self.vdo.path.split("/")
-            actionName = ap[-2] + ":::" + ap[-1]
-            self.groupBox_0veral.setTitle(actionName)
-            # overall info
-            self.l_vdo_dbrev_val.setText(f"0x{self.vdo.dbrev:02X} / {self.vdo.dbrev}")
-            self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
-            formatted = f"{self.vdo.file_size:,}".replace(',', ' ')
-            self.l_vdo_size_val.setText(f"0x{self.vdo.file_size:04X} / {formatted}")
-            self.l_vdo_path_val.setText(self.vdo.path)
-            # vdo info
-            bl_toc: block_0x12 = self.vdo.get_block(0)
-            bl_bibliogr: block_0x13 = self.vdo.get_block(bl_toc.bladdr_bibliogr)
-            # area_a-b only in rev34
-            if self.vdo.dbrev != 34:
-                self.groupBox_area_A.hide()
-                self.groupBox_area_B.hide()
-            else:
-                # инфо areas на панель
-                self.l_Alb_coord.setText(bl_toc.area_A[0].__repr__())
-                self.l_Art_coord.setText(bl_toc.area_A[1].__repr__())
-                self.l_Blb_coord.setText(bl_toc.area_B[0].__repr__())
-                self.l_Brt_coord.setText(bl_toc.area_B[1].__repr__())
-                # отрисовать
+            # >>> tab_info
+            self._initTabInfo()
 
-                pass
-            # bl_13
-            self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
-            self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)
-            self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
+            # >>> tab_addr
+
+            # >>> tab_topo
+            self._initTabTopo()
 
             # привязать pb_Action
             # self.pb_Action.clicked.connect(self.pbActionEvent)
@@ -96,7 +130,58 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         else:   # if self.vdo.path is not None:
             # TODO: vdo None -> make unactive groupbox?
             pass
+
         pass
+
+    # <<<<<<<<<<<<< функции инициализации вкладок
+    
+    def _initTabTopo(self) -> None:
+        """
+        Инициализация вкладки Topo
+        """
+        # Восстановить из настроек ранее установленный scale
+        self._restoreScale()
+
+    def _initTabInfo(self) -> None:
+        """
+        Инициализация вкладки Info
+        """
+        # path above overall info
+        ap = self.vdo.path.split("/")
+        actionName = ap[-2] + ":::" + ap[-1]
+        del ap
+        self.groupBox_0veral.setTitle(actionName)
+        # overall info
+        self.l_vdo_dbrev_val.setText(f"0x{self.vdo.dbrev:02X} / {self.vdo.dbrev}")
+        self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
+        formatted = f"{self.vdo.file_size:,}".replace(',', ' ')
+        self.l_vdo_size_val.setText(f"0x{self.vdo.file_size:04X} / {formatted}")
+        self.l_vdo_path_val.setText(self.vdo.path)
+        del formatted
+        # vdo info
+        bl_toc: block_0x12 = self.vdo.get_block(0)
+        bl_bibliogr: block_0x13 = self.vdo.get_block(bl_toc.bladdr_bibliogr)
+        bl_scales: block_0x07 = self.vdo.get_block(bl_toc.bladdr_scales)
+        self.scales = bl_scales.scales
+        # area_a-b only in rev34
+        if self.vdo.dbrev != 34:
+            self.groupBox_area_A.hide()
+            self.groupBox_area_B.hide()
+        else:
+            # инфо areas на панель
+            self.l_Alb_coord.setText(bl_toc.area_A[0].__repr__())
+            self.l_Art_coord.setText(bl_toc.area_A[1].__repr__())
+            self.l_Blb_coord.setText(bl_toc.area_B[0].__repr__())
+            self.l_Brt_coord.setText(bl_toc.area_B[1].__repr__())
+            # отрисовать
+
+            pass
+        # bl_13
+        self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
+        self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)
+        self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
+
+    # >>>>>>>>>>> функции инициализации вкладок
 
     def DrawTocAreas(self):
         """Отображает на карте area_A, area_b"""

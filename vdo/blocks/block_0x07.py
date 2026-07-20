@@ -40,7 +40,7 @@ class GEO_INDEX(BYTESTRUCT):
 
 class SCALE(BYTESTRUCT):
     """
-    0   UINT    BLADDR almanac_ids
+    0   UINT    BLADDR almanac_idx
     4   QWORD   COORD left bottom
     12  QWORD   COORD right top
     20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
@@ -57,20 +57,18 @@ class SCALE(BYTESTRUCT):
             raise ValueError(vdo.dbrev, " dbrev must be 30 or 34")
 
         super().__init__(byte_array)
+        self.vdo = vdo
+
         # area
-        self.almanac_idx = BLADDR(self._raw[:4], vdo)
         point_lb = COORD(self._raw[4:12])
         point_rt = COORD(self._raw[12:20])
         self.area = (point_lb, point_rt)
+
+        # @properties:
+        # 0   UINT    BLADDR almanac_idx
         # 20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
-        self.val_A = self.ushort(20)
         # 22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
-        self.zoom_from = self.ushort(22)
-        if vdo.dbrev == 34:
-            # 24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
-            self.zoom_to = self.ushort(24)
-        else:
-            self.zoom_to = 0
+        # 24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
 
         # TODO а оно надо?
         self.square_side = (self.area[1]._hlat - self.area[0]._hlat)
@@ -117,18 +115,53 @@ class SCALE(BYTESTRUCT):
 
     def __repr__(self):
         res = f"{self.area[1].delta(self.area[0])}"
-        res += f" {self.zoom_from}-{self.zoom_to} {self.val_A}"
+        res += f" {self.zoom_from}-{self.zoom_to} {self.value_a}"
         res += f" [0x{self.square_side:X}]"
         return res
 
     @property
-    def is_empty(self) -> bool:
+    def almanac_idx(self) -> BLADDR | None:
+        """
+        bladdr block_0x08 - альманаха
+        """
+        return BLADDR(self._raw[:4], self.vdo)
+        
+    @property
+    def value_a(self) -> int:
+        """
+        20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
+        """
+        return self.ushort(20)
+
+    @property
+    def zoom_from(self) -> int:
+        """
+        22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
+        """
+        return self.ushort(22)
+
+    @property
+    def zoom_to(self) -> int:
+        """
+        24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
+        if vdo.dbrev == 34: else 0
+        """
+        if self.vdo.dbrev == 34:
+            return self.ushort(24)
+        else:
+            return 0
+        
+    @property
+    def isEmpty(self) -> bool:
         """ Валидный или пустой"""
         # если almanac_idx == 0, то scale пустой
-        return self.almanac_idx.isZero
+        # return self.almanac_idx.isZero
+        # return self._raw[:4] == b'\x00' * 4     # а вот херь: у бмв есть 0x04dffa01, но пустой area # noqa
+        return self._raw[4:20] == b'\x00' * 16
 
     def find_idx(self, poin: COORD) -> BLADDR | None:
         """
+        TODO:
         Поиск idx блока, в который попадают координаты, или None
         """
         res = None

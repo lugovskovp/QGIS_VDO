@@ -30,7 +30,8 @@ listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
            'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information',
            'gb_CategoriesPOI'
            ]
-RB_SCALE_NAME = 'rb_scale_'
+RB_SCALE_OBJNAME_PREFIX = 'rb_scale_'
+SCALE_GROUP_NAME_PREFIX = 'Scale '
 QTY_ALL_SCALES = 12
 
 
@@ -55,12 +56,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                 if not self.scales[i].isEmpty:
                     checkScale = i
                     break
-
+        # root group - vdo
+        root = self._getRootGroup()
         # Создаем ОБЩУЮ группу для всех радиокнопок
         self.button_group_scale = QButtonGroup(self)
         # добавляем в группу все кнопки rb_scale_[0..11]
         for id in range(QTY_ALL_SCALES):
-            rb_name = RB_SCALE_NAME + str(id)
+            rb_name = RB_SCALE_OBJNAME_PREFIX + str(id)
             rb = self.tabWidget.findChild(QRadioButton, rb_name)
             # Изменить подпись
             sc: SCALE = self.scales[id]
@@ -68,13 +70,20 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             rb.setText(f"{txt}")
             # Установить enabled|disabled
             rb.setEnabled(not sc.isEmpty)
+            # параллельно с rb создаём группы масштабов для отображения.
+            if not sc.isEmpty:
+                gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
+                if not (root.findGroup(gr_name)):
+                    root.insertGroup(-2, gr_name)
             # добавляем в группу rb
             self.button_group_scale.addButton(rb, id)
             pass
         # Connect the change signal button_group_scale
         self.button_group_scale.buttonClicked.connect(self.on_rb_scale_changed)
+
         # set from settings
         self._setScale(checkScale)
+
         pass
 
     def _setScale(self, idScale: int) -> None:
@@ -90,10 +99,19 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         """
         Triggered when any button in the group is clicked/changed
         """
+        idScale = self.button_group_scale.id(button)
         # сохраняем номер масштаба в settings
-        Settings.setChousedScale(self.button_group_scale.id(button))
+        Settings.setChousedScale(idScale)
         # отрисовать area альманахов
         self.DrawAlmanacAreas()
+
+        # Отключить видимость для всех групп
+        # root group - vdo
+        root_gr = self._getRootGroup()
+        for id in range(QTY_ALL_SCALES):
+            gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
+            if gr := root_gr.findGroup(gr_name):
+                gr.setItemVisibilityChecked(id == idScale)
 
         # что то делаем
         print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
@@ -207,17 +225,24 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             return False
         return True
 
-    def _getRootAreaLayer(self) -> QgsVectorLayer:
+    def _getRootGroup(self) -> QgsLayerTreeGroup:
         """
-        возвращает слой NAME_LAYER_GLOBAL_BOUNDS в корневой рабочей группе
+        Возвращает QgsLayerTreeGroup текущего файла vdo
         """
         # Access the main root of the QGIS layer tree
         root = QgsProject.instance().layerTreeRoot()
         # If root_group_name doesn't exist, create it
         if not (root_group := root.findGroup(self.vdo.QGISvdoGroupName)):
             root_group = root.insertGroup(0, self.vdo.QGISvdoGroupName)
+        return root_group
 
+    def _getRootAreaLayer(self) -> QgsVectorLayer:
+        """
+        возвращает слой NAME_LAYER_GLOBAL_BOUNDS в корневой рабочей группе
+        """
+        
         layer_name = NAME_LAYER_GLOBAL_BOUNDS
+        root_group = self._getRootGroup()
         #  существует ли уже слой с таким именем в прямых потомках root группы
         for child in root_group.children():
             # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
@@ -255,27 +280,22 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
             QgsProject.instance().addMapLayer(layer, False) # noqa
             
-            # Вставляем слой на первое место внутри нашей новой группы
-            root_group.insertLayer(0, layer)
+            # Вставляем слой на последнее место внутри нашей новой группы
+            root_group.insertLayer(-1, layer)
             print("Новый слой успешно создан в памяти и добавлен наверх!")
             return layer
         else:
             print("Не удалось создать новый слой.")
 
     def DrawTocAreas(self):
-        """Отображает на карте area_A, area_b"""
+        """
+        Отображает на карте area_A, area_b
+        Скрывает и сворачивает остальные toc группы
+        """
         # Проверить наличие открытого/активного сохранённого проекта
         if not self._isExistsOpenProject():
             return
         project = QgsProject.instance()
-
-        # Is dbrev old? no areas, show warning
-        if self.vdo.dbrev != 34:
-            # Сообщение - что area a, b only in v.34
-            self.iface.messageBar().pushMessage(
-                    self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
-                    Qgis.Warning, 3)
-            return
 
         # получаем корневой ТОС area layer в группе
         layer = self._getRootAreaLayer()
@@ -285,7 +305,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         root = project.layerTreeRoot()
         root_group = root.findGroup(self.vdo.QGISvdoGroupName)
         root_group.setItemVisibilityChecked(True)
+        root_group.setExpanded(True)  # False — свернуть, True — развернуть
 
+        # по значению настроек - скрываем все другие группы vdo
         if Settings.HideNonActiveVdoEnabled():
             # Задаем регулярное выражение для поиска корневых vdo групп
             pattern = r"_0x[0-9a-f]{4,}$"
@@ -296,7 +318,16 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                         # Проверяем имя группы через regexp
                         if regex.search(child.name()):
                             child.setItemVisibilityChecked(False)
+                            child.setExpanded(False)  # False — свернуть, True — развернуть # noqa
             pass
+
+        # Is dbrev old? no areas, show warning
+        if self.vdo.dbrev != 34:
+            # Сообщение - что area a, b only in v.34
+            self.iface.messageBar().pushMessage(
+                    self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
+                    Qgis.Warning, 3)
+            return
 
         # Areas from TOC block
         bl_toc: block_0x12 = self.vdo.get_block(0)

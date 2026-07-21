@@ -9,19 +9,17 @@ import re
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup
 from qgis.PyQt.QtCore import QMetaType
-from qgis.PyQt.QtGui import QColor
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
-                       QgsSingleSymbolRenderer, QgsFillSymbol,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
-from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS
+from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS, NAME_LAYER_ALMANACS
 from QGIS_VDO.vdo.blocks import block_0x12, block_0x13, block_0x07
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 
-from QGIS_VDO.ui_files.drawing import _DrawArea
+from QGIS_VDO.ui_files.drawing import _DrawArea, getRendererByLayerName
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -105,7 +103,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         Добавляет слой Almanac, если не было его ранее
         отрисовывает валидные альманахи
         """
-
+        # Проверить наличие открытого/активного сохранённого проекта
+        if not self._isExistsOpenProject():
+            return
+        #
+        print(NAME_LAYER_ALMANACS)
         pass
 
     def __init__(self, parent_plugin, iface, parent=None):
@@ -142,7 +144,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             # TODO: vdo None -> make unactive groupbox?
             pass
 
-        pass
+        pass    # def __init__(self, parent_plugin, iface, parent=None):
 
     # <<<<<<<<<<<<< функции инициализации вкладок
     
@@ -184,8 +186,6 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.l_Art_coord.setText(bl_toc.area_A[1].__repr__())
             self.l_Blb_coord.setText(bl_toc.area_B[0].__repr__())
             self.l_Brt_coord.setText(bl_toc.area_B[1].__repr__())
-            # отрисовать
-
             pass
         # bl_13
         self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
@@ -194,18 +194,82 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     # >>>>>>>>>>> функции инициализации вкладок
 
-    def DrawTocAreas(self):
-        """Отображает на карте area_A, area_b"""
-        # Проверить наличие открытого/активного сохранённого проекта
+    def _isExistsOpenProject(self) -> bool:
+        """
+        Проверить наличие открытого/активного сохранённого проекта
+        """
         project = QgsProject.instance()
         if not project.fileName():
             # Сообщение - что надо, чтобы был открыт проект.
             self.iface.messageBar().pushMessage(
                     self.tr('Open/create any qgis project and reopen Carindb.'),   # noqa
                     Qgis.Warning, 3)
+            return False
+        return True
+
+    def _getRootAreaLayer(self) -> QgsVectorLayer:
+        """
+        возвращает слой NAME_LAYER_GLOBAL_BOUNDS в корневой рабочей группе
+        """
+        # Access the main root of the QGIS layer tree
+        root = QgsProject.instance().layerTreeRoot()
+        # If root_group_name doesn't exist, create it
+        if not (root_group := root.findGroup(self.vdo.QGISvdoGroupName)):
+            root_group = root.insertGroup(0, self.vdo.QGISvdoGroupName)
+
+        layer_name = NAME_LAYER_GLOBAL_BOUNDS
+        #  существует ли уже слой с таким именем в прямых потомках root группы
+        for child in root_group.children():
+            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
+            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
+                # Получаем сам объект слоя, он нужен для работы
+                layer = child.layer()
+                return layer
+
+        # нет, слой с таким именем не найден - создаём его в root
+        # Настраиваем параметры нового слоя в памяти (Memory Layer)
+        # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
+        # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
+        geometry_type = "Polygon?crs=EPSG:4326"
+        layer = QgsVectorLayer(geometry_type, layer_name, "memory")
+        del geometry_type
+
+        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
+        provider = layer.dataProvider()
+        provider.addAttributes([
+            QgsField("id", QMetaType.Type.Int),            # noqa 
+            QgsField("name", QMetaType.Type.QString),      # noqa
+            QgsField("value", QMetaType.Type.QString)      # noqa Double
+        ])
+        # Обновляем поля в слое после их добавления в провайдер
+        layer.updateFields()
+
+        # получаем рендерер - свойства отображения слоя
+        renderer = getRendererByLayerName(NAME_LAYER_GLOBAL_BOUNDS)
+        layer.setRenderer(renderer)
+        del renderer
+        # Обновляем отображение слоя
+        layer.triggerRepaint()
+        # Проверяем валидность и добавляем слой в нашу верхнюю группу
+        if layer.isValid():
+            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
+            QgsProject.instance().addMapLayer(layer, False) # noqa
+            
+            # Вставляем слой на первое место внутри нашей новой группы
+            root_group.insertLayer(0, layer)
+            print("Новый слой успешно создан в памяти и добавлен наверх!")
+            return layer
+        else:
+            print("Не удалось создать новый слой.")
+
+    def DrawTocAreas(self):
+        """Отображает на карте area_A, area_b"""
+        # Проверить наличие открытого/активного сохранённого проекта
+        if not self._isExistsOpenProject():
             return
-        
-        # Is dbrev old?
+        project = QgsProject.instance()
+
+        # Is dbrev old? no areas, show warning
         if self.vdo.dbrev != 34:
             # Сообщение - что area a, b only in v.34
             self.iface.messageBar().pushMessage(
@@ -213,90 +277,22 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                     Qgis.Warning, 3)
             return
 
-        #
-        root_group_name = self.vdo.QGISvdoGroupName
-        # Access the main root of the QGIS layer tree
-        root = project.layerTreeRoot()
-        # If it doesn't exist, create it
-        if not (root_group := root.findGroup(root_group_name)):
-            root_group = root.insertGroup(0, root_group_name)
-
-        layer_name = NAME_LAYER_GLOBAL_BOUNDS
-        #  существует ли уже слой с таким именем в прямых потомках root группы
-        found = False
-        for child in root_group.children():
-            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
-            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
-                found = True
-                # Получаем сам объект слоя, он нужен для работы
-                layer = child.layer()
-                break
-        
-        if not found:
-            # Создаем сам слой
-
-            # Настраиваем параметры нового слоя в памяти (Memory Layer)
-            # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
-            # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
-            geometry_type = "Polygon?crs=EPSG:4326"
-            layer = QgsVectorLayer(geometry_type, layer_name, "memory")
-
-            # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
-            provider = layer.dataProvider()
-            provider.addAttributes([
-                QgsField("id", QMetaType.Type.Int),            # noqa 
-                QgsField("name", QMetaType.Type.QString),      # noqa
-                QgsField("value", QMetaType.Type.QString)      # noqa Double
-            ])
-
-            # Обновляем поля в слое после их добавления в провайдер
-            layer.updateFields()
-
-            # Настраиваем стиль (Символогию)
-            # Создаем дефолтный символ для полигона
-            symbol = QgsFillSymbol.createSimple({'name': 'square'})
-            
-            # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
-            # 128 в конце означает 50% прозрачности (0 - полностью прозрачный, 255 - сплошной)  # noqa
-            fill_color = QColor(34, 139, 34, 20)   # Лесной зеленый с 20% прозрачностью
-            symbol.setColor(fill_color)
-            
-            # НАСТРОЙКА ГРАНИЦЫ
-            symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0, 255))  # Черный цвет границы (сплошной) # noqa
-            symbol.symbolLayer(0).setStrokeWidth(0.6)                   # Толщина границы в миллиметрах  # noqa
-            # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
-            
-            # НАСТРОЙКА ОБЩЕЙ ПРОЗРАЧНОСТИ СЛОЯ (Альтернативный вариант от 0.0 до 1.0)
-            # symbol.setOpacity(0.7) # 70% непрозрачности для всего символа целиком
-            
-            # 4. Применяем настроенный символ к рендереру слоя
-            renderer = QgsSingleSymbolRenderer(symbol)
-            layer.setRenderer(renderer)
-            
-            # Обновляем отображение слоя
-            layer.triggerRepaint()
-
-            # 5. Проверяем валидность и добавляем слой в нашу верхнюю группу
-            if layer.isValid():
-                # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
-                QgsProject.instance().addMapLayer(layer, False) # noqa
-                
-                # Вставляем слой на первое место внутри нашей новой группы
-                root_group.insertLayer(0, layer)
-                print("Новый слой успешно создан в памяти и добавлен наверх!")
-            else:
-                print("Не удалось создать новый слой.")
+        # получаем корневой ТОС area layer в группе
+        layer = self._getRootAreaLayer()
 
         # hide all another vdo root groups but root_group_name
         self.iface.setActiveLayer(layer)
+        root = project.layerTreeRoot()
+        root_group = root.findGroup(self.vdo.QGISvdoGroupName)
         root_group.setItemVisibilityChecked(True)
+
         if Settings.HideNonActiveVdoEnabled():
-            # 1. Задаем регулярное выражение для поиска корневых vdo групп
+            # Задаем регулярное выражение для поиска корневых vdo групп
             pattern = r"_0x[0-9a-f]{4,}$"
             regex = re.compile(pattern, re.IGNORECASE)
             for child in project.layerTreeRoot().children():
                 if isinstance(child, QgsLayerTreeGroup):
-                    if child.name() != root_group_name:
+                    if child.name() != root_group.name():
                         # Проверяем имя группы через regexp
                         if regex.search(child.name()):
                             child.setItemVisibilityChecked(False)

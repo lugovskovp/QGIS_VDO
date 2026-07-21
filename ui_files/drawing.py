@@ -7,9 +7,12 @@
 #                        QgsSingleSymbolRenderer, QgsFillSymbol,
 #                        QgsPointXY, QgsRectangle, QgsGeometry, QgsFeature,
 #                        QgsLayerTreeGroup, QgsCoordinateTransform)
-from qgis.core import (Qgis, QgsVectorLayer,
-                       QgsPointXY, QgsRectangle, QgsGeometry, QgsFeature
-                       )
+from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle,
+                       QgsSingleSymbolRenderer, QgsFillSymbol, QgsFeature,
+                       QgsGeometry)
+from qgis.PyQt.QtGui import QColor
+
+from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS, NAME_LAYER_ALMANACS
 
 
 def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
@@ -62,3 +65,37 @@ def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
         print("Не удалось добавить объект на слой.")
 
     pass
+
+
+def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
+    """
+    свойства отображения слоя по наименованию слоя
+    фактически просто вынесенные отдельно библиотека
+    """
+    #
+    if layerName == NAME_LAYER_GLOBAL_BOUNDS:
+        # renderer для слоя глобальных границ
+        # Настраиваем стиль (Символогию) Создаем дефолтный символ для полигона
+        symbol = QgsFillSymbol.createSimple({'name': 'square'})
+        
+        # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
+        # 128 в конце означает 50% прозрачности (0 - полностью прозрачный, 255 - сплошной)  # noqa
+        fill_color = QColor(34, 139, 34, 20)   # Лесной зеленый с 20% прозрачностью
+        symbol.setColor(fill_color)
+        
+        # НАСТРОЙКА ГРАНИЦЫ
+        symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0, 255))  # Черный цвет границы (сплошной) # noqa
+        symbol.symbolLayer(0).setStrokeWidth(0.6)                   # Толщина границы в миллиметрах  # noqa
+        # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
+        
+        # НАСТРОЙКА ОБЩЕЙ ПРОЗРАЧНОСТИ СЛОЯ (Альтернативный вариант от 0.0 до 1.0)
+        # symbol.setOpacity(0.7) # 70% непрозрачности для всего символа целиком
+    elif layerName == NAME_LAYER_ALMANACS:
+        # слой альманах карт
+        symbol = 0
+    else:
+        raise ValueError(layerName, "неизвестно, _getRendererByName")
+
+    # Применяем настроенный символ к рендереру слоя
+    renderer = QgsSingleSymbolRenderer(symbol)
+    return renderer

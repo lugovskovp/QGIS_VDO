@@ -42,14 +42,14 @@ class block_0x08(block_base):
         self.qty_items_on_side = int(self.li_items.cnt ** 0.5)   # sqrt of overall qty
         self.area_side = self.item_side * self.qty_items_on_side
 
-    def items(self, start: COORD):
+    def items(self, start_lb: COORD):
         """
         Генератор
         Returns:
             (bladdr_fldr, point_lb, point_rt) Folders с координатами углов
         """
-        start_lb_x = start._hlon    # 0xa800  x = 1
-        start_lb_y = start._hlat    # 0xf5cd6500  y = 1
+        start_lb_x = start_lb._hlon    # 0xa800  x = 1
+        start_lb_y = start_lb._hlat    # 0xf5cd6500  y = 1
         for (bladdr_fldr, x, y) in self._get_raw_content():
             #
             lb_x = start_lb_x + x * self.item_side  # noqa 0xa800 + 1 * 0x14000000 = 0x1400a800

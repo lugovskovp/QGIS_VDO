@@ -69,6 +69,7 @@ class block_0x08(block_base):
         # "координаты" в квадрате ареа
         x = 0
         y = 0
+        finded_early = []
         for offset in range(self.li_items.ptr,
                             self.li_items.ptr + BLADDR.size * self.li_items.cnt,
                             BLADDR.size):
@@ -83,6 +84,12 @@ class block_0x08(block_base):
             if ffolder.isZero:
                 # пустые folders - значит информации нет
                 continue
+            
+            # а вообще бывают которые занимают 2 и/или 4 места?
+            if ffolder in finded_early:
+                raise ValueError(finded_early, finded_early)
+            finded_early.append(ffolder)
+
             yield res
 
 

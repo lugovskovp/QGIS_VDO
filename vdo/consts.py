@@ -44,4 +44,4 @@ LOOKUP_CHAR_BYTES = {'000': b'a',
 # Имена слоёв в интерфейсе
 NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"
 NAME_LAYER_ALMANACS = 'Almanac'
-NAME_LAYER_MAPS = ''
+NAME_LAYER_MAPS = 'Maps'

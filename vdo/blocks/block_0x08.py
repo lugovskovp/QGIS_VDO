@@ -19,7 +19,6 @@ block_0x08
 
 """
 
-# from QGIS_VDO.vdo.consts import struct_UINT  # struct_WORD  #
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR       # BYTESTRUCT
 from QGIS_VDO.vdo.geotypes import COORD, hex2COORD
@@ -32,7 +31,7 @@ OFFSET_FOLDER_SIZE = 0x0c
 class block_0x08(block_base):
     """
     0x08    LIST    li_folders  ptr_cnt на BLADDR | 0
-    0x0c    LIST    side    размер приращения _hlat на следующий folder
+    0x0c    DWORD    side    размер приращения _hlat на следующий folder
     0x10    [BLADDR] - массив на папки-индексы гео-блоков
     """
     def __init__(self, bl_addr: BLADDR) -> None:

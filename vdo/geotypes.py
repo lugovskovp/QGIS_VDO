@@ -111,10 +111,10 @@ class COORD(BYTESTRUCT):
     @property
     def _hlongtitude(self):
         """ value hlat"""
-        if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
-            hlon = self._hlat - 2 ** 32
+        if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
+            hlon = self._hlon - 2 ** 32
         else:
-            hlon = self._hlat
+            hlon = self._hlon
         return hlon
 
     def __repr__(self):

@@ -227,7 +227,7 @@ class block_0x07(block_base):
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
-    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl  # noqa
+    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
     from vdo.consts import struct_UINT        # noqa
     from vdo.blocks import block_0x12, block_0x09
 
@@ -235,6 +235,7 @@ if __name__ == '__main__':
     # vdo = vdo34ee
     # vdo = vdobmv
     # vdo = vdo34bnl
+    vdo = vdoRu
 
     bl_toc: block_0x12 = vdo.get_block(0)
     bl_scales: BLADDR = bl_toc.bladdr_scales
@@ -242,6 +243,7 @@ if __name__ == '__main__':
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
     scale_5 = block_07.scales[5]
+    scale_5 = block_07.scales[11]
     block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
 
     # block_08 content

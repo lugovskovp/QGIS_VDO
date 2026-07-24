@@ -9,14 +9,17 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle,
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtCore import Qt
 
-from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS, NAME_LAYER_ALMANACS)
+from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
+                                 NAME_LAYER_ALMANACS,
+                                 NAME_LAYER_MAPS)
 
 
 def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
     """
     Рисует прямоугольник в слое layer, в котором должен быть атрибут name.
     Args:
-        area (coord lb, coord rt)
+        area: aaraay of tylpes val coordf
+            [(lon, lat), (lon, lat)]
         area_name: str имя добавляемой area
         layer: QgsVectorLayer Qgis.GeometryType.Polygon:
     """
@@ -48,8 +51,14 @@ def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
         # print(f"ID: {feature.id()} | {feature.attribute('name')} | Данные: {feature.attributes()}")  # noqa
 
     # координаты точек
-    p_lb = QgsPointXY(area[0].lon, area[0].lat)
-    p_rt = QgsPointXY(area[1].lon, area[1].lat)
+    # TODO: временно
+
+    # p_lb = QgsPointXY(area[0].lon, area[0].lat)
+    # p_rt = QgsPointXY(area[1].lon, area[1].lat)
+    (la, lo) = area[0]
+    p_lb = QgsPointXY(lo, la)       # (X, Y) -> (Долгота (Lng) E/W, Широта (Lat) N/S)
+    (la, lo) = area[1]
+    p_rt = QgsPointXY(lo, la)
 
     # Создаем геометрию прямоугольника
     rect = QgsRectangle(p_lb, p_rt)
@@ -110,9 +119,22 @@ def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
         symbol.setColor(fill_color)
         # НАСТРОЙКА ГРАНИЦЫ
         symbol.symbolLayer(0).setStrokeColor(QColor(255, 129, 80, 255))  # Персиковый цвет границы (сплошной) # noqa
-        symbol.symbolLayer(0).setStrokeWidth(0.6)                   # Толщина границы в миллиметрах  # noqa
+        symbol.symbolLayer(0).setStrokeWidth(0.2)                   # Толщина границы в миллиметрах  # noqa
         # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
         symbol.symbolLayer(0).setStrokeStyle(Qt.DashLine)
+
+    elif layerName == NAME_LAYER_MAPS:
+        # слой карт - желтый
+        # Настраиваем стиль (Символогию) Создаем дефолтный символ для полигона
+        symbol = QgsFillSymbol.createSimple({'name': 'square'})
+        # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
+        fill_color = QColor(255, 229, 180, 40)   # Персиковый с 10% прозрачностью
+        symbol.setColor(fill_color)
+        # НАСТРОЙКА ГРАНИЦЫ
+        symbol.symbolLayer(0).setStrokeColor(QColor(255, 229, 180, 255))  # Персиковый цвет границы (сплошной) # noqa
+        symbol.symbolLayer(0).setStrokeWidth(0.4)                   # Толщина границы в миллиметрах  # noqa
+        # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
+        symbol.symbolLayer(0).setStrokeStyle(Qt.DotLine)
 
     else:
         raise ValueError(layerName, "неизвестный слой, _getRendererByName")

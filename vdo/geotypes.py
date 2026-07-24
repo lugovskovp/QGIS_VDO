@@ -81,23 +81,41 @@ class COORD(BYTESTRUCT):
     @property
     def lon(self):
         """ Longtitude, x, w|e"""
-        hlo = self._hlon
-        if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
-            hlo = self._hlon - 2 ** 32
-        res = (hlo / MULCOORD) - 30     # e/w
+        # hlo = self._hlon
+        # if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
+        #     hlo = self._hlon - 2 ** 32
+        res = (self._hlongtitude / MULCOORD) - 30     # e/w
         return res
 
     @property
     def lat(self):
         """Latitude, y, s|e"""
         # check sign
-        hla = self._hlat
+        # hla = self._hlat
+        # if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
+        #     hla = self._hlat - 2 ** 32
+        #     # self.hla = ctypes.c_int32(self._hlat).value
+        #     # self._hlat = 0 - (0xffffffff - self._hlat + 1)
+        res = self._hlatitude / MULCOORD            # n/s
+        return res
+
+    @property
+    def _hlatitude(self):
+        """ value hlat"""
         if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
             hla = self._hlat - 2 ** 32
-            # self.hla = ctypes.c_int32(self._hlat).value
-            # self._hlat = 0 - (0xffffffff - self._hlat + 1)
-        res = hla / MULCOORD            # n/s
-        return res
+        else:
+            hla = self._hlat
+        return hla
+    
+    @property
+    def _hlongtitude(self):
+        """ value hlat"""
+        if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
+            hlon = self._hlat - 2 ** 32
+        else:
+            hlon = self._hlat
+        return hlon
 
     def __repr__(self):
         ''' View while debug value'''

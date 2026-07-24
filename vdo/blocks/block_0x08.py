@@ -50,8 +50,8 @@ class block_0x08(block_base):
         self.delta_degree = self.item_side / MULCOORD    # приращение градусов
         self.origin = origin      # "начало" координат, left bottom
         # self.bound_max = max
-        self.qty_x = int((max._hlatitude - origin._hlatitude) / self.item_side)
-        self.qty_y = int((max._hlongtitude - origin._hlongtitude) / self.item_side)
+        self.qty_y = int((max._hlatitude - origin._hlatitude) / self.item_side)
+        self.qty_x = int((max._hlongtitude - origin._hlongtitude) / self.item_side)
         pass
 
     def get_items(self) -> tuple:
@@ -84,9 +84,11 @@ class block_0x08(block_base):
                     raise ValueError(finded_early, finded_early)
                 # ок, найден новый
                 # left bottom
-                lat0 = self.origin.lat + x * self.delta_degree  # N/S - x
-                lon0 = self.origin.lon + y * self.delta_degree  # E/W - y
+                lat0 = self.origin.lat + y * self.delta_degree  # Широта (Lat) N/S - y
+                lon0 = self.origin.lon + x * self.delta_degree  # Долгота (Lng) E/W - x
                 # right top
+                # if (lat1 := (lat0 + self.delta_degree)) > 85:
+                #     lat1 = 85
                 lat1 = lat0 + self.delta_degree
                 lon1 = lon0 + self.delta_degree
                 res = (bla_val, lat0, lon0, lat1, lon1)

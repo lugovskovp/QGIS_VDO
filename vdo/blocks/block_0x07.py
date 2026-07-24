@@ -234,33 +234,27 @@ if __name__ == '__main__':
     vdo = vdo30
     # vdo = vdo34ee
     # vdo = vdobmv
-    vdo = vdo34bnl
+    # vdo = vdo34bnl
 
     bl_toc: block_0x12 = vdo.get_block(0)
     bl_scales: BLADDR = bl_toc.bladdr_scales
 
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
-    scale_5 = block_07.scales[4]
-    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx)  # block_08
+    scale_5 = block_07.scales[5]
+    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
 
     # block_08 content
     print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
-    for f in block_almanac._get_raw_content():
+    bla_first = None
+    for f in block_almanac.get_items():
+        if not bla_first:
+            (bla_first, lat0, lon0, lat1, lon1) = f
+            lb_f = (lat0, lon0)
+            rt_f = (lat1, lon1)
         print(f)
         pass
-    
-    # block_08 content
-    print("block_08: block_0x09 : COORD(lb) : COORD(rt)")
-    bla_first = None
-    for (f, lb, rt) in block_almanac.items(scale_5.area[0]):
-        if not bla_first:
-            bla_first = f   # noqa 03cdcc01 09 0000 [09:FOLDER_MAPS] - qty 16 area 0x1400 0000 item(fromFile) 0x140 0000
-            lb_f = lb
-            rt_f = rt
-        print((f, lb, rt))
-        pass
-    
+
     # block_09 content
     print("block_09: geo_block_0xXX : x : y")
     bl_folder: block_0x09 = vdo.get_block(BLADDR(struct_UINT.pack(bla_first), vdo))

@@ -162,12 +162,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         
         # Получить альманах и отрисовать
         sc: SCALE = self.scales[idScale]
-        bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx)
-        for (bladdr_fldr_val, (lat0, lon0), (lat1, lon1)) in bl_almanac.items(sc.area[0]):  # noqa
+        bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
+        for (bladdr_fldr_val, lat0, lon0, lat1, lon1) in bl_almanac.get_items():  # noqa
             #             print(bladdr_fldr, point_lb, point_rt)
             # при отрисовке поле name уникальное - второй раз не отрисовывается
             area = [(lat0, lon0), (lat1, lon1)]  # noqa
             _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
+            # break
             if False:
                 bladdr_map: block_0x09
                 _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
@@ -175,7 +176,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             # bl_folder: block_0x09 = self.vdo.get_block(bladdr_fldr_val)
             # for (bladdr_map, point_lb, point_rt) in bl_folder.items(point_fldr_lb):
             #     # _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
-            #     pass
+            #     pass  (203.910287S 75.001364W, 86.000034N 214.908958E)
             pass
     
         print(NAME_LAYER_ALMANACS)

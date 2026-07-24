@@ -52,12 +52,17 @@ def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
 
     # координаты точек
     # TODO: временно
-
-    # p_lb = QgsPointXY(area[0].lon, area[0].lat)
-    # p_rt = QgsPointXY(area[1].lon, area[1].lat)
     (la, lo) = area[0]
-    p_lb = QgsPointXY(lo, la)       # (X, Y) -> (Долгота (Lng) E/W, Широта (Lat) N/S)
+    if la > 85:
+        la = 85
+    if la < -85:
+        la = -85
+    p_lb = QgsPointXY(lo, la)       # (X, Y) -> (Долгота (Long) E/W, Широта (Lat) N/S)
     (la, lo) = area[1]
+    if la > 85:
+        la = 85
+    if la < -85:
+        la = -85
     p_rt = QgsPointXY(lo, la)
 
     # Создаем геометрию прямоугольника

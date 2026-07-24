@@ -264,7 +264,7 @@ if __name__ == '__main__':
     print("block_09: geo_block_0xXX : x : y")
     bl_folder: block_0x09 = vdo.get_block(bla_first.offset)
 
-    print("block_08: block_0x09 : COORD(lb) : COORD(rt)")
+    print(f"block_08: block_0x09: 0x{bl_folder.head.bladdr.hex.replace(' ', '')} COORD(lb) : COORD(rt)")  # noqa
     for f in bl_folder._get_raw_content():
         print(f)
         pass
@@ -273,11 +273,12 @@ if __name__ == '__main__':
     for f in bl_folder.items(lb_f):     # 03cdcc01 09 0000 [09:FOLDER_MAPS]
         if not bl_map_first:
             (bl_map_first, lb_map, _) = f
-            print(f"map: {bl_map_first} lb_coord: {lb_map}")
+            print(f"map: {bl_map_first:X} lb_coord: {lb_map}")
         pass
     
     # map
-    bl_map = vdo.get_block(bl_map_first)
+    bladdr_first = BLADDR(struct_UINT.pack(bl_map_first), vdo)
+    bl_map = vdo.get_block(bladdr_first)
 
     print(f"infile map area: {bl_map.map}")
 

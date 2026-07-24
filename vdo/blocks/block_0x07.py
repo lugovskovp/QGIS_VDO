@@ -227,24 +227,25 @@ class block_0x07(block_base):
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
-    from vdo.test_vdo import vdo30, vdo34ee, vdobmv # noqa
+    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl  # noqa
     from vdo.consts import struct_UINT        # noqa
     from vdo.blocks import block_0x12, block_0x09
 
     vdo = vdo30
     # vdo = vdo34ee
     # vdo = vdobmv
+    vdo = vdo34bnl
 
     bl_toc: block_0x12 = vdo.get_block(0)
     bl_scales: BLADDR = bl_toc.bladdr_scales
 
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
-    scale_5 = block_07.scales[6]
+    scale_5 = block_07.scales[4]
     block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx)  # block_08
 
     # block_08 content
-    print("block_08: block_0x09 : x : y")
+    print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
     for f in block_almanac._get_raw_content():
         print(f)
         pass
@@ -262,7 +263,7 @@ if __name__ == '__main__':
     
     # block_09 content
     print("block_09: geo_block_0xXX : x : y")
-    bl_folder: block_0x09 = vdo.get_block(bla_first.offset)
+    bl_folder: block_0x09 = vdo.get_block(BLADDR(struct_UINT.pack(bla_first), vdo))
 
     print(f"block_08: block_0x09: 0x{bl_folder.head.bladdr.hex.replace(' ', '')} COORD(lb) : COORD(rt)")  # noqa
     for f in bl_folder._get_raw_content():

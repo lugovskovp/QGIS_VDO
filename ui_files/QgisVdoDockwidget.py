@@ -1,6 +1,6 @@
 """
 Основной dockedWidget
-
+feat: DrawAlmanacArea еще и maps при создании рисует
 """
 
 import os
@@ -15,9 +15,15 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeL
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
-from QGIS_VDO.vdo.blocks import block_0x12, block_0x13, block_0x07, block_0x08
+from QGIS_VDO.vdo.blocks import (block_0x12,
+                                 block_0x13,
+                                 block_0x07,
+                                 block_0x08,
+                                 block_0x09)
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
-from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS, NAME_LAYER_ALMANACS
+from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
+                                 NAME_LAYER_ALMANACS,
+                                 NAME_LAYER_MAPS)
 
 from QGIS_VDO.ui_files.drawing import _DrawArea, getRendererByLayerName
 
@@ -120,8 +126,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Areas from TOC block
         bl_toc: block_0x12 = self.vdo.get_block(0)
-        _DrawArea(bl_toc.area_B, "Area_B", layer)   # Area_A is bigger
-        _DrawArea(bl_toc.area_A, "Area_A", layer)
+        area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
+        _DrawArea(area, "Area_B", layer)   # Area_A is bigger
+        area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
+        _DrawArea(area, "Area_A", layer)
         
         # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
         # Получаем доступ к карте (холсту)
@@ -149,14 +157,25 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         # Получить слой для альманаха.abs
         layer = self._getLayer(idScale, NAME_LAYER_ALMANACS, 'Polygon')
+        # Получить слой для альманаха.abs
+        layer_maps = self._getLayer(idScale, NAME_LAYER_MAPS, 'Polygon')
         
-        # Получить
+        # Получить альманах и отрисовать
         sc: SCALE = self.scales[idScale]
         bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx)
-        for (bladdr_fldr, point_lb, point_rt) in bl_almanac.items(sc.area[0]):
-            #
-            print(bladdr_fldr, point_lb, point_rt)
-            _DrawArea([point_lb, point_rt], f"0x{bladdr_fldr}".replace(' ', ''), layer)
+        for (bladdr_fldr_val, (lat0, lon0), (lat1, lon1)) in bl_almanac.items(sc.area[0]):  # noqa
+            #             print(bladdr_fldr, point_lb, point_rt)
+            # при отрисовке поле name уникальное - второй раз не отрисовывается
+            area = [(lat0, lon0), (lat1, lon1)]  # noqa
+            _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
+            if False:
+                bladdr_map: block_0x09
+                _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
+            # и отрисовываем контуры блоков карт
+            # bl_folder: block_0x09 = self.vdo.get_block(bladdr_fldr_val)
+            # for (bladdr_map, point_lb, point_rt) in bl_folder.items(point_fldr_lb):
+            #     # _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
+            #     pass
             pass
     
         print(NAME_LAYER_ALMANACS)

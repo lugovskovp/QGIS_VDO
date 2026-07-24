@@ -6,7 +6,7 @@ FOLDER_MAPS = 0x09		# map folders 0x09.
 
 from QGIS_VDO.vdo.datatypes import BLADDR, PTR
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.geotypes import COORD, hex2COORD
+from QGIS_VDO.vdo.geotypes import COORD, MULCOORD   # , hex2COORD
 
 
 OFFSET_LIST_PTR = 0x08
@@ -30,60 +30,69 @@ class block_0x09(block_base):
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
         self.qty_items_on_side = int(self.li_items.cnt ** 0.5)   # sqrt of overall qty
         self.area_side = self.item_side * self.qty_items_on_side
+        self.atom_delta = self.item_side / MULCOORD    # приращение градусов
 
-    def items(self, start: COORD):
+    def items(self, origin: COORD):
         """
         Генератор, все валидные блоки с координатами
         Args:
-            start: COORD - left bottom area coord
+            origin: COORD - left bottom area coordinate
         Returns:
-            (bladdr_fldr, point_lb, point_rt) Folders с координатами углов
+            (bladdr_map_val, point_lb, point_rt) val bl_map с координатами углов
+                point_lb - left bottom (lon, lat)
+                point_rt right top (lon, lat)
         """
-        start_lb_x = start._hlon
-        start_lb_y = start._hlat
-        for (bladdr_geo, x, y) in self._get_raw_content():
-            #
-            lb_x = start_lb_x + x * self.item_side
-            lb_y = start_lb_y + y * self.item_side
-            rt_x = lb_x + self.item_side
-            rt_y = lb_y + self.item_side
-            point_lb = hex2COORD(lb_x, lb_y)
-            point_rt = hex2COORD(rt_x, rt_y)
-            yield (bladdr_geo, point_lb, point_rt)
+        # для ускорения, расчет координат не через COORD
+        origin_lon = origin.lon     # E/W -y
+        origin_lat = origin.lat     # N/S -x
+        for (bladdr_map_val, y_lb, x_lb, y_rt, x_rt) in self._get_raw_content():
+            lat_lb = origin_lat + x_lb * self.atom_delta
+            lon_lb = origin_lon + y_lb * self.atom_delta
+            lat_rt = origin_lat + x_rt * self.atom_delta
+            lon_rt = origin_lon + y_rt * self.atom_delta
+            point_lb = (lat_lb, lon_lb)
+            point_rt = (lat_rt, lon_rt)
+            yield (bladdr_map_val, point_lb, point_rt)
 
     def _get_raw_content(self):
         """
         Генератор содержимого
-
         Returns:
-            (bladdr_folder, y, x) - x, y - координаты в квадрате
+            (bladdr_map_val, x_lb, y_lb, x_tr, y_rt) -
+                bladdr_map_val: int value bladdr
+                x, y: int - координаты в альманахе
         """
-        # "координаты" в квадрате ареа
-        x = 0
-        y = 0
-        finded_early = []
-        for offset in range(self.li_items.ptr,
-                            self.li_items.ptr + PTR.size * self.li_items.cnt,
-                            PTR.size):
-            ptr_2geoblock = self.ushort(offset)   # : PTR = self.ptr(offset)
-            # а вот приращение идёт по вертикали, по y
-            if y >= self.qty_items_on_side:
-                # следующий столбец
-                y = 0
-                x += 1
-            curr_y = y
-            y += 1
-            if not ptr_2geoblock:
-                # пустые ptr - значит информации нет
-                continue
-            bladdr_geo = self.bladdr(self.read(ptr_2geoblock, BLADDR.size))
-
-            # а вообще бывают которые занимают 2 и/или 4 места?
-            if bladdr_geo in finded_early:
-                raise ValueError(finded_early, finded_early)
-            finded_early.append(bladdr_geo)
-
-            yield (bladdr_geo, x, curr_y)
-
+        finded_early = []        # ранее ptr уже был найден
+        atom_delta = PTR.size       # единица приращения
+        # "координаты" в квадрате альманаха
+        for x in range(self.qty_items_on_side):
+            for y in range(self.qty_items_on_side):
+                offset = self.li_items.ptr + atom_delta * (x + y * self.qty_items_on_side)  # noqa
+                ptr_val = self.ushort(offset)
+                if not ptr_val or ptr_val in finded_early:
+                    # следующий, если ptr == 0 или ранее был найден
+                    continue
+                # finded new ptr
+                finded_early.append(ptr_val)
+                size_X = 0
+                # calculate X side size
+                for i in range(x, self.qty_items_on_side):
+                    off_next = offset + atom_delta * size_X
+                    ptr_next_val = self.ushort(off_next)
+                    if ptr_next_val != ptr_val:
+                        break
+                    size_X += 1
+                # Calculate Y side size
+                size_Y = 0
+                for i in range(y, self.qty_items_on_side):
+                    off_next = offset + atom_delta * size_Y * self.qty_items_on_side
+                    ptr_next_val = self.ushort(off_next)
+                    if ptr_next_val != ptr_val:
+                        break
+                    size_Y += 1
+                # read bladdr_value
+                bladdr_map_val = self.uint(ptr_val)
+                res = (bladdr_map_val, y, x, y + size_Y, x + size_X)
+                yield res
 
 # All block tests in block_0x07

@@ -157,11 +157,13 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] block_0x07  SCALES
     * [x] block_0x08  ALMANSC
     * [x] block_0x09  FOLDER_MAPS
-    * [x] получение всего содержимого 08, 09 - с координатами
+    * [ ] получение всего содержимого 08, 09 - с координатами
     * [x] tab scales
     * [x] состояние groupButton scales - хранить в сеттингсах
     * [ ]        tab компоновка и наполение: scales, poi_cats, v34: страны, terr_div
-    * [ ] draw scale almanac
+    * [ ] debug push button - clear all vdo groups
+    * [ ] scroll area - how many folders in almanacs
+    * [x] draw scale almanac
     * [ ] draw folder maps
     * [ ] draw in child layer
     * [ ] при переключении (и инициализации?) scale - в соответствующую группу нарисовать альманахи/

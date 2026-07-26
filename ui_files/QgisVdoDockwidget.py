@@ -160,11 +160,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Получить слой для альманаха.abs
         layer_maps = self._getLayer(idScale, NAME_LAYER_MAPS, 'Polygon')
         
-        # Получить альманах и отрисовать
+        # Получить альманах и отрисовать содержимое - folder maps
         sc: SCALE = self.scales[idScale]
         bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
         for (bladdr_fldr_val, lat0, lon0, lat1, lon1) in bl_almanac.get_items():  # noqa
-            #             print(bladdr_fldr, point_lb, point_rt)
             # при отрисовке поле name уникальное - второй раз не отрисовывается
             area = [(lat0, lon0), (lat1, lon1)]  # noqa
             _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa

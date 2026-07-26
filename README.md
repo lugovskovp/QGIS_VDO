@@ -161,7 +161,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] tab scales
     * [x] состояние groupButton scales - хранить в сеттингсах
     * [ ]        tab компоновка и наполение: scales, poi_cats, v34: страны, terr_div
-    * [ ] debug push button - clear all vdo groups
+    * [x] debug push button - clear all vdo groups: + pb_DebugClearVDOevent
     * [ ] scroll area - how many folders in almanacs
     * [x] draw scale almanac
     * [ ] draw folder maps
@@ -210,6 +210,10 @@ c:/OSGeo4W/apps/Qt5/bin/designer.exe
 - ./i18n/QGIS_VDO.pro - файл проекта
 - ```pylupdate5 .\i18n\QGIS_VDO.pro```
 - c:\Tools\QtLinguist\bin\linguist.exe 
+
+или ```c:\Work\QGIS_VDO\.venv\Scripts\pylupdate5.exe c:\Work\QGIS_VDO\i18n\QGIS_VDO.pro ```
+<TS version="2.1">
+<TS version="2.1" language="ru_RU" sourcelanguage="en_US">
 
 
 

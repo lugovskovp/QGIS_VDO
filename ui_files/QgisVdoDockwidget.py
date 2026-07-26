@@ -80,6 +80,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         else:   # if self.vdo.path is not None:
             # TODO: vdo None -> make unactive groupbox?
             pass
+        # TODO: DEBUG привязать pb_DebugClearVDO
+        self.pb_DebugClearVDO.clicked.connect(self.pb_DebugClearVDOevent)
+
         pass    # def __init__(self, parent_plugin, iface, parent=None):
 
     def DrawTocAreas(self):
@@ -163,10 +166,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         # Получить альманах и отрисовать содержимое - folder maps
         sc: SCALE = self.scales[idScale]
         bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
+        qty_folders = 0
         for (bladdr_fldr_val, lat0, lon0, lat1, lon1) in bl_almanac.get_items():  # noqa
             # при отрисовке поле name уникальное - второй раз не отрисовывается
             area = [(lat0, lon0), (lat1, lon1)]  # noqa
             _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
+            qty_folders += 1
             # break
             if False:
                 bladdr_map: block_0x09
@@ -177,6 +182,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             #     # _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
             #     pass  (203.910287S 75.001364W, 86.000034N 214.908958E)
             pass
+        self.pb_LoadFolderMaps.setText(self.tr("Load {} fld".format(qty_folders)))
     
         print(NAME_LAYER_ALMANACS)
         pass
@@ -456,5 +462,16 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     def pbActionEvent(self, event):
         # action для кнопки
         pass
+
+    def pb_DebugClearVDOevent(self, event):
+        # TODO:DEBUG! Удаляет текущую группу VDO из слоёв проекта.
+        root = QgsProject.instance().layerTreeRoot()
+        group4del = self._getRootGroup()
+        for child in root.children():
+            # if child.nodeType() == 0 and child.name() == 'YourGroupName':
+            if child == group4del:
+                root.removeChildNode(group4del)     # remove child group
+                break
+        return
 
     # >>>>>>>>>>>>>> работа с эвентами

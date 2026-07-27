@@ -133,10 +133,10 @@ def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
         # Настраиваем стиль (Символогию) Создаем дефолтный символ для полигона
         symbol = QgsFillSymbol.createSimple({'name': 'square'})
         # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
-        fill_color = QColor(255, 229, 180, 40)   # Персиковый с 10% прозрачностью
+        fill_color = QColor(255, 229, 180, 80)   # Персиковый с 10% прозрачностью
         symbol.setColor(fill_color)
         # НАСТРОЙКА ГРАНИЦЫ
-        symbol.symbolLayer(0).setStrokeColor(QColor(255, 229, 180, 255))  # Персиковый цвет границы (сплошной) # noqa
+        symbol.symbolLayer(0).setStrokeColor(QColor(255, 229, 0, 255))  # Персиковый цвет границы (сплошной) # noqa
         symbol.symbolLayer(0).setStrokeWidth(0.4)                   # Толщина границы в миллиметрах  # noqa
         # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
         symbol.symbolLayer(0).setStrokeStyle(Qt.DotLine)

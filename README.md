@@ -157,14 +157,14 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] block_0x07  SCALES
     * [x] block_0x08  ALMANSC
     * [x] block_0x09  FOLDER_MAPS
-    * [ ] получение всего содержимого 08, 09 - с координатами
+    * [x] получение всего содержимого 08, 09 - с координатами
     * [x] tab scales
     * [x] состояние groupButton scales - хранить в сеттингсах
     * [ ]        tab компоновка и наполение: scales, poi_cats, v34: страны, terr_div
     * [x] debug push button - clear all vdo groups: + pb_DebugClearVDOevent
     * [x] scroll area - how many folders in almanacs
     * [x] draw scale almanac
-    * [ ] draw folder maps
+    * [x] draw folder maps
     * [ ] draw in child layer
     * [x] при переключении (и инициализации?) scale - в соответствующую группу нарисовать альманахи/
     * [x] при инициализации, если нет валидного scale, по-умолчанию - 5 (?) scale
@@ -174,6 +174,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 - [ ] tab block
     * [ ] 
+
 - [ ] отрисовка геообъектов
     * [ ] функция возвращения геообъекта - набора координат точек
     * [ ] архитектура представления геообъектов - по категориям
@@ -185,7 +186,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 * [x] запрет commit при наличии ошибок flake8
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
-*-* [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
+* [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
 * [ ] почистить bitstream? av_, v_, ??
 * [ ] Settings show RecentFiles
 * [ ] 

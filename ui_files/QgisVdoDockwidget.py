@@ -171,7 +171,6 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
             pass
         self.pb_LoadFolderMaps.setText(self.tr("Load {} fldrs".format(bl_almanac.items_cnt())))   # noqa
-        # print(NAME_LAYER_ALMANACS)
         pass
 
     # <<<<<<<<<<<<< функции инициализации вкладок

@@ -46,6 +46,7 @@ class block_0x08(block_base):
         """
         super().__init__(bl_addr)
 
+        # item - bladdr value map block
         self.li_items = self.list(OFFSET_LIST_FOLDEFS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
         
@@ -110,8 +111,8 @@ class block_0x08(block_base):
                 # right top
                 # if (lat1 := (lat0 + self.delta_degree)) > 85:
                 #     lat1 = 85
-                lat = lat + self.item_side
-                lon = lon + self.item_side
+                lat += self.item_side
+                lon += self.item_side
                 coord_rt = COORD(lon, lat)
 
                 res = (bla_val, coord_lb, coord_rt)

@@ -102,7 +102,7 @@ class VDO_FILE():
             return f.read(size)
         return None
 
-    def get_block(self, addr: int) -> object:
+    def get_block(self, addr: int, *args) -> object:
         """
         Возвращает блок по offset addr или из BLADDR adr
         Args:
@@ -141,7 +141,7 @@ class VDO_FILE():
             bl_class.type_name = 'block_base'
             pass
         #
-        bl_instance = bl_class(head.bladdr)
+        bl_instance = bl_class(head.bladdr, *args)
         return bl_instance
 
     def get_huffman_weights(self) -> dict:

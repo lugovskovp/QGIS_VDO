@@ -1,38 +1,53 @@
 """
-
-
+Основной dockedWidget
+feat: DrawAlmanacArea еще и maps при создании рисует
 """
 
 import os
 import re
 
 from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup
 from qgis.PyQt.QtCore import QMetaType
-from qgis.PyQt.QtGui import QColor
-from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField,
-                       QgsSingleSymbolRenderer, QgsFillSymbol,
+from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
-from QGIS_VDO.settings import Settings
+from QGIS_VDO.threading import FolderMapProcessingWorker
+from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
-from QGIS_VDO.vdo.consts import NAME_LAYER_GLOBAL_BOUNDS
-from QGIS_VDO.vdo.blocks import block_0x12, block_0x13
+from QGIS_VDO.vdo.blocks import (block_0x12,
+                                 block_0x13,
+                                 block_0x07,
+                                 block_0x08)
+from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
+from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
+                                 NAME_LAYER_ALMANACS,
+                                 NAME_LAYER_MAPS)
 
-from QGIS_VDO.ui_files.drawing import _DrawArea
+from QGIS_VDO.ui_files.drawing import _DrawArea, getRendererByLayerName
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'QgisVdoDockwidgetBase.ui'))
 
+# list groupbox collapsible - used for restore visibility
+listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
+           'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information',
+           'gb_CategoriesPOI'
+           ]
+RB_SCALE_OBJNAME_PREFIX = 'rb_scale_'
+SCALE_GROUP_NAME_PREFIX = 'Scale '
+QTY_ALL_SCALES = 12
+
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     """
-
+    Главный рабочий виджет для отображения выбранного carindb
     """
     vdo: VDO_FILE = None
     """current vdo file"""
-
+    
     def __init__(self, parent_plugin, iface, parent=None):
         """Constructor."""
         super(QgisVdoDockwidget, self).__init__(parent)
@@ -42,76 +57,69 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
         # widgets-and-dialogs-with-auto-connect
         self.iface = iface
-        
         self.setupUi(self)
 
         # Восстановить из настроек видимость groupBoxes
-        GB = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
-              'groupBox_i_label', 'groupBox_i_description', 'groupBox_i_information'
-              ]
-        for gb in GB:
-            ch = Settings.ShowGroupBoxEnabled(gb)
-            wi = self.findChild(AnimatedGroupBox, gb)
-            if wi is not None:
-                wi.toggle_state(ch)
-        
+        self._restoreGroupBoxVisibility()
+
         # vdo
         self.vdo = parent_plugin.vdo
-        #
         if self.vdo.path is not None:
-            # path above overall info
-            ap = self.vdo.path.split("/")
-            actionName = ap[-2] + ":::" + ap[-1]
-            self.groupBox_0veral.setTitle(actionName)
-            # overall info
-            self.l_vdo_dbrev_val.setText(f"0x{self.vdo.dbrev:02X} / {self.vdo.dbrev}")
-            self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
-            formatted = f"{self.vdo.file_size:,}".replace(',', ' ')
-            self.l_vdo_size_val.setText(f"0x{self.vdo.file_size:04X} / {formatted}")
-            self.l_vdo_path_val.setText(self.vdo.path)
-            # vdo info
-            bl_toc: block_0x12 = self.vdo.get_block(0)
-            bl_bibliogr: block_0x13 = self.vdo.get_block(bl_toc.bladdr_bibliogr)
-            # area_a-b only in rev34
-            if self.vdo.dbrev != 34:
-                self.groupBox_area_A.hide()
-                self.groupBox_area_B.hide()
-            else:
-                # инфо areas на панель
-                self.l_Alb_coord.setText(bl_toc.area_A[0].__repr__())
-                self.l_Art_coord.setText(bl_toc.area_A[1].__repr__())
-                self.l_Blb_coord.setText(bl_toc.area_B[0].__repr__())
-                self.l_Brt_coord.setText(bl_toc.area_B[1].__repr__())
-                # отрисовать
+            # >>> tab_info
+            self._initTabInfo()
 
-                pass
-            # bl_13
-            self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
-            self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)
-            self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
+            # >>> tab_addr
+
+            # >>> tab_topo
+            self._initTabTopo()
 
             # привязать pb_Action
             # self.pb_Action.clicked.connect(self.pbActionEvent)
-
             # ----------------------------------------------
             pass
         else:   # if self.vdo.path is not None:
             # TODO: vdo None -> make unactive groupbox?
             pass
-        pass
+        # TODO: DEBUG привязать pb_DebugClearVDO
+        self.pb_DebugClearVDO.clicked.connect(self.pb_DebugClearVDOevent)
+
+        pass    # def __init__(self, parent_plugin, iface, parent=None):
 
     def DrawTocAreas(self):
-        """Отображает на карте area_A, area_b"""
+        """
+        Отображает на карте area_A, area_b
+        Скрывает и сворачивает остальные toc группы
+        """
         # Проверить наличие открытого/активного сохранённого проекта
-        project = QgsProject.instance()
-        if not project.fileName():
-            # Сообщение - что надо, чтобы был открыт проект.
-            self.iface.messageBar().pushMessage(
-                    self.tr('Open/create any qgis project and reopen Carindb.'),   # noqa
-                    Qgis.Warning, 3)
+        if not self._isExistsOpenProject():
             return
-        
-        # Is dbrev old?
+        project = QgsProject.instance()
+
+        # получаем корневой ТОС area layer в группе
+        layer = self._getRootAreaLayer()
+
+        # hide all another vdo root groups but root_group_name
+        self.iface.setActiveLayer(layer)
+        root = project.layerTreeRoot()
+        root_group = root.findGroup(self.vdo.QGISvdoGroupName)
+        root_group.setItemVisibilityChecked(True)
+        root_group.setExpanded(True)  # False — свернуть, True — развернуть
+
+        # по значению настроек - скрываем все другие группы vdo
+        if Settings.HideNonActiveVdoEnabled():
+            # Задаем регулярное выражение для поиска корневых vdo групп
+            pattern = r"_0x[0-9a-f]{4,}$"
+            regex = re.compile(pattern, re.IGNORECASE)
+            for child in project.layerTreeRoot().children():
+                if isinstance(child, QgsLayerTreeGroup):
+                    if child.name() != root_group.name():
+                        # Проверяем имя группы через regexp
+                        if regex.search(child.name()):
+                            child.setItemVisibilityChecked(False)
+                            child.setExpanded(False)  # False — свернуть, True — развернуть # noqa
+            pass
+
+        # Is dbrev old? no areas, show warning
         if self.vdo.dbrev != 34:
             # Сообщение - что area a, b only in v.34
             self.iface.messageBar().pushMessage(
@@ -119,99 +127,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
                     Qgis.Warning, 3)
             return
 
-        #
-        root_group_name = self.vdo.QGISvdoGroupName
-        # Access the main root of the QGIS layer tree
-        root = project.layerTreeRoot()
-        # If it doesn't exist, create it
-        if not (root_group := root.findGroup(root_group_name)):
-            root_group = root.insertGroup(0, root_group_name)
-
-        layer_name = NAME_LAYER_GLOBAL_BOUNDS
-        #  существует ли уже слой с таким именем в прямых потомках root группы
-        found = False
-        for child in root_group.children():
-            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
-            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
-                found = True
-                # Получаем сам объект слоя, он нужен для работы
-                layer = child.layer()
-                break
-        
-        if not found:
-            # Создаем сам слой
-
-            # Настраиваем параметры нового слоя в памяти (Memory Layer)
-            # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
-            # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
-            geometry_type = "Polygon?crs=EPSG:4326"
-            layer = QgsVectorLayer(geometry_type, layer_name, "memory")
-
-            # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
-            provider = layer.dataProvider()
-            provider.addAttributes([
-                QgsField("id", QMetaType.Type.Int),            # noqa 
-                QgsField("name", QMetaType.Type.QString),      # noqa
-                QgsField("value", QMetaType.Type.QString)      # noqa Double
-            ])
-
-            # Обновляем поля в слое после их добавления в провайдер
-            layer.updateFields()
-
-            # Настраиваем стиль (Символогию)
-            # Создаем дефолтный символ для полигона
-            symbol = QgsFillSymbol.createSimple({'name': 'square'})
-            
-            # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
-            # 128 в конце означает 50% прозрачности (0 - полностью прозрачный, 255 - сплошной)  # noqa
-            fill_color = QColor(34, 139, 34, 20)   # Лесной зеленый с 20% прозрачностью
-            symbol.setColor(fill_color)
-            
-            # НАСТРОЙКА ГРАНИЦЫ
-            symbol.symbolLayer(0).setStrokeColor(QColor(0, 0, 0, 255))  # Черный цвет границы (сплошной) # noqa
-            symbol.symbolLayer(0).setStrokeWidth(0.6)                   # Толщина границы в миллиметрах  # noqa
-            # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
-            
-            # НАСТРОЙКА ОБЩЕЙ ПРОЗРАЧНОСТИ СЛОЯ (Альтернативный вариант от 0.0 до 1.0)
-            # symbol.setOpacity(0.7) # 70% непрозрачности для всего символа целиком
-            
-            # 4. Применяем настроенный символ к рендереру слоя
-            renderer = QgsSingleSymbolRenderer(symbol)
-            layer.setRenderer(renderer)
-            
-            # Обновляем отображение слоя
-            layer.triggerRepaint()
-
-            # 5. Проверяем валидность и добавляем слой в нашу верхнюю группу
-            if layer.isValid():
-                # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
-                QgsProject.instance().addMapLayer(layer, False) # noqa
-                
-                # Вставляем слой на первое место внутри нашей новой группы
-                root_group.insertLayer(0, layer)
-                print("Новый слой успешно создан в памяти и добавлен наверх!")
-            else:
-                print("Не удалось создать новый слой.")
-
-        # hide all another vdo root groups but root_group_name
-        self.iface.setActiveLayer(layer)
-        root_group.setItemVisibilityChecked(True)
-        if Settings.HideNonActiveVdoEnabled():
-            # 1. Задаем регулярное выражение для поиска корневых vdo групп
-            pattern = r"_0x[0-9a-f]{4,}$"
-            regex = re.compile(pattern, re.IGNORECASE)
-            for child in project.layerTreeRoot().children():
-                if isinstance(child, QgsLayerTreeGroup):
-                    if child.name() != root_group_name:
-                        # Проверяем имя группы через regexp
-                        if regex.search(child.name()):
-                            child.setItemVisibilityChecked(False)
-            pass
-
         # Areas from TOC block
         bl_toc: block_0x12 = self.vdo.get_block(0)
-        _DrawArea(bl_toc.area_B, "Area_B", layer)   # Area_A is bigger
-        _DrawArea(bl_toc.area_A, "Area_A", layer)
+        area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
+        _DrawArea(area, "Area_B", layer)   # Area_A is bigger
+        area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
+        _DrawArea(area, "Area_A", layer)
         
         # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
         # Получаем доступ к карте (холсту)
@@ -228,6 +149,386 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         canvas.refresh()
         pass
 
+    def DrawAlmanacArea(self, idScale: int) -> None:
+        """
+        Добавляет слой Almanac, если не было его ранее
+        отрисовывает валидные альманахи
+        """
+        # Проверить наличие открытого/активного сохранённого проекта
+        if not self._isExistsOpenProject():
+            return
+
+        # Получить слой для альманаха
+        layer = self._getLayer(idScale, NAME_LAYER_ALMANACS, 'Polygon')
+        
+        # Получить альманах и отрисовать содержимое - folder maps
+        sc: SCALE = self.scales[idScale]
+        bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
+        for (bladdr_fldr_val, coord_lb, coord_rt) in bl_almanac.get_items():  # noqa
+            # при отрисовке поле name уникальное - второй раз не отрисовывается
+            area = [(coord_lb.lat, coord_lb.lon),
+                    (coord_rt.lat, coord_rt.lon)]  # noqa
+            _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
+            pass
+        self.pb_LoadFolderMaps.setText(self.tr("Load {} fldrs".format(bl_almanac.items_cnt())))   # noqa
+        pass
+
+    # <<<<<<<<<<<<< функции инициализации вкладок
+           
+    def _initTabInfo(self) -> None:
+        """
+        Инициализация вкладки Info
+        """
+        # path above overall info
+        ap = self.vdo.path.split("/")
+        actionName = ap[-2] + ":::" + ap[-1]
+        del ap
+        self.groupBox_0veral.setTitle(actionName)
+        # overall info
+        self.l_vdo_dbrev_val.setText(f"0x{self.vdo.dbrev:02X} / {self.vdo.dbrev}")
+        self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
+        formatted = f"{self.vdo.file_size:,}".replace(',', ' ')
+        self.l_vdo_size_val.setText(f"0x{self.vdo.file_size:04X} / {formatted}")
+        self.l_vdo_path_val.setText(self.vdo.path)
+        del formatted
+        # vdo info
+        bl_toc: block_0x12 = self.vdo.get_block(0)
+        bl_bibliogr: block_0x13 = self.vdo.get_block(bl_toc.bladdr_bibliogr)
+        bl_scales: block_0x07 = self.vdo.get_block(bl_toc.bladdr_scales)
+        self.scales = bl_scales.scales
+        # area_a-b only in rev34
+        if self.vdo.dbrev != 34:
+            self.groupBox_area_A.hide()
+            self.groupBox_area_B.hide()
+        else:
+            # инфо areas на панель
+            self.l_Alb_coord.setText(bl_toc.area_A[0].__repr__())
+            self.l_Art_coord.setText(bl_toc.area_A[1].__repr__())
+            self.l_Blb_coord.setText(bl_toc.area_B[0].__repr__())
+            self.l_Brt_coord.setText(bl_toc.area_B[1].__repr__())
+            pass
+        # bl_13
+        self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
+        self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)
+        self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
+
+    def _initTabTopo(self) -> None:
+        """
+        Инициализация вкладки Topo
+        Собрать scale radioButtons в QButtonGroup
+        (к моменту вызова _restoreScale список масштабов уже есть)
+        """
+        # Восстановить из настроек ранее установленный scale
+        checkScale = Settings.ChousedScale()
+        if self.scales[checkScale].isEmpty:
+            checkScale = DEFAULT_SCALE
+        if self.scales[checkScale].isEmpty:
+            for i in range(QTY_ALL_SCALES):
+                if not self.scales[i].isEmpty:
+                    checkScale = i
+                    break
+        # root group - vdo
+        root = self._getRootGroup()
+        # Создаем ОБЩУЮ группу для всех радиокнопок масштабов
+        self.button_group_scale = QButtonGroup(self)
+        # добавляем в группу все кнопки rb_scale_[0..11]
+        for id in range(QTY_ALL_SCALES):
+            rb_name = RB_SCALE_OBJNAME_PREFIX + str(id)
+            rb = self.tabWidget.findChild(QRadioButton, rb_name)
+            # Изменить подпись: номер scale, value_a, масштаб от и до
+            sc: SCALE = self.scales[id]
+            rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
+            # Установить enabled|disabled
+            rb.setEnabled(not sc.isEmpty)
+            # параллельно с rb создаём группы масштабов для отображения.
+            if not sc.isEmpty:
+                gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
+                if not (root.findGroup(gr_name)):
+                    root.insertGroup(-2, gr_name)
+            # добавляем в группу rb
+            self.button_group_scale.addButton(rb, id)
+            pass
+
+        # Connect the change signal button_group_scale
+        self.button_group_scale.buttonClicked.connect(self.on_rb_scale_changed)
+
+        # Progress bar
+        self.progressBarFolderMaps.setValue(0)
+        self.pb_LoadFolderMaps.clicked.connect(self.start_loading_folders)
+
+        # set from settings
+        self._setScale(checkScale)
+
+        pass
+        
+    # >>>>>>>>>>> функции инициализации вкладок
+
+    def _setScale(self, idScale: int) -> None:
+        """
+        Установить, как checked scale
+        Attention! NOT checked enabled!!!
+        """
+        button = self.button_group_scale.button(idScale)
+        button.setChecked(True)
+        self.on_rb_scale_changed(button)
+
+    def _isExistsOpenProject(self) -> bool:
+        """
+        Проверить наличие открытого/активного сохранённого проекта
+        """
+        project = QgsProject.instance()
+        if not project.fileName():
+            # Сообщение - что надо, чтобы был открыт проект.
+            self.iface.messageBar().pushMessage(
+                    self.tr('Open/create any qgis project and reopen Carindb.'),   # noqa
+                    Qgis.Warning, 3)
+            return False
+        return True
+
+    def _getRootGroup(self) -> QgsLayerTreeGroup:
+        """
+        Возвращает QgsLayerTreeGroup текущего файла vdo
+        """
+        # Access the main root of the QGIS layer tree
+        root = QgsProject.instance().layerTreeRoot()
+        # If root_group_name doesn't exist, create it
+        if not (root_group := root.findGroup(self.vdo.QGISvdoGroupName)):
+            root_group = root.insertGroup(0, self.vdo.QGISvdoGroupName)
+        return root_group
+
+    def _getLayer(self, scaleId: int, layerName: str, layerType: str) -> QgsVectorLayer:
+        """
+        Находит или создаёт слой с именем layerName в scale scaleId
+        Args:
+            scaleId: int - номер scale [0..11]
+            layerName: str наименование слоя
+            layerType: str Тип геометрии [Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon]  # noqa
+        Returns:
+            layer: QgsVectorLayer
+        """
+        # группа /root_group/scale_X
+        gr_name = SCALE_GROUP_NAME_PREFIX + str(scaleId)
+        if not (scaleGroup := self._getRootGroup().findGroup(gr_name)):
+            # какого хера то?
+            raise ValueError(f"Нет группы {gr_name}")
+        del gr_name
+        # В группе ищем слой
+        for child in scaleGroup.children():
+            # Проверяем, что дочерний элемент — это слой и его имя совпадает
+            if isinstance(child, QgsLayerTreeLayer) and child.name() == layerName:
+                layer = child.layer()
+                # Убеждаемся, что это векторный слой
+                if isinstance(layer, QgsVectorLayer):
+                    return layer
+                else:
+                    raise ValueError(f"Что не так с {layer.name()}")
+
+        # <<< Слой не найден. Создаём новый.
+        # для начала самое время проверить валидность типа
+        if layerType not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
+                             'MultiLineString', 'MultiPolygon']:
+            raise ValueError(f"Тип геометрии слоя {layerType} вне валидных ['Point', 'LineString', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon']")  # noqa
+        # Настраиваем параметры нового слоя в памяти (Memory Layer)
+        layer = QgsVectorLayer(f"{layerType}?crs=EPSG:4326", layerName, "memory")
+
+        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
+        provider = layer.dataProvider()
+        provider.addAttributes([
+            # QgsField("id", QMetaType.Type.Int),            # noqa 
+            QgsField("name", QMetaType.Type.QString)      # noqa
+            # QgsField("value", QMetaType.Type.QString)      # noqa Double
+        ])
+        # Обновляем поля в слое после их добавления в провайдер
+        layer.updateFields()
+
+        # получаем рендерер - свойства отображения слоя
+        renderer = getRendererByLayerName(layerName)
+        layer.setRenderer(renderer)
+        del renderer
+        # Обновляем отображение слоя
+        layer.triggerRepaint()
+        # Проверяем валидность и добавляем слой в нашу верхнюю группу
+        if layer.isValid():
+            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
+            QgsProject.instance().addMapLayer(layer, False) # noqa
+            # Вставляем слой на последнее место внутри нашей новой группы
+            scaleGroup.insertLayer(0, layer)
+            # print("Новый слой успешно создан в памяти и добавлен наверх!")
+            return layer
+        else:
+            print("Не удалось создать новый слой.")
+            pass
+
+    def _getRootAreaLayer(self) -> QgsVectorLayer:
+        """
+        возвращает слой NAME_LAYER_GLOBAL_BOUNDS в корневой рабочей группе
+        """
+        layer_name = NAME_LAYER_GLOBAL_BOUNDS
+        root_group = self._getRootGroup()
+        #  существует ли уже слой с таким именем в прямых потомках root группы
+        for child in root_group.children():
+            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
+            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
+                # Получаем сам объект слоя, он нужен для работы
+                layer = child.layer()
+                return layer
+
+        # нет, слой с таким именем не найден - создаём его в root
+        # Настраиваем параметры нового слоя в памяти (Memory Layer)
+        # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
+        # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
+        geometry_type = "Polygon?crs=EPSG:4326"
+        layer = QgsVectorLayer(geometry_type, layer_name, "memory")
+        del geometry_type
+
+        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
+        provider = layer.dataProvider()
+        # provider.addAttributes([
+        #     # QgsField("id", QMetaType.Type.Int),            # noqa 
+        #     QgsField("name", QMetaType.Type.QString)      # noqa
+        #     # QgsField("value", QMetaType.Type.QString)      # noqa Double
+        # ])
+        provider.addAttributes([QgsField("name", QMetaType.Type.QString)])
+        # Обновляем поля в слое после их добавления в провайдер
+        layer.updateFields()
+
+        # получаем рендерер - свойства отображения слоя
+        renderer = getRendererByLayerName(NAME_LAYER_GLOBAL_BOUNDS)
+        layer.setRenderer(renderer)
+        del renderer
+        # Обновляем отображение слоя
+        layer.triggerRepaint()
+        # Проверяем валидность и добавляем слой в нашу верхнюю группу
+        if layer.isValid():
+            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
+            QgsProject.instance().addMapLayer(layer, False) # noqa
+            
+            # Вставляем слой на последнее место внутри нашей новой группы
+            root_group.insertLayer(-1, layer)
+            # print("Новый слой успешно создан в памяти и добавлен наверх!")
+            return layer
+        else:
+            print("Не удалось создать новый слой.")
+            pass
+
+    def _restoreGroupBoxVisibility(self) -> None:
+        """
+        Восстанавливает ранее сохранённые настройки
+        свёрнутых/развёрнутых groupBoxCollapsible
+        """
+        for gb in listGBC:
+            state = Settings.ShowGroupBoxEnabled(gb)
+            widget = self.findChild(AnimatedGroupBox, gb)
+            if widget is not None:
+                widget.toggle_state(state)
+
+    # <<<<<<<<<< работа с эвентами
+
+    #
+    def start_loading_folders(self):
+        """
+        Load folders with maps on tabTopo
+        """
+        # Блокируем кнопку от повторного нажатия
+        self.pb_LoadFolderMaps.setEnabled(False)
+        
+        # Список для хранения кнопок, которые УЖЕ БЫЛИ отключены
+        self.disabled_buttons = []
+        # Блокируем группу, запоминая изначально выключенные кнопки
+        for button in self.button_group_scale.buttons():
+            if not button.isEnabled():
+                # Если кнопка уже была disabled, запоминаем её
+                self.disabled_buttons.append(button)
+            else:
+                # Если кнопка была активна — выключаем её на время загрузки
+                button.setEnabled(False)
+
+        self.progressBarFolderMaps.setValue(0)
+
+        # $ TODO Проверка, что карты уже отрисованы
+
+        # Получить альманах
+        sc: SCALE = self.scales[self.currentIdScale]
+        almanac_block: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
+        
+        # Делаем слой активным в интерфейсе
+        self.iface.setActiveLayer(self.layer_maps)
+
+        # Инициализируем поток, передав ему параметры папки
+        self.thread = FolderMapProcessingWorker(almanac_block)   # noqa
+
+        # СВЯЗЫВАЕМ СИГНАЛЫ С РЕАЛЬНОЙ ЛОГИКОЙ ДОК-ВИДЖЕТА
+        self.thread.count_signal.connect(self._set_progress_max)
+        self.thread.progress_signal.connect(self._update_gui_with_result)
+        self.thread.safe_drawing_map_signal.connect(self._safe_drawing_map)
+        self.thread.finished.connect(self.on_finished_loading_folders)
+        self.thread.start()
+
+    # РЕАЛЬНАЯ ЛОГИКА ОБРАБОТКИ КАЖДОЙ ПАПКИ КАРТ
+    def _safe_drawing_map(self, lat0: float, lon0: float,
+                          lat1: float, lon1: float,
+                          bl_map_val: int):
+        """
+        Потокобезопасная отрисовка контуров карт
+        """
+        # # Получить слой для folder maps
+        # layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')
+
+        point_lb = (lat0, lon0)
+        point_rt = (lat1, lon1)
+        _DrawArea([point_lb, point_rt], f"0x{bl_map_val:X}", self.layer_maps)  # noqa
+
+    def _update_gui_with_result(self, percent, block_folder_value):
+        # Обновляем прогресс-бар
+        self.progressBarFolderMaps.setValue(percent)
+
+        # Например: добавление в QListWidget, отрисовка слоя, парсинг метаданных и т.д.   # noqa
+        print(f"Док-виджет обрабатывает карту: {block_folder_value}")
+
+    def _set_progress_max(self, total_count):
+        if total_count == 0:
+            self.progressBarFolderMaps.setMaximum(100)
+        else:
+            self.progressBarFolderMaps.setMaximum(total_count)
+
+    def on_finished_loading_folders(self):
+        """
+        Finish Loading folders with maps on tabTopo
+        """
+        self.pb_LoadFolderMaps.setEnabled(True)
+        # Восстанавливаем состояние кнопок
+        for button in self.button_group_scale.buttons():
+            # Если кнопка есть в списке изначально отключенных — оставляем её disabled
+            if button in self.disabled_buttons:
+                button.setEnabled(False)
+            else:
+                # Все остальные кнопки делаем снова активными
+                button.setEnabled(True)
+
+    def on_rb_scale_changed(self, button) -> None:
+        """
+        Triggered when any radio button in the group scale is clicked/changed
+        """
+        self.currentIdScale = self.button_group_scale.id(button)
+        # сохраняем номер масштаба в settings
+        Settings.setChousedScale(self.currentIdScale)
+        # Получить слой для folder maps
+        self.layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')  # noqa
+        # отрисовать area альманаха
+        self.DrawAlmanacArea(self.currentIdScale)
+
+        # Отключить видимость для всех групп iface
+        # root group - vdo
+        root_gr = self._getRootGroup()
+        for id in range(QTY_ALL_SCALES):
+            gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
+            if gr := root_gr.findGroup(gr_name):
+                gr.setItemVisibilityChecked(id == self.currentIdScale)
+                
+        # TODO: del?
+        #  что то делаем
+        # print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
+
     def closeEvent(self, event):
         # self.closingPlugin.emit()
         # event.accept()
@@ -236,3 +537,16 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
     def pbActionEvent(self, event):
         # action для кнопки
         pass
+
+    def pb_DebugClearVDOevent(self, event):
+        # TODO:DEBUG only! Удаляет текущую группу VDO из слоёв проекта.
+        root = QgsProject.instance().layerTreeRoot()
+        group4del = self._getRootGroup()
+        for child in root.children():
+            # if child.nodeType() == 0 and child.name() == 'YourGroupName':
+            if child == group4del:
+                root.removeChildNode(group4del)     # remove child group
+                break
+        return
+
+    # >>>>>>>>>>>>>> работа с эвентами

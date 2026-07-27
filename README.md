@@ -158,14 +158,23 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] block_0x08  ALMANSC
     * [x] block_0x09  FOLDER_MAPS
     * [x] получение всего содержимого 08, 09 - с координатами
-    * [ ] tab groupButton scales
-    * [ ] tab 
-    * [ ] draw scale almanac
-    * [ ] draw folder maps
+    * [x] tab scales
+    * [x] состояние groupButton scales - хранить в сеттингсах
+    * [ ]        tab компоновка и наполение: scales, poi_cats, v34: страны, terr_div
+    * [x] debug push button - clear all vdo groups: + pb_DebugClearVDOevent
+    * [x] scroll area - how many folders in almanacs
+    * [x] draw scale almanac
+    * [x] draw folder maps
     * [ ] draw in child layer
-    * [ ] 
+    * [x] при переключении (и инициализации?) scale - в соответствующую группу нарисовать альманахи/
+    * [x] при инициализации, если нет валидного scale, по-умолчанию - 5 (?) scale
+    * [ ] listWidget POI Categories
+    * [ ] listWidget Countries
+
+
 - [ ] tab block
     * [ ] 
+
 - [ ] отрисовка геообъектов
     * [ ] функция возвращения геообъекта - набора координат точек
     * [ ] архитектура представления геообъектов - по категориям
@@ -177,7 +186,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 * [x] запрет commit при наличии ошибок flake8
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
-
+* [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
 * [ ] почистить bitstream? av_, v_, ??
 * [ ] Settings show RecentFiles
 * [ ] 
@@ -204,6 +213,10 @@ c:/OSGeo4W/apps/Qt5/bin/designer.exe
 - ./i18n/QGIS_VDO.pro - файл проекта
 - ```pylupdate5 .\i18n\QGIS_VDO.pro```
 - c:\Tools\QtLinguist\bin\linguist.exe 
+
+или ```c:\Work\QGIS_VDO\.venv\Scripts\pylupdate5.exe c:\Work\QGIS_VDO\i18n\QGIS_VDO.pro ```
+<TS version="2.1">
+<TS version="2.1" language="ru_RU" sourcelanguage="en_US">
 
 
 

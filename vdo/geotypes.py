@@ -17,10 +17,10 @@ import ctypes
 import re
 import struct
 
-from .datatypes import BYTESTRUCT, FAR_LIST
-from .datatypes import DOUBLE_BYTES_CNT
-from .consts import struct_UINT     # , USHORT_TWICE_struct
-from .enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT
+from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST
+from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
+from QGIS_VDO.vdo.consts import struct_UINT     # , USHORT_TWICE_struct
+from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
 GEO_CATEGORY_struct = struct.Struct(">bbHxbH")
@@ -48,56 +48,104 @@ class COORD(BYTESTRUCT):
     """ coordinates, 2 dwords: lon lat """
     #_lon: float         # double lon = ((1.0f * hlon )/ MULCOORD) - 30.0;
     #_lat: float         # double lat = 1.0f * hlat / MULCOORD;
-    _hlon: int
-    _hlat: int
+    """
+    self._hlon = struct_UINT.unpack(self._raw[:4])[0]
+    # self.hlo = ctypes.c_int32(self._hlon).value
+    self._hlat = struct_UINT.unpack(self._raw[4:8])[0]
+    # self.hla = ctypes.c_int32(self._hlat).value
+    if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit =1 -> minus val.
+    # self.hlo = ctypes.c_int32(self._hlon).value
+    self._hlon = 0 - (0xffffffff - self._hlon + 1)
+    """
+    # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
+    # MULCOORD = 0x54C563 # dec 5555554;
+    # *90 = 2FAF07B0, *180 = 5F5E0F60,  *180=BEBC1EC0
+    # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
+    # 5555554 / 111362м = 49,88734038540974 - в одном метре
+    _hlon: int      # значение dword unsigned lng числовое
+    _hlat: int      # значение dword unsigned lat числовое
        
     size: int = DOUBLE_BYTES_CNT     # 2*DWORD: lon lat
 
-    def __init__(self, buffer: bytearray) -> None:
-        """ Инициализируется или bytearray, или TODO: парой float """
+    def __init__(self, lo: bytearray | int | float, la: int | float = None) -> None:
+        """ Координаты
+        Долгота (Lng) E/W - x - lo
+        Широта (Lat) N/S - y - la
 
+        Args:
+            a. lo: bytes[8], la: None - координаты, как в vdo
+            b. lo: int, la: int - координаты hlo-hla
+            c. lo: float, la: float - координаты в градусах
+        """
         # === bytearray
-        super().__init__(buffer[:DOUBLE_BYTES_CNT])   # 8 - self.size
-        """
-        self._hlon = struct_UINT.unpack(self._raw[:4])[0]
-        # self.hlo = ctypes.c_int32(self._hlon).value
-        self._hlat = struct_UINT.unpack(self._raw[4:8])[0]
-        # self.hla = ctypes.c_int32(self._hlat).value
-        if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit =1 -> minus val.
-            # self.hlo = ctypes.c_int32(self._hlon).value
-            self._hlon = 0 - (0xffffffff - self._hlon + 1)
+        if not la:
+            super().__init__(lo[:DOUBLE_BYTES_CNT])   # 8 - self.size
+            # _hlon, _hlat - unsigned value
+            self._hlon = ctypes.c_uint32(struct_UINT.unpack(self._raw[:4])[0]).value   # noqa x we
+            self._hlat = ctypes.c_uint32(struct_UINT.unpack(self._raw[4:8])[0]).value  # noqa y sn
+            return
 
-        """
-        self._hlon = ctypes.c_uint32(struct_UINT.unpack(self._raw[:4])[0]).value   # noqa x we
-        self._hlat = ctypes.c_uint32(struct_UINT.unpack(self._raw[4:8])[0]).value  # noqa y sn
+        # аргументы - hlon hlat
+        elif isinstance(lo, int) and isinstance(la, int):
+            # to unsigned dword
+            self._hlon = ctypes.c_uint32(lo).value
+            self._hlat = ctypes.c_uint32(la).value
+            # to bytes
+            coo_bytes = (struct_UINT.pack(self._hlon)
+                         + struct_UINT.pack(self._hlat))
+            super().__init__(coo_bytes[:DOUBLE_BYTES_CNT])   # 8 - self.size
+            return
 
-        return
-        # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
-        # MULCOORD = 0x54C563 # dec 5555554;
-        # *90 = 2FAF07B0, *180 = 5F5E0F60,  *180=BEBC1EC0
-        # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
-        # 5555554 / 111362м = 49,88734038540974 - в одном метре
+        # аргументы - lon hla
+        elif isinstance(lo, float) and isinstance(la, float):
+            #
+            hlongtitude = int((30 + lo) * MULCOORD)
+            hlatitude = int(la * MULCOORD)
+            self.__init__(hlongtitude, hlatitude)
+            return
+
+        else:
+            # и шо ета было?
+            raise ValueError(lo, la)
 
     @property
-    def lon(self):
+    def lon(self) -> float:
         """ Longtitude, x, w|e"""
-        hlo = self._hlon
-        if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
-            hlo = self._hlon - 2 ** 32
-        res = (hlo / MULCOORD) - 30     # e/w
+        # hlo = self._hlon
+        # if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
+        #     hlo = self._hlon - 2 ** 32
+        res = (self._hlongtitude / MULCOORD) - 30     # e/w
         return res
 
     @property
-    def lat(self):
+    def lat(self) -> float:
         """Latitude, y, s|e"""
         # check sign
-        hla = self._hlat
+        # hla = self._hlat
+        # if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
+        #     hla = self._hlat - 2 ** 32
+        #     # self.hla = ctypes.c_int32(self._hlat).value
+        #     # self._hlat = 0 - (0xffffffff - self._hlat + 1)
+        res = self._hlatitude / MULCOORD            # n/s
+        return res
+
+    @property
+    def _hlatitude(self) -> int:
+        """ value signed hlat"""
         if MOST_SIGNIFICANT_BIT & self._hlat:     # hi bit == 1 -> minus val.
             hla = self._hlat - 2 ** 32
-            # self.hla = ctypes.c_int32(self._hlat).value
-            # self._hlat = 0 - (0xffffffff - self._hlat + 1)
-        res = hla / MULCOORD            # n/s
-        return res
+        else:
+            hla = self._hlat
+        return hla
+    
+    @property
+    def _hlongtitude(self) -> int:
+        """ value signed hlat"""
+        if MOST_SIGNIFICANT_BIT & self._hlon:     # hi bit == 1 -> minus val.
+            hlon = self._hlon - 2 ** 32
+        else:
+            hlon = self._hlon
+        return hlon
 
     def __repr__(self):
         ''' View while debug value'''
@@ -527,15 +575,27 @@ def normLatLng(n_latitude: float, e_longtude: float):
 if __name__ == '__main__':
 
     #
-    a1 = b'\x06\xe6y\xaa\x0b\xb1\xde\x1f'
-    a2 = b'\nlvM\x10_\xf3\xf9'
-    a3 = b'(\xc7\xb2\xb8\x17)\x94p'
-    a4 = b'\x0cS\xbd\xcb\x11\xb7\x02='
+    sa1 = b'\x06\xe6y\xaa\x0b\xb1\xde\x1f'
+    sa2 = b'\nlvM\x10_\xf3\xf9'
+    sa3 = b'\xf1\x190\x00\xbczP\x00'
+    sa4 = b'Q\x190\x00\x1czP\x00'
 
-    c1 = COORD(a1)  # 35.317104N 9.161808W
-    c2 = COORD(a2)  # 49.450295N 1.478463E
-    c3 = COORD(a3)  # 69.948177N 93.151702E
-    c4 = COORD(a4)  # 53.497145N 7.226644E
+    c1 = COORD(sa1)  # 35.317104N 9.161808W
+    c2 = COORD(sa2)  # 49.450295N 1.478463E
+    c3 = COORD(sa3)  # 203.910287S 75.001364W
+    c4 = COORD(sa4)  # 86.000034N 214.908958E
+
+    coo1 = COORD(115767722, 196206111)
+
+    # 203.910287S 75.001364W    b'\xf1\x190\x00\xbczP\x00'
+    coo2longtitude = COORD(-250007552, -1132834816)
+    coo2hlon = COORD(4044959744, 3162132480)
+    eq2True = coo2hlon == coo2longtitude
+    # lat -203.91028727102872 lon -75.0013638601364
+    coo2degree = COORD(-75.0013638601364, -203.91028727102872)
+    eq2tooTrue = coo2hlon == coo2degree
+
+    # b'\x06\xe6y\xaa\x0b\xb1\xde\x1f'
 
     # import ctypes
     # dword_val = ctypes.c_int32(0xFFFFFFFF).value

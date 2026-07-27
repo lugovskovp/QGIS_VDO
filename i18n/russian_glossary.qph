@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE QPH>
+<QPH sourcelanguage="en_US" targetlanguage="ru_RU">
+  <phrase>
+    <source>Cancel</source>
+    <target>Отмена</target>
+    <definition>Кнопка отмены действия</definition>
+  </phrase>
+  <phrase>
+    <source>OK</source>
+    <target>ОК</target>
+  </phrase>
+</QPH>

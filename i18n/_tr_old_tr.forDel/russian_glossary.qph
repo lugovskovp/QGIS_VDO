@@ -1,0 +1,16 @@
+<!DOCTYPE QPH>
+<QPH sourcelanguage="en_US" language="_US">
+<phrase>
+    <source>Cancel</source>
+    <target>Отмена</target>
+    <definition>Кнопка отмены действия</definition>
+</phrase>
+<phrase>
+    <source>OK</source>
+    <target>ОК</target>
+</phrase>
+<phrase>
+    <source>VDO</source>
+    <target>МВЩ</target>
+</phrase>
+</QPH>

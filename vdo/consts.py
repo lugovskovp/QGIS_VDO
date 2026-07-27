@@ -1,5 +1,5 @@
 """
-
+Константы проекта
 """
 
 import struct
@@ -21,10 +21,10 @@ struct_WORD = struct.Struct(">H")
 struct_WORD_TWICE = struct.Struct(">HH")
 struct_UINT = struct.Struct(">L")
 
-#
-ZERO_DWORD = b'\x00\x00\x00\x00'
+# Бинарный DWORD 0
+ZERO_DWORD = b'\x00' * 4
 
-#
+# Дерево хаффмана для сжатого текста
 LOOKUP_CHAR_BYTES = {'000': b'a',
                      '001': b'e',
                      '0100': b's',
@@ -41,4 +41,7 @@ LOOKUP_CHAR_BYTES = {'000': b'a',
                      '10111': b'o'
                      }
 
+# Имена слоёв в интерфейсе
 NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"
+NAME_LAYER_ALMANACS = 'Almanac'
+NAME_LAYER_MAPS = 'Maps'

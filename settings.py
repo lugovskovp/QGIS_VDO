@@ -16,6 +16,8 @@ the Free Software Foundation; either version 2 of the License, or
 import os.path
 from qgis.PyQt.QtCore import Qt, QSettings
 
+DEFAULT_SCALE = 4
+
 
 class Settings():
     """A helper class for handling reloader's all QSettings."""
@@ -35,6 +37,7 @@ class Settings():
     NAME_ENABLE_SHOW_CLEAR_ACTION = 'ShowClearRecentFilesEnabled'
     NAME_CHECKED_GROUP_BOX = 'ShowGroupBoxEnabled'
     NAME_HIDE_NON_ACTIVE_VDO_GROUPS = 'cbHideNonActiveVdo'
+    NAME_LAST_CHOUSED_SCALE = 'LastChousedScale'
 
     # RecentFilesCount
     @classmethod
@@ -62,6 +65,19 @@ class Settings():
     def setLastFileNamePath(cls, path: os.path) -> None:
         """ Setting last opened file path """
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_LAST_PATH}', path)
+
+    # chousen scale
+    @classmethod
+    def ChousedScale(cls) -> int:
+        """ Get last choused scale """
+        scaleNum = QSettings().value(f'{cls.PREFIX}/{cls.NAME_LAST_CHOUSED_SCALE}',
+                                     DEFAULT_SCALE, type=int)
+        return scaleNum
+
+    @classmethod
+    def setChousedScale(cls, scaleNum: int) -> None:
+        """ Remember last choused scale """
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_LAST_CHOUSED_SCALE}', scaleNum)
 
     # RecentFiles
     @classmethod

@@ -5,6 +5,8 @@ SCALE_ALMANAC = 0x08    # set of map folders 0x9.
 Описывает квадрат (в SCALE), количество итемов - папок (block_0x9),
 дельта координат между папками, сам список папок
 
+ALARM! количество items - не всегда квадрат стороны!
+
 block_0x08
 
 //header start
@@ -19,10 +21,9 @@ block_0x08
 
 """
 
-# from QGIS_VDO.vdo.consts import struct_UINT  # struct_WORD  #
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.datatypes import BLADDR       # BYTESTRUCT
-from QGIS_VDO.vdo.geotypes import COORD, hex2COORD
+from QGIS_VDO.vdo.datatypes import BLADDR
+from QGIS_VDO.vdo.geotypes import COORD
 
 
 OFFSET_LIST_FOLDEFS = 0x08
@@ -32,59 +33,91 @@ OFFSET_FOLDER_SIZE = 0x0c
 class block_0x08(block_base):
     """
     0x08    LIST    li_folders  ptr_cnt на BLADDR | 0
-    0x0c    LIST    side    размер приращения _hlat на следующий folder
+    0x0c    DWORD    side    размер приращения _hlat на следующий folder
     0x10    [BLADDR] - массив на папки-индексы гео-блоков
     """
-    def __init__(self, bl_addr: BLADDR) -> None:
+
+    def __init__(self, bl_addr: BLADDR, origin: COORD, max: COORD):
+        """
+        Args:
+            bl_addr: BLADDR
+            origin: COORD - left bottom
+            max: COORD - right top
+        """
         super().__init__(bl_addr)
-        # item - one valid folder maps
+
+        # item - bladdr value map block
         self.li_items = self.list(OFFSET_LIST_FOLDEFS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
-        self.qty_items_on_side = int(self.li_items.cnt ** 0.5)   # sqrt of overall qty
-        self.area_side = self.item_side * self.qty_items_on_side
-
-    def items(self, start: COORD):
-        """
-        Генератор
-        Returns:
-            (bladdr_fldr, point_lb, point_rt) Folders с координатами углов
-        """
-        start_lb_x = start._hlon    # 0xa800  x = 1
-        start_lb_y = start._hlat    # 0xf5cd6500  y = 1
-        for (bladdr_fldr, x, y) in self._get_raw_content():
-            #
-            lb_x = start_lb_x + x * self.item_side  # noqa 0xa800 + 1 * 0x14000000 = 0x1400a800
-            lb_y = start_lb_y + y * self.item_side  # noqa 0xf5cd6500 + 1 * 0x28000000 = 0x11dcd6500
-            rt_x = lb_x + self.item_side
-            rt_y = lb_y + self.item_side
-            point_lb = hex2COORD(lb_x, lb_y)
-            point_rt = hex2COORD(rt_x, rt_y)
-            yield (bladdr_fldr, point_lb, point_rt)
         
-    def _get_raw_content(self):
+        self.origin = origin      # "начало" координат, left bottom
+        self.qty_y = int((max._hlatitude - origin._hlatitude) / self.item_side)
+        self.qty_x = int((max._hlongtitude - origin._hlongtitude) / self.item_side)
+        pass
+
+    def items_cnt(self) -> int:
         """
-        Генератор содержимого
-        Returns:
-            (bladdr_folder, x, y) - x, y - координаты в квадрате
+        Возвращает количество уникальных итемов
         """
-        # "координаты" в квадрате ареа
-        x = 0
-        y = 0
+        finded_early = []
         for offset in range(self.li_items.ptr,
-                            self.li_items.ptr + BLADDR.size * self.li_items.cnt,
+                            self.li_items.ptr + self.li_items.cnt * BLADDR.size,
                             BLADDR.size):
-            ffolder: BLADDR = self.bladdr(offset)
-            # приращение идёт по вертикали, по y
-            if y >= self.qty_items_on_side:
-                # следующий столбец
-                y = 0
-                x += 1
-            res = (ffolder, x, y)
-            y += 1
-            if ffolder.isZero:
-                # пустые folders - значит информации нет
+            val = self.uint(offset)
+            if not val:
                 continue
-            yield res
+            if val in finded_early:
+                continue
+            finded_early.append(val)
+        return len(finded_early)
+
+    def get_items(self) -> tuple:
+        """
+        Генератор валидных итемов с координатами COORD lb, rt
+        Returns:
+            res = (bla_val, coord_lb, coord_rt): tuple
+                bla_val: int - значение bladdr Folders
+                coord_lb: COORD left bottom
+                coord_rt: COORD right top
+        """
+        finded_early = []        # ранее ptr уже был найден
+        step = BLADDR.size       # единица приращения
+        # "координаты" в квадрате ареа
+        for x in range(self.qty_x):
+            # в файле перебор по вертикали, потом по Х
+            for y in range(self.qty_y):
+                curr_item = y + x * self.qty_x
+                if curr_item >= self.li_items.cnt:
+                    # количество итемов может быть меньше квадрата стороны
+                    break
+                offset = self.li_items.ptr + step * curr_item  # noqa
+                bla_val = self.uint(offset)
+                if not bla_val:
+                    # следующий, если bla_val == 0
+                    continue
+                # а вообще бывают которые занимают 2 и/или 4 места?
+                if bla_val in finded_early:
+                    # если попали хоть раз сюда, то надо допереписать по примеру 0х09
+                    raise ValueError(finded_early, finded_early)
+                # ок, найден новый
+
+                # left bottom
+                # Долгота (Lng) E/W - x
+                lon = self.origin._hlongtitude + x * self.item_side
+                # Широта (Lat) N/S - y
+                lat = self.origin._hlatitude + y * self.item_side
+                coord_lb = COORD(lon, lat)
+
+                # right top
+                # if (lat1 := (lat0 + self.delta_degree)) > 85:
+                #     lat1 = 85
+                lat += self.item_side
+                lon += self.item_side
+                coord_rt = COORD(lon, lat)
+
+                res = (bla_val, coord_lb, coord_rt)
+                yield res
+        pass
 
 
 # All block tests in block_0x07

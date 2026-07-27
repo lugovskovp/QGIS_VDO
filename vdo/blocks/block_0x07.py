@@ -40,7 +40,7 @@ class GEO_INDEX(BYTESTRUCT):
 
 class SCALE(BYTESTRUCT):
     """
-    0   UINT    BLADDR almanac_ids
+    0   UINT    BLADDR almanac_idx
     4   QWORD   COORD left bottom
     12  QWORD   COORD right top
     20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
@@ -57,20 +57,18 @@ class SCALE(BYTESTRUCT):
             raise ValueError(vdo.dbrev, " dbrev must be 30 or 34")
 
         super().__init__(byte_array)
+        self.vdo = vdo
+
         # area
-        self.almanac_idx = BLADDR(self._raw[:4], vdo)
         point_lb = COORD(self._raw[4:12])
         point_rt = COORD(self._raw[12:20])
         self.area = (point_lb, point_rt)
+
+        # @properties:
+        # 0   UINT    BLADDR almanac_idx
         # 20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
-        self.val_A = self.ushort(20)
         # 22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
-        self.zoom_from = self.ushort(22)
-        if vdo.dbrev == 34:
-            # 24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
-            self.zoom_to = self.ushort(24)
-        else:
-            self.zoom_to = 0
+        # 24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
 
         # TODO а оно надо?
         self.square_side = (self.area[1]._hlat - self.area[0]._hlat)
@@ -117,18 +115,53 @@ class SCALE(BYTESTRUCT):
 
     def __repr__(self):
         res = f"{self.area[1].delta(self.area[0])}"
-        res += f" {self.zoom_from}-{self.zoom_to} {self.val_A}"
+        res += f" {self.zoom_from}-{self.zoom_to} {self.value_a}"
         res += f" [0x{self.square_side:X}]"
         return res
 
     @property
-    def is_empty(self) -> bool:
+    def almanac_idx(self) -> BLADDR | None:
+        """
+        bladdr block_0x08 - альманаха
+        """
+        return BLADDR(self._raw[:4], self.vdo)
+        
+    @property
+    def value_a(self) -> int:
+        """
+        20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
+        """
+        return self.ushort(20)
+
+    @property
+    def zoom_from(self) -> int:
+        """
+        22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
+        """
+        return self.ushort(22)
+
+    @property
+    def zoom_to(self) -> int:
+        """
+        24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
+        if vdo.dbrev == 34: else 0
+        """
+        if self.vdo.dbrev == 34:
+            return self.ushort(24)
+        else:
+            return 0
+        
+    @property
+    def isEmpty(self) -> bool:
         """ Валидный или пустой"""
         # если almanac_idx == 0, то scale пустой
-        return self.almanac_idx.isZero
+        # return self.almanac_idx.isZero
+        # return self._raw[:4] == b'\x00' * 4     # а вот херь: у бмв есть 0x04dffa01, но пустой area # noqa
+        return self._raw[4:20] == b'\x00' * 16
 
     def find_idx(self, poin: COORD) -> BLADDR | None:
         """
+        TODO:
         Поиск idx блока, в который попадают координаты, или None
         """
         res = None
@@ -194,59 +227,53 @@ class block_0x07(block_base):
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
-    from vdo.test_vdo import vdo30, vdo34ee, vdobmv # noqa
+    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
     from vdo.consts import struct_UINT        # noqa
     from vdo.blocks import block_0x12, block_0x09
 
     vdo = vdo30
     # vdo = vdo34ee
     # vdo = vdobmv
+    # vdo = vdo34bnl
+    vdo = vdoRu
 
     bl_toc: block_0x12 = vdo.get_block(0)
     bl_scales: BLADDR = bl_toc.bladdr_scales
 
     block_07: block_0x07 = vdo.get_block(bl_scales)
 
-    scale_5 = block_07.scales[6]
-    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx)  # block_08
+    scale_5 = block_07.scales[5]
+    scale_5 = block_07.scales[11]
+    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
 
     # block_08 content
-    print("block_08: block_0x09 : x : y")
-    for f in block_almanac._get_raw_content():
+    print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
+    bla_first = None
+    for f in block_almanac.get_items():
+        if not bla_first:
+            (bla_first, coord_lb, coord_rt) = f
+
         print(f)
         pass
-    
-    # block_08 content
-    print("block_08: block_0x09 : COORD(lb) : COORD(rt)")
-    bla_first = None
-    for (f, lb, rt) in block_almanac.items(scale_5.area[0]):
-        if not bla_first:
-            bla_first = f   # noqa 03cdcc01 09 0000 [09:FOLDER_MAPS] - qty 16 area 0x1400 0000 item(fromFile) 0x140 0000
-            lb_f = lb
-            rt_f = rt
-        print((f, lb, rt))
-        pass
-    
+
     # block_09 content
     print("block_09: geo_block_0xXX : x : y")
-    bl_folder: block_0x09 = vdo.get_block(bla_first.offset)
+    bla = BLADDR(struct_UINT.pack(bla_first), vdo)
+    bl_folder: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
 
-    print("block_08: block_0x09 : COORD(lb) : COORD(rt)")
-    for f in bl_folder._get_raw_content():
+    print(f"block_08: block_0x09: 0x{bl_folder.head.bladdr.hex.replace(' ', '')} COORD(lb) : COORD(rt)")  # noqa
+    bla_first = None
+    cnt = bl_folder.items_cnt()
+
+    for f in bl_folder.get_items():
+        if not bla_first:
+            (bla_first, coord_lb, coord_rt) = f
         print(f)
         pass
 
-    bl_map_first = None
-    for f in bl_folder.items(lb_f):     # 03cdcc01 09 0000 [09:FOLDER_MAPS]
-        if not bl_map_first:
-            (bl_map_first, lb_map, _) = f
-            print(f"map: {bl_map_first} lb_coord: {lb_map}")
-        pass
-    
-    # map
-    bl_map = vdo.get_block(bl_map_first)
+    # geoblock content
 
-    print(f"infile map area: {bl_map.map}")
+    pass
 
     # bl_ru_big_map = vdo.get_block(BLADDR(struct_UINT.pack(0x)))
     # @ 00000201 13 0202 [13:BIBLIOGR]

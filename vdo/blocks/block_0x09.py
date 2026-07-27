@@ -72,7 +72,8 @@ class block_0x09(block_base):
                 # calculate X side size
                 size_X = 0
                 for i in range(x, self.qty_x):
-                    off_next = offset + step * size_X
+                    next_item = y + i * self.qty_x
+                    off_next = self.li_items.ptr + step * next_item
                     ptr_next_val = self.ushort(off_next)
                     if ptr_next_val != ptr_val:
                         break
@@ -81,7 +82,8 @@ class block_0x09(block_base):
                 # Calculate Y side size
                 size_Y = 0
                 for i in range(y, self.qty_y):
-                    off_next = offset + step * size_Y * self.qty_y
+                    next_item = x * self.qty_x + i
+                    off_next = self.li_items.ptr + step * next_item
                     ptr_next_val = self.ushort(off_next)
                     if ptr_next_val != ptr_val:
                         break
@@ -139,10 +141,41 @@ if __name__ == '__main__':
     print(f"\nmap{block_maps}")
     for f in block_maps.get_items():
         print(f)
+        pass
     pass
 
     # (156661763, 31.641849N 20.643179W, 49.761244N 2.523783W)
     bla = BLADDR(struct_UINT.pack(156661763), vdo)
     bla_map = vdo.get_block(bla)
+
+    """
+    vdo ru
+    scale 3
+    fldr - 0x6766107
+    map - 0x110573619
+
+    """
+    print()
+    search_fldr = 0x6766107
+    search_map = 110573619
+    # search_map = 0x110586636
+    # search_map = 0x110449163
+    scale = block_07.scales[3]
+    block_almanac: block_0x08 = vdo.get_block(scale.almanac_idx, scale.area[0], scale.area[1])  # noqa
+    for (bl_folder, coord_lb, coord_rt) in block_almanac.get_items():
+        if bl_folder == search_fldr:
+            break
+    #
+    bla = BLADDR(struct_UINT.pack(bl_folder), vdo)
+    block_maps: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
+    for (bl_map, coord_lb, coord_rt) in block_maps.get_items():
+        print(bl_map, coord_lb, coord_rt)
+        if bl_map == 110553640:
+            pass
+        # 110553640 50.893706N 7.102145E 51.459937N 7.668376E
+        # 110573619 51.459937N 7.102145E 52.026168N 7.385261E
+        if bl_map == search_map:    # 110573619
+            print("finded")
+            break
 
     pass

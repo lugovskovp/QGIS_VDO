@@ -162,14 +162,16 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] состояние groupButton scales - хранить в сеттингсах
     * [ ]        tab компоновка и наполение: scales, poi_cats, v34: страны, terr_div
     * [x] debug push button - clear all vdo groups: + pb_DebugClearVDOevent
-    * [ ] scroll area - how many folders in almanacs
+    * [x] scroll area - how many folders in almanacs
     * [x] draw scale almanac
     * [ ] draw folder maps
     * [ ] draw in child layer
-    * [ ] при переключении (и инициализации?) scale - в соответствующую группу нарисовать альманахи/
-    * [ ] при инициализации, если нет валидного scale, по-умолчанию - 5 (?) scale
+    * [x] при переключении (и инициализации?) scale - в соответствующую группу нарисовать альманахи/
+    * [x] при инициализации, если нет валидного scale, по-умолчанию - 5 (?) scale
     * [ ] listWidget POI Categories
     * [ ] listWidget Countries
+
+
 - [ ] tab block
     * [ ] 
 - [ ] отрисовка геообъектов
@@ -183,7 +185,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 * [x] запрет commit при наличии ошибок flake8
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
-
+*-* [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
 * [ ] почистить bitstream? av_, v_, ??
 * [ ] Settings show RecentFiles
 * [ ] 

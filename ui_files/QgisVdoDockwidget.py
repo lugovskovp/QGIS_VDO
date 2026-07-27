@@ -12,14 +12,14 @@ from qgis.PyQt.QtCore import QMetaType
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
+from QGIS_VDO.threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
 from QGIS_VDO.vdo.blocks import (block_0x12,
                                  block_0x13,
                                  block_0x07,
-                                 block_0x08,
-                                 block_0x09)
+                                 block_0x08)
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
                                  NAME_LAYER_ALMANACS,
@@ -158,33 +158,20 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         if not self._isExistsOpenProject():
             return
 
-        # Получить слой для альманаха.abs
+        # Получить слой для альманаха
         layer = self._getLayer(idScale, NAME_LAYER_ALMANACS, 'Polygon')
-        # Получить слой для альманаха.abs
-        layer_maps = self._getLayer(idScale, NAME_LAYER_MAPS, 'Polygon')
         
         # Получить альманах и отрисовать содержимое - folder maps
         sc: SCALE = self.scales[idScale]
         bl_almanac: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
-        qty_folders = 0
-        for (bladdr_fldr_val, lat0, lon0, lat1, lon1) in bl_almanac.get_items():  # noqa
+        for (bladdr_fldr_val, coord_lb, coord_rt) in bl_almanac.get_items():  # noqa
             # при отрисовке поле name уникальное - второй раз не отрисовывается
-            area = [(lat0, lon0), (lat1, lon1)]  # noqa
+            area = [(coord_lb.lat, coord_lb.lon),
+                    (coord_rt.lat, coord_rt.lon)]  # noqa
             _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
-            qty_folders += 1
-            # break
-            if False:
-                bladdr_map: block_0x09
-                _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
-            # и отрисовываем контуры блоков карт
-            # bl_folder: block_0x09 = self.vdo.get_block(bladdr_fldr_val)
-            # for (bladdr_map, point_lb, point_rt) in bl_folder.items(point_fldr_lb):
-            #     # _DrawArea([point_lb, point_rt], f"0x{bladdr_map}".replace(' ', ''), layer_maps)  # noqa
-            #     pass  (203.910287S 75.001364W, 86.000034N 214.908958E)
             pass
-        self.pb_LoadFolderMaps.setText(self.tr("Load {} fld".format(qty_folders)))
-    
-        print(NAME_LAYER_ALMANACS)
+        self.pb_LoadFolderMaps.setText(self.tr("Load {} fldrs".format(bl_almanac.items_cnt())))   # noqa
+        # print(NAME_LAYER_ALMANACS)
         pass
 
     # <<<<<<<<<<<<< функции инициализации вкладок
@@ -262,8 +249,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
             # добавляем в группу rb
             self.button_group_scale.addButton(rb, id)
             pass
+
         # Connect the change signal button_group_scale
         self.button_group_scale.buttonClicked.connect(self.on_rb_scale_changed)
+
+        # Progress bar
+        self.progressBarFolderMaps.setValue(0)
+        self.pb_LoadFolderMaps.clicked.connect(self.start_loading_folders)
 
         # set from settings
         self._setScale(checkScale)
@@ -433,26 +425,110 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
 
     # <<<<<<<<<< работа с эвентами
 
+    #
+    def start_loading_folders(self):
+        """
+        Load folders with maps on tabTopo
+        """
+        # Блокируем кнопку от повторного нажатия
+        self.pb_LoadFolderMaps.setEnabled(False)
+        
+        # Список для хранения кнопок, которые УЖЕ БЫЛИ отключены
+        self.disabled_buttons = []
+        # Блокируем группу, запоминая изначально выключенные кнопки
+        for button in self.button_group_scale.buttons():
+            if not button.isEnabled():
+                # Если кнопка уже была disabled, запоминаем её
+                self.disabled_buttons.append(button)
+            else:
+                # Если кнопка была активна — выключаем её на время загрузки
+                button.setEnabled(False)
+
+        self.progressBarFolderMaps.setValue(0)
+
+        # $ TODO Проверка, что карты уже отрисованы
+
+        # Получить альманах
+        sc: SCALE = self.scales[self.currentIdScale]
+        almanac_block: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
+        
+        # Делаем слой активным в интерфейсе
+        self.iface.setActiveLayer(self.layer_maps)
+
+        # Инициализируем поток, передав ему параметры папки
+        self.thread = FolderMapProcessingWorker(almanac_block)   # noqa
+
+        # СВЯЗЫВАЕМ СИГНАЛЫ С РЕАЛЬНОЙ ЛОГИКОЙ ДОК-ВИДЖЕТА
+        self.thread.count_signal.connect(self._set_progress_max)
+        self.thread.progress_signal.connect(self._update_gui_with_result)
+        self.thread.safe_drawing_map_signal.connect(self._safe_drawing_map)
+        self.thread.finished.connect(self.on_finished_loading_folders)
+        self.thread.start()
+
+    # РЕАЛЬНАЯ ЛОГИКА ОБРАБОТКИ КАЖДОЙ ПАПКИ КАРТ
+    def _safe_drawing_map(self, lat0: float, lon0: float,
+                          lat1: float, lon1: float,
+                          bl_map_val: int):
+        """
+        Потокобезопасная отрисовка контуров карт
+        """
+        # # Получить слой для folder maps
+        # layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')
+
+        point_lb = (lat0, lon0)
+        point_rt = (lat1, lon1)
+        _DrawArea([point_lb, point_rt], f"0x{bl_map_val:X}", self.layer_maps)  # noqa
+
+    def _update_gui_with_result(self, percent, block_folder_value):
+        # Обновляем прогресс-бар
+        self.progressBarFolderMaps.setValue(percent)
+
+        # Например: добавление в QListWidget, отрисовка слоя, парсинг метаданных и т.д.   # noqa
+        print(f"Док-виджет обрабатывает карту: {block_folder_value}")
+
+    def _set_progress_max(self, total_count):
+        if total_count == 0:
+            self.progressBarFolderMaps.setMaximum(100)
+        else:
+            self.progressBarFolderMaps.setMaximum(total_count)
+
+    def on_finished_loading_folders(self):
+        """
+        Finish Loading folders with maps on tabTopo
+        """
+        self.pb_LoadFolderMaps.setEnabled(True)
+        # Восстанавливаем состояние кнопок
+        for button in self.button_group_scale.buttons():
+            # Если кнопка есть в списке изначально отключенных — оставляем её disabled
+            if button in self.disabled_buttons:
+                button.setEnabled(False)
+            else:
+                # Все остальные кнопки делаем снова активными
+                button.setEnabled(True)
+
     def on_rb_scale_changed(self, button) -> None:
         """
         Triggered when any radio button in the group scale is clicked/changed
         """
-        idScale = self.button_group_scale.id(button)
+        self.currentIdScale = self.button_group_scale.id(button)
         # сохраняем номер масштаба в settings
-        Settings.setChousedScale(idScale)
+        Settings.setChousedScale(self.currentIdScale)
+        # Получить слой для folder maps
+        self.layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')  # noqa
         # отрисовать area альманаха
-        self.DrawAlmanacArea(idScale)
+        self.DrawAlmanacArea(self.currentIdScale)
 
-        # Отключить видимость для всех групп
+        # Отключить видимость для всех групп iface
         # root group - vdo
         root_gr = self._getRootGroup()
         for id in range(QTY_ALL_SCALES):
             gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
             if gr := root_gr.findGroup(gr_name):
-                gr.setItemVisibilityChecked(id == idScale)
-
-        # что то делаем
-        print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
+                gr.setItemVisibilityChecked(id == self.currentIdScale)
+                
+        # TODO: del?
+        #  что то делаем
+        # print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
 
     def closeEvent(self, event):
         # self.closingPlugin.emit()
@@ -464,7 +540,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         pass
 
     def pb_DebugClearVDOevent(self, event):
-        # TODO:DEBUG! Удаляет текущую группу VDO из слоёв проекта.
+        # TODO:DEBUG only! Удаляет текущую группу VDO из слоёв проекта.
         root = QgsProject.instance().layerTreeRoot()
         group4del = self._getRootGroup()
         for child in root.children():

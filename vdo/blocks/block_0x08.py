@@ -45,7 +45,7 @@ class block_0x08(block_base):
             max: COORD - right top
         """
         super().__init__(bl_addr)
-        
+
         self.li_items = self.list(OFFSET_LIST_FOLDEFS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
         
@@ -53,6 +53,22 @@ class block_0x08(block_base):
         self.qty_y = int((max._hlatitude - origin._hlatitude) / self.item_side)
         self.qty_x = int((max._hlongtitude - origin._hlongtitude) / self.item_side)
         pass
+
+    def items_cnt(self) -> int:
+        """
+        Возвращает количество уникальных итемов
+        """
+        finded_early = []
+        for offset in range(self.li_items.ptr,
+                            self.li_items.ptr + self.li_items.cnt * BLADDR.size,
+                            BLADDR.size):
+            val = self.uint(offset)
+            if not val:
+                continue
+            if val in finded_early:
+                continue
+            finded_early.append(val)
+        return len(finded_early)
 
     def get_items(self) -> tuple:
         """

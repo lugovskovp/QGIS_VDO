@@ -251,33 +251,29 @@ if __name__ == '__main__':
     bla_first = None
     for f in block_almanac.get_items():
         if not bla_first:
-            (bla_first, lat0, lon0, lat1, lon1) = f
-            lb_f = (lat0, lon0)
-            rt_f = (lat1, lon1)
+            (bla_first, coord_lb, coord_rt) = f
+
         print(f)
         pass
 
     # block_09 content
     print("block_09: geo_block_0xXX : x : y")
-    bl_folder: block_0x09 = vdo.get_block(BLADDR(struct_UINT.pack(bla_first), vdo))
+    bla = BLADDR(struct_UINT.pack(bla_first), vdo)
+    bl_folder: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
 
     print(f"block_08: block_0x09: 0x{bl_folder.head.bladdr.hex.replace(' ', '')} COORD(lb) : COORD(rt)")  # noqa
-    for f in bl_folder._get_raw_content():
+    bla_first = None
+    cnt = bl_folder.items_cnt()
+
+    for f in bl_folder.get_items():
+        if not bla_first:
+            (bla_first, coord_lb, coord_rt) = f
         print(f)
         pass
 
-    bl_map_first = None
-    for f in bl_folder.items(lb_f):     # 03cdcc01 09 0000 [09:FOLDER_MAPS]
-        if not bl_map_first:
-            (bl_map_first, lb_map, _) = f
-            print(f"map: {bl_map_first:X} lb_coord: {lb_map}")
-        pass
-    
-    # map
-    bladdr_first = BLADDR(struct_UINT.pack(bl_map_first), vdo)
-    bl_map = vdo.get_block(bladdr_first)
+    # geoblock content
 
-    print(f"infile map area: {bl_map.map}")
+    pass
 
     # bl_ru_big_map = vdo.get_block(BLADDR(struct_UINT.pack(0x)))
     # @ 00000201 13 0202 [13:BIBLIOGR]

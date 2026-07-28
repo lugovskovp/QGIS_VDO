@@ -3,3 +3,4 @@ from QGIS_VDO.ui_files.AnimatedGroupBox import AnimatedGroupBox
 from QGIS_VDO.ui_files.drawing import (_DrawArea,
                                        _DrawPacketAreas,
                                        getRendererByLayerName)
+from QGIS_VDO.ui_files.ClickCoordinatesTool import ClickCoordinatesTool

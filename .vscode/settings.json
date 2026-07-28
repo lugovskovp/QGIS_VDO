@@ -1,8 +1,8 @@
 {
   "python.languageServer": "Pylance", //  рекомендуется для автодополнения с QGIS/PyQt5;
   "python.analysis.extraPaths": [
-    "C:\\OSGeo4W\\apps\\qgis\\python",
-    "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
+    // "C:\\OSGeo4W\\apps\\qgis\\python",
+    // "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
     "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
   ],
   "python.autoComplete.extraPaths": [

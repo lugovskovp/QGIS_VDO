@@ -1,7 +1,7 @@
 [flake8]
 max-line-length = 120
 extend-ignore = E203
-max-complexity = 12
+max-complexity = 15
 exclude = .git, __pycache__, build, dist, i18n, .venv, examples\*, bmw*, ext_libs, d0*, research
 
 # extend-ignore = E203

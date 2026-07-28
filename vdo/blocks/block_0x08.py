@@ -121,10 +121,12 @@ class block_0x08(block_base):
                 yield res
         pass
 
-    def find_by_coord(self, srch_point: COORD) -> BLADDR | None:
+    def find_by_coord(self, srch: COORD) -> BLADDR | None:
         """
         Поиск idx блока, в который попадают координаты, или None
         """
+
+        return None
 
         
 # All block tests in block_0x07

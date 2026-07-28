@@ -21,6 +21,8 @@ block_0x08
 
 """
 
+from typing import Iterator
+
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR
 from QGIS_VDO.vdo.geotypes import COORD
@@ -71,7 +73,7 @@ class block_0x08(block_base):
             finded_early.append(val)
         return len(finded_early)
 
-    def get_items(self) -> tuple:
+    def get_items(self) -> Iterator[tuple]:
         """
         Генератор валидных итемов с координатами COORD lb, rt
         Returns:
@@ -119,5 +121,10 @@ class block_0x08(block_base):
                 yield res
         pass
 
+    def find_by_coord(self, srch_point: COORD) -> BLADDR | None:
+        """
+        Поиск idx блока, в который попадают координаты, или None
+        """
 
+        
 # All block tests in block_0x07

@@ -1,5 +1,22 @@
 {
-  "python.languageServer": "Jedi", //  рекомендуется для автодополнения с QGIS/PyQt5;
+  "python.languageServer": "Pylance", //  рекомендуется для автодополнения с QGIS/PyQt5;
+  "python.analysis.extraPaths": [
+    "C:\\OSGeo4W\\apps\\qgis\\python",
+    "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
+    "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
+  ],
+  "python.autoComplete.extraPaths": [
+    "C:\\OSGeo4W\\apps\\qgis\\python",
+    "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
+    "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
+  ],
+  "python.analysis.indexing": true,
+  "python.analysis.packageIndexDepths": [
+    {
+      "name": "C:\\OSGeo4W\\apps\\qgis\\python",
+      "depth": 5
+    }
+  ],
   "editor.formatOnSave": true, //  автоматическое форматирование и сортировка импортов при сохранении.
   "[python]": {
     "editor.codeActionsOnSave": {
@@ -13,6 +30,7 @@
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   // "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python.envFile": "${workspaceFolder}/.env",
   "files.associations": {
     "metadata.txt": "ini"
   },

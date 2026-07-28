@@ -1,0 +1,31 @@
+{
+  "python.languageServer": "Jedi", //  рекомендуется для автодополнения с QGIS/PyQt5;
+  "editor.formatOnSave": true, //  автоматическое форматирование и сортировка импортов при сохранении.
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "workbench.colorCustomizations": {
+    "terminal.foreground": "#00FD61",
+    "terminal.background": "#383737"
+  },
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  // "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "files.associations": {
+    "metadata.txt": "ini"
+  },
+  "terminal.integrated.profiles.windows": {
+    "OSGeo4W Shell": {
+      "path": "cmd.exe",
+      "args": [
+        "/k",
+        "C:\\OSGeo4W\\osgeo4w.bat"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "OSGeo4W Shell",
+  "python.defaultInterpreterPath": "C:\\OSGeo4W\\bin\\python3.exe",
+  "qtForPython.qmlls.enabled": false
+}

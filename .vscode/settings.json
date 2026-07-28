@@ -3,7 +3,15 @@
   "python.analysis.extraPaths": [
     "C:\\OSGeo4W\\apps\\qgis\\python",
     "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
+    "C:\\OSGeo4W\\apps\\Python312\\Lib\\site-packages\\PyQt5",
     "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
+  ],
+  "python.analysis.exclude": [
+    "c:/Users/plugo/AppData/Local/Programs/Python/Python312/Lib",
+    "C:/OSGeo4W/apps/qgis/python/qgis",
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*"
   ],
   "python.autoComplete.extraPaths": [
     "C:\\OSGeo4W\\apps\\qgis\\python",
@@ -53,5 +61,5 @@
   "flake8.importStrategy": "fromEnvironment",
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python.analysis.autoImportCompletions": false,
-  "python.analysis.typeCheckingMode": "basic"
+  "python.analysis.typeCheckingMode": "off"
 }

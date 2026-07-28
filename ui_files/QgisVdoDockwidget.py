@@ -14,7 +14,6 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeL
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
-from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE
 from QGIS_VDO.vdo.blocks import (block_0x12,
                                  block_0x13,
@@ -28,6 +27,7 @@ from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
 from QGIS_VDO.ui_files.drawing import (_DrawArea,
                                        _DrawPacketAreas,
                                        getRendererByLayerName)
+from QGIS_VDO.ui_files import AnimatedGroupBox
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(

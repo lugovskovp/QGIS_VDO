@@ -10,15 +10,27 @@ FAR_LIST
 CH_IDX
 BLSTART
 """
+from __future__ import annotations  # Обязательно на самой первой строчке файла
 
 import os.path
 import struct
 import importlib
-import heapq
+# import heapq
+
+from typing import TYPE_CHECKING, Union, Any
+
+if TYPE_CHECKING:
+    # Этот блок видит только Pylance, интерпретатор Python его игнорирует
+    from _typeshed import ReadableBuffer
+else:
+    # Запасной вариант для рантайма, чтобы не было NameError
+    ReadableBuffer = bytes
+
 
 from .enums import BlockType
 from .consts import struct_WORD, struct_UINT
-from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD
+from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD, EMPTY_BUFFER
+
 
 OFFSET_TOC = 0x08
 
@@ -54,13 +66,13 @@ KNOWN_BLOCKS = setup_known_types()
 # ----
 class VDO_FILE():
     """ класс работы с файлом формата carindb """
-    path: os.path
+    path: str | None
     # :path: full filepath, os.path or None
     dbrev: int
     """:dbrev: database revision, 30 (0x1e) or 34 (0x22)"""
     segsize: int    # :segsize: size of one segment in chank
 
-    def __init__(self, path: os.path = None) -> None:
+    def __init__(self, path: str | None = None) -> None:
         """ """
         if path:
             self.path = path
@@ -83,13 +95,15 @@ class VDO_FILE():
         return 0
 
     @property
-    def QGISvdoGroupName(self) -> str:
+    def QGISvdoGroupName(self) -> str | None:
         """ Generate unique name for root group"""
+        if self.path is None:
+            return None
         ap = self.path.split("/")
         res = f"{ap[-2]}_0x{self.file_size:04X}"
         return res
 
-    def read(self, offset: int, size: int) -> bytearray | None:
+    def read(self, offset: int, size: int) -> ReadableBuffer:
         """ Return bytearray[size] from self.path.offset
         Args:
             offset: offset in file path
@@ -97,52 +111,61 @@ class VDO_FILE():
         Returns:
             bytearray[size]: from self.path.offset
         """
+        if self.path is None:
+            return EMPTY_BUFFER                   # пустое значение
         with open(self.path, 'rb') as f:
             f.seek(offset)
             return f.read(size)
         return None
 
-    def get_block(self, addr: int, *args) -> object:
+    def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
         """
-        Возвращает блок по offset addr или из BLADDR adr
+        Возвращает экземпляр блока по смещению offset (int) или из структуры BLADDR.
+        
         Args:
             addr: int offset | BLADDR block address
         Returns:
-            Block: block base structure needed type (if possible)
+            Block instance или None, если адрес невалиден или это не блок.
         """
-        type_addr = type(addr)  # noqa
-        if type(addr) is int:
+        if isinstance(addr, int):
             offset = addr
-        # elif type(addr) is BLADDR:
-        elif isinstance(addr, BLADDR) or f"{type(addr)}" == "<class 'QGIS_VDO.vdo.datatypes.BLADDR'>":   # noqa
-            if not struct_UINT.unpack(addr._raw)[0]:       # == 0
-                # raise ValueError(addr, " bladdr 00 00 00 00")
+        elif type(addr).__name__ == "BLADDR":
+            # struct_UINT.unpack возвращает кортеж, проверяем первый элемент [0]
+            if not struct_UINT.unpack(addr._raw)[0]:
                 return None
             offset = addr.offset
         else:
-            # только offset начала блока или BLADDR
-            raise ValueError(addr, " Тип не int и не bladdr")
+            raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
+
+        # Чтение заголовка блока и базовая проверка валидности
         head = BLSTART(self.read(offset, BLSTART.size), self)
         if head.bladdr.offset != offset:
-            # а это и не блок вовсе
             return None
+
+        # 3. Динамический импорт класса блока
+        block_type = head.bltype.value
         # а описан ли тип этого блока?
-        if head.bltype.value in KNOWN_BLOCKS.keys():
-            bl = KNOWN_BLOCKS[head.bltype.value]
-            # импорт класса bl из модуля
-            bl_class = getattr(importlib.import_module('.blocks.' + bl, package="QGIS_VDO.vdo"), bl)  # noqa
-            bl_class.type = head.bltype.value
-            bl_class.type_name = bl
+        if block_type in KNOWN_BLOCKS:
+            bl_module_name = KNOWN_BLOCKS[block_type]
+            # Относительный импорт внутри пакета vdo
+            module = importlib.import_module(f".blocks.{bl_module_name}", package="QGIS_VDO.vdo")
+            bl_class = getattr(module, bl_module_name)
         else:
-            # no this type in known blocks
-            bl_class = getattr(importlib.import_module('QGIS_VDO.vdo.block_base'), 'block_base')  # noqa
-            #return block_base(head.bladdr, self)
-            bl_class.type = head.bltype.value
-            bl_class.type_name = 'block_base'
-            pass
-        #
+            # Дефолтный базовый класс, если тип блока неизвестен
+            module = importlib.import_module("QGIS_VDO.vdo.block_base")
+            bl_class = getattr(module, "block_base")
+            bl_module_name = "block_base"
+
+        # Инициализируем и возвращаем экземпляр класса
         bl_instance = bl_class(head.bladdr, *args)
+        
+        # Записываем метаданные строго в ЭКЗЕМПЛЯР, а не в КЛАСС,
+        # чтобы параллельные вызовы не перезаписывали типы друг друга
+        bl_instance.type = block_type
+        bl_instance.type_name = bl_module_name
+
         return bl_instance
+        pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
 
     def get_huffman_weights(self) -> dict:
         """
@@ -169,128 +192,6 @@ class VDO_FILE():
             ptr += HUFFMAN_PAIR_SIZE
         return weights
 
-    def generate_canonical_lookup(self, weights_table):
-        """Строит каноническую lookup-мапу: { бинарная_строка: int_байт }"""
-        full_weights = {b: 1 for b in range(256)}
-        #for key_hex, weight in weights_table.items():
-        for byte_id, weight in weights_table.items():
-            try:
-                #byte_id = int(key_hex, 16)
-                if 0 <= byte_id <= 255:
-                    full_weights[byte_id] = weight
-            except ValueError:
-                continue
-
-        heap = []
-        counter = 0
-        for byte_id, weight in full_weights.items():
-            heapq.heappush(heap, (weight, counter, {'id': byte_id, 'left': None, 'right': None}))  # noqa
-            counter += 1
-
-        while len(heap) > 1:
-            w1, _, n1 = heapq.heappop(heap)
-            w2, _, n2 = heapq.heappop(heap)
-            heapq.heappush(heap, (w1 + w2, counter, {'id': None, 'left': n1, 'right': n2}))  # noqa
-            counter += 1
-
-        _, _, root_node = heapq.heappop(heap)
-        code_lengths = {}
-        
-        def collect_lengths(node, current_depth):
-            if node['id'] is not None:
-                code_lengths[node['id']] = current_depth
-                return
-            if node['left']: collect_lengths(node['left'], current_depth + 1)  # noqa
-            if node['right']: collect_lengths(node['right'], current_depth + 1)  # noqa
-
-        collect_lengths(root_node, 0)
-        sorted_elements = sorted(code_lengths.items(), key=lambda x: (x[1], x[0]))
-
-        canonical_lookup = {}
-        current_code_int = 0
-        last_length = 0
-
-        for byte_id, length in sorted_elements:
-            if length == 0: continue  # noqa
-            if last_length > 0:
-                current_code_int <<= (length - last_length)
-            bit_code = f"{current_code_int:0{length}b}"
-            canonical_lookup[bit_code] = byte_id
-            current_code_int += 1
-            last_length = length
-
-        return canonical_lookup
-
-    def generate_huffman_lookup(self, weights_table: dict) -> dict:
-        """
-        Автоматически строит дерево Хаффмана на основе таблицы весов
-        для ключей в диапазоне от 0x0000 до 0xA000.
-        Args:
-            weights_table: dict - таблица весов
-        Returns:
-            словарь соответствия: { 'бинарный_код_строкой': декодированное_значение }
-        """
-        # Очередь с приоритетами (куча) для сборки дерева
-        heap = []
-        counter = 0
-        
-        for key_title, weight in weights_table.items():
-            node = {'id': key_title, 'left': None, 'right': None}
-            # Формат элемента: (вес, уникальный_счетчик, узел_дерева)
-            heapq.heappush(heap, (weight, counter, node))
-            counter += 1
-
-        if not heap:
-            return {}
-
-        # Построение дерева Хаффмана путем слияния минимальных узлов
-        while len(heap) > 1:
-            weight1, _, node1 = heapq.heappop(heap)
-            weight2, _, node2 = heapq.heappop(heap)
-            
-            parent_node = {'id': None, 'left': node1, 'right': node2}
-            parent_weight = weight1 + weight2
-            
-            heapq.heappush(heap, (parent_weight, counter, parent_node))
-            counter += 1
-
-        # Корень финального дерева
-        _, _, root_node = heapq.heappop(heap)       # там 1 элемент, heap[0]
-        # _, _, root_node = heapq.heappop(heap)  #  heap
-        huffman_lookup = {}
-        
-        # Рекурсивный обход дерева для генерации префиксных битовых кодов
-        def walk_tree(node, current_code):
-            if node['id'] is not None:
-                val_id = node['id']
-                """
-                # noqa:
-                # Логика интерпретации ID в конечный символ или токен
-                # if val_id == 0x00:
-                #     char_out = "[EOS]"                      # Маркер конца строки
-                # elif 0x41 <= val_id <= 0x5A:
-                #     char_out = chr(val_id).lower()          # Перевод латиницы A-Z в нижний регистр a-z
-                # elif 32 <= val_id <= 126:
-                #     char_out = chr(val_id)                  # Остальной печатный ASCII
-                # elif 0x0400 <= val_id <= 0x04FF:
-                #     char_out = chr(val_id)                  # Кириллица (Unicode), если присутствует в СНГ-версии
-                # else:
-                #     char_out = f"[Token_0x{val_id:04X}]"    # Крупные токены координат или гео-префиксов
-                """
-                # huffman_lookup[current_code] = char_out
-                huffman_lookup[current_code] = val_id
-                return
-            
-            # Левая ветка кодируется нулем, правая — единицей
-            if node['left']:
-                walk_tree(node['left'], current_code + "0")
-            if node['right']:
-                walk_tree(node['right'], current_code + "1")
-
-        # Запускаем обход от корня
-        walk_tree(root_node, "")
-        return huffman_lookup
-
     def empty(self):
         """
         Args:
@@ -307,16 +208,138 @@ class VDO_FILE():
         self.dbrev = DEFAULT_DB_REVISION
         self.segsize = DEFAULT_ONE_SEG_SIZE
 
+    # def generate_canonical_lookup(self, weights_table):
+    #     """Строит каноническую lookup-мапу: { бинарная_строка: int_байт }"""
+    #     full_weights = {b: 1 for b in range(256)}
+    #     #for key_hex, weight in weights_table.items():
+    #     for byte_id, weight in weights_table.items():
+    #         try:
+    #             #byte_id = int(key_hex, 16)
+    #             if 0 <= byte_id <= 255:
+    #                 full_weights[byte_id] = weight
+    #         except ValueError:
+    #             continue
 
+    #     heap = []
+    #     counter = 0
+    #     for byte_id, weight in full_weights.items():
+    #         heapq.heappush(heap, (weight, counter, {'id': byte_id, 'left': None, 'right': None}))  # noqa
+    #         counter += 1
+
+    #     while len(heap) > 1:
+    #         w1, _, n1 = heapq.heappop(heap)
+    #         w2, _, n2 = heapq.heappop(heap)
+    #         heapq.heappush(heap, (w1 + w2, counter, {'id': None, 'left': n1, 'right': n2}))  # noqa
+    #         counter += 1
+
+    #     _, _, root_node = heapq.heappop(heap)
+    #     code_lengths = {}
+        
+    #     def collect_lengths(node, current_depth):
+    #         if node['id'] is not None:
+    #             code_lengths[node['id']] = current_depth
+    #             return
+    #         if node['left']: collect_lengths(node['left'], current_depth + 1)  # noqa
+    #         if node['right']: collect_lengths(node['right'], current_depth + 1)  # noqa
+
+    #     collect_lengths(root_node, 0)
+    #     sorted_elements = sorted(code_lengths.items(), key=lambda x: (x[1], x[0]))
+
+    #     canonical_lookup = {}
+    #     current_code_int = 0
+    #     last_length = 0
+
+    #     for byte_id, length in sorted_elements:
+    #         if length == 0: continue  # noqa
+    #         if last_length > 0:
+    #             current_code_int <<= (length - last_length)
+    #         bit_code = f"{current_code_int:0{length}b}"
+    #         canonical_lookup[bit_code] = byte_id
+    #         current_code_int += 1
+    #         last_length = length
+
+    #     return canonical_lookup
+
+    # def generate_huffman_lookup(self, weights_table: dict) -> dict:
+    #     """
+    #     Автоматически строит дерево Хаффмана на основе таблицы весов
+    #     для ключей в диапазоне от 0x0000 до 0xA000.
+    #     Args:
+    #         weights_table: dict - таблица весов
+    #     Returns:
+    #         словарь соответствия: { 'бинарный_код_строкой': декодированное_значение }
+    #     """
+    #     # Очередь с приоритетами (куча) для сборки дерева
+    #     heap = []
+    #     counter = 0
+        
+    #     for key_title, weight in weights_table.items():
+    #         node = {'id': key_title, 'left': None, 'right': None}
+    #         # Формат элемента: (вес, уникальный_счетчик, узел_дерева)
+    #         heapq.heappush(heap, (weight, counter, node))
+    #         counter += 1
+
+    #     if not heap:
+    #         return {}
+
+    #     # Построение дерева Хаффмана путем слияния минимальных узлов
+    #     while len(heap) > 1:
+    #         weight1, _, node1 = heapq.heappop(heap)
+    #         weight2, _, node2 = heapq.heappop(heap)
+            
+    #         parent_node = {'id': None, 'left': node1, 'right': node2}
+    #         parent_weight = weight1 + weight2
+            
+    #         heapq.heappush(heap, (parent_weight, counter, parent_node))
+    #         counter += 1
+
+    #     # Корень финального дерева
+    #     _, _, root_node = heapq.heappop(heap)       # там 1 элемент, heap[0]
+    #     # _, _, root_node = heapq.heappop(heap)  #  heap
+    #     huffman_lookup = {}
+        
+    #     # Рекурсивный обход дерева для генерации префиксных битовых кодов
+    #     def walk_tree(node, current_code):
+    #         if node['id'] is not None:
+    #             val_id = node['id']
+    #             """
+    #             # noqa:
+    #             # Логика интерпретации ID в конечный символ или токен
+    #             # if val_id == 0x00:
+    #             #     char_out = "[EOS]"                      # Маркер конца строки
+    #             # elif 0x41 <= val_id <= 0x5A:
+    #             #     char_out = chr(val_id).lower()          # Перевод латиницы A-Z в нижний регистр a-z
+    #             # elif 32 <= val_id <= 126:
+    #             #     char_out = chr(val_id)                  # Остальной печатный ASCII
+    #             # elif 0x0400 <= val_id <= 0x04FF:
+    #             #     char_out = chr(val_id)                  # Кириллица (Unicode), если присутствует в СНГ-версии
+    #             # else:
+    #             #     char_out = f"[Token_0x{val_id:04X}]"    # Крупные токены координат или гео-префиксов
+    #             """
+    #             # huffman_lookup[current_code] = char_out
+    #             huffman_lookup[current_code] = val_id
+    #             return
+            
+    #         # Левая ветка кодируется нулем, правая — единицей
+    #         if node['left']:
+    #             walk_tree(node['left'], current_code + "0")
+    #         if node['right']:
+    #             walk_tree(node['right'], current_code + "1")
+
+    #     # Запускаем обход от корня
+    #     walk_tree(root_node, "")
+    #     return huffman_lookup
+
+    
 # ================================================
 class BYTESTRUCT():
     """ Base for other data structures """
 
-    def __init__(self, buffer: bytearray, size: int = None) -> None:
+    def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
         if size is not None:
-            self._raw = buffer[:size]
+            self._raw: memoryview = memoryview(buffer)[:size]
             return
-        self._raw = buffer
+        self._raw: memoryview = memoryview(buffer)[:size]
     
     def __repr__(self) -> str:
         # ss = "B " + self.hex
@@ -347,12 +370,12 @@ class BYTESTRUCT():
         """ length raw in bytes """
         return len(self._raw)
 
-    def read(self, offset: int, cnt: int) -> bytearray:
+    def read(self, offset: int, cnt: int) -> ReadableBuffer:
         """ read from inner bytes array """
         ret = self._raw[offset: offset + cnt]
         return ret
 
-    def read_str(self, ptr: int, max_len: int = None) -> str:
+    def read_str(self, ptr: int, max_len: Union[int, None] = None) -> str | None:
         """
         Args:
             ptr: offset в текущем _raw
@@ -362,7 +385,7 @@ class BYTESTRUCT():
         # ??? struct.unpack("s*")
         if not max_len:
             max_len = MAX_STR_LEN
-        return self.read(ptr, max_len).decode('cp1250').split('\x00')[0]
+        return bytes(self.read(ptr, max_len)).decode('cp1250').split('\x00')[0]
     
     def uchar(self, near_offset: int = 0) -> int:
         ''' Return uchar, offset from _raw begin'''
@@ -390,12 +413,12 @@ class BLADDR(BYTESTRUCT):
     ''' b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks '''
     size: int = UINT_BYTES_CNT
 
-    def __new__(cls, buffer, parent: VDO_FILE = None):
+    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
         instance = super().__new__(cls)
         return instance
 
-    def __init__(self, buffer: bytearray, vdo: VDO_FILE = None) -> None:
-        super().__init__(buffer[:UINT_BYTES_CNT])  # 4 - self.bytescnt
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])  # 4 - self.bytescnt
         #self.vdo = vdo if vdo else VDO_FILE()
         if not vdo or self._raw == ZERO_DWORD:
             self.vdo = VDO_FILE()
@@ -409,7 +432,7 @@ class BLADDR(BYTESTRUCT):
         return self.hex + v
 
     @property
-    def isZero(self) -> True | False:
+    def isZero(self) -> bool:
         ''' 00 00 00 00 - "заглушка" - встречается, но ptr не на реальный блок '''
         return self._raw == ZERO_DWORD
     
@@ -479,8 +502,8 @@ class PTR(BYTESTRUCT):
     ''' Указатель(near) 01 02 -> near offset 0x102 '''
     size: int = USHORT_BYTES_CNT
 
-    def __init__(self, buffer: bytearray) -> None:
-        super().__init__(buffer[:USHORT_BYTES_CNT])     # 2 - self.bytescnt
+    def __init__(self, buffer: ReadableBuffer) -> None:
+        super().__init__(memoryview(buffer)[:USHORT_BYTES_CNT])     # 2 - self.bytescnt
     
     def __repr__(self):
         ''' View while debug value'''
@@ -509,8 +532,8 @@ class LIST(BYTESTRUCT):
     b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304 '''
     size: int = UINT_BYTES_CNT
 
-    def __init__(self, buffer: bytearray) -> None:
-        super().__init__(buffer[:UINT_BYTES_CNT])   # 4 - self.bytescnt
+    def __init__(self, buffer: ReadableBuffer) -> None:
+        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])   # 4 - self.bytescnt
 
     def __repr__(self):
         ''' View while debug value'''
@@ -533,12 +556,12 @@ class FAR_LIST(BYTESTRUCT):
     ''' BLADDR : LIST '''
     size: int = DOUBLE_BYTES_CNT
 
-    def __new__(cls, buffer, parent: VDO_FILE = None):
+    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
         instance = super().__new__(cls)
         return instance
     
-    def __init__(self, buffer: bytearray, vdo: VDO_FILE = None) -> None:
-        super().__init__(buffer[:DOUBLE_BYTES_CNT])  # 8 - self.bytescnt
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        super().__init__(memoryview(buffer)[:DOUBLE_BYTES_CNT])  # 8 - self.bytescnt
         #self.vdo = vdo if vdo else VDO_FILE()
         if not vdo or self._raw[:4] == ZERO_DWORD:
             self.vdo = VDO_FILE()
@@ -582,16 +605,15 @@ class CH_IDX(BYTESTRUCT):
     '''
     size: int = 12        # CH_IDX size = 3 * DWORD
 
-    def __new__(cls, buffer, parent: VDO_FILE = None):
+    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
         instance = super().__new__(cls)
         return instance
     
-    def __init__(self, buffer: bytearray, vdo: VDO_FILE = None) -> None:
-        if (len(buffer) < self.size):
-            err = f"Размер массива байтов {len(buffer)}\
- меньше требуемого {self.size}"
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        if (len(memoryview(buffer)) < self.size):
+            err = f"Размер массива байтов {len(memoryview(buffer))} меньше требуемого {self.size}"
             raise TypeError(err)
-        super().__init__(buffer[:self.size])  # 4 - CH_IDX_SIZE
+        super().__init__(memoryview(buffer)[:self.size])  # 4 - CH_IDX_SIZE
         self.vdo = vdo if vdo else VDO_FILE()
 
     def __repr__(self):
@@ -632,13 +654,13 @@ class BLSTART(BYTESTRUCT):
     
     size: int = DOUBLE_BYTES_CNT
 
-    def __new__(cls, buffer, parent: VDO_FILE = None):
+    def __new__(cls, buffer, parent: VDO_FILE | None = None):
         instance = super().__new__(cls)
         return instance
 
-    def __init__(self, buffer: bytearray, vdo: VDO_FILE = None):
+    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None):
         """ """
-        super().__init__(buffer[:self.size])
+        super().__init__(memoryview(buffer)[:self.size])
         self.vdo = vdo if vdo else VDO_FILE()
 
     def __repr__(self):

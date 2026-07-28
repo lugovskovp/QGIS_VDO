@@ -24,10 +24,10 @@ from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
                                  NAME_LAYER_ALMANACS,
                                  NAME_LAYER_MAPS)
 
-from QGIS_VDO.ui_files.drawing import (_DrawArea,
-                                       _DrawPacketAreas,
-                                       getRendererByLayerName)
-from QGIS_VDO.ui_files import AnimatedGroupBox
+from QGIS_VDO.ui_files import (AnimatedGroupBox,
+                               _DrawArea,
+                               _DrawPacketAreas,
+                               getRendererByLayerName)
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(

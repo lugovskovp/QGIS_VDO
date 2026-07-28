@@ -16,6 +16,18 @@
                 }
             ],
             "justMyCode": true
+        },
+        {
+            "name": "Python312: QGIS Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "C:\\OSGeo4W\\bin\\python3.exe",
+            "env": {
+                "PYTHONHOME": "C:\\OSGeo4W\\apps\\Python312",
+                "PYTHONPATH": "C:\\OSGeo4W\\apps\\qgis-ltr\\python;C:\\OSGeo4W\\apps\\Python312\\Lib\\site-packages"
+            }
         }
     ]
 }

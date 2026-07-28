@@ -1,8 +1,8 @@
 {
   "python.languageServer": "Pylance", //  рекомендуется для автодополнения с QGIS/PyQt5;
   "python.analysis.extraPaths": [
-    // "C:\\OSGeo4W\\apps\\qgis\\python",
-    // "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
+    "C:\\OSGeo4W\\apps\\qgis\\python",
+    "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
     "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
   ],
   "python.autoComplete.extraPaths": [
@@ -45,5 +45,11 @@
   },
   "terminal.integrated.defaultProfile.windows": "OSGeo4W Shell",
   "python.defaultInterpreterPath": "C:\\OSGeo4W\\bin\\python3.exe",
-  "qtForPython.qmlls.enabled": false
+  "qtForPython.qmlls.enabled": false,
+  // Заставляем расширение Flake8 использовать интерпретатор QGIS
+  "flake8.interpreter": [
+    "C:\\OSGeo4W\\bin\\python3.exe"
+  ],
+  "flake8.importStrategy": "fromEnvironment",
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }

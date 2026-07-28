@@ -1,6 +1,7 @@
 [flake8]
-max-line-length = 88
+max-line-length = 120
 extend-ignore = E203
+max-complexity = 10
 exclude = .git, __pycache__, build, dist, i18n, .venv, examples\*, bmw*, ext_libs, d0*, research
 
 # extend-ignore = E203
@@ -16,7 +17,7 @@ exclude = .git, __pycache__, build, dist, i18n, .venv, examples\*, bmw*, ext_lib
 # QGS105 Do not pass iface (QgisInterface) as an argument, instead import it: 'from qgis.utils import iface' Flake8(QGS105)
 # W293 blank line contains whitespace Flake8(W293)
 # QGS202 Check the success flag and possibly error message from return value of the method if it is some of (QgsRasterAttributeTable.setValue(), QgsRasterBlock.setValue()). Otherwise ignore this error.Flake8(QGS202)
-# W503 line break before binary operatorFlake8(W503)
+# W503 line break before binary operator Flake8(W503)
 # QGS201 (experimental) Check the success flag and possibly error message from return value of some of (QgsProject.startEditing(), QgsVectorLayer.startEditing()).
 # TR012 `format` method argument is resolved before translation callFlake8(TR012)
 ignore = E265, QGS105, W293, QGS202, W503, QGS201, TR012

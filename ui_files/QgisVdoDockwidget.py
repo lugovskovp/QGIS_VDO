@@ -25,7 +25,9 @@ from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
                                  NAME_LAYER_ALMANACS,
                                  NAME_LAYER_MAPS)
 
-from QGIS_VDO.ui_files.drawing import _DrawArea, getRendererByLayerName
+from QGIS_VDO.ui_files.drawing import (_DrawArea,
+                                       _DrawPacketAreas,
+                                       getRendererByLayerName)
 
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
@@ -465,18 +467,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.thread.start()
 
     # РЕАЛЬНАЯ ЛОГИКА ОБРАБОТКИ КАЖДОЙ ПАПКИ КАРТ
-    def _safe_drawing_map(self, lat0: float, lon0: float,
-                          lat1: float, lon1: float,
-                          bl_map_val: int):
+    def _safe_drawing_map(self, areas_packet: list) -> None:
         """
         Потокобезопасная отрисовка контуров карт
         """
         # # Получить слой для folder maps
-        # layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')
-
-        point_lb = (lat0, lon0)
-        point_rt = (lat1, lon1)
-        _DrawArea([point_lb, point_rt], f"0x{bl_map_val:X}", self.layer_maps)  # noqa
+        _DrawPacketAreas(areas_packet, self.layer_maps)
+        # _DrawArea([point_lb, point_rt], f"0x{bl_map_val:X}", self.layer_maps)  # noqa
 
     def _update_gui_with_result(self, percent, block_folder_value):
         # Обновляем прогресс-бар

@@ -3,7 +3,7 @@
 Общий установочный файл для тестов 30 и 34 версии
 """
 
-from vdo.datatypes import VDO_FILE
+from QGIS_VDO.vdo.datatypes import VDO_FILE
 
 
 fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'

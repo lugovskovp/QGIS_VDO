@@ -4,6 +4,8 @@ FOLDER_MAPS = 0x09		# map folders 0x09.
 Индекс гео-блоков
 """
 
+from typing import Iterator, cast
+
 from QGIS_VDO.vdo.datatypes import BLADDR, PTR
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.geotypes import COORD
@@ -41,7 +43,7 @@ class block_0x09(block_base):
         """
         return self.li_valid.cnt
 
-    def get_items(self):
+    def get_items(self) -> Iterator[tuple]:
         """
         Генератор валидных итемов с координатами COORD lb, rt
         Returns:
@@ -117,14 +119,14 @@ if __name__ == '__main__':
     # vdo = vdo34bnl
     vdo = vdoRu
 
-    bl_toc: block_0x12 = vdo.get_block(0)
+    bl_toc: block_0x12 = cast("block_0x12", vdo.get_block(0))
     bl_scales: BLADDR = bl_toc.bladdr_scales
 
-    block_07: block_0x07 = vdo.get_block(bl_scales)
+    block_07: block_0x07 = cast("block_0x07", vdo.get_block(bl_scales))
 
     scale_5 = block_07.scales[5]
     scale_5 = block_07.scales[11]
-    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
+    block_almanac: block_0x08 = cast("block_0x08", vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1]))  # noqa
 
     # block_08 content
     print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
@@ -136,7 +138,7 @@ if __name__ == '__main__':
         pass
     
     bla_first = BLADDR(struct_UINT.pack(bla_first_val), vdo)
-    block_maps: block_0x09 = vdo.get_block(bla_first, coord_lb, coord_rt)
+    block_maps: block_0x09 = cast("block_0x09", vdo.get_block(bla_first, coord_lb, coord_rt))
 
     print(f"\nmap{block_maps}")
     for f in block_maps.get_items():
@@ -161,13 +163,13 @@ if __name__ == '__main__':
     # search_map = 0x110586636
     # search_map = 0x110449163
     scale = block_07.scales[3]
-    block_almanac: block_0x08 = vdo.get_block(scale.almanac_idx, scale.area[0], scale.area[1])  # noqa
+    block_almanac: block_0x08 = cast("block_0x08", vdo.get_block(scale.almanac_idx, scale.area[0], scale.area[1]))  # noqa
     for (bl_folder, coord_lb, coord_rt) in block_almanac.get_items():
         if bl_folder == search_fldr:
             break
     #
     bla = BLADDR(struct_UINT.pack(bl_folder), vdo)
-    block_maps: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
+    block_maps: block_0x09 = cast("block_0x09", vdo.get_block(bla, coord_lb, coord_rt))
     for (bl_map, coord_lb, coord_rt) in block_maps.get_items():
         print(bl_map, coord_lb, coord_rt)
         if bl_map == 110553640:

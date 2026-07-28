@@ -23,6 +23,7 @@ struct_UINT = struct.Struct(">L")
 
 # Бинарный DWORD 0
 ZERO_DWORD = b'\x00' * 4
+EMPTY_BUFFER = b''
 
 # Дерево хаффмана для сжатого текста
 LOOKUP_CHAR_BYTES = {'000': b'a',

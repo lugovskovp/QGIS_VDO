@@ -165,14 +165,19 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] scroll area - how many folders in almanacs
     * [x] draw scale almanac
     * [x] draw folder maps
-    * [ ] draw in child layer
     * [x] при переключении (и инициализации?) scale - в соответствующую группу нарисовать альманахи/
     * [x] при инициализации, если нет валидного scale, по-умолчанию - 5 (?) scale
-    * [ ] listWidget POI Categories
+    * [x] ускорить отрисовку карт -maps контуры
+    * [x] отображать прогресс по картам -maps
+    * [ ] проверка что карты уже загружены?
+    * [ ] listWidget POI Categories - имя, номер
     * [ ] listWidget Countries
+    * [ ] listWidget terrDivisions - пока просто перечень стран
 
 
 - [ ] tab block
+    * [ ] tabBlock - функция взятия по клику map в текущем scale (и проверить "пустые")
+    * [ ] draw in child layer
     * [ ] 
 
 - [ ] отрисовка геообъектов

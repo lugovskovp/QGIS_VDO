@@ -12,7 +12,7 @@ from qgis.PyQt.QtCore import QMetaType
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
-from QGIS_VDO.threading import FolderMapProcessingWorker
+from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.CollapsibleGroupBox import AnimatedGroupBox
 from QGIS_VDO.vdo import VDO_FILE

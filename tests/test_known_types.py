@@ -27,3 +27,11 @@ def test_setup_known_types_dynamic_parsing(tmp_path):
     
     # Проверяем, что лишние файлы не попали в словарь
     assert len(result_dict) == 2
+
+
+def test_setup_known_types_non_exist_path():
+    #
+    non_exists_path = "lkmdzkjnsvkjnsdjkns"
+    result_dict = setup_known_types(blocks_dir=non_exists_path)
+
+    assert result_dict == {}

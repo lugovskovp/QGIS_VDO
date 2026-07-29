@@ -109,9 +109,9 @@ class block_0x09(block_base):
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
-    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
-    from vdo.consts import struct_UINT        # noqa
-    from vdo.blocks import block_0x12, block_0x07, block_0x08
+    from QGIS_VDO.vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
+    from QGIS_VDO.vdo.consts import struct_UINT        # noqa
+    from QGIS_VDO.vdo.blocks import block_0x12, block_0x07, block_0x08
 
     vdo = vdo30
     # vdo = vdo34ee
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     """
     print()
     search_fldr = 0x6766107
-    search_map = 110573619
+    search_map = 110573619      # 0x6973833
     # search_map = 0x110586636
     # search_map = 0x110449163
     scale = block_07.scales[3]
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     bla = BLADDR(struct_UINT.pack(bl_folder), vdo)
     block_maps: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
     for (bl_map, coord_lb, coord_rt) in block_maps.get_items():
-        print(bl_map, coord_lb, coord_rt)
+        print(f"0x{bl_map:X}", bl_map, coord_lb, coord_rt)
         if bl_map == 110553640:
             pass
         # 110553640 50.893706N 7.102145E 51.459937N 7.668376E

@@ -128,7 +128,7 @@ class block_0x12(block_base):
         Return:
             BLADDR: BIBLIOGR type 0x13
         """
-        return self.bladdr(OFFSET_BLADDR_13_BIBLIOGR)
+        return self.read_bladdr(OFFSET_BLADDR_13_BIBLIOGR)
 
     @property
     def bladdr_scales(self) -> BLADDR:
@@ -137,7 +137,7 @@ class block_0x12(block_base):
             BLADDR: SCALES type 0x07
         """
         li_scales = self.list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
-        return self.bladdr(li_scales.ptr)
+        return self.read_bladdr(li_scales.ptr)
         # 000002 01 : 0001:0000 cnt:0 34
         # 000002 01 : 0001:0000 cnt:0 30
         # 000003 04 : 0001:0000 cnt:0 bmw
@@ -158,7 +158,7 @@ class block_0x12(block_base):
         return self.get_farlist_ch_country().bladdr
 
     @property
-    def area_A(self):
+    def area_A(self) -> tuple[COORD, COORD] | None:
         """
         Return (coord(left_bott), coort(right_top))
         """
@@ -170,7 +170,7 @@ class block_0x12(block_base):
         return (lb, rt)
 
     @property
-    def area_B(self):
+    def area_B(self) -> tuple[COORD, COORD] | None:
         """
         Return (coord(left_bott), coort(right_top))
         """

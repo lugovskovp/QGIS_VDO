@@ -5,15 +5,29 @@
 
 import zlib             # распаковка архивов типа 2 и 3
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    # Этот блок видит только Pylance, интерпретатор Python его игнорирует
+    from _typeshed import ReadableBuffer
+else:
+    # Запасной вариант для рантайма, чтобы не было NameError
+    ReadableBuffer = bytes
+
+
+from QGIS_VDO.vdo.consts import struct_UINT
+
 # from vdo.enums import BlockType
 from .datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX, PTR
-from .datatypes import ZERO_DWORD, MAX_STR_LEN
+from .datatypes import MAX_STR_LEN
 from .geotypes import COORD
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
 BLOCK_0x12_SIZE = 0x800
 
 # 0x13 - read_str(self)
+
+ZERO_DWORD = "\x00" * 4
 
 
 class block_base(BYTESTRUCT):
@@ -90,18 +104,29 @@ class block_base(BYTESTRUCT):
         next = self.head.bladdr.offset + (self.vdo.segsize * self.head.segcnt)
         return next
 
-    def bladdr(self, value: bytearray | int) -> BLADDR:
+    def bladdr(self, value: ReadableBuffer | int) -> BLADDR:
         """
         Args:
-            value: или массив байтов, или offset, откуда их взять в _raw
+            value: или массив байтов, или НОМЕР БЛОКА, откуда их взять в _raw
         Returns:
             BLADDR: - block adress
         """
-        if type(value) is int:
-            # offset
-            value = self.read(value, BLADDR.size)
+        if isinstance(value, int):
+            # bl_addr
+            value = struct_UINT.pack(value)
+            # value = self.read(value, BLADDR.size)
         return BLADDR(value, self.vdo)
-    
+
+    def read_bladdr(self, offset: int) -> BLADDR:
+        """
+        Args:
+            offset: int откуда их взять в _raw
+        Returns:
+            BLADDR: - block adress
+        """
+        value = self.read(offset, BLADDR.size)
+        return BLADDR(value, self.vdo)
+        
     def farlist(self, value: bytearray | int) -> FAR_LIST:
         """
         Args:
@@ -181,7 +206,7 @@ class block_base(BYTESTRUCT):
         """
         # offset = 0 -> нет строки
         if offset:
-            string = self.read(offset, MAX_STR_LEN)
+            string = self.read(offset, MAX_STR_LEN).tobytes()
             return string.decode('cp1250').split('\x00')[0]
         return ''
 

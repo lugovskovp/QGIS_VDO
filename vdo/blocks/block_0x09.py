@@ -4,7 +4,7 @@ FOLDER_MAPS = 0x09		# map folders 0x09.
 Индекс гео-блоков
 """
 
-from typing import Iterator, cast
+from typing import Iterator
 
 from QGIS_VDO.vdo.datatypes import BLADDR, PTR
 from QGIS_VDO.vdo.block_base import block_base
@@ -93,25 +93,94 @@ class block_0x09(block_base):
 
                 # read bladdr_value
                 bladdr_map_val = self.uint(ptr_val)
-                # Долгота (Lng) E/W - x
-                hex_lon = self.origin._hlongtitude + x * self.item_side
-                # Широта (Lat) N/S - y
-                hex_lat = self.origin._hlatitude + y * self.item_side
-                coord_lb = COORD(hex_lon, hex_lat)
-                hex_lon += size_X * self.item_side
-                hex_lat += size_Y * self.item_side
-                coord_rt = COORD(hex_lon, hex_lat)
-                res = (bladdr_map_val, coord_lb, coord_rt)
-                yield res
 
+                # # Долгота (Lng) E/W - x
+                # hex_lon = self.origin._hlongtitude + x * self.item_side
+                # # Широта (Lat) N/S - y
+                # hex_lat = self.origin._hlatitude + y * self.item_side
+                # coord_lb = COORD(hex_lon, hex_lat)
+                # hex_lon += size_X * self.item_side
+                # hex_lat += size_Y * self.item_side
+                # coord_rt = COORD(hex_lon, hex_lat)
 
+                (coord_lb, coord_rt) = self.get_xy_area(x, y, size_X, size_Y)
+                # res = (bladdr_map_val, coord_lb, coord_rt)
+                yield (bladdr_map_val, coord_lb, coord_rt)
+
+    def get_xy_area(self, x: int, y: int, x_size: int, y_size: int) -> tuple[COORD, COORD]:
+        """
+        Args:
+            x, y: int - "координаты" левого нижнего в квадрате
+            x_size, y_size: int - размеры сторон
+        значения x, y ОБЯЗАНЫ быть 0..qty_x, не проверяется
+        Returns:
+            tuple[left_bottov, right_top]
+                left_bottom: COORD
+                right_top: COORD
+        """
+        # left bottom
+        # Долгота (Lng) E/W - x
+        hex_lon = self.origin._hlongtitude + x * self.item_side
+        # Широта (Lat) N/S - y
+        hex_lat = self.origin._hlatitude + y * self.item_side
+        coord_lb = COORD(hex_lon, hex_lat)
+
+        # right top
+        hex_lon += x_size * self.item_side
+        hex_lat += y_size * self.item_side
+        coord_rt = COORD(hex_lon, hex_lat)
+
+        return (coord_lb, coord_rt)
+
+    def get_xy_item(self, x, y) -> BLADDR | None:
+        """
+        Вернуть bladdr карты
+        Args:
+            x, y: int "координаты" в "квадрате" итемов
+        Returns:
+            block: BLADDR, item self - geo_block
+        """
+        item_num = y + x * self.qty_y
+        offset = self.li_items.ptr + item_num * PTR.size
+        # items in 0x09 - ptr to bladdr
+        if not (ptr := self.ushort(offset)):
+            # non valid ptr == 0
+            return None
+        # а вот теперь сам bladdr, и он точно не самый первый блок
+        # bladdr_val = self.uint(ptr)
+        # bladdr = self.bladdr(self.uint(ptr))
+        return self.bladdr(self.uint(ptr))
+    
+    def find_by_coord(self, srch: COORD) -> BLADDR | None:
+        """
+        Поиск блока КАРТЫ, в который попадают координаты, или None
+        """
+        # проверка, что srch в пределах координат блока
+        max_hlatitude = self.origin._hlatitude + self.qty_y * self.item_side
+        max_hlongtitude = self.origin._hlongtitude + self.qty_x * self.item_side
+        if srch._hlatitude < self.origin._hlatitude or srch.lat > max_hlatitude \
+           or srch._hlongtitude < self.origin._hlongtitude or srch.lon > max_hlongtitude:
+            # не попал в квадрат lb-rt
+            print(f"bl_0x08: No way: {srch} not in {self.area}")
+            return None
+        # расчет offset для srch : _hlongtitude - SIGNED!
+        # delta_hlon_x = (srch._hlongtitude - self.origin._hlongtitude) / self.item_side
+        # delta_hlat_y = (srch._hlatitude - self.origin._hlatitude) / self.item_side
+        delta_x = int((srch._hlongtitude - self.origin._hlongtitude) / self.item_side)
+        delta_y = int((srch._hlatitude - self.origin._hlatitude) / self.item_side)
+        # Если есть такой блок в итемах
+        if (bladdr_map := self.get_xy_item(delta_x, delta_y)) is None:
+            return None
+        # координаты углов полученного итема не нужны - есть внутри geoblock
+        return bladdr_map
 # -------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
-    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
-    from vdo.consts import struct_UINT        # noqa
-    from vdo.blocks import block_0x12, block_0x07, block_0x08
+    from QGIS_VDO.vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
+    from QGIS_VDO.vdo.consts import struct_UINT        # noqa
+    from QGIS_VDO.vdo.blocks import block_0x12, block_0x07, block_0x08
 
     vdo = vdo30
     # vdo = vdo34ee
@@ -119,14 +188,14 @@ if __name__ == '__main__':
     # vdo = vdo34bnl
     vdo = vdoRu
 
-    bl_toc: block_0x12 = cast("block_0x12", vdo.get_block(0))
+    bl_toc: block_0x12 = vdo.get_block(0)
     bl_scales: BLADDR = bl_toc.bladdr_scales
 
-    block_07: block_0x07 = cast("block_0x07", vdo.get_block(bl_scales))
+    block_07: block_0x07 = vdo.get_block(bl_scales)
 
     scale_5 = block_07.scales[5]
     scale_5 = block_07.scales[11]
-    block_almanac: block_0x08 = cast("block_0x08", vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1]))  # noqa
+    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])
 
     # block_08 content
     print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
@@ -138,7 +207,7 @@ if __name__ == '__main__':
         pass
     
     bla_first = BLADDR(struct_UINT.pack(bla_first_val), vdo)
-    block_maps: block_0x09 = cast("block_0x09", vdo.get_block(bla_first, coord_lb, coord_rt))
+    block_maps: block_0x09 = vdo.get_block(bla_first, coord_lb, coord_rt)
 
     print(f"\nmap{block_maps}")
     for f in block_maps.get_items():
@@ -159,19 +228,19 @@ if __name__ == '__main__':
     """
     print()
     search_fldr = 0x6766107
-    search_map = 110573619
+    search_map = 110573619      # 0x6973833
     # search_map = 0x110586636
     # search_map = 0x110449163
     scale = block_07.scales[3]
-    block_almanac: block_0x08 = cast("block_0x08", vdo.get_block(scale.almanac_idx, scale.area[0], scale.area[1]))  # noqa
+    block_almanac: block_0x08 = vdo.get_block(scale.almanac_idx, scale.area[0], scale.area[1])
     for (bl_folder, coord_lb, coord_rt) in block_almanac.get_items():
         if bl_folder == search_fldr:
             break
     #
     bla = BLADDR(struct_UINT.pack(bl_folder), vdo)
-    block_maps: block_0x09 = cast("block_0x09", vdo.get_block(bla, coord_lb, coord_rt))
+    block_maps: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
     for (bl_map, coord_lb, coord_rt) in block_maps.get_items():
-        print(bl_map, coord_lb, coord_rt)
+        print(f"0x{bl_map:X}", bl_map, coord_lb, coord_rt)
         if bl_map == 110553640:
             pass
         # 110553640 50.893706N 7.102145E 51.459937N 7.668376E

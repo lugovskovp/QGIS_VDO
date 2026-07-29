@@ -13,7 +13,6 @@ BLSTART
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
 import os.path
-import struct
 import importlib
 
 from typing import TYPE_CHECKING, Union, Any
@@ -28,7 +27,7 @@ else:
 
 from .enums import BlockType
 from .consts import struct_WORD, struct_UINT
-from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD, EMPTY_BUFFER
+from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
 
 
 OFFSET_TOC = 0x08
@@ -41,81 +40,93 @@ OFFSET_DB_REVISION = 0x1a
 MAX_STR_LEN = 63    # 255
 
 
-def setup_known_types():
-    """ """
-    # 'C:\\Work\\QGIS_VDO\\vdo'
-    plugin_dir = os.path.dirname(os.path.realpath(__file__))
-    # 'C:\\Work\\QGIS_VDO\\vdo\\blocks'
-    dirname = os.path.join(plugin_dir, "blocks")
-    # список файлов в директории - только файлы
-    files = [f for f in os.listdir(dirname) if os.path.isfile(os.path.join(dirname, f))]
-    # оставить только файлы, начинающемися на 'block_', без расширений [0:-3]
-    block_files = [f[0:-3] for f in files if f[0:6] == 'block_']
-    # 'block_0x0B', 'block_0x12' ...
-    # '0x0B' '0x12' '0x13' '0xEE' - block types
-    known_types = dict([(int(t[-4:], 16), t) for t in block_files])
-    # {(11, 'block_0x0B'), (18, 'block_0x12'), (19, 'block_0x13')...}
+def setup_known_types(blocks_dir: str | None = None) -> dict[int, str]:
+    """
+    Динамически собирает словарь известных типов блоков на основе файлов в папке blocks.
+    
+    Args:
+        blocks_dir: Опциональный путь к папке. Если не передан, вычисляется автоматически.
+    Returns:
+        dict: {int_type: "block_name"}
+    """
+    if blocks_dir is None:
+        plugin_dir = os.path.dirname(os.path.realpath(__file__))
+        blocks_dir = os.path.join(plugin_dir, "blocks")
+
+    # Защита: если папки physical не существует (например, при специфичном запуске тестов)
+    if not os.path.exists(blocks_dir):
+        return {}
+
+    known_types = {}
+    
+    try:
+        for f in os.listdir(blocks_dir):
+            # Проверяем расширение и префикс файла
+            if f.startswith("block_") and f.endswith(".py"):
+                module_name = f[:-3]  # Отсекаем ".py" -> "block_0x0B"
+                
+                # Извлекаем HEX-часть: разбиваем по '_' и берем последний элемент
+                hex_part = module_name.split("_")[-1]  # "0x0B"
+                
+                try:
+                    block_type = int(hex_part, 16)
+                    known_types[block_type] = module_name
+                except ValueError:
+                    # Игнорируем файлы, которые не заканчиваются на валидный HEX
+                    continue
+    except OSError:
+        return {}
+
     return known_types
 
 
-# создается список блоков, для которых уже есть классы
+# Инициализация словаря блоков по умолчанию
 KNOWN_BLOCKS = setup_known_types()
 
 
 # ----
 class VDO_FILE():
     """ класс работы с файлом формата carindb """
-    path: str | None
-    # :path: full filepath, os.path or None
-    dbrev: int
-    """:dbrev: database revision, 30 (0x1e) or 34 (0x22)"""
-    segsize: int    # :segsize: size of one segment in chank
 
     def __init__(self, path: str | None = None) -> None:
-        """ """
         if path:
-            self.path = path
-            self.dbrev = struct_WORD.unpack(self.read(OFFSET_DB_REVISION, 2))[0]
-            self.segsize = struct_WORD.unpack(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
-            return
-        self.empty()
+            self.path: str | None = path
+            # Используем unpack_from для безопасности типов ReadableBuffer
+            self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
+            # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
+            self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
+        else:
+            self.empty()
 
-    def __repr__(self):
-        s = f'VDO v.{self.dbrev}[{self.segsize}]:{self.path}'
-        return s
+    def __repr__(self) -> str:
+        return f"VDO v.{self.dbrev}[{self.segsize}]:{self.path}"
 
     @property
     def file_size(self) -> int:
-        """ Размер файла VDO """
-        if self.path is None:
-            return 0
-        if os.path.exists(self.path):
+        """Размер файла VDO на диске."""
+        if self.path and os.path.exists(self.path):
             return os.path.getsize(self.path)
         return 0
 
     @property
     def QGISvdoGroupName(self) -> str | None:
-        """ Generate unique name for root group"""
-        if self.path is None:
+        """Генерация уникального имени для корневой группы слоев QGIS."""
+        if not self.path:
             return None
-        ap = self.path.split("/")
-        res = f"{ap[-2]}_0x{self.file_size:04X}"
-        return res
+        # Замена ручного split("/") на кроссплатформенный os.path.split
+        _, folder_name = os.path.split(os.path.dirname(self.path))
+        return f"{folder_name}_0x{self.file_size:04X}"
 
-    def read(self, offset: int, size: int) -> ReadableBuffer:
-        """ Return bytearray[size] from self.path.offset
-        Args:
-            offset: offset in file path
-            size:    bytes in result bytearray
-        Returns:
-            bytearray[size]: from self.path.offset
-        """
-        if self.path is None:
-            return EMPTY_BUFFER                   # пустое значение
-        with open(self.path, 'rb') as f:
-            f.seek(offset)
-            return f.read(size)
-        return None
+    def read(self, offset: int, size: int) -> bytes:
+        """Чтение блока байт заданной длины по указанному смещению."""
+        if not self.path or size <= 0:
+            return EMPTY_BUFFER
+        try:
+            with open(self.path, "rb") as f:
+                f.seek(offset)
+                return f.read(size)
+        except (OSError, FileNotFoundError):
+            return EMPTY_BUFFER
 
     def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
         """
@@ -126,83 +137,73 @@ class VDO_FILE():
         Returns:
             Block instance или None, если адрес невалиден или это не блок.
         """
+        if addr is None:
+            return None
+        
         if isinstance(addr, int):
             offset = addr
-        elif type(addr).__name__ == "BLADDR":
-            # struct_UINT.unpack возвращает кортеж, проверяем первый элемент [0]
-            if not struct_UINT.unpack(addr._raw)[0]:
+        elif isinstance(addr, BLADDR):  # Исправлена проверка типа
+            if addr.isZero:  # Используем оптимизированное свойство
                 return None
             offset = addr.offset
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
 
-        # Чтение заголовка блока и базовая проверка валидности
-        head = BLSTART(self.read(offset, BLSTART.size), self)
+        # Чтение заголовка блока
+        head_bytes = self.read(offset, BLSTART.size)
+        if len(head_bytes) < BLSTART.size:
+            return None
+            
+        head = BLSTART(head_bytes, self)
         if head.bladdr.offset != offset:
             return None
 
-        # 3. Динамический импорт класса блока
         block_type = head.bltype.value
-        # а описан ли тип этого блока?
+
+        # Динамический импорт класса блока
         if block_type in KNOWN_BLOCKS:
             bl_module_name = KNOWN_BLOCKS[block_type]
-            # Относительный импорт внутри пакета vdo
-            module = importlib.import_module(f".blocks.{bl_module_name}", package="QGIS_VDO.vdo")
+            # Безопасный относительный импорт без жесткого префикса QGIS_VDO
+            module = importlib.import_module(f"..blocks.{bl_module_name}", package=__name__)
             bl_class = getattr(module, bl_module_name)
         else:
-            # Дефолтный базовый класс, если тип блока неизвестен
-            module = importlib.import_module("QGIS_VDO.vdo.block_base")
+            module = importlib.import_module("..block_base", package=__name__)
             bl_class = getattr(module, "block_base")
             bl_module_name = "block_base"
 
-        # Инициализируем и возвращаем экземпляр класса
         bl_instance = bl_class(head.bladdr, *args)
-        
-        # Записываем метаданные строго в ЭКЗЕМПЛЯР, а не в КЛАСС,
-        # чтобы параллельные вызовы не перезаписывали типы друг друга
         bl_instance.type = block_type
         bl_instance.type_name = bl_module_name
 
         return bl_instance
         pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
 
-    def get_huffman_weights(self) -> dict:
-        """
-        в первом блоке, 0х12 есть таблица весов для дерева хаффмана
-        по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
-        Таблица одна на весь файл - и логично не привязывать её к блоку
-        Returns:
-            weight: dict {key_id : value_weight}
-        """
-        OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
-        # начальный адрес таблицы весов и количество элементов.
-        HUFFMAN_PAIR_SIZE = 4
-        struct_WORD_TWICE = struct.Struct(">HH")
+    # def get_huffman_weights(self) -> dict:
+    #     """
+    #     в первом блоке, 0х12 есть таблица весов для дерева хаффмана
+    #     по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
+    #     Таблица одна на весь файл - и логично не привязывать её к блоку
+    #     Returns:
+    #         weight: dict {key_id : value_weight}
+    #     """
+    #     OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
+    #     # начальный адрес таблицы весов и количество элементов.
+    #     HUFFMAN_PAIR_SIZE = 4
+    #     struct_WORD_TWICE = struct.Struct(">HH")
 
-        weights = {}
-        bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
-        (ptr, cnt) = struct_WORD_TWICE.unpack(bytes_list)
-        for _ in range(cnt):
-            (key_id, value_weight) = struct_WORD_TWICE.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
-            #if 0 <= key_id <= 0xFFFF:
-            # Нам нужны только символы с реальным весом > 0
-            if value_weight > 0:
-                weights[key_id] = value_weight
-            ptr += HUFFMAN_PAIR_SIZE
-        return weights
+    #     weights = {}
+    #     bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
+    #     (ptr, cnt) = struct_WORD_TWICE.unpack(bytes_list)
+    #     for _ in range(cnt):
+    #         (key_id, value_weight) = struct_WORD_TWICE.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
+    #         #if 0 <= key_id <= 0xFFFF:
+    #         # Нам нужны только символы с реальным весом > 0
+    #         if value_weight > 0:
+    #             weights[key_id] = value_weight
+    #         ptr += HUFFMAN_PAIR_SIZE
+    #     return weights
 
-    def empty(self):
-        """
-        Args:
-            param1: This is the first param.
-            param2: This is a second param.
-
-        Returns:
-            This is a description of what is returned.
-
-        Raises:
-            KeyError: Raises an exception.
-        """
+    def empty(self) -> None:
         self.path = None
         self.dbrev = DEFAULT_DB_REVISION
         self.segsize = DEFAULT_ONE_SEG_SIZE
@@ -331,182 +332,197 @@ class VDO_FILE():
 
     
 # ================================================
-class BYTESTRUCT():
-    """ Base for other data structures """
+
+class BYTESTRUCT:
+    """Base for other data structures"""
+
+    # Жестко выделяем память только под _raw
+    __slots__ = ("_raw",)
 
     def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
-        if size is not None:
-            self._raw: memoryview = memoryview(buffer)[:size]
-            return
-        self._raw: memoryview = memoryview(buffer)[:size]
-    
+        # Создаем memoryview. Если buffer уже memoryview, избегаем двойного оборачивания
+        view = buffer if isinstance(buffer, memoryview) else memoryview(buffer)
+        self._raw: memoryview = view[:size]
+
     def __repr__(self) -> str:
-        # ss = "B " + self.hex
         return self.hex
-    
-    @property
-    def hex(self):
-        # he = " ".join("{:02x}".format(c) for c in self._raw)
-        hex_list = [f"{c:02X}" for c in self._raw]
-        result_lines = []
-        for i in range(0, len(hex_list), 16):
-            # Номер строки в HEX (0000, 0010, 0020 и т.д.)
-            #   line_number = f"{i:04X}: "
-            # 8 + " " + 8 HEX-значений текущей строки
-            # hex_chunk = " ".join(hex_list[i : i + 16])
-            hex_chunk0 = " ".join(hex_list[i : i + 8])
-            hex_chunk1 = " ".join(hex_list[i + 8 : i + 16])
-            # Собираем строку воедино
-            #result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
-            result_lines.append(f"{hex_chunk0}  {hex_chunk1}")
-        # Объединяем все строки
-        # cr = "{}".format("\n")
-        result = "   ".join(result_lines)
-        return result
 
     @property
-    def len(self):
-        """ length raw in bytes """
+    def hex(self) -> str:
+        raw_hex = self._raw.hex().upper()
+        chunks = []
+        # Шаг 32 символа = 16 байт
+        for i in range(0, len(raw_hex), 32):
+            line = raw_hex[i : i + 32]
+            length = len(line)
+            if length == 32:
+                chunks.append(f"{line[:16]}  {line[16:]}")
+            elif length > 16:
+                # Если хвост больше 8 байт, бьем на 8 байт + остаток
+                chunks.append(f"{line[:16]} {line[16:]}")
+            else:
+                # Если хвост меньше или равен 8 байтам
+                chunks.append(line)
+
+        return "   ".join(chunks)
+
+    def len(self) -> int:
+        """length raw in bytes"""
         return len(self._raw)
 
-    def read(self, offset: int, cnt: int) -> ReadableBuffer:
-        """ read from inner bytes array """
-        ret = self._raw[offset: offset + cnt]
-        return ret
+    def read(self, offset: int, cnt: int) -> memoryview:
+        """read from inner bytes array (returns zero-copy view)"""
+        return self._raw[offset : offset + cnt]
 
-    def read_str(self, ptr: int, max_len: Union[int, None] = None) -> str | None:
-        """
+    def read_str(self, ptr: int, max_len: int | None = None) -> str:
+        """Чтение 0-ended строки БЕЗ копирования и лишнего выделения памяти
+
         Args:
             ptr: offset в текущем _raw
         Returns:
-            str: 0-ended строка
+            str: декодированная строка до первого \x00
         """
-        # ??? struct.unpack("s*")
-        if not max_len:
-            max_len = MAX_STR_LEN
-        return bytes(self.read(ptr, max_len)).decode('cp1250').split('\x00')[0]
-    
+        limit = max_len if max_len is not None else MAX_STR_LEN
+        sub_view = self._raw[ptr : ptr + limit]
+
+        # Ищем 0x00 перебором прямо по memoryview БЕЗ вызова .tobytes()
+        # Для memoryview итерация возвращает int (коды байт)
+        null_idx = next((i for i, b in enumerate(sub_view) if b == 0), None)
+
+        if null_idx is not None:
+            sub_view = sub_view[:null_idx]
+
+        # Декодируем напрямую через bytes(sub_view) - копия создается только 1 раз при десериализации
+        return bytes(sub_view).decode("cp1250")
+
     def uchar(self, near_offset: int = 0) -> int:
-        ''' Return uchar, offset from _raw begin'''
-        #uc = self.read(near_offset, UCHAR_BYTES_CNT)
-        uc = self._raw[near_offset]
-        return uc
+        """Return uchar, offset from _raw begin"""
+        return self._raw[near_offset]
 
     def ushort(self, near_offset: int = 0) -> int:
-        ''' Return unsigned short (2 bytes, word), offset from _raw begin'''
-        return struct_WORD.unpack_from(self._raw[near_offset:])[0]
-    
+        """Return unsigned short (2 bytes, word), offset from _raw begin"""
+        return struct_WORD.unpack_from(self._raw, near_offset)[0]
+
     def uint(self, near_offset: int = 0) -> int:
-        ''' Return unsigned int (4 bytes, dword), offset from _raw begin'''
-        return struct_UINT.unpack_from(self._raw[near_offset:])[0]
-
-    # def list(self, near_offset: int = 0) -> LIST:
-    #     return LIST(self._raw[near_offset:LIST.size])
-
-    # def coord(self, near_offset: int = 0) -> COORD:
-    #     return COORD(self._raw[near_offset:COORD.size])
+        """Return unsigned int (4 bytes, dword), offset from _raw begin"""
+        return struct_UINT.unpack_from(self._raw, near_offset)[0]
     
 
-# ----
+# Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
+class EmptyVDO:
+    segsize = 512  # дефолтный размер сегмента для безопасных математических операций
+    path = ""
+
+
+EMPTY_VDO = EmptyVDO()
+
+
 class BLADDR(BYTESTRUCT):
-    ''' b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks '''
+    """
+    b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks
+    """
+    # Фиксируем слоты. Базовый '_raw' уже унаследован, здесь пишем только новые поля
+    __slots__ = ('vdo',)
+    
     size: int = UINT_BYTES_CNT
 
-    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
-        instance = super().__new__(cls)
-        return instance
-
-    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
-        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])  # 4 - self.bytescnt
-        #self.vdo = vdo if vdo else VDO_FILE()
-        if not vdo or self._raw == ZERO_DWORD:
-            self.vdo = VDO_FILE()
+    def __init__(self, buffer: ReadableBuffer, vdo: getattr = None) -> None:
+        # Передаем буфер строго фиксированной длины в базовый класс
+        super().__init__(buffer, size=UINT_BYTES_CNT)
+        
+        # Экономим память: не создаем новый VDO_FILE() на каждый чих
+        if not vdo or self.value == 0:
+            self.vdo = EMPTY_VDO
         else:
             self.vdo = vdo
-        pass
-
-    def __repr__(self) -> str:
-        ''' View while debug value'''
-        v = '' if self.vdo.path else ' virt'
-        return self.hex + v
 
     @property
     def isZero(self) -> bool:
-        ''' 00 00 00 00 - "заглушка" - встречается, но ptr не на реальный блок '''
-        return self._raw == ZERO_DWORD
+        """Быстрая проверка на нулевой dword без сравнения массивов байт"""
+        return self.value == 0
     
     @property
+    def value(self) -> int:
+        """Числовое значение всего dword (Big-Endian)"""
+        # Индекс [0] обязателен, если unpack_from возвращает кортеж (val,)
+        return struct_UINT.unpack_from(self._raw, 0)[0]
+
+    @property
     def blocknumber(self) -> int:
-        ''' Номер блока, первые 3 байта'''
-        return struct_UINT.unpack(b'\x00' + self._raw[:3])[0]
+        """Номер блока (первые 3 байта). Работает моментально через битовый сдвиг."""
+        return self.value >> 8
     
     @property
     def segcnt(self) -> int:
-        ''' Размер в сегментах, последний байт'''
-        bn = self.uchar(3)
-        return bn
+        """Размер в сегментах (последний 4-й байт)"""
+        return self._raw[3]
     
     @property
     def sizeofblock(self) -> int:
-        ''' Размер описываемого блока в байтах'''
-        sz = self.segcnt * self.vdo.segsize
-        return sz
+        """Размер описываемого блока в байтах"""
+        return self.segcnt * self.vdo.segsize
     
     @property
-    def hex(self):
-        he = f'{self.blocknumber:06x} {self._raw[3]:02x}'
-        return he
+    def offset(self) -> int:
+        """Смещение от начала файла"""
+        return self.blocknumber * self.vdo.segsize
+    
+    def next_block_offset(self) -> int:
+        return self.offset + self.sizeofblock
 
     @property
-    def offset(self):
-        ''' Смещение от начала файла'''
-        bo = int(self.blocknumber * self.vdo.segsize)
-        return bo
+    def hex(self) -> str:
+        # Вывод номера блока в 6 символов hex и размера сегмента в 2 символа hex
+        return f'{self.blocknumber:06x} {self._raw[3]:02x}'
+
+    def __repr__(self) -> str:
+        v = '' if self.vdo.path else ' virt'
+        return self.hex + v
     
-    def next_block_offset(self):
-        return self.offset + self.sizeofblock
-    
-    def __eq__(self, value: object) -> bool:
-        '''TODO: segsize == segsize'''
-        if not isinstance(value, BLADDR):
+    # --- ИСПРАВЛЕННЫЕ ОПЕРАЦИИ СРАВНЕНИЯ ---
+
+    def _check_context(self, other: 'BLADDR') -> None:
+        """Внутренняя проверка на совместимость контекстов данных"""
+        if self.vdo.segsize != other.vdo.segsize:
+            raise ValueError(
+                f"Cannot compare BLADDR with different segsize: {self.vdo.segsize} != {other.vdo.segsize}"
+            )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != value.vdo.segsize:
-            return False    # segsize обязаны быть равными
-        if self.blocknumber == value.blocknumber:
-            return True
-        return False
+        self._check_context(other)
+        return self.blocknumber == other.blocknumber
     
-    def __lt__(self, value: object) -> bool:
-        if not isinstance(value, BLADDR):
-            #raise TypeError("Операнд справа должен иметь тип BLADDR")
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != value.vdo.segsize:
-            return False    # segsize обязаны быть равными
-        if self.blocknumber < value.blocknumber:
-            return True
-        return False
-    
-    def __le__(self, value: object) -> bool:
-        if not isinstance(value, BLADDR):
+        self._check_context(other)
+        return self.blocknumber < other.blocknumber
+
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != value.vdo.segsize:
-            return False    # segsize обязаны быть равными
-        if self.blocknumber <= value.blocknumber:
-            return True
-        return False
+        self._check_context(other)
+        return self.blocknumber <= other.blocknumber
 
 
 # ----
 class PTR(BYTESTRUCT):
     ''' Указатель(near) 01 02 -> near offset 0x102 '''
+    # Класс не вводит новых переменных, но чтобы не создавался __dict__,
+    # нужно явно объявить пустые __slots__
+    __slots__ = ()
+
     size: int = USHORT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer) -> None:
-        super().__init__(memoryview(buffer)[:USHORT_BYTES_CNT])     # 2 - self.bytescnt
+        # Передаем буфер фиксированного размера (2 байта) напрямую в базовый класс
+        super().__init__(buffer, size=USHORT_BYTES_CNT)
     
-    def __repr__(self):
-        ''' View while debug value'''
-        return "0x{:04X}".format(self.value)
+    def __repr__(self) -> str:
+        """Отображение значения при отладке в правильном 16-битном формате (4 символа)"""
+        return f"0x{self.value:04X}"
  
     @property
     def value(self) -> int:
@@ -516,12 +532,12 @@ class PTR(BYTESTRUCT):
     
     @property
     def hexptr(self) -> str:
-        ''' ptr in hex string '''
-        return "0x{:02X}".format(self.value)
+        """Возвращает указатель в виде hex-строки фиксированной длины 4 символа (0x0000)"""
+        return f"0x{self.value:04X}"
 
     @property
     def isZero(self) -> bool:
-        """ ==0 -> empty"""
+        """True, если указатель нулевой (пустой)"""
         return self.value == 0
     
     
@@ -529,20 +545,23 @@ class PTR(BYTESTRUCT):
 class LIST(BYTESTRUCT):
     ''' ptr: указатель(near) на начало массива; cnt: количество элементов
     b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304 '''
-    size: int = UINT_BYTES_CNT
+    # Сохраняем оптимизацию памяти базового класса, запрещая создание __dict__
+    __slots__ = ()
+
+    size: int = 4       # UINT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer) -> None:
-        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])   # 4 - self.bytescnt
+        # Жестко ограничиваем буфер размером структуры (4 байта)
+        super().__init__(buffer, size=4)         # 4 - self.bytescnt
 
     def __repr__(self):
         ''' View while debug value'''
-        val = "{0:04X}:{1:04X} cnt:{1:d}".format(self.ptr, self.cnt)
-        return val
+        return f"{self.ptr:04X}:{self.cnt:04X} cnt:{self.cnt}"
         
     @property
     def ptr(self) -> int:
         ''' Near ptr to begin list'''
-        return self.ushort()
+        return self.ushort(0)
 
     @property
     def cnt(self) -> int:
@@ -552,43 +571,54 @@ class LIST(BYTESTRUCT):
 
 # ----
 class FAR_LIST(BYTESTRUCT):
-    ''' BLADDR : LIST '''
+    """
+    Композитная структура: BLADDR (4 байта) + LIST (4 байта).
+    Общий размер: 8 байт.
+    """
+    # Жестко фиксируем поля в памяти. __dict__ больше не создается!
+    __slots__ = ('vdo', '_bladdr_obj', '_list_obj')
+    
     size: int = DOUBLE_BYTES_CNT
 
-    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
-        instance = super().__new__(cls)
-        return instance
-    
     def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
-        super().__init__(memoryview(buffer)[:DOUBLE_BYTES_CNT])  # 8 - self.bytescnt
-        #self.vdo = vdo if vdo else VDO_FILE()
-        if not vdo or self._raw[:4] == ZERO_DWORD:
-            self.vdo = VDO_FILE()
+        # Инициализируем базовый буфер размером 8 байт
+        super().__init__(buffer, size=DOUBLE_BYTES_CNT)
+        
+        # Защита от создания лишних тяжелых инстансов VDO
+        # Используем встроенное свойство uint базового класса для мгновенной проверки первых 4 байт
+        if not vdo or self.uint(0) == 0:
+            self.vdo = EMPTY_VDO
         else:
             self.vdo = vdo
+            
+        # ОПТИМИЗАЦИЯ: Создаем дочерние структуры ОДИН раз при инициализации.
+        # Передаем zero-copy срезы memoryview, чтобы избежать копирования байт.
+        self._bladdr_obj = BLADDR(self._raw[:UINT_BYTES_CNT], self.vdo)
+        self._list_obj = LIST(self._raw[UINT_BYTES_CNT:])
     
     def __repr__(self):
         ''' View while debug value'''
-        val = self.hex
-        return val
+        return self.hex
     
     @property
     def bladdr(self) -> BLADDR:
-        return BLADDR(self._raw, self.vdo)
+        """Возвращает кэшированный объект адреса блока (без создания нового)"""
+        return self._bladdr_obj
 
     @property
     def list(self) -> LIST:
-        return LIST(self._raw[UINT_BYTES_CNT:])
+        """Возвращает кэшированный объект списка (без создания нового)"""
+        return self._list_obj
 
     @property
     def offset(self) -> int:
-        return self.bladdr.offset + self.list.ptr
+        """Смещение от начала файла: смещение блока + смещение внутри списка"""
+        return self._bladdr_obj.offset + self._list_obj.ptr
 
     @property
     def hex(self) -> str:
-        #sh = f"{self.bladdr}: {self.list.hexptr} {self.list.hexcnt}"
-        sh = self.bladdr.__repr__() + ' : ' + self.list.__repr__()
-        return sh
+        """Форматированный вывод отладочной информации"""
+        return f"{repr(self._bladdr_obj)} : {repr(self._list_obj)}"
     
 
 # сложные составные типы
@@ -596,50 +626,62 @@ class FAR_LIST(BYTESTRUCT):
 class CH_IDX(BYTESTRUCT):
     '''
     CH_IDX   3*DWORD, указатель на список букв или (страны, города, улицы, poi)
-      DWORD bl_postaddr адрес блока
-      byte  ch    собственно буква
-      byte  is_ptr_out = 0 на индекс (CH_idx 0b,0d,0f,11), 1 - на описание (0a,0c,0e,10)
-      LIST  pointer-counter в bl_postaddr
-      WORD  align
+        0  DWORD bl_postaddr адрес блока
+        4  byte  ch    собственно буква
+        5  byte  is_ptr_out = 0 на индекс (CH_idx 0b,0d,0f,11), 1 - на описание (0a,0c,0e,10)
+        6 LIST  pointer-counter в bl_postaddr
+        10 WORD  align
     '''
-    size: int = 12        # CH_IDX size = 3 * DWORD
-
-    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
-        instance = super().__new__(cls)
-        return instance
+    # Запрещаем создание __dict__ для CH_IDX и фиксируем внутренний кэш объектов
+    __slots__ = ('vdo', '_bladdr_obj', '_list_obj')
     
-    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
-        if (len(memoryview(buffer)) < self.size):
-            err = f"Размер массива байтов {len(memoryview(buffer))} меньше требуемого {self.size}"
-            raise TypeError(err)
-        super().__init__(memoryview(buffer)[:self.size])  # 4 - CH_IDX_SIZE
-        self.vdo = vdo if vdo else VDO_FILE()
+    size: int = 12
 
-    def __repr__(self):
-        ''' View while debug value'''
-        # val = self.hex
-        val = f"{self.ch} {self.is_out} {self.bladdr} {self.list}"
-        return val
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        # Быстрая проверка длины за O(1) без оборачивания в memoryview
+        if len(buffer) < self.size:
+            raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
+            
+        super().__init__(buffer, size=self.size)
+        
+        # Используем глобальный EMPTY_VDO, если контекст не задан или адрес пустой
+        if not vdo or self.uint(0) == 0:
+            self.vdo = EMPTY_VDO
+        else:
+            self.vdo = vdo
+
+        # ОПТИМИЗАЦИЯ: Создаем и кэшируем вложенные типы строго один раз при инициализации
+        self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
+        # LIST занимает строго 4 байта с 6-го по 10-й индекс
+        self._list_obj = LIST(self._raw[6:10])
+
+    def __repr__(self) -> str:
+        return f"'{self.ch}' out:{int(self.is_out)} {repr(self._bladdr_obj)} : {repr(self._list_obj)}"
     
     @property
     def bladdr(self) -> BLADDR:
-        return BLADDR(self._raw, self.vdo)
+        """Возвращает кэшированный объект адреса блока (zero-allocation)"""
+        return self._bladdr_obj
     
     @property
     def ch(self) -> str:
-        """ char from offset 5 """
-        return chr(self._raw[4])  # 4 - offset of char
+        """Декодированная буква (байт 4) с поддержкой расширенной таблицы cp1250"""
+        raw_byte = self._raw[4]
+        if raw_byte < 128:
+            return chr(raw_byte)
+        return bytes([raw_byte]).decode('cp1250')
 
     @property
     def is_out(self) -> bool:
         """ offset 6 :is_ptr_out - flag
         0 - на индекс (CH_idx 0b,0d,0f,11)
         1 - на описание (0a,0c,0e,10) """
-        return False if self._raw[5] == 0 else True
+        return self._raw[5] != 0
 
     @property
     def list(self) -> LIST:
-        return LIST(self._raw[UINT_BYTES_CNT + 2:])
+        """Возвращает кэшированный объект списка LIST (zero-allocation)"""
+        return self._list_obj
 
 
 # ==========
@@ -649,68 +691,74 @@ class BLSTART(BYTESTRUCT):
         00   dword   BLADDR          00000001 always
         04   word    bl_type         0012
         06   char    is_arch         00-not arch, 01- ???, 02-lzw
-        07   char    unarch_size """
+        07   char    unarch_size
+    """
+    # Фиксируем слоты, предотвращая появление __dict__ и кэшируя композиты
+    __slots__ = ('vdo', '_bladdr_obj')
     
-    size: int = DOUBLE_BYTES_CNT
+    size: int = 8  # DOUBLE_BYTES_CNT
 
-    def __new__(cls, buffer, parent: VDO_FILE | None = None):
-        instance = super().__new__(cls)
-        return instance
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        if len(buffer) < self.size:
+            raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
+            
+        super().__init__(buffer, size=self.size)
+        
+        # Используем оптимизированный синглтон-заглушку
+        if not vdo or self.uint(0) == 0:
+            self.vdo = EMPTY_VDO
+        else:
+            self.vdo = vdo
 
-    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None):
-        """ """
-        super().__init__(memoryview(buffer)[:self.size])
-        self.vdo = vdo if vdo else VDO_FILE()
+        # Кэшируем BLADDR один раз при инициализации
+        self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
 
-    def __repr__(self):
-        ''' View while debug value'''
+    def __repr__(self) -> str:
         v = '' if self.vdo.path else ' virt'
-        v = f'{v} [{self.bltype.value:02X}:{self.bltype.name}]'
-        return self.headhex() + v
+        try:
+            type_name = self.bltype.name
+        except ValueError:
+            type_name = "UNKNOWN"
+        return f"{self.headhex()}{v} [{self.bltype.value:02X}:{type_name}]"
     
     @property
     def bladdr(self) -> BLADDR:
-        return BLADDR(self._raw, self.vdo)
+        """Возвращает кэшированный объект адреса блока (zero-allocation)"""
+        return self._bladdr_obj
 
     @property
     def bltype(self) -> BlockType:
-        """ Enums type of block """
-        OFFSET_TYPE = 4
-        bltype = self.ushort(OFFSET_TYPE)
-        if bltype in BlockType:
-            return BlockType(bltype)
-        return BlockType(0xFF)     # unknown
+        """Возвращает валидный элемент BlockType"""
+        bltype_val = self.ushort(4)     # OFFSET_TYPE = 4
+        # Безопасный поиск по значению enum
+        try:
+            return BlockType(bltype_val)
+        except ValueError:
+            return BlockType.UNKNOWN
 
     def headhex(self) -> str:
-        ''' Строковое представление'''
-        OFFSET_TYPE = 4
-        s = "{:08x} {:02x} {:04x}".format(self.uint(),
-                                          self.ushort(OFFSET_TYPE),
-                                          self.ushort(OFFSET_TYPE + 2))
-        return s
+        """Строковое представление заголовка в соответствии с разметкой байт"""
+        # Читаем байты 6 и 7 раздельно, как заложено в структуре
+        return f"{self.uint(0):08X} {self.ushort(4):04X} {self._raw[6]:02X} {self._raw[7]:02X}"
 
     @property
-    def segcnt(self):
-        ''' Количество сегментов после распаковки, was unarc_segcnt'''
+    def segcnt(self) -> int:
+        """Количество сегментов после распаковки"""
         if self.arch_type:
-            OFFSET_UNARC_SEGS = 7
-            return self._raw[OFFSET_UNARC_SEGS]
-        return self.bladdr.segcnt
+            return self._raw[7]  # OFFSET_UNARC_SEGS = 7
+        return self._bladdr_obj.segcnt
     
     @property
-    def arch_type(self):
-        ''' 2 - zlib, 1 - bytype, 0 - not archived'''
-        if self._raw == b'\x00\x00\x00\x00':
-            return None  # if bl 0xEE
-        OFFSET_ARC_TYPE = 6
-        return self._raw[OFFSET_ARC_TYPE]
+    def arch_type(self) -> int:
+        """2 - zlib, 1 - bytype, 0 - не сжато"""
+        return self._raw[6]  # OFFSET_ARC_TYPE = 6
     
     @property
     def sizeofblock(self) -> int:
-        ''' Размер распакованного блока в байтах'''
+        """Размер распакованного блока в байтах"""
         if self.arch_type:
             return self.segcnt * self.vdo.segsize
-        return self.bladdr.sizeofblock
+        return self._bladdr_obj.sizeofblock
 
 # class PSTR(PTR):
 #     ''' PSTR    WORD, nearPTR на zero-ended строку '''

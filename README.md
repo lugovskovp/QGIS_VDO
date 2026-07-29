@@ -176,7 +176,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 - [ ] tab block
-    * [ ] tabBlock - функция взятия по клику map в текущем scale (и проверить "пустые")
+    * [x] tabBlock - функция взятия по клику map в текущем scale (и проверить "пустые")
     * [ ] draw in child layer
     * [ ] 
 
@@ -189,6 +189,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 * [x] запрет commit при наличии ошибок flake8
+* [x] запрет commit при наличии ошибок pytest
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
 * [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)

@@ -335,78 +335,73 @@ class VDO_FILE():
 # ================================================
 class BYTESTRUCT():
     """ Base for other data structures """
+    # объявляем __slots__ в базовом классе.
+    # Теперь у каждого объекта будет только жестко выделенная память под _raw.
+    __slots__ = ('_raw',)
 
     def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
-        if size is not None:
-            self._raw: memoryview = memoryview(buffer)[:size]
-            return
+        #
         self._raw: memoryview = memoryview(buffer)[:size]
     
     def __repr__(self) -> str:
-        # ss = "B " + self.hex
         return self.hex
     
     @property
     def hex(self):
         # he = " ".join("{:02x}".format(c) for c in self._raw)
-        hex_list = [f"{c:02X}" for c in self._raw]
-        result_lines = []
-        for i in range(0, len(hex_list), 16):
-            # Номер строки в HEX (0000, 0010, 0020 и т.д.)
-            #   line_number = f"{i:04X}: "
-            # 8 + " " + 8 HEX-значений текущей строки
-            # hex_chunk = " ".join(hex_list[i : i + 16])
-            hex_chunk0 = " ".join(hex_list[i : i + 8])
-            hex_chunk1 = " ".join(hex_list[i + 8 : i + 16])
-            # Собираем строку воедино
-            #result_lines.append(f"{line_number}: {hex_chunk0}  {hex_chunk1}")
-            result_lines.append(f"{hex_chunk0}  {hex_chunk1}")
-        # Объединяем все строки
-        # cr = "{}".format("\n")
-        result = "   ".join(result_lines)
-        return result
+        # hex_list = [f"{c:02X}" for c in self._raw]
+        # Получаем чистую hex-строку встроенным сверхбыстрым методом
+        raw_hex = self._raw.hex().upper()
+        # Разбиваем строку на группы по 16 символов (8 байт)
+        # Каждые 8 байт (16 символов) разделяем пробелом, каждые 16 байт (32 символа) — двойным пробелом
+        chunks = []
+        for i in range(0, len(raw_hex), 32):
+            line = raw_hex[i:i + 32]
+            if len(line) == 32:
+                chunks.append(f"{line[:16]}  {line[16:]}")
+            else:
+                chunks.append(f"{line[:16]} {line[16:]}".strip())
+                
+        return "   ".join(chunks)
 
-    @property
     def len(self):
         """ length raw in bytes """
         return len(self._raw)
 
-    def read(self, offset: int, cnt: int) -> ReadableBuffer:
+    def read(self, offset: int, cnt: int) -> memoryview:
         """ read from inner bytes array """
-        ret = self._raw[offset: offset + cnt]
-        return ret
+        return self._raw[offset: offset + cnt]
 
-    def read_str(self, ptr: int, max_len: Union[int, None] = None) -> str | None:
+    def read_str(self, ptr: int, max_len: int | None = None) -> str | None:
         """
+        Чтение 0-ended строки БЕЗ декодирования лишних байт \x00
         Args:
             ptr: offset в текущем _raw
         Returns:
             str: 0-ended строка
         """
-        # ??? struct.unpack("s*")
-        if not max_len:
-            max_len = MAX_STR_LEN
-        return bytes(self.read(ptr, max_len)).decode('cp1250').split('\x00')[0]
+        limit = max_len if max_len else MAX_STR_LEN
+        sub_view = self._raw[ptr : ptr + limit]
+        # Ищем терминирующий ноль в байтах встроенным методом index/find
+        # Это предотвращает декодирование хвоста строки в памяти
+        try:
+            null_idx = sub_view.tobytes().index(0)   # Ищем байт 0x00
+            sub_view = sub_view[:null_idx]
+        except ValueError:
+            pass   # Если нуля нет, декодируем всю длину
+        return sub_view.tobytes().decode('cp1250')
     
     def uchar(self, near_offset: int = 0) -> int:
         ''' Return uchar, offset from _raw begin'''
-        #uc = self.read(near_offset, UCHAR_BYTES_CNT)
-        uc = self._raw[near_offset]
-        return uc
+        return self._raw[near_offset]
 
     def ushort(self, near_offset: int = 0) -> int:
         ''' Return unsigned short (2 bytes, word), offset from _raw begin'''
-        return struct_WORD.unpack_from(self._raw[near_offset:])[0]
+        return struct_WORD.unpack_from(self._raw, near_offset)[0]
     
     def uint(self, near_offset: int = 0) -> int:
         ''' Return unsigned int (4 bytes, dword), offset from _raw begin'''
-        return struct_UINT.unpack_from(self._raw[near_offset:])[0]
-
-    # def list(self, near_offset: int = 0) -> LIST:
-    #     return LIST(self._raw[near_offset:LIST.size])
-
-    # def coord(self, near_offset: int = 0) -> COORD:
-    #     return COORD(self._raw[near_offset:COORD.size])
+        return struct_UINT.unpack_from(self._raw, near_offset)[0]
     
 
 # ----

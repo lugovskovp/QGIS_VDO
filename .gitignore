@@ -1,19 +1,15 @@
 .venv
-.coverage
 d0*.py
 __pycache__
 examples
 dev-setup/hooks
 .qgis-settings
 
-
 tail_*.bin
 raw_*.bin
 begin word*
 line0*
 
-
 ui_files/vdo_explorer_dockwidget_base.ui
 ui_files/citroen_kbd_dialog.ui
-
-
+.coverage

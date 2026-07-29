@@ -79,22 +79,29 @@ def test_bladdr_comparisons(custom_vdo):
     different_vdo.segsize = 4096
     addr_diff_vdo = BLADDR(b'\x00\x00\x10\x01', vdo=different_vdo)
 
-    # Проверка равенства (сравниваются только номера блоков)
+    # 1. Проверка равенства в рамках одного контекста
     assert addr1 == addr2
-    assert (addr1 == addr3) is False
-    assert (addr1 == addr_diff_vdo) is False  # Разные segsize -> False
+    assert addr1 != addr3
 
-    # Проверка оператора "меньше" (<)
+    # 2. Проверка оператора "меньше" (<)
     assert addr1 < addr3
-    assert (addr3 < addr1) is False
-    assert (addr1 < addr2) is False  # Номера равны
-    assert (addr1 < addr_diff_vdo) is False  # Разные segsize -> False
+    assert not (addr3 < addr1)
+    assert not (addr1 < addr2)  # Номера блоков равны
 
-    # Проверка оператора "меньше или равно" (<=)
+    # 3. Проверка оператора "меньше или равно" (<=)
     assert addr1 <= addr2  # Равны
     assert addr1 <= addr3  # Меньше
-    assert (addr3 <= addr1) is False
-    assert (addr1 <= addr_diff_vdo) is False  # Разные segsize -> False
+    assert not (addr3 <= addr1)
+
+    # 4. ПРОВЕРКА ЗАЩИТЫ: Разные segsize должны вызывать ValueError, а не молча возвращать False
+    with pytest.raises(ValueError, match="Cannot compare BLADDR with different segsize"):
+        _ = addr1 == addr_diff_vdo
+
+    with pytest.raises(ValueError, match="Cannot compare BLADDR with different segsize"):
+        _ = addr1 < addr_diff_vdo
+
+    with pytest.raises(ValueError, match="Cannot compare BLADDR with different segsize"):
+        _ = addr1 <= addr_diff_vdo
 
 
 def test_bladdr_comparison_with_invalid_type(custom_vdo):

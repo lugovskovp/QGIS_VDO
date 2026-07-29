@@ -1,7 +1,8 @@
 import unittest
-# import struct
+import struct
 
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT   # , COORD, BLADDR  # Исправьте путь импорта под ваш проект
+from QGIS_VDO.vdo.geotypes import COORD
 
 
 class TestByteStruct(unittest.TestCase):
@@ -20,7 +21,8 @@ class TestByteStruct(unittest.TestCase):
             b"\x12\x34"                    # 2: ushort (4660)
             b"\x55\x66\x77\x88"            # 4: uint (1432778632)
             b"Test\x00\x00\x00\x00"        # 8: 0-ended string
-            b"\x01\x00\x02\x00"            # 16: COORD (X=1, Y=2, упакованы как 2-байтовые uint/ushort)
+            b'\x06\xe6y\xaa\x0b\xb1\xde\x1f'   # 16: COORD # 35.317104N 9.161808W
+                                           # (X=115767722, Y=196206111, упакованы как 4-байтовые uint/ushort)
         )
         self.base_struct = BYTESTRUCT(self.raw_data)
 
@@ -74,24 +76,23 @@ class TestByteStruct(unittest.TestCase):
             # У объектов с включенными __slots__ нет словаря динамических атрибутов
             _ = self.base_struct.__dict__
 
-    # def test_child_coord_class(self):
-    #     """Тест дочернего класса COORD (если вы адаптировали ushort/uint под размер осей)."""
-    #     # Вырезаем из общего буфера кусок под координаты (смещение 16, длина 4)
-    #     coord_buffer = self.base_struct.read(16, 4)
+    def test_child_coord_class(self):
+        """Тест дочернего класса COORD (если вы адаптировали ushort/uint под размер осей)."""
+        # Вырезаем из общего буфера кусок под координаты (смещение 16, длина 8)
+        coord_buffer = self.base_struct.read(16, 8)
         
-    #     # Предположим, в вашем классе COORD оси X и Y читаются как ushort (по 2 байта)
-    #     # Для этого теста временно переопределим свойства x и y, если в COORD они используют uint.
-    #     # Если в вашем COORD используется uint (4 байта), передайте в setUp буфер побольше.
-    #     class TestCOORD(COORD):
-    #         __slots__ = ()
-    #         @property
-    #         def x(self): return struct.unpack("<H", self._raw[0:2])[0]
-    #         @property
-    #         def y(self): return struct.unpack("<H", self._raw[2:4])[0]
+        # Предположим, в вашем классе COORD оси X и Y читаются как uint (по 4 байта)
+        # Для этого теста временно переопределим свойства x и y, если в COORD они используют uint.
+        class TestCOORD(COORD):
+            __slots__ = ()
+            @property
+            def x(self): return struct.unpack(">L", self._raw[0:4])[0]  # type: ignore # noqa
+            @property
+            def y(self): return struct.unpack(">L", self._raw[4:8])[0]  # type: ignore # noqa
 
-    #     coord = TestCOORD(coord_buffer)
-    #     self.assertEqual(coord.x, 1)
-    #     self.assertEqual(coord.y, 2)
+        coord = TestCOORD(coord_buffer)
+        self.assertEqual(coord.x, 115767722)    # _hlon
+        self.assertEqual(coord.y, 196206111)    # _hlat
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ struct_4BYTES = struct.Struct(">BBBB")
 struct_WORD = struct.Struct(">H")
 struct_WORD_TWICE = struct.Struct(">HH")
 struct_UINT = struct.Struct(">L")
+struct_2UINT = struct.Struct(">LL")     # 2x Unsigned Long (8 байт для COORD)
 
 # Бинарный DWORD 0
 ZERO_DWORD = b'\x00' * 4

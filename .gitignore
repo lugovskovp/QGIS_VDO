@@ -1,10 +1,11 @@
 .venv
-# .vscode
+.coverage
 d0*.py
 __pycache__
 examples
 dev-setup/hooks
 .qgis-settings
+
 
 tail_*.bin
 raw_*.bin

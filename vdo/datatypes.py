@@ -27,7 +27,7 @@ else:
 
 from .enums import BlockType
 from .consts import struct_WORD, struct_UINT
-from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD, EMPTY_BUFFER
+from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
 
 
 OFFSET_TOC = 0x08
@@ -40,81 +40,93 @@ OFFSET_DB_REVISION = 0x1a
 MAX_STR_LEN = 63    # 255
 
 
-def setup_known_types():
-    """ """
-    # 'C:\\Work\\QGIS_VDO\\vdo'
-    plugin_dir = os.path.dirname(os.path.realpath(__file__))
-    # 'C:\\Work\\QGIS_VDO\\vdo\\blocks'
-    dirname = os.path.join(plugin_dir, "blocks")
-    # список файлов в директории - только файлы
-    files = [f for f in os.listdir(dirname) if os.path.isfile(os.path.join(dirname, f))]
-    # оставить только файлы, начинающемися на 'block_', без расширений [0:-3]
-    block_files = [f[0:-3] for f in files if f[0:6] == 'block_']
-    # 'block_0x0B', 'block_0x12' ...
-    # '0x0B' '0x12' '0x13' '0xEE' - block types
-    known_types = dict([(int(t[-4:], 16), t) for t in block_files])
-    # {(11, 'block_0x0B'), (18, 'block_0x12'), (19, 'block_0x13')...}
+def setup_known_types(blocks_dir: str | None = None) -> dict[int, str]:
+    """
+    Динамически собирает словарь известных типов блоков на основе файлов в папке blocks.
+    
+    Args:
+        blocks_dir: Опциональный путь к папке. Если не передан, вычисляется автоматически.
+    Returns:
+        dict: {int_type: "block_name"}
+    """
+    if blocks_dir is None:
+        plugin_dir = os.path.dirname(os.path.realpath(__file__))
+        blocks_dir = os.path.join(plugin_dir, "blocks")
+
+    # Защита: если папки physical не существует (например, при специфичном запуске тестов)
+    if not os.path.exists(blocks_dir):
+        return {}
+
+    known_types = {}
+    
+    try:
+        for f in os.listdir(blocks_dir):
+            # Проверяем расширение и префикс файла
+            if f.startswith("block_") and f.endswith(".py"):
+                module_name = f[:-3]  # Отсекаем ".py" -> "block_0x0B"
+                
+                # Извлекаем HEX-часть: разбиваем по '_' и берем последний элемент
+                hex_part = module_name.split("_")[-1]  # "0x0B"
+                
+                try:
+                    block_type = int(hex_part, 16)
+                    known_types[block_type] = module_name
+                except ValueError:
+                    # Игнорируем файлы, которые не заканчиваются на валидный HEX
+                    continue
+    except OSError:
+        return {}
+
     return known_types
 
 
-# создается список блоков, для которых уже есть классы
+# Инициализация словаря блоков по умолчанию
 KNOWN_BLOCKS = setup_known_types()
 
 
 # ----
 class VDO_FILE():
     """ класс работы с файлом формата carindb """
-    path: str | None
-    # :path: full filepath, os.path or None
-    dbrev: int
-    """:dbrev: database revision, 30 (0x1e) or 34 (0x22)"""
-    segsize: int    # :segsize: size of one segment in chank
 
     def __init__(self, path: str | None = None) -> None:
-        """ """
         if path:
-            self.path = path
-            self.dbrev = struct_WORD.unpack(self.read(OFFSET_DB_REVISION, 2))[0]
-            self.segsize = struct_WORD.unpack(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
-            return
-        self.empty()
+            self.path: str | None = path
+            # Используем unpack_from для безопасности типов ReadableBuffer
+            self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
+            # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
+            self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
+        else:
+            self.empty()
 
-    def __repr__(self):
-        s = f'VDO v.{self.dbrev}[{self.segsize}]:{self.path}'
-        return s
+    def __repr__(self) -> str:
+        return f"VDO v.{self.dbrev}[{self.segsize}]:{self.path}"
 
     @property
     def file_size(self) -> int:
-        """ Размер файла VDO """
-        if self.path is None:
-            return 0
-        if os.path.exists(self.path):
+        """Размер файла VDO на диске."""
+        if self.path and os.path.exists(self.path):
             return os.path.getsize(self.path)
         return 0
 
     @property
     def QGISvdoGroupName(self) -> str | None:
-        """ Generate unique name for root group"""
-        if self.path is None:
+        """Генерация уникального имени для корневой группы слоев QGIS."""
+        if not self.path:
             return None
-        ap = self.path.split("/")
-        res = f"{ap[-2]}_0x{self.file_size:04X}"
-        return res
+        # Замена ручного split("/") на кроссплатформенный os.path.split
+        _, folder_name = os.path.split(os.path.dirname(self.path))
+        return f"{folder_name}_0x{self.file_size:04X}"
 
-    def read(self, offset: int, size: int) -> ReadableBuffer:
-        """ Return bytearray[size] from self.path.offset
-        Args:
-            offset: offset in file path
-            size:    bytes in result bytearray
-        Returns:
-            bytearray[size]: from self.path.offset
-        """
-        if self.path is None:
-            return EMPTY_BUFFER                   # пустое значение
-        with open(self.path, 'rb') as f:
-            f.seek(offset)
-            return f.read(size)
-        return None
+    def read(self, offset: int, size: int) -> bytes:
+        """Чтение блока байт заданной длины по указанному смещению."""
+        if not self.path or size <= 0:
+            return EMPTY_BUFFER
+        try:
+            with open(self.path, "rb") as f:
+                f.seek(offset)
+                return f.read(size)
+        except (OSError, FileNotFoundError):
+            return EMPTY_BUFFER
 
     def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
         """
@@ -127,40 +139,39 @@ class VDO_FILE():
         """
         if addr is None:
             return None
-        elif isinstance(addr, int):
+        
+        if isinstance(addr, int):
             offset = addr
-        elif type(addr).__name__ == "BLADDR":
-            # struct_UINT.unpack возвращает кортеж, проверяем первый элемент [0]
-            if not struct_UINT.unpack(addr._raw)[0]:
+        elif isinstance(addr, BLADDR):  # Исправлена проверка типа
+            if addr.isZero:  # Используем оптимизированное свойство
                 return None
             offset = addr.offset
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
 
-        # Чтение заголовка блока и базовая проверка валидности
-        head = BLSTART(self.read(offset, BLSTART.size), self)
+        # Чтение заголовка блока
+        head_bytes = self.read(offset, BLSTART.size)
+        if len(head_bytes) < BLSTART.size:
+            return None
+            
+        head = BLSTART(head_bytes, self)
         if head.bladdr.offset != offset:
             return None
 
-        #  Динамический импорт класса блока
         block_type = head.bltype.value
-        # а описан ли тип этого блока?
+
+        # Динамический импорт класса блока
         if block_type in KNOWN_BLOCKS:
             bl_module_name = KNOWN_BLOCKS[block_type]
-            # Относительный импорт внутри пакета vdo
-            module = importlib.import_module(f".blocks.{bl_module_name}", package="QGIS_VDO.vdo")
+            # Безопасный относительный импорт без жесткого префикса QGIS_VDO
+            module = importlib.import_module(f"..blocks.{bl_module_name}", package=__name__)
             bl_class = getattr(module, bl_module_name)
         else:
-            # Дефолтный базовый класс, если тип блока неизвестен
-            module = importlib.import_module("QGIS_VDO.vdo.block_base")
+            module = importlib.import_module("..block_base", package=__name__)
             bl_class = getattr(module, "block_base")
             bl_module_name = "block_base"
 
-        # Инициализируем и возвращаем экземпляр класса
         bl_instance = bl_class(head.bladdr, *args)
-        
-        # Записываем метаданные строго в ЭКЗЕМПЛЯР, а не в КЛАСС,
-        # чтобы параллельные вызовы не перезаписывали типы друг друга
         bl_instance.type = block_type
         bl_instance.type_name = bl_module_name
 
@@ -192,18 +203,7 @@ class VDO_FILE():
     #         ptr += HUFFMAN_PAIR_SIZE
     #     return weights
 
-    def empty(self):
-        """
-        Args:
-            param1: This is the first param.
-            param2: This is a second param.
-
-        Returns:
-            This is a description of what is returned.
-
-        Raises:
-            KeyError: Raises an exception.
-        """
+    def empty(self) -> None:
         self.path = None
         self.dbrev = DEFAULT_DB_REVISION
         self.segsize = DEFAULT_ONE_SEG_SIZE
@@ -571,43 +571,54 @@ class LIST(BYTESTRUCT):
 
 # ----
 class FAR_LIST(BYTESTRUCT):
-    ''' BLADDR : LIST '''
+    """
+    Композитная структура: BLADDR (4 байта) + LIST (4 байта).
+    Общий размер: 8 байт.
+    """
+    # Жестко фиксируем поля в памяти. __dict__ больше не создается!
+    __slots__ = ('vdo', '_bladdr_obj', '_list_obj')
+    
     size: int = DOUBLE_BYTES_CNT
 
-    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
-        instance = super().__new__(cls)
-        return instance
-    
     def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
-        super().__init__(memoryview(buffer)[:DOUBLE_BYTES_CNT])  # 8 - self.bytescnt
-        #self.vdo = vdo if vdo else VDO_FILE()
-        if not vdo or self._raw[:4] == ZERO_DWORD:
-            self.vdo = VDO_FILE()
+        # Инициализируем базовый буфер размером 8 байт
+        super().__init__(buffer, size=DOUBLE_BYTES_CNT)
+        
+        # Защита от создания лишних тяжелых инстансов VDO
+        # Используем встроенное свойство uint базового класса для мгновенной проверки первых 4 байт
+        if not vdo or self.uint(0) == 0:
+            self.vdo = EMPTY_VDO
         else:
             self.vdo = vdo
+            
+        # ОПТИМИЗАЦИЯ: Создаем дочерние структуры ОДИН раз при инициализации.
+        # Передаем zero-copy срезы memoryview, чтобы избежать копирования байт.
+        self._bladdr_obj = BLADDR(self._raw[:UINT_BYTES_CNT], self.vdo)
+        self._list_obj = LIST(self._raw[UINT_BYTES_CNT:])
     
     def __repr__(self):
         ''' View while debug value'''
-        val = self.hex
-        return val
+        return self.hex
     
     @property
     def bladdr(self) -> BLADDR:
-        return BLADDR(self._raw, self.vdo)
+        """Возвращает кэшированный объект адреса блока (без создания нового)"""
+        return self._bladdr_obj
 
     @property
     def list(self) -> LIST:
-        return LIST(self._raw[UINT_BYTES_CNT:])
+        """Возвращает кэшированный объект списка (без создания нового)"""
+        return self._list_obj
 
     @property
     def offset(self) -> int:
-        return self.bladdr.offset + self.list.ptr
+        """Смещение от начала файла: смещение блока + смещение внутри списка"""
+        return self._bladdr_obj.offset + self._list_obj.ptr
 
     @property
     def hex(self) -> str:
-        #sh = f"{self.bladdr}: {self.list.hexptr} {self.list.hexcnt}"
-        sh = self.bladdr.__repr__() + ' : ' + self.list.__repr__()
-        return sh
+        """Форматированный вывод отладочной информации"""
+        return f"{repr(self._bladdr_obj)} : {repr(self._list_obj)}"
     
 
 # сложные составные типы

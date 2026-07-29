@@ -93,19 +93,88 @@ class block_0x09(block_base):
 
                 # read bladdr_value
                 bladdr_map_val = self.uint(ptr_val)
-                # Долгота (Lng) E/W - x
-                hex_lon = self.origin._hlongtitude + x * self.item_side
-                # Широта (Lat) N/S - y
-                hex_lat = self.origin._hlatitude + y * self.item_side
-                coord_lb = COORD(hex_lon, hex_lat)
-                hex_lon += size_X * self.item_side
-                hex_lat += size_Y * self.item_side
-                coord_rt = COORD(hex_lon, hex_lat)
-                res = (bladdr_map_val, coord_lb, coord_rt)
-                yield res
 
+                # # Долгота (Lng) E/W - x
+                # hex_lon = self.origin._hlongtitude + x * self.item_side
+                # # Широта (Lat) N/S - y
+                # hex_lat = self.origin._hlatitude + y * self.item_side
+                # coord_lb = COORD(hex_lon, hex_lat)
+                # hex_lon += size_X * self.item_side
+                # hex_lat += size_Y * self.item_side
+                # coord_rt = COORD(hex_lon, hex_lat)
 
+                (coord_lb, coord_rt) = self.get_xy_area(x, y, size_X, size_Y)
+                # res = (bladdr_map_val, coord_lb, coord_rt)
+                yield (bladdr_map_val, coord_lb, coord_rt)
+
+    def get_xy_area(self, x: int, y: int, x_size: int, y_size: int) -> tuple[COORD, COORD]:
+        """
+        Args:
+            x, y: int - "координаты" левого нижнего в квадрате
+            x_size, y_size: int - размеры сторон
+        значения x, y ОБЯЗАНЫ быть 0..qty_x, не проверяется
+        Returns:
+            tuple[left_bottov, right_top]
+                left_bottom: COORD
+                right_top: COORD
+        """
+        # left bottom
+        # Долгота (Lng) E/W - x
+        hex_lon = self.origin._hlongtitude + x * self.item_side
+        # Широта (Lat) N/S - y
+        hex_lat = self.origin._hlatitude + y * self.item_side
+        coord_lb = COORD(hex_lon, hex_lat)
+
+        # right top
+        hex_lon += x_size * self.item_side
+        hex_lat += y_size * self.item_side
+        coord_rt = COORD(hex_lon, hex_lat)
+
+        return (coord_lb, coord_rt)
+
+    def get_xy_item(self, x, y) -> BLADDR | None:
+        """
+        Вернуть bladdr карты
+        Args:
+            x, y: int "координаты" в "квадрате" итемов
+        Returns:
+            block: BLADDR, item self - geo_block
+        """
+        item_num = y + x * self.qty_y
+        offset = self.li_items.ptr + item_num * PTR.size
+        # items in 0x09 - ptr to bladdr
+        if not (ptr := self.ushort(offset)):
+            # non valid ptr == 0
+            return None
+        # а вот теперь сам bladdr, и он точно не самый первый блок
+        # bladdr_val = self.uint(ptr)
+        # bladdr = self.bladdr(self.uint(ptr))
+        return self.bladdr(self.uint(ptr))
+    
+    def find_by_coord(self, srch: COORD) -> BLADDR | None:
+        """
+        Поиск блока КАРТЫ, в который попадают координаты, или None
+        """
+        # проверка, что srch в пределах координат блока
+        max_hlatitude = self.origin._hlatitude + self.qty_y * self.item_side
+        max_hlongtitude = self.origin._hlongtitude + self.qty_x * self.item_side
+        if srch._hlatitude < self.origin._hlatitude or srch.lat > max_hlatitude \
+           or srch._hlongtitude < self.origin._hlongtitude or srch.lon > max_hlongtitude:
+            # не попал в квадрат lb-rt
+            print(f"bl_0x08: No way: {srch} not in {self.area}")
+            return None
+        # расчет offset для srch : _hlongtitude - SIGNED!
+        # delta_hlon_x = (srch._hlongtitude - self.origin._hlongtitude) / self.item_side
+        # delta_hlat_y = (srch._hlatitude - self.origin._hlatitude) / self.item_side
+        delta_x = int((srch._hlongtitude - self.origin._hlongtitude) / self.item_side)
+        delta_y = int((srch._hlatitude - self.origin._hlatitude) / self.item_side)
+        # Если есть такой блок в итемах
+        if (bladdr_map := self.get_xy_item(delta_x, delta_y)) is None:
+            return None
+        # координаты углов полученного итема не нужны - есть внутри geoblock
+        return bladdr_map
 # -------------------------------------------------------------------------
+
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE

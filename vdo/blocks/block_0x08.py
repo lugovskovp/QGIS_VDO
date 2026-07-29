@@ -24,6 +24,7 @@ block_0x08
 from typing import Iterator
 
 from QGIS_VDO.vdo.block_base import block_base
+from QGIS_VDO.vdo.blocks import block_0x09
 from QGIS_VDO.vdo.datatypes import BLADDR
 from QGIS_VDO.vdo.geotypes import COORD
 
@@ -101,32 +102,82 @@ class block_0x08(block_base):
                 if bla_val in finded_early:
                     # если попали хоть раз сюда, то надо допереписать по примеру 0х09
                     raise ValueError(finded_early, finded_early)
-                # ок, найден новый
-
-                # left bottom
-                # Долгота (Lng) E/W - x
-                lon = self.origin._hlongtitude + x * self.item_side
-                # Широта (Lat) N/S - y
-                lat = self.origin._hlatitude + y * self.item_side
-                coord_lb = COORD(lon, lat)
-
-                # right top
-                # if (lat1 := (lat0 + self.delta_degree)) > 85:
-                #     lat1 = 85
-                lat += self.item_side
-                lon += self.item_side
-                coord_rt = COORD(lon, lat)
-
-                res = (bla_val, coord_lb, coord_rt)
-                yield res
+                
+                # ок, найден новый, координаты углов
+                (coord_lb, coord_rt) = self.get_xy_area(x, y)
+                # res = (bla_val, coord_lb, coord_rt)
+                yield (bla_val, coord_lb, coord_rt)
         pass
 
     def find_by_coord(self, srch: COORD) -> BLADDR | None:
         """
-        Поиск idx блока, в который попадают координаты, или None
+        Поиск блока КАРТЫ, в который попадают координаты, или None
         """
+        # проверка, что srch в пределах координат блока
+        max_hlatitude = self.origin._hlatitude + self.qty_y * self.item_side
+        max_hlongtitude = self.origin._hlongtitude + self.qty_x * self.item_side
+        if srch._hlatitude < self.origin._hlatitude or srch.lat > max_hlatitude \
+           or srch._hlongtitude < self.origin._hlongtitude or srch.lon > max_hlongtitude:
+            # не попал в квадрат lb-rt
+            print(f"bl_0x08: No way: {srch} not in {self.area}")
+            return None
+        # расчет offset для srch : _hlongtitude - SIGNED!
+        # delta_hlon_x = (srch._hlongtitude - self.origin._hlongtitude) / self.item_side
+        # delta_hlat_y = (srch._hlatitude - self.origin._hlatitude) / self.item_side
+        delta_x = int((srch._hlongtitude - self.origin._hlongtitude) / self.item_side)
+        delta_y = int((srch._hlatitude - self.origin._hlatitude) / self.item_side)
+        # Если есть такой блок в итемах
+        if (bladdr_folder_maps := self.get_xy_item(delta_x, delta_y)) is None:
+            return None
+        # координаты углов полученного итема
+        lb: COORD
+        rt: COORD
+        (lb, rt) = self.get_xy_area(delta_x, delta_y)
+        # bladdr карты ищем в 0x09
+        folder_maps: block_0x09 = self.vdo.get_block(bladdr_folder_maps, lb, rt)
+        # res = folder_maps.find_by_coord(srch)
+        return folder_maps.find_by_coord(srch)
 
-        return None
+    def get_xy_area(self, x: int, y: int) -> tuple[COORD, COORD]:
+        """
+        Координаты lb, rt area x, y
+        значения x, y ОБЯЗАНЫ быть 0..qty_x
+        Returns:
+            tuple[left_bottov, right_top]
+                left_bottom: COORD
+                right_top: COORD
+        """
+        # left bottom
+        # Долгота (Lng) E/W - x
+        hex_lon = self.origin._hlongtitude + x * self.item_side
+        # Широта (Lat) N/S - y
+        hex_lat = self.origin._hlatitude + y * self.item_side
+        coord_lb = COORD(hex_lon, hex_lat)
+
+        # right top
+        # if (lat1 := (lat0 + self.delta_degree)) > 85:
+        #     lat1 = 85
+        hex_lat += self.item_side
+        hex_lon += self.item_side
+        coord_rt = COORD(hex_lon, hex_lat)
+
+        return (coord_lb, coord_rt)
+
+    def get_xy_item(self, x: int, y: int) -> BLADDR | None:
+        """
+        Вернуть item
+        Args:
+            x, y: int "координаты" в "квадрате" итемов
+        Returns:
+            block_0x09: BLADDR, item self
+        """
+        item_num = y + x * self.qty_y
+        offset = self.li_items.ptr + item_num * BLADDR.size
+        # bl_folder_val = self.uint(offset)
+        res = self.bladdr(self.uint(offset))
+        if res.isZero:
+            return None
+        return res
 
         
 # All block tests in block_0x07

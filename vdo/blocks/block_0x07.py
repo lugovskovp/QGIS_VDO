@@ -182,9 +182,7 @@ class SCALE(BYTESTRUCT):
         if not self.almanac_idx:
             return None
         alm: block_0x08 = self.vdo.get_block(self.almanac_idx, self.area[0], self.area[1])
-        res = alm.find_by_coord(srch_point)
-        # bl =
-
+        res = alm.find_by_coord(srch_point)     # bladdr geoblock
         return res
 
 
@@ -241,6 +239,24 @@ class block_0x07(block_base):
     def li_toc(self):
         """ LIST to table of contents """
         return self.list(OFFSET_TOC)
+
+    def find_by_coord(self, point: COORD, idScale: int) -> BLADDR | None:
+        """
+        Args:
+            point: COORD - searched
+            idScale: int - номер SCALE - num scale
+        Returns:
+            bladdr_map: BLADDR
+        """
+        # проверка на существование масштаба
+        if idScale < 0 or idScale > len(self.scales):
+            return None
+        sc: SCALE = self.scales[idScale]
+        # проверка на то, что scale валиден
+        if sc.isEmpty:
+            return None
+        res = sc.find_by_coord(point)
+        return res
 
 
 # -------------------------------------------------------------------------
@@ -301,10 +317,15 @@ if __name__ == '__main__':
 
     bladdr_scales: BLADDR = vdo.get_block(0).bladdr_scales      # type: ignore
     block_07: block_0x07 = vdo.get_block(bladdr_scales)         # type: ignore
-    sc = block_07.scales[1]
+    sc: SCALE = block_07.scales[1]
     # b'\x13\xc7\xb9\x02\x13\xddiu'  59.989966N 29.734109E
     srch = COORD(b'\x13\xc7\xb9\x02\x13\xddiu')
-    sc.find_by_coord(srch)
+    bladdr_map = sc.find_by_coord(srch)
+
+    bl_map = vdo.get_block(bladdr_map)
+
+    bladdr_map = block_07.find_by_coord(srch, 8)
+    bl_map = vdo.get_block(bladdr_map)
 
     # bl_ru_big_map = vdo.get_block(BLADDR(struct_UINT.pack(0x)))
     # @ 00000201 13 0202 [13:BIBLIOGR]

@@ -18,7 +18,7 @@ SCALE
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
     from _typeshed import ReadableBuffer
@@ -181,7 +181,7 @@ class SCALE(BYTESTRUCT):
         # 0x08
         if not self.almanac_idx:
             return None
-        alm: block_0x08 = cast("block_0x08", self.vdo.get_block(self.almanac_idx, self.area[0], self.area[1]))
+        alm: block_0x08 = self.vdo.get_block(self.almanac_idx, self.area[0], self.area[1])
         res = alm.find_by_coord(srch_point)
         # bl =
 

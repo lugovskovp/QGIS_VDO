@@ -1,7 +1,7 @@
 import unittest
 import struct
-# from collections.abc import ReadableBuffer
-# from vdo.bytestruct import BYTESTRUCT, COORD  # Настройте импорт под ваш проект
+
+
 from QGIS_VDO.vdo.geotypes import COORD
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 

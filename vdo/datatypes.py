@@ -626,50 +626,62 @@ class FAR_LIST(BYTESTRUCT):
 class CH_IDX(BYTESTRUCT):
     '''
     CH_IDX   3*DWORD, указатель на список букв или (страны, города, улицы, poi)
-      DWORD bl_postaddr адрес блока
-      byte  ch    собственно буква
-      byte  is_ptr_out = 0 на индекс (CH_idx 0b,0d,0f,11), 1 - на описание (0a,0c,0e,10)
-      LIST  pointer-counter в bl_postaddr
-      WORD  align
+        0  DWORD bl_postaddr адрес блока
+        4  byte  ch    собственно буква
+        5  byte  is_ptr_out = 0 на индекс (CH_idx 0b,0d,0f,11), 1 - на описание (0a,0c,0e,10)
+        6 LIST  pointer-counter в bl_postaddr
+        10 WORD  align
     '''
-    size: int = 12        # CH_IDX size = 3 * DWORD
-
-    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
-        instance = super().__new__(cls)
-        return instance
+    # Запрещаем создание __dict__ для CH_IDX и фиксируем внутренний кэш объектов
+    __slots__ = ('vdo', '_bladdr_obj', '_list_obj')
     
-    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
-        if (len(memoryview(buffer)) < self.size):
-            err = f"Размер массива байтов {len(memoryview(buffer))} меньше требуемого {self.size}"
-            raise TypeError(err)
-        super().__init__(memoryview(buffer)[:self.size])  # 4 - CH_IDX_SIZE
-        self.vdo = vdo if vdo else VDO_FILE()
+    size: int = 12
 
-    def __repr__(self):
-        ''' View while debug value'''
-        # val = self.hex
-        val = f"{self.ch} {self.is_out} {self.bladdr} {self.list}"
-        return val
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        # Быстрая проверка длины за O(1) без оборачивания в memoryview
+        if len(buffer) < self.size:
+            raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
+            
+        super().__init__(buffer, size=self.size)
+        
+        # Используем глобальный EMPTY_VDO, если контекст не задан или адрес пустой
+        if not vdo or self.uint(0) == 0:
+            self.vdo = EMPTY_VDO
+        else:
+            self.vdo = vdo
+
+        # ОПТИМИЗАЦИЯ: Создаем и кэшируем вложенные типы строго один раз при инициализации
+        self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
+        # LIST занимает строго 4 байта с 6-го по 10-й индекс
+        self._list_obj = LIST(self._raw[6:10])
+
+    def __repr__(self) -> str:
+        return f"'{self.ch}' out:{int(self.is_out)} {repr(self._bladdr_obj)} : {repr(self._list_obj)}"
     
     @property
     def bladdr(self) -> BLADDR:
-        return BLADDR(self._raw, self.vdo)
+        """Возвращает кэшированный объект адреса блока (zero-allocation)"""
+        return self._bladdr_obj
     
     @property
     def ch(self) -> str:
-        """ char from offset 5 """
-        return chr(self._raw[4])  # 4 - offset of char
+        """Декодированная буква (байт 4) с поддержкой расширенной таблицы cp1250"""
+        raw_byte = self._raw[4]
+        if raw_byte < 128:
+            return chr(raw_byte)
+        return bytes([raw_byte]).decode('cp1250')
 
     @property
     def is_out(self) -> bool:
         """ offset 6 :is_ptr_out - flag
         0 - на индекс (CH_idx 0b,0d,0f,11)
         1 - на описание (0a,0c,0e,10) """
-        return False if self._raw[5] == 0 else True
+        return self._raw[5] != 0
 
     @property
     def list(self) -> LIST:
-        return LIST(self._raw[UINT_BYTES_CNT + 2:])
+        """Возвращает кэшированный объект списка LIST (zero-allocation)"""
+        return self._list_obj
 
 
 # ==========

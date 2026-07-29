@@ -510,14 +510,19 @@ class BLADDR(BYTESTRUCT):
 # ----
 class PTR(BYTESTRUCT):
     ''' Указатель(near) 01 02 -> near offset 0x102 '''
+    # Класс не вводит новых переменных, но чтобы не создавался __dict__,
+    # нужно явно объявить пустые __slots__
+    __slots__ = ()
+
     size: int = USHORT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer) -> None:
-        super().__init__(memoryview(buffer)[:USHORT_BYTES_CNT])     # 2 - self.bytescnt
+        # Передаем буфер фиксированного размера (2 байта) напрямую в базовый класс
+        super().__init__(buffer, size=USHORT_BYTES_CNT)
     
-    def __repr__(self):
-        ''' View while debug value'''
-        return "0x{:04X}".format(self.value)
+    def __repr__(self) -> str:
+        """Отображение значения при отладке в правильном 16-битном формате (4 символа)"""
+        return f"0x{self.value:04X}"
  
     @property
     def value(self) -> int:
@@ -527,12 +532,12 @@ class PTR(BYTESTRUCT):
     
     @property
     def hexptr(self) -> str:
-        ''' ptr in hex string '''
-        return "0x{:02X}".format(self.value)
+        """Возвращает указатель в виде hex-строки фиксированной длины 4 символа (0x0000)"""
+        return f"0x{self.value:04X}"
 
     @property
     def isZero(self) -> bool:
-        """ ==0 -> empty"""
+        """True, если указатель нулевой (пустой)"""
         return self.value == 0
     
     

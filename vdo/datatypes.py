@@ -13,7 +13,6 @@ BLSTART
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
 import os.path
-import struct
 import importlib
 
 from typing import TYPE_CHECKING, Union, Any
@@ -143,7 +142,7 @@ class VDO_FILE():
         if head.bladdr.offset != offset:
             return None
 
-        # 3. Динамический импорт класса блока
+        #  Динамический импорт класса блока
         block_type = head.bltype.value
         # а описан ли тип этого блока?
         if block_type in KNOWN_BLOCKS:
@@ -168,30 +167,30 @@ class VDO_FILE():
         return bl_instance
         pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
 
-    def get_huffman_weights(self) -> dict:
-        """
-        в первом блоке, 0х12 есть таблица весов для дерева хаффмана
-        по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
-        Таблица одна на весь файл - и логично не привязывать её к блоку
-        Returns:
-            weight: dict {key_id : value_weight}
-        """
-        OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
-        # начальный адрес таблицы весов и количество элементов.
-        HUFFMAN_PAIR_SIZE = 4
-        struct_WORD_TWICE = struct.Struct(">HH")
+    # def get_huffman_weights(self) -> dict:
+    #     """
+    #     в первом блоке, 0х12 есть таблица весов для дерева хаффмана
+    #     по смещению OFFSET_MAY_BE_HUFFMAN_THREE = 0x28 list(ptr|cnt)\n
+    #     Таблица одна на весь файл - и логично не привязывать её к блоку
+    #     Returns:
+    #         weight: dict {key_id : value_weight}
+    #     """
+    #     OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS = 0x28
+    #     # начальный адрес таблицы весов и количество элементов.
+    #     HUFFMAN_PAIR_SIZE = 4
+    #     struct_WORD_TWICE = struct.Struct(">HH")
 
-        weights = {}
-        bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
-        (ptr, cnt) = struct_WORD_TWICE.unpack(bytes_list)
-        for _ in range(cnt):
-            (key_id, value_weight) = struct_WORD_TWICE.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
-            #if 0 <= key_id <= 0xFFFF:
-            # Нам нужны только символы с реальным весом > 0
-            if value_weight > 0:
-                weights[key_id] = value_weight
-            ptr += HUFFMAN_PAIR_SIZE
-        return weights
+    #     weights = {}
+    #     bytes_list = self.read(OFFSET_SEEMS_LIKE_HUFFMAN_WEIGHTS, HUFFMAN_PAIR_SIZE)
+    #     (ptr, cnt) = struct_WORD_TWICE.unpack(bytes_list)
+    #     for _ in range(cnt):
+    #         (key_id, value_weight) = struct_WORD_TWICE.unpack(self.read(ptr, HUFFMAN_PAIR_SIZE))   # noqa
+    #         #if 0 <= key_id <= 0xFFFF:
+    #         # Нам нужны только символы с реальным весом > 0
+    #         if value_weight > 0:
+    #             weights[key_id] = value_weight
+    #         ptr += HUFFMAN_PAIR_SIZE
+    #     return weights
 
     def empty(self):
         """

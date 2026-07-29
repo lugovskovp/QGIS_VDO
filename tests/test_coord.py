@@ -177,5 +177,50 @@ class TestCoord(unittest.TestCase):
             COORD(55.123, "строка")  # type: ignore
 
 
+def test_coord_negative_and_hemispheres():
+    """Тест закрывает отрицательные ветви знака и южное/западное полушария"""
+    # 1. Положительные координаты (Север/Восток)
+    c_north_east = COORD(10.0, 20.0)
+    assert "N" in repr(c_north_east)
+    assert "E" in repr(c_north_east)
+    
+    # 2. Отрицательные координаты (Юг/Запад)
+    # Передаем отрицательные float, чтобы сработали ветви знака (< 0)
+    c_south_west = COORD(-10.0, -20.0)
+    
+    # Проверяем, что сработал вычитатель 0x100000000 в property
+    assert c_south_west.lat < 0
+    assert c_south_west.lon < 0
+    
+    # Проверяем, что в __repr__ сработали ветви 'S' и 'W'
+    representation = repr(c_south_west)
+    assert "S" in representation
+    assert "W" in representation
+
+
+def test_coord_not_implemented_branches():
+    """Тест закрывает ветви 'NotImplemented' при неверных типах в __eq__ и delta"""
+    c = COORD(10.0, 20.0)
+    wrong_object = "я просто строка"
+
+    # Проверяем ветвь 'if not isinstance' в __eq__
+    # В Python c == wrong_object вернет False, если метод возвращает NotImplemented
+    assert (c == wrong_object) is False
+    
+    # Проверяем ветвь 'if not isinstance' в delta
+    assert c.delta(wrong_object) is NotImplemented
+
+
+def test_coord_as_tuple():
+    """ Проверка работы as_tuple"""
+    c = COORD(10.0, -20.0)
+    (val1, val2) = (10.0, -20.0)
+
+    #
+    (val_coo1, val_coo2) = c.as_tuple()
+    assert (val_coo1 == val1)
+    assert (val_coo2 == val2)
+
+
 if __name__ == "__main__":
     unittest.main()

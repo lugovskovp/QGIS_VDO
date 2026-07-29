@@ -545,20 +545,23 @@ class PTR(BYTESTRUCT):
 class LIST(BYTESTRUCT):
     ''' ptr: указатель(near) на начало массива; cnt: количество элементов
     b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304 '''
-    size: int = UINT_BYTES_CNT
+    # Сохраняем оптимизацию памяти базового класса, запрещая создание __dict__
+    __slots__ = ()
+
+    size: int = 4       # UINT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer) -> None:
-        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])   # 4 - self.bytescnt
+        # Жестко ограничиваем буфер размером структуры (4 байта)
+        super().__init__(buffer, size=4)         # 4 - self.bytescnt
 
     def __repr__(self):
         ''' View while debug value'''
-        val = "{0:04X}:{1:04X} cnt:{1:d}".format(self.ptr, self.cnt)
-        return val
+        return f"{self.ptr:04X}:{self.cnt:04X} cnt:{self.cnt}"
         
     @property
     def ptr(self) -> int:
         ''' Near ptr to begin list'''
-        return self.ushort()
+        return self.ushort(0)
 
     @property
     def cnt(self) -> int:

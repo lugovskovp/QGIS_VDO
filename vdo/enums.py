@@ -42,7 +42,7 @@ class BlockType(enum.Enum):
     MAP__10k400 = 0x1d  # scale 10  1d_MAP_POLI_10_k400 //[10] a(a:400h)-0x1d
     MAP__11k_11 = 0x1e  # scale 11  1e_MAP_POLI_11			//[11] b(b:666h)-0x1e
 
-    UNKN = 0xFF  # если тип блока ещё не описан
+    UNKNOWN = 0xFF  # если тип блока ещё не описан
 
     bl_0x0 = 0x0
     bl_0x4 = 0x4

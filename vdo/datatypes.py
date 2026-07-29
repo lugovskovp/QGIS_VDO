@@ -332,125 +332,139 @@ class VDO_FILE():
 
     
 # ================================================
-class BYTESTRUCT():
-    """ Base for other data structures """
-    # объявляем __slots__ в базовом классе.
-    # Теперь у каждого объекта будет только жестко выделенная память под _raw.
-    __slots__ = ('_raw',)
+
+class BYTESTRUCT:
+    """Base for other data structures"""
+
+    # Жестко выделяем память только под _raw
+    __slots__ = ("_raw",)
 
     def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
-        #
-        self._raw: memoryview = memoryview(buffer)[:size]
-    
+        # Создаем memoryview. Если buffer уже memoryview, избегаем двойного оборачивания
+        view = buffer if isinstance(buffer, memoryview) else memoryview(buffer)
+        self._raw: memoryview = view[:size]
+
     def __repr__(self) -> str:
         return self.hex
-    
+
     @property
-    def hex(self):
-        # he = " ".join("{:02x}".format(c) for c in self._raw)
-        # hex_list = [f"{c:02X}" for c in self._raw]
-        # Получаем чистую hex-строку встроенным сверхбыстрым методом
+    def hex(self) -> str:
         raw_hex = self._raw.hex().upper()
-        # Разбиваем строку на группы по 16 символов (8 байт)
-        # Каждые 8 байт (16 символов) разделяем пробелом, каждые 16 байт (32 символа) — двойным пробелом
         chunks = []
+        # Шаг 32 символа = 16 байт
         for i in range(0, len(raw_hex), 32):
-            line = raw_hex[i:i + 32]
-            if len(line) == 32:
+            line = raw_hex[i : i + 32]
+            length = len(line)
+            if length == 32:
                 chunks.append(f"{line[:16]}  {line[16:]}")
+            elif length > 16:
+                # Если хвост больше 8 байт, бьем на 8 байт + остаток
+                chunks.append(f"{line[:16]} {line[16:]}")
             else:
-                chunks.append(f"{line[:16]} {line[16:]}".strip())
-                
+                # Если хвост меньше или равен 8 байтам
+                chunks.append(line)
+
         return "   ".join(chunks)
 
-    def len(self):
-        """ length raw in bytes """
+    def len(self) -> int:
+        """length raw in bytes"""
         return len(self._raw)
 
     def read(self, offset: int, cnt: int) -> memoryview:
-        """ read from inner bytes array """
-        return self._raw[offset: offset + cnt]
+        """read from inner bytes array (returns zero-copy view)"""
+        return self._raw[offset : offset + cnt]
 
-    def read_str(self, ptr: int, max_len: int | None = None) -> str | None:
-        """
-        Чтение 0-ended строки БЕЗ декодирования лишних байт \x00
+    def read_str(self, ptr: int, max_len: int | None = None) -> str:
+        """Чтение 0-ended строки БЕЗ копирования и лишнего выделения памяти
+
         Args:
             ptr: offset в текущем _raw
         Returns:
-            str: 0-ended строка
+            str: декодированная строка до первого \x00
         """
-        limit = max_len if max_len else MAX_STR_LEN
+        limit = max_len if max_len is not None else MAX_STR_LEN
         sub_view = self._raw[ptr : ptr + limit]
-        # Ищем терминирующий ноль в байтах встроенным методом index/find
-        # Это предотвращает декодирование хвоста строки в памяти
-        try:
-            null_idx = sub_view.tobytes().index(0)   # Ищем байт 0x00
+
+        # Ищем 0x00 перебором прямо по memoryview БЕЗ вызова .tobytes()
+        # Для memoryview итерация возвращает int (коды байт)
+        null_idx = next((i for i, b in enumerate(sub_view) if b == 0), None)
+
+        if null_idx is not None:
             sub_view = sub_view[:null_idx]
-        except ValueError:
-            pass   # Если нуля нет, декодируем всю длину
-        return sub_view.tobytes().decode('cp1250')
-    
+
+        # Декодируем напрямую через bytes(sub_view) - копия создается только 1 раз при десериализации
+        return bytes(sub_view).decode("cp1250")
+
     def uchar(self, near_offset: int = 0) -> int:
-        ''' Return uchar, offset from _raw begin'''
+        """Return uchar, offset from _raw begin"""
         return self._raw[near_offset]
 
     def ushort(self, near_offset: int = 0) -> int:
-        ''' Return unsigned short (2 bytes, word), offset from _raw begin'''
+        """Return unsigned short (2 bytes, word), offset from _raw begin"""
         return struct_WORD.unpack_from(self._raw, near_offset)[0]
-    
+
     def uint(self, near_offset: int = 0) -> int:
-        ''' Return unsigned int (4 bytes, dword), offset from _raw begin'''
+        """Return unsigned int (4 bytes, dword), offset from _raw begin"""
         return struct_UINT.unpack_from(self._raw, near_offset)[0]
     
 
-# ----
+# Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
+class EmptyVDO:
+    segsize = 512  # дефолтный размер сегмента для безопасных математических операций
+    path = ""
+
+
+EMPTY_VDO = EmptyVDO()
+
+
 class BLADDR(BYTESTRUCT):
-    ''' b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks '''
-    # Фиксируем место под новую переменную. Теперь __dict__ не создается!
+    """
+    b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks
+    """
+    # Фиксируем слоты. Базовый '_raw' уже унаследован, здесь пишем только новые поля
     __slots__ = ('vdo',)
     
     size: int = UINT_BYTES_CNT
 
-    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None) -> None:
-        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])
+    def __init__(self, buffer: ReadableBuffer, vdo: getattr = None) -> None:
+        # Передаем буфер строго фиксированной длины в базовый класс
+        super().__init__(buffer, size=UINT_BYTES_CNT)
         
-        # Защита от создания лишних инстансов: если vdo не передан или блок нулевой
-        if not vdo or self._raw == ZERO_DWORD:
-            self.vdo = VDO_FILE()
+        # Экономим память: не создаем новый VDO_FILE() на каждый чих
+        if not vdo or self.value == 0:
+            self.vdo = EMPTY_VDO
         else:
             self.vdo = vdo
 
     @property
     def isZero(self) -> bool:
-        """ 00 00 00 00 - 'заглушка' """
-        return self._raw == ZERO_DWORD
+        """Быстрая проверка на нулевой dword без сравнения массивов байт"""
+        return self.value == 0
     
     @property
     def value(self) -> int:
-        """ Числовое значение всего dword (Big-Endian) """
-        return self.uint(0)
+        """Числовое значение всего dword (Big-Endian)"""
+        # Индекс [0] обязателен, если unpack_from возвращает кортеж (val,)
+        return struct_UINT.unpack_from(self._raw, 0)[0]
 
     @property
     def blocknumber(self) -> int:
-        """ Номер блока (первые 3 байта).
-        В Big-Endian формате это эквивалентно сдвигу dword на 8 бит вправо (деление на 256).
-        Работает моментально без склеивания байт.
-        """
+        """Номер блока (первые 3 байта). Работает моментально через битовый сдвиг."""
         return self.value >> 8
     
     @property
     def segcnt(self) -> int:
-        """ Размер в сегментах (последний 4-й байт) """
-        return self.uchar(3)
+        """Размер в сегментах (последний 4-й байт)"""
+        return self._raw[3]
     
     @property
     def sizeofblock(self) -> int:
-        """ Размер описываемого блока в байтах """
+        """Размер описываемого блока в байтах"""
         return self.segcnt * self.vdo.segsize
     
     @property
     def offset(self) -> int:
-        """ Смещение от начала файла """
+        """Смещение от начала файла"""
         return self.blocknumber * self.vdo.segsize
     
     def next_block_offset(self) -> int:
@@ -465,27 +479,31 @@ class BLADDR(BYTESTRUCT):
         v = '' if self.vdo.path else ' virt'
         return self.hex + v
     
-# --- ОПЕРАЦИИ СРАВНЕНИЯ (С учетом равенства segsize) ---
+    # --- ИСПРАВЛЕННЫЕ ОПЕРАЦИИ СРАВНЕНИЯ ---
+
+    def _check_context(self, other: 'BLADDR') -> None:
+        """Внутренняя проверка на совместимость контекстов данных"""
+        if self.vdo.segsize != other.vdo.segsize:
+            raise ValueError(
+                f"Cannot compare BLADDR with different segsize: {self.vdo.segsize} != {other.vdo.segsize}"
+            )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != other.vdo.segsize:
-            return False
+        self._check_context(other)
         return self.blocknumber == other.blocknumber
     
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != other.vdo.segsize:
-            return False
+        self._check_context(other)
         return self.blocknumber < other.blocknumber
 
     def __le__(self, other: object) -> bool:
         if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != other.vdo.segsize:
-            return False    # segsize обязаны быть равными
+        self._check_context(other)
         return self.blocknumber <= other.blocknumber
 
 

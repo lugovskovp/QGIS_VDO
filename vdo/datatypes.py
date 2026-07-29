@@ -126,7 +126,9 @@ class VDO_FILE():
         Returns:
             Block instance или None, если адрес невалиден или это не блок.
         """
-        if isinstance(addr, int):
+        if addr is None:
+            return None
+        elif isinstance(addr, int):
             offset = addr
         elif type(addr).__name__ == "BLADDR":
             # struct_UINT.unpack возвращает кортеж, проверяем первый элемент [0]
@@ -465,6 +467,13 @@ class BLADDR(BYTESTRUCT):
     
     def next_block_offset(self):
         return self.offset + self.sizeofblock
+
+    @property
+    def value(self):
+        """
+        числовое значение
+        """
+        return self.uint()
     
     def __eq__(self, value: object) -> bool:
         '''TODO: segsize == segsize'''

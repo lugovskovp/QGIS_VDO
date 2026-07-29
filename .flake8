@@ -2,7 +2,17 @@
 max-line-length = 120
 extend-ignore = E203
 max-complexity = 15
-exclude = .git, __pycache__, build, dist, i18n, .venv, examples\*, bmw*, ext_libs, d0*, research
+exclude = .git, 
+          __pycache__, 
+          build, 
+          dist, 
+          i18n, 
+          .venv, 
+          examples\*, 
+          bmw*, 
+          ext_libs, 
+          d0*, 
+          research
 
 # extend-ignore = E203
 # F401 'pytest_qgis.pytest_qgis.*' imported but unused

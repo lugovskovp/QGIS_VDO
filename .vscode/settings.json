@@ -61,5 +61,6 @@
   "flake8.importStrategy": "fromEnvironment",
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python.analysis.autoImportCompletions": false,
-  "python.analysis.typeCheckingMode": "off"
+  "python.analysis.typeCheckingMode": "off",
+  "python.analysis.languageServerMode": "light"
 }

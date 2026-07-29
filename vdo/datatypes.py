@@ -15,7 +15,6 @@ from __future__ import annotations  # Обязательно на самой п�
 import os.path
 import struct
 import importlib
-# import heapq
 
 from typing import TYPE_CHECKING, Union, Any
 
@@ -27,7 +26,6 @@ else:
     ReadableBuffer = bytes
 
 
-from QGIS_VDO.vdo.block_base import block_base
 from .enums import BlockType
 from .consts import struct_WORD, struct_UINT
 from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, ZERO_DWORD, EMPTY_BUFFER
@@ -119,7 +117,7 @@ class VDO_FILE():
             return f.read(size)
         return None
 
-    def get_block(self, addr: Union[int, BLADDR], *args: Any) -> block_base | None:
+    def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
         """
         Возвращает экземпляр блока по смещению offset (int) или из структуры BLADDR.
         

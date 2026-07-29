@@ -406,97 +406,87 @@ class BYTESTRUCT():
 # ----
 class BLADDR(BYTESTRUCT):
     ''' b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks '''
+    # Фиксируем место под новую переменную. Теперь __dict__ не создается!
+    __slots__ = ('vdo',)
+    
     size: int = UINT_BYTES_CNT
 
-    def __new__(cls, buffer, parent: Union[VDO_FILE, None] = None):
-        instance = super().__new__(cls)
-        return instance
-
-    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
-        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])  # 4 - self.bytescnt
-        #self.vdo = vdo if vdo else VDO_FILE()
+    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None) -> None:
+        super().__init__(memoryview(buffer)[:UINT_BYTES_CNT])
+        
+        # Защита от создания лишних инстансов: если vdo не передан или блок нулевой
         if not vdo or self._raw == ZERO_DWORD:
             self.vdo = VDO_FILE()
         else:
             self.vdo = vdo
-        pass
-
-    def __repr__(self) -> str:
-        ''' View while debug value'''
-        v = '' if self.vdo.path else ' virt'
-        return self.hex + v
 
     @property
     def isZero(self) -> bool:
-        ''' 00 00 00 00 - "заглушка" - встречается, но ptr не на реальный блок '''
+        """ 00 00 00 00 - 'заглушка' """
         return self._raw == ZERO_DWORD
     
     @property
+    def value(self) -> int:
+        """ Числовое значение всего dword (Big-Endian) """
+        return self.uint(0)
+
+    @property
     def blocknumber(self) -> int:
-        ''' Номер блока, первые 3 байта'''
-        return struct_UINT.unpack(b'\x00' + self._raw[:3])[0]
+        """ Номер блока (первые 3 байта).
+        В Big-Endian формате это эквивалентно сдвигу dword на 8 бит вправо (деление на 256).
+        Работает моментально без склеивания байт.
+        """
+        return self.value >> 8
     
     @property
     def segcnt(self) -> int:
-        ''' Размер в сегментах, последний байт'''
-        bn = self.uchar(3)
-        return bn
+        """ Размер в сегментах (последний 4-й байт) """
+        return self.uchar(3)
     
     @property
     def sizeofblock(self) -> int:
-        ''' Размер описываемого блока в байтах'''
-        sz = self.segcnt * self.vdo.segsize
-        return sz
+        """ Размер описываемого блока в байтах """
+        return self.segcnt * self.vdo.segsize
     
     @property
-    def hex(self):
-        he = f'{self.blocknumber:06x} {self._raw[3]:02x}'
-        return he
-
-    @property
-    def offset(self):
-        ''' Смещение от начала файла'''
-        bo = int(self.blocknumber * self.vdo.segsize)
-        return bo
+    def offset(self) -> int:
+        """ Смещение от начала файла """
+        return self.blocknumber * self.vdo.segsize
     
-    def next_block_offset(self):
+    def next_block_offset(self) -> int:
         return self.offset + self.sizeofblock
 
     @property
-    def value(self):
-        """
-        числовое значение
-        """
-        return self.uint()
+    def hex(self) -> str:
+        # Вывод номера блока в 6 символов hex и размера сегмента в 2 символа hex
+        return f'{self.blocknumber:06x} {self._raw[3]:02x}'
+
+    def __repr__(self) -> str:
+        v = '' if self.vdo.path else ' virt'
+        return self.hex + v
     
-    def __eq__(self, value: object) -> bool:
-        '''TODO: segsize == segsize'''
-        if not isinstance(value, BLADDR):
+# --- ОПЕРАЦИИ СРАВНЕНИЯ (С учетом равенства segsize) ---
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != value.vdo.segsize:
-            return False    # segsize обязаны быть равными
-        if self.blocknumber == value.blocknumber:
-            return True
-        return False
+        if self.vdo.segsize != other.vdo.segsize:
+            return False
+        return self.blocknumber == other.blocknumber
     
-    def __lt__(self, value: object) -> bool:
-        if not isinstance(value, BLADDR):
-            #raise TypeError("Операнд справа должен иметь тип BLADDR")
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != value.vdo.segsize:
-            return False    # segsize обязаны быть равными
-        if self.blocknumber < value.blocknumber:
-            return True
-        return False
-    
-    def __le__(self, value: object) -> bool:
-        if not isinstance(value, BLADDR):
+        if self.vdo.segsize != other.vdo.segsize:
+            return False
+        return self.blocknumber < other.blocknumber
+
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, BLADDR):
             return NotImplemented
-        if self.vdo.segsize != value.vdo.segsize:
+        if self.vdo.segsize != other.vdo.segsize:
             return False    # segsize обязаны быть равными
-        if self.blocknumber <= value.blocknumber:
-            return True
-        return False
+        return self.blocknumber <= other.blocknumber
 
 
 # ----

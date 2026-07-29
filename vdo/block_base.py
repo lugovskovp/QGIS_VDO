@@ -169,7 +169,7 @@ class block_base(BYTESTRUCT):
         """
         li = self.list(ptr_list_str)
         # -1: 'no label\x00', последний char \x00
-        return self.read(li.ptr, li.cnt - 1).decode('cp1250')
+        return bytes(self.read(li.ptr, li.cnt - 1)).decode('cp1250')
 
     def read_str(self, offset: int) -> str:
         """
@@ -196,7 +196,7 @@ class block_base(BYTESTRUCT):
 
 # --------------------------------------------------------
 if __name__ == "__main__":
-    from vdo.vdo import VDO_FILE
+    from QGIS_VDO.vdo import VDO_FILE
 
     fpath = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
     vdo = VDO_FILE(fpath)

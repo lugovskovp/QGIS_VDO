@@ -2,7 +2,7 @@
 Легковесный поток для итерации по картам
 """
 
-import time
+# import time
 
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 
@@ -18,8 +18,8 @@ class FolderMapProcessingWorker(QThread):
     progress_signal = pyqtSignal(int, str)
     #
     count_signal = pyqtSignal(int)
-    # Safe drawing signal
-    safe_drawing_map_signal = pyqtSignal(float, float, float, float, int)
+    # Safe drawing areas packet signal
+    safe_drawing_map_signal = pyqtSignal(list)
 
     def __init__(self, almanac_block: block_0x08):
         super().__init__()
@@ -39,18 +39,18 @@ class FolderMapProcessingWorker(QThread):
 
             bla = BLADDR(struct_UINT.pack(bla_val), self.almanac_block.vdo)
             bl_folder: block_0x09 = self.almanac_block.vdo.get_block(bla, origin, rt_max)  # noqa
-            #
-            # cnt_map = bl_folder.items_cnt()
-            pass
+            #cnt_map = bl_folder.items_cnt()
+            # Пакет координат
+            areas_packet = []
             for (bl_map_val, lb, rt) in bl_folder.get_items():
-
-                point_lb = (lb.lat, lb.lon)
-                point_rt = (rt.lat, rt.lon)
-                # отрисовка контура каждой карты (фактически ground)
-                time.sleep(0.04)
-                # _DrawArea([point_lb, point_rt], f"0x{bl_map_val}", self.layer_maps)  # noqa
-                print([point_lb, point_rt], f"0x{bl_map_val}")
-                self.safe_drawing_map_signal.emit(lb.lat, lb.lon, rt.lat, rt.lon, bl_map_val)  # noqa
+                # {"area": [(lat, lon), (lat, lon)], "name": "Имя1"}, ...
+                area = {"area": [(lb.lat, lb.lon), (rt.lat, rt.lon)], "name": f"0x{bl_map_val:X}"}  # noqa
+                areas_packet.append(area)
+                # debug print
+                # print(area)
+                
+            # Сигналом отправляем ВСЁ содержимое block_folder_maps
+            self.safe_drawing_map_signal.emit(areas_packet)  # noqa
 
             # Имитация тяжелого чтения файла с диска
             # time.sleep(0.01)

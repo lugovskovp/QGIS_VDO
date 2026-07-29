@@ -91,10 +91,105 @@ def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
     pass
 
 
+def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
+    """
+    Пакетно добавляет прямоугольники в слой layer.
+    
+    Args:
+        areas_packet: список словарей или кортежей с данными объектов.
+                      Пример формата: [ {"area": [(lat, lon), (lat, lon)], "name": "Имя1"}, ... ]  # noqa
+        layer: Целевой полигональный слой QgsVectorLayer
+    """
+    # Базовые проверки слоя
+    if not layer or layer.geometryType() != Qgis.GeometryType.Polygon:
+        return
+
+    field_name_index = layer.fields().indexOf('name')
+    if field_name_index == -1:
+        print("Ошибка: В слое отсутствует обязательное поле 'name'")
+        return
+
+    # Оптимизированный сбор существующих имен в слое (чтобы избежать дубликатов)
+    # Собираем уникальные имена из пришедшего пакета, чтобы отфильтровать их одним запросом  # noqa
+    packet_names = {item["name"] for item in areas_packet if "name" in item}
+    if not packet_names:
+        return
+
+    # Формируем SQL-выражение для поиска существующих имен: "name" IN ('Имя1', 'Имя2')
+    safe_names_str = ", ".join(f"'{name.replace("'", "''")}'" for name in packet_names)
+    exist_expression = f"\"name\" IN ({safe_names_str})"
+    
+    request = QgsFeatureRequest().setFilterExpression(exist_expression).setSubsetOfAttributes([field_name_index])  # noqa
+    existing_names = {f.attribute('name') for f in layer.getFeatures(request)}
+
+    # 3. Подготовка списка новых объектов
+    features_to_add = []
+
+    for item in areas_packet:
+        area = item.get("area")
+        area_name = item.get("name")
+
+        if not area or not area_name:
+            continue
+
+        # Если полигон с таким именем уже есть на слое — пропускаем его
+        if area_name in existing_names:
+            continue
+
+        # Извлекаем и валидируем широту/долготу
+        lat1, lon1 = area[0]
+        lat2, lon2 = area[1]
+
+        # Защита от выхода за границы стандартных проекций (Web Mercator)
+        lat1 = max(-85.0, min(85.0, lat1))
+        lat2 = max(-85.0, min(85.0, lat2))
+
+        # Геометрия требует правильного порядка углов (XMin, YMin, XMax, YMax)
+        x_min, x_max = min(lon1, lon2), max(lon1, lon2)
+        y_min, y_max = min(lat1, lat2), max(lat1, lat2)
+
+        rect = QgsRectangle(x_min, y_min, x_max, y_max)
+        geom = QgsGeometry.fromRect(rect)
+        
+        # Создаем объект QgsFeature
+        feature = QgsFeature(layer.fields())
+        feature.setGeometry(geom)
+        feature.setAttribute(field_name_index, area_name)
+        
+        features_to_add.append(feature)
+
+    # Если добавлять нечего — выходим
+    if not features_to_add:
+        return
+
+    # Единая транзакция для всего пакета объектов
+    was_editable = layer.isEditable()
+    if not was_editable:
+        layer.startEditing()
+        
+    # Блокируем сигналы изменения слоя на время массовой вставки (прирост скорости)
+    layer.blockSignals(True)
+    try:
+        # addFeatures принимает list и работает в разы быстрее, чем addFeature в цикле
+        success = layer.addFeatures(features_to_add)
+    finally:
+        layer.blockSignals(False)
+
+    # Фиксация изменений
+    if success:
+        if not was_editable:
+            layer.commitChanges()  # Сохраняем на диск/в память один раз за пакет
+        layer.triggerRepaint()     # Перерисовываем карту один раз за пакет
+    else:
+        if not was_editable:
+            layer.rollBack()
+        print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
+
+
 def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
     """
     свойства отображения слоя по наименованию слоя
-    фактически просто вынесенные отдельно библиотека
+    фактически просто вынесенные отдельно библиотекой
     """
     #
     if layerName == NAME_LAYER_GLOBAL_BOUNDS:

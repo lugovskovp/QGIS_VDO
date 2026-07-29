@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach to QGIS",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "127.0.0.1",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "C:/Users/plugo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins/QGIS_VDO"
+                }
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Python312: QGIS Script",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "C:\\OSGeo4W\\bin\\python3.exe",
+            "env": {
+                "PYTHONHOME": "C:\\OSGeo4W\\apps\\Python312",
+                "PYTHONPATH": "C:\\OSGeo4W\\apps\\qgis-ltr\\python;C:\\OSGeo4W\\apps\\Python312\\Lib\\site-packages"
+            }
+        }
+    ]
+}

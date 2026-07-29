@@ -1,8 +1,10 @@
+"""
+
+"""
 
 from qgis.PyQt import QtWidgets, QtCore
 from qgis.PyQt.QtWidgets import (QSizePolicy, QGroupBox,
                                  QStyleOptionGroupBox, QStyle)
-# from qgis.PyQt.QtCore import QEasingCurve, pyqtProperty
 from qgis.PyQt.QtGui import QMouseEvent
 
 from QGIS_VDO.settings import Settings
@@ -24,7 +26,6 @@ class AnimatedGroupBox(QGroupBox):    # Наследуемся от QGroupBox
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-
         pass
 
     # --- ПЕРЕХВАТ ЗАГОЛОВКА ИЗ QT DESIGNER ---

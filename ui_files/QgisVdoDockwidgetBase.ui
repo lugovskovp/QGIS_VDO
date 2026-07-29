@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>662</width>
-    <height>719</height>
+    <width>527</width>
+    <height>837</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -87,7 +87,7 @@
        <enum>QTabWidget::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -161,8 +161,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>617</width>
-             <height>652</height>
+             <width>265</width>
+             <height>547</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -800,8 +800,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>622</width>
-             <height>636</height>
+             <width>139</width>
+             <height>222</height>
             </rect>
            </property>
            <property name="sizePolicy">
@@ -1000,7 +1000,7 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>622</width>
+             <width>262</width>
              <height>189</height>
             </rect>
            </property>
@@ -1151,8 +1151,8 @@
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>598</width>
-                <height>139</height>
+                <width>111</width>
+                <height>111</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_13">
@@ -1199,6 +1199,52 @@
        <attribute name="title">
         <string>Block</string>
        </attribute>
+       <widget class="QSplitter" name="splitter">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>40</y>
+          <width>431</width>
+          <height>34</height>
+         </rect>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <widget class="QLabel" name="l_currScaleId">
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Current scale. Change on Topography tab.</string>
+         </property>
+         <property name="text">
+          <string>SC</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pb_getCoordinates">
+         <property name="text">
+          <string>Get block</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="le_bladdr">
+         <property name="font">
+          <font>
+           <pointsize>14</pointsize>
+          </font>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pb_loadBlock">
+         <property name="text">
+          <string>Load block</string>
+         </property>
+        </widget>
+       </widget>
       </widget>
      </widget>
     </item>

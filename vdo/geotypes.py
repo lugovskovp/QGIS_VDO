@@ -12,12 +12,22 @@ functions:
     str2COORD
     normLatLng
 """
+from __future__ import annotations  # Обязательно на самой первой строчке файла
 
 import ctypes
-import re
+# import re
 import struct
 
-from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST
+from typing import TYPE_CHECKING, Union  # , Any
+
+if TYPE_CHECKING:
+    # Этот блок видит только Pylance, интерпретатор Python его игнорирует
+    from _typeshed import ReadableBuffer
+else:
+    # Запасной вариант для рантайма, чтобы не было NameError
+    ReadableBuffer = bytes
+
+from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
 from QGIS_VDO.vdo.consts import struct_UINT     # , USHORT_TWICE_struct
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
@@ -67,7 +77,7 @@ class COORD(BYTESTRUCT):
        
     size: int = DOUBLE_BYTES_CNT     # 2*DWORD: lon lat
 
-    def __init__(self, lo: bytearray | int | float, la: int | float = None) -> None:
+    def __init__(self, lo: Union[ReadableBuffer, int, float], la: Union[int, float, None] = None) -> None:
         """ Координаты
         Долгота (Lng) E/W - x - lo
         Широта (Lat) N/S - y - la
@@ -79,7 +89,7 @@ class COORD(BYTESTRUCT):
         """
         # === bytearray
         if not la:
-            super().__init__(lo[:DOUBLE_BYTES_CNT])   # 8 - self.size
+            super().__init__(memoryview(lo)[:DOUBLE_BYTES_CNT])   # 8 - self.size   # type: ignore[reportArgumentType]
             # _hlon, _hlat - unsigned value
             self._hlon = ctypes.c_uint32(struct_UINT.unpack(self._raw[:4])[0]).value   # noqa x we
             self._hlat = ctypes.c_uint32(struct_UINT.unpack(self._raw[4:8])[0]).value  # noqa y sn
@@ -219,8 +229,8 @@ class MAP_AREA(BYTESTRUCT):
 # ----
 class GEO_CATEGORY(BYTESTRUCT):
     '''GEO CATEGORY портотип?, используемый класс - дочерний'''
-    cat: en_GEO_CATEGORY = None
-    draw: en_DRAW_TYPE = None  # SHAPE = 0, POLILINE = 1
+    cat: en_GEO_CATEGORY | None = None
+    draw: en_DRAW_TYPE | None = None  # SHAPE = 0, POLILINE = 1
     cnt: int = 0    # сколько элементов в категории (расчетом, разница со следующим ptr
     ptr: int = 0    # near на первый объект
     obj_size: int = 0          # shape size = 0x14, line = 0x10
@@ -245,7 +255,8 @@ class GEO_CATEGORY(BYTESTRUCT):
 
     def __repr__(self):
         ''' View while debug value'''
-        val = f"{self.draw.name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
+        name = self.draw.name if self.draw else 'NOT DEFINED'
+        val = f"{name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
         return val
     
     def __str__(self) -> str:
@@ -268,11 +279,11 @@ class GEO_SHAPE(BYTESTRUCT):
     size: int = 0x14              # ptr ptr dword qword w ptr
     name: str = ''
 
-    def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
+    def __init__(self, buffer: ReadableBuffer, category: en_GEO_CATEGORY) -> None:
         OFFSET_COORD = 8
         VRTX_OBJ_SIZE = 4       # word x, word y
-        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
-        super().__init__(buffer[:self.size])  # первые 0x14 в raw, для инициализации нужны ещё ptr следущего # noqa: E501
+        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(memoryview(buffer)[:(self.size * 2)])  # noqa: E501
+        super().__init__(memoryview(buffer)[:self.size])  # первые 0x14 в raw, для инициализации нужны ещё ptr следущего # noqa: E501
         self.p_str_name = p_str_name    # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
@@ -285,7 +296,8 @@ class GEO_SHAPE(BYTESTRUCT):
   
     def __repr__(self):
         ''' View while debug value'''
-        val = f"{self.cat.category.name}:[{self.cnt_vrtx}] {self.name}"
+        name = self.cat.name if self.cat else "NOT DEFINED"
+        val = f"{name}:[{self.cnt_vrtx}] {self.name}"
         return val
     pass    # GEO_SHAPE_PROTO
 
@@ -356,7 +368,8 @@ class GEO_LINE(BYTESTRUCT):
     
     def __repr__(self):
         ''' View while debug value '''
-        val = f"{self.cat.category.name}:[{self.cnt_vrtx}] {self.name}"
+        name = self.cat.name if self.cat else "NOT DEFINED"
+        val = f"{name}:[{self.cnt_vrtx}] {self.name}"
         return val
     pass    # GEO_LINE_PROTO
 
@@ -377,11 +390,11 @@ class VERTEX(BYTESTRUCT):
         # self.y = self.ushort(2)
     
     @property
-    def x(self) -> int:        # координата х
+    def x(self) -> int | None:        # координата х
         return self._x
 
     @property
-    def y(self) -> int:        # координата y
+    def y(self) -> int | None:        # координата y
         return self._y
 
     def getXY(self) -> tuple:
@@ -435,10 +448,10 @@ class POI_CATEGORY(BYTESTRUCT):
     """
     bytescnt: int = 12  # 3*DWORD 0a 0c размер элемента класса в байтах
 
-    def __init__(self, buffer: bytearray, parent_vdo: struct) -> None:
+    def __init__(self, buffer: ReadableBuffer, parent_vdo: VDO_FILE) -> None:
         """ """
-        super().__init__(buffer[:self.size])
-        self.fl_POIs = FAR_LIST(self.read(0, FAR_LIST.bytescnt), parent_vdo)
+        super().__init__(memoryview(buffer)[:self.bytescnt])
+        self.fl_POIs = FAR_LIST(self.read(0, FAR_LIST.size), parent_vdo)
         self.poi_type = en_POI_CAT(self.ushort(8))  # offs en_POI_CATEGORY - enum тип, категория POI # noqa
         self.p_str = self.ushort(10)
         self.name = "Proto. Name set where called"
@@ -493,54 +506,54 @@ def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
     """
 
 
-def str2COORD(lon_lat: str) -> tuple:
-    '''Координаты по строке, lon где E|W, lat-N|S, exmpl: 73.920441N 54.297287E
-    Args:
-        lon_lat: str  # Широта, latitude и Долгота, longtitude  градусы
-    Returns:
-        coordinates: tuple(N_lat: hlat, E_lng: hlon)
-    '''
-    # lon_lat - типа 73.92N 54.30E, разделитель - пробел
-    # вычистить мусор
+# def str2COORD(lon_lat: str) -> tuple:
+#     '''Координаты по строке, lon где E|W, lat-N|S, exmpl: 73.920441N 54.297287E
+#     Args:
+#         lon_lat: str  # Широта, latitude и Долгота, longtitude  градусы
+#     Returns:
+#         coordinates: tuple(N_lat: hlat, E_lng: hlon)
+#     '''
+#     # lon_lat - типа 73.92N 54.30E, разделитель - пробел
+#     # вычистить мусор
 
-    lon_lat = re.sub(r'\s+', ' ', lon_lat)      # remove multispaces
-    lon_lat = re.sub(r',\s', ' ', lon_lat)      # remove ', ' between digits
-    lon_lat = re.sub(r',', '.', lon_lat)        # . in digits instead ,
-    splted = lon_lat.split(' ')
-    # две части?
-    if len(splted) != 2:
-        raise TypeError(f"В строке {lon_lat} координаты не распознаны")
-    # разбираемся - где долгота, где широта
-    for k in splted:
-        if re.search(r'[NnSs]$', k):         # последняя буква - север или юг
-            lat = float(re.sub(r'[NnSs]$', '', k))
-            if re.search(r'[Ss]', k):
-                lat = -lat
-        elif re.search(r'[EeWw]$', k):         # последняя буква - восток или запад
-            lon = float(re.sub(r'[EeWw]$', '', k))
-            if re.search(r'[Ww]', k):
-                lon = -lon
-        else:
-            raise TypeError(f"В строке {lon_lat} должны быть N (или S) и E (или W)")
-    # вернуть координаты
-    res = float2COORD(lat, lon)
-    return res
+#     lon_lat = re.sub(r'\s+', ' ', lon_lat)      # remove multispaces
+#     lon_lat = re.sub(r',\s', ' ', lon_lat)      # remove ', ' between digits
+#     lon_lat = re.sub(r',', '.', lon_lat)        # . in digits instead ,
+#     splted = lon_lat.split(' ')
+#     # две части?
+#     if len(splted) != 2:
+#         raise TypeError(f"В строке {lon_lat} координаты не распознаны")
+#     # разбираемся - где долгота, где широта
+#     for k in splted:
+#         if re.search(r'[NnSs]$', k):         # последняя буква - север или юг
+#             lat = float(re.sub(r'[NnSs]$', '', k))
+#             if re.search(r'[Ss]', k):
+#                 lat = -lat
+#         elif re.search(r'[EeWw]$', k):         # последняя буква - восток или запад
+#             lon = float(re.sub(r'[EeWw]$', '', k))
+#             if re.search(r'[Ww]', k):
+#                 lon = -lon
+#         else:
+#             raise TypeError(f"В строке {lon_lat} должны быть N (или S) и E (или W)")
+#     # вернуть координаты
+#     res = float2COORD(lat, lon)
+#     return res
 
 
-def float2COORD(n_latitude: float, e_longtude: float) -> tuple:
-    ''' Координаты в градусах (широта, долгота)
-    Args:
-        n_latitude: float   # Широта, S/N latitude градусы
-        e_longtude: float   # Долгота, E/W longtitude градусы
-    Returns:
-        coordinates: tuple(N_lat: hlat, E_lng: hlon)
-        '''
-    res: COORD
-    lat, lon = normLatLng(n_latitude, e_longtude)   # lon - x we, lat - y sn
-    hlon = int((lon + 30) * MULCOORD)   # self._lon = ( self._hlon / MULCOORD ) - 30
-    hlat = int(lat * MULCOORD)          # self._lat =   self._hlat / MULCOORD
-    res = hex2COORD(hlon, hlat)
-    return res
+# def float2COORD(n_latitude: float, e_longtude: float) -> tuple:
+#     ''' Координаты в градусах (широта, долгота)
+#     Args:
+#         n_latitude: float   # Широта, S/N latitude градусы
+#         e_longtude: float   # Долгота, E/W longtitude градусы
+#     Returns:
+#         coordinates: tuple(N_lat: hlat, E_lng: hlon)
+#         '''
+#     res: COORD
+#     lat, lon = normLatLng(n_latitude, e_longtude)   # lon - x we, lat - y sn
+#     hlon = int((lon + 30) * MULCOORD)   # self._lon = ( self._hlon / MULCOORD ) - 30
+#     hlat = int(lat * MULCOORD)          # self._lat =   self._hlat / MULCOORD
+#     res = hex2COORD(hlon, hlat)
+#     return res
 
 
 def normLatLng(n_latitude: float, e_longtude: float):

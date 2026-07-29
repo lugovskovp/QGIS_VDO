@@ -16,6 +16,15 @@ block_0x07
 SCALE
 
 """
+from __future__ import annotations  # Обязательно на самой первой строчке файла
+
+from typing import TYPE_CHECKING, cast
+if TYPE_CHECKING:
+    # Этот блок видит только Pylance, интерпретатор Python его игнорирует
+    from _typeshed import ReadableBuffer
+else:
+    # Запасной вариант для рантайма, чтобы не было NameError
+    ReadableBuffer = bytes
 
 # from QGIS_VDO.vdo.consts import struct_WORD  # struct_UINT
 from QGIS_VDO.vdo.enums import en_POI_CAT
@@ -48,7 +57,7 @@ class SCALE(BYTESTRUCT):
     24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
     * - only dbrev.34
     """
-    def __init__(self, byte_array: bytes, vdo: VDO_FILE) -> None:
+    def __init__(self, byte_array: ReadableBuffer, vdo: VDO_FILE) -> None:
         if vdo.dbrev == 34:
             self.size = 0x1C
         elif vdo.dbrev == 30:
@@ -60,7 +69,7 @@ class SCALE(BYTESTRUCT):
         self.vdo = vdo
 
         # area
-        point_lb = COORD(self._raw[4:12])
+        point_lb = COORD(bytearray(self._raw[4:12]))
         point_rt = COORD(self._raw[12:20])
         self.area = (point_lb, point_rt)
 
@@ -159,12 +168,23 @@ class SCALE(BYTESTRUCT):
         # return self._raw[:4] == b'\x00' * 4     # а вот херь: у бмв есть 0x04dffa01, но пустой area # noqa
         return self._raw[4:20] == b'\x00' * 16
 
-    def find_idx(self, poin: COORD) -> BLADDR | None:
+    def find_by_coord(self, srch_point: COORD) -> BLADDR | None:
         """
-        TODO:
         Поиск idx блока, в который попадают координаты, или None
         """
-        res = None
+        # check borders
+        if srch_point.lat < self.area[0].lat or srch_point.lat > self.area[1].lat \
+           or srch_point.lon < self.area[0].lon or srch_point.lon > self.area[1].lon:
+            # не попал в квадрат lb-rt scale
+            print(f"No way: {srch_point} not in {self.area}")
+            return None
+        # 0x08
+        if not self.almanac_idx:
+            return None
+        alm: block_0x08 = cast("block_0x08", self.vdo.get_block(self.almanac_idx, self.area[0], self.area[1]))
+        res = alm.find_by_coord(srch_point)
+        # bl =
+
         return res
 
 
@@ -227,9 +247,8 @@ class block_0x07(block_base):
 
 if __name__ == '__main__':
     # from vdo.datatypes import VDO_FILE
-    from vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
-    from vdo.consts import struct_UINT        # noqa
-    from vdo.blocks import block_0x12, block_0x09
+    from QGIS_VDO.vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
+    from QGIS_VDO.vdo.consts import struct_UINT        # noqa
 
     vdo = vdo30
     # vdo = vdo34ee
@@ -237,43 +256,55 @@ if __name__ == '__main__':
     # vdo = vdo34bnl
     vdo = vdoRu
 
-    bl_toc: block_0x12 = vdo.get_block(0)
-    bl_scales: BLADDR = bl_toc.bladdr_scales
+    # test get_items ---------------------------------------------------------------------
+    # from QGIS_VDO.vdo.blocks import block_0x12, block_0x09
+    # bl_toc: block_0x12 = vdo.get_block(0)
+    # bl_scales: BLADDR = bl_toc.bladdr_scales
 
-    block_07: block_0x07 = vdo.get_block(bl_scales)
+    # block_07: block_0x07 = vdo.get_block(bl_scales)
 
-    scale_5 = block_07.scales[5]
-    scale_5 = block_07.scales[11]
-    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
+    # scale_5 = block_07.scales[5]
+    # scale_5 = block_07.scales[11]
+    # block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
 
-    # block_08 content
-    print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
-    bla_first = None
-    for f in block_almanac.get_items():
-        if not bla_first:
-            (bla_first, coord_lb, coord_rt) = f
+    # # block_08 content
+    # print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
+    # bla_first = None
+    # for f in block_almanac.get_items():
+    #     if not bla_first:
+    #         (bla_first, coord_lb, coord_rt) = f
 
-        print(f)
-        pass
+    #     print(f)
+    #     pass
 
-    # block_09 content
-    print("block_09: geo_block_0xXX : x : y")
-    bla = BLADDR(struct_UINT.pack(bla_first), vdo)
-    bl_folder: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
+    # # block_09 content
+    # print("block_09: geo_block_0xXX : x : y")
+    # bla = BLADDR(struct_UINT.pack(bla_first), vdo)
+    # bl_folder: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
 
-    print(f"block_08: block_0x09: 0x{bl_folder.head.bladdr.hex.replace(' ', '')} COORD(lb) : COORD(rt)")  # noqa
-    bla_first = None
-    cnt = bl_folder.items_cnt()
+    # print(f"block_08: block_0x09: 0x{bl_folder.head.bladdr.hex.replace(' ', '')} COORD(lb) : COORD(rt)")  # noqa
+    # bla_first = None
+    # cnt = bl_folder.items_cnt()
 
-    for f in bl_folder.get_items():
-        if not bla_first:
-            (bla_first, coord_lb, coord_rt) = f
-        print(f)
-        pass
+    # for f in bl_folder.get_items():
+    #     if not bla_first:
+    #         (bla_first, coord_lb, coord_rt) = f
+    #     print(f)
+    #     pass
 
     # geoblock content
 
     pass
+
+    # test search find_by_coord ===============================================================
+    vdo = vdo30
+
+    bladdr_scales: BLADDR = vdo.get_block(0).bladdr_scales      # type: ignore
+    block_07: block_0x07 = vdo.get_block(bladdr_scales)         # type: ignore
+    sc = block_07.scales[1]
+    # b'\x13\xc7\xb9\x02\x13\xddiu'  59.989966N 29.734109E
+    srch = COORD(b'\x13\xc7\xb9\x02\x13\xddiu')
+    sc.find_by_coord(srch)
 
     # bl_ru_big_map = vdo.get_block(BLADDR(struct_UINT.pack(0x)))
     # @ 00000201 13 0202 [13:BIBLIOGR]

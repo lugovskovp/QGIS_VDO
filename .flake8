@@ -8,12 +8,14 @@ exclude = .git,
           dist, 
           i18n, 
           .venv,
-          c:/Users/*,
+          *.pyi,
+          c:/Users/,
           examples\*, 
           bmw*, 
           ext_libs, 
           d0*, 
-          research
+          research,
+          
 
 # extend-ignore = E203
 # F401 'pytest_qgis.pytest_qgis.*' imported but unused

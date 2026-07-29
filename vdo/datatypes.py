@@ -691,68 +691,74 @@ class BLSTART(BYTESTRUCT):
         00   dword   BLADDR          00000001 always
         04   word    bl_type         0012
         06   char    is_arch         00-not arch, 01- ???, 02-lzw
-        07   char    unarch_size """
+        07   char    unarch_size
+    """
+    # Фиксируем слоты, предотвращая появление __dict__ и кэшируя композиты
+    __slots__ = ('vdo', '_bladdr_obj')
     
-    size: int = DOUBLE_BYTES_CNT
+    size: int = 8  # DOUBLE_BYTES_CNT
 
-    def __new__(cls, buffer, parent: VDO_FILE | None = None):
-        instance = super().__new__(cls)
-        return instance
+    def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
+        if len(buffer) < self.size:
+            raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
+            
+        super().__init__(buffer, size=self.size)
+        
+        # Используем оптимизированный синглтон-заглушку
+        if not vdo or self.uint(0) == 0:
+            self.vdo = EMPTY_VDO
+        else:
+            self.vdo = vdo
 
-    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None):
-        """ """
-        super().__init__(memoryview(buffer)[:self.size])
-        self.vdo = vdo if vdo else VDO_FILE()
+        # Кэшируем BLADDR один раз при инициализации
+        self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
 
-    def __repr__(self):
-        ''' View while debug value'''
+    def __repr__(self) -> str:
         v = '' if self.vdo.path else ' virt'
-        v = f'{v} [{self.bltype.value:02X}:{self.bltype.name}]'
-        return self.headhex() + v
+        try:
+            type_name = self.bltype.name
+        except ValueError:
+            type_name = "UNKNOWN"
+        return f"{self.headhex()}{v} [{self.bltype.value:02X}:{type_name}]"
     
     @property
     def bladdr(self) -> BLADDR:
-        return BLADDR(self._raw, self.vdo)
+        """Возвращает кэшированный объект адреса блока (zero-allocation)"""
+        return self._bladdr_obj
 
     @property
     def bltype(self) -> BlockType:
-        """ Enums type of block """
-        OFFSET_TYPE = 4
-        bltype = self.ushort(OFFSET_TYPE)
-        if bltype in BlockType:
-            return BlockType(bltype)
-        return BlockType(0xFF)     # unknown
+        """Возвращает валидный элемент BlockType"""
+        bltype_val = self.ushort(4)     # OFFSET_TYPE = 4
+        # Безопасный поиск по значению enum
+        try:
+            return BlockType(bltype_val)
+        except ValueError:
+            return BlockType.UNKNOWN
 
     def headhex(self) -> str:
-        ''' Строковое представление'''
-        OFFSET_TYPE = 4
-        s = "{:08x} {:02x} {:04x}".format(self.uint(),
-                                          self.ushort(OFFSET_TYPE),
-                                          self.ushort(OFFSET_TYPE + 2))
-        return s
+        """Строковое представление заголовка в соответствии с разметкой байт"""
+        # Читаем байты 6 и 7 раздельно, как заложено в структуре
+        return f"{self.uint(0):08X} {self.ushort(4):04X} {self._raw[6]:02X} {self._raw[7]:02X}"
 
     @property
-    def segcnt(self):
-        ''' Количество сегментов после распаковки, was unarc_segcnt'''
+    def segcnt(self) -> int:
+        """Количество сегментов после распаковки"""
         if self.arch_type:
-            OFFSET_UNARC_SEGS = 7
-            return self._raw[OFFSET_UNARC_SEGS]
-        return self.bladdr.segcnt
+            return self._raw[7]  # OFFSET_UNARC_SEGS = 7
+        return self._bladdr_obj.segcnt
     
     @property
-    def arch_type(self):
-        ''' 2 - zlib, 1 - bytype, 0 - not archived'''
-        if self._raw == b'\x00\x00\x00\x00':
-            return None  # if bl 0xEE
-        OFFSET_ARC_TYPE = 6
-        return self._raw[OFFSET_ARC_TYPE]
+    def arch_type(self) -> int:
+        """2 - zlib, 1 - bytype, 0 - не сжато"""
+        return self._raw[6]  # OFFSET_ARC_TYPE = 6
     
     @property
     def sizeofblock(self) -> int:
-        ''' Размер распакованного блока в байтах'''
+        """Размер распакованного блока в байтах"""
         if self.arch_type:
             return self.segcnt * self.vdo.segsize
-        return self.bladdr.sizeofblock
+        return self._bladdr_obj.sizeofblock
 
 # class PSTR(PTR):
 #     ''' PSTR    WORD, nearPTR на zero-ended строку '''

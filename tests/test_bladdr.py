@@ -5,15 +5,6 @@ from QGIS_VDO.vdo.datatypes import BLADDR, VDO_FILE  # Настройте имп
 ZERO_DWORD = b'\x00\x00\x00\x00'
 
 
-@pytest.fixture
-def custom_vdo():
-    """Фикстура для создания настроенного объекта VDO_FILE."""
-    vdo = VDO_FILE()
-    vdo.path = "C:/Maps/test_map.vdo"
-    vdo.segsize = 2048  # Кастомный размер сегмента (2 КБ)
-    return vdo
-
-
 def test_bladdr_parsing_big_endian(custom_vdo):
     """Тест разбора полей адреса блока из сырых байт (Big-Endian)."""
     # b'\x00\x02\x03\x04'

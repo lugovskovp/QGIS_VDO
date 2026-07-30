@@ -1,7 +1,9 @@
 import pytest   # type: ignore # noqa
 import sys
+import os
 from types import ModuleType
 from typing import Any
+from pathlib import Path
 
 # Импортируем тестируемый класс и функцию генерации словаря
 from QGIS_VDO.vdo.datatypes import VDO_FILE, setup_known_types
@@ -93,3 +95,74 @@ def test_vdo_get_block_integration(tmp_path, monkeypatch):
     assert block_instance.type_name == "block_0x0B"
     assert block_instance.bladdr.offset == 100
     assert block_instance.bladdr.isZero is False
+
+
+def test_vdo_files_init_wrong_path():
+    """Проверка создания VDO_FILE с несуществующим путём"""
+    vdo = VDO_FILE("bla-bla-bla")
+
+    assert vdo.path is None
+
+
+def test_vdo_files_init_too_little_file():
+    """Проверка создания VDO_FILE carindb_0h_1Fh.bin """
+    FIXTURES_DIR = Path(__file__).parent
+    too_little_file_path = FIXTURES_DIR / 'fixtures' / 'carindb_0h_1Fh.bin'
+    vdo = VDO_FILE(too_little_file_path)
+
+    assert vdo.path is None
+
+
+# --------------------------------------------------------------
+# Тестs на реальных fixtures
+# Словарь ожидаемых значений прямо внутри файла с тестами
+EXPECTED_VDO_METRICS = {"carindb30_0h_9000h.bin": {"dbrev": 30,
+                                                   "segsize": 2048,
+                                                   "file_size": 36864,
+                                                   },
+                        "carindb34_0h_6800h.bin": {"dbrev": 34,
+                                                   "segsize": 2048,
+                                                   "file_size": 0x6800,  # 0x6800,
+                                                   },
+                        "DB34_0h_3A01h.bin": {"dbrev": 34,
+                                              "segsize": 512,
+                                              "file_size": 0x3A01,  # реальный размер файла в байтах
+                                              }
+                        }
+
+
+def test_vdo_files_init_exists_fixture_files(bin_file_path):
+    """ """
+    # Проверка существования 3-х bin_file_path файлов
+    vdo = VDO_FILE(bin_file_path)
+
+    assert vdo.path != ''
+
+
+def test_vdo_files_expected_dbrev(real_vdo):
+    """ """
+    # Извлекаем чистое имя файла из пути (например, 'DB34_0h_3A01h.bin')
+    filename = os.path.basename(real_vdo.path)
+    # Получаем эталонный набор для текущего файла
+    expected = EXPECTED_VDO_METRICS[filename]
+
+    assert real_vdo.dbrev == expected["dbrev"]
+
+
+def test_vdo_files_expected_segsize(real_vdo):
+    """ """
+    # Извлекаем чистое имя файла из пути (например, 'DB34_0h_3A01h.bin')
+    filename = os.path.basename(real_vdo.path)
+    expected = EXPECTED_VDO_METRICS[filename]
+
+    assert real_vdo.segsize == expected["segsize"]
+
+
+def test_vdo_files_expected_size(real_vdo):
+    """ """
+    # Извлекаем чистое имя файла из пути (например, 'DB34_0h_3A01h.bin')
+    filename = os.path.basename(real_vdo.path)
+    expected = EXPECTED_VDO_METRICS[filename]
+
+    assert real_vdo.file_size == expected["file_size"]
+# 'fixtures_0x3A01'

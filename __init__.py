@@ -26,13 +26,14 @@ ext_libs_path = os.path.join(plugin_dir, "ext_libs")
 if ext_libs_path not in sys.path:
     sys.path.insert(0, ext_libs_path)
 
-from bitarray import bitarray                     # type: ignore # noqa
-from bitarray.util import ba2int    # type: ignore # noqa
+from bitarray import bitarray           # type: ignore # noqa
+from bitarray.util import ba2int        # type: ignore # noqa
 
 # >>> bitarray import
 
 
-def classFactory(iface):
+def classFactory(iface):                # pragma: no cover
+    # Весь этот блок теперь официально игнорируется тестами
     """Load VDOExplorerPlugin class from file VDOExplorer.
 
     :param iface: A QGIS interface instance.

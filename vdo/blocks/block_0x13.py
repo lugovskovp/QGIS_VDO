@@ -29,7 +29,9 @@ class block_0x13(block_base):
 
 # -------------------------------------------------------------------------
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
+    # Весь этот блок теперь официально игнорируется тестами
+    
     from vdo.datatypes import VDO_FILE, BYTESTRUCT
     from vdo.blocks import block_0x12
 

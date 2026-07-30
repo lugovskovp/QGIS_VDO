@@ -76,9 +76,12 @@ class COORD(BYTESTRUCT):
         Широта (Lat) N/S - y - la
         """
         # Сценарий A: На входе сырые байты (ReadableBuffer) из vdo
-        if la is None:
+        if isinstance(lo, ReadableBuffer) or isinstance(lo, memoryview) or isinstance(lo, bytearray):
             # Обрезаем буфер строго до 8 байт и передаем в базовый BYTESTRUCT
-            super().__init__(memoryview(lo)[:DOUBLE_BYTES_CNT])   # type: ignore
+            if isinstance(lo, memoryview):
+                super().__init__(lo[:DOUBLE_BYTES_CNT])   # type: ignore
+            else:
+                super().__init__(memoryview(lo)[:DOUBLE_BYTES_CNT])   # type: ignore
             
             # Быстро распаковываем сразу оба dword за один проход на Си
             self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
@@ -570,6 +573,13 @@ if __name__ == '__main__':
 
     coo1 = COORD(115767722, 196206111)
 
+    buff = b'\xaa\x00\x124Ufw\x88Test\x00\x00\x00\x00\x06\xe6y\xaa\x0b\xb1\xde\x1f'
+    co_bu = COORD(buff)
+
+    base_struct = BYTESTRUCT(b'\xaa\x00\x124Ufw\x88Test\x00\x00\x00\x00\x06\xe6y\xaa\x0b\xb1\xde\x1f')
+    coord_buffer = base_struct.read(16, 8)
+    a = COORD(coord_buffer)
+    
     # 203.910287S 75.001364W    b'\xf1\x190\x00\xbczP\x00'
     coo2longtitude = COORD(-250007552, -1132834816)
     coo2hlon = COORD(4044959744, 3162132480)

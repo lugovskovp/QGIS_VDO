@@ -51,9 +51,12 @@ def test_init_scenario_c_floats():
 
 def test_init_invalid_types():
     """Проверка выброса ValueError при передаче неверных типов данных."""
-    # with pytest.raises(ValueError, match="Неверные типы аргументов для COORD"):
-    with pytest.raises(TypeError, match="memoryview:"):
+    # with pytest.raises(TypeError, match="memoryview:"):
+    with pytest.raises(ValueError, match="Неверные типы аргументов для COORD"):
         COORD("строка вместо байт", None)
+
+    with pytest.raises(ValueError, match="Неверные типы аргументов для COORD"):
+        COORD(155, "строка вместо байт")
 
 
 # =========================================================================

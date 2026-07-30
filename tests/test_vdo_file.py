@@ -6,7 +6,8 @@ from typing import Any
 from pathlib import Path
 
 # Импортируем тестируемый класс и функцию генерации словаря
-from QGIS_VDO.vdo.datatypes import VDO_FILE, setup_known_types, EMPTY_BUFFER
+from QGIS_VDO.vdo.datatypes import VDO_FILE, setup_known_types, KNOWN_BLOCKS, EMPTY_BUFFER, BLADDR
+from QGIS_VDO.vdo.blocks import block_0x12, block_0x13, block_0x07
 
 
 # --- Заглушки для сопутствующих классов (BLSTART и BLADDR) ---
@@ -120,7 +121,8 @@ def test_vdo_files_init_too_little_file():
 
     assert vdo.path is None
     assert vdo.QGISvdoGroupName is None
-
+    assert vdo.get_block(0) is None
+    
 
 # --------------------------------------------------------------
 # Тестs на реальных fixtures
@@ -128,24 +130,99 @@ def test_vdo_files_init_too_little_file():
 EXPECTED_VDO_METRICS = {"carindb30_0h_9000h.bin": {"dbrev": 30,
                                                    "segsize": 2048,
                                                    "file_size": 36864,
+                                                   "bl_0x12.area_A": 'None',
+                                                   "bl_201": block_0x07,
                                                    },
                         "carindb34_0h_6800h.bin": {"dbrev": 34,
                                                    "segsize": 2048,
                                                    "file_size": 0x6800,  # 0x6800,
+                                                   "bl_0x12.area_A": '(41.264594N 12.107514E, 59.895456N 29.673966E)',
+                                                   "bl_201": block_0x07,
                                                    },
                         "DB34_0h_3A01h.bin": {"dbrev": 34,
                                               "segsize": 512,
                                               "file_size": 0x3A01,  # реальный размер файла в байтах
+                                              "bl_0x12.area_A": '(35.317104N 9.161808W, 70.479517N 93.151702E)',
+                                              "bl_201": block_0x13,
                                               }
                         }
+
+
+def test_get_block_with_unknown_type(real_vdo, monkeypatch):
+    """
+    Тест проверяет ветку else в get_block, когда считанный из фикстуры
+    тип блока отсутствует в словаре KNOWN_BLOCKS.
+    """
+    test_addr = 0
+    real_block_type = 0x12
+
+    # самый первый блок по смещению 0 - тип блока 0x12, из фейкового словаря известных блоков
+    monkeypatch.delitem(KNOWN_BLOCKS, real_block_type, raising=False)
+
+    bl_instance = real_vdo.get_block(test_addr)
+
+    # Блок должен создаться как базовый класс "block_base"
+    assert bl_instance is not None
+    assert bl_instance.type == real_block_type
+    assert bl_instance.type_name == "block_base"
+    
+    # Проверяем, что имя класса соответствует базовому классу
+    assert bl_instance.__class__.__name__ == "block_base"
 
 
 def test_vdo_files_init_exists_fixture_files(bin_file_path):
     """ """
     # Проверка существования 3-х bin_file_path файлов
     vdo = VDO_FILE(bin_file_path)
-
+    isinstance(vdo, VDO_FILE)
     assert vdo.path != ''
+
+    # если виртуальный BLADDR - без vdo
+    bla_zero = BLADDR(b'\x00' * 4)
+    a = vdo.get_block(bla_zero)
+    assert a is None
+
+
+@pytest.mark.slow
+def test_vdo_files_get_block(real_vdo):
+    """ Проверка правильной  работы get_block"""
+    assert real_vdo.get_block(None) is None
+
+    # если виртуальный zero BLADDR - c vdo
+    bla_zero = BLADDR(b'\x00' * 4, real_vdo)
+    a = real_vdo.get_block(bla_zero)
+    assert a is None
+
+    # если указатель не на начало настоящего блока
+    a = real_vdo.get_block(0x10)
+    assert a is None
+
+    # если аргумент не гото типа
+    with pytest.raises(ValueError):
+        real_vdo.get_block("strings not good choice here")
+
+    # ------------------------------------------
+    # Получаем эталонный набор для текущего файла
+    filename = os.path.basename(real_vdo.path)
+    expected = EXPECTED_VDO_METRICS[filename]
+
+    # если виртуальный BLADDR - без vdo
+    bla = BLADDR(b'\x00\x00\x02\x01')
+    a = real_vdo.get_block(bla)
+    assert isinstance(a, expected["bl_201"])
+
+    # если блок за пределами файла
+    bla = BLADDR(b'\x11\x00\x02\x01')
+    a = real_vdo.get_block(bla)
+    assert a is None
+
+    #
+    bl_0x12 = real_vdo.get_block(0)
+    assert isinstance(bl_0x12, block_0x12)
+    bla_0x07 = bl_0x12.bladdr_scales
+    
+    assert bl_0x12.area_A.__repr__() == expected["bl_0x12.area_A"]
+    assert isinstance(bla_0x07, BLADDR)
 
 
 @pytest.mark.slow

@@ -1,5 +1,6 @@
 import os
 import sys
+from unittest.mock import MagicMock
 
 # 1. Настройка путей (работает везде: и локально, и на GitHub)
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -13,17 +14,29 @@ if EXT_LIBS_DIR not in sys.path:
 # 2. Умный импорт QGIS: настоящая библиотека локально ИЛИ заглушка на GitHub
 if os.environ.get("GITHUB_ACTIONS") == "true" or os.environ.get("CI") == "true":
     # Этот блок выполнится ТОЛЬКО на GitHub Actions
-    from unittest.mock import MagicMock
+    # Класс, который заставляет Python думать, что это пакет, а не просто объект
+    class MockPackage(MagicMock):
+        __path__ = []  # Этот атрибут говорит Python, что модуль является пакетом
 
-    class MockModule(MagicMock):
-        @classmethod
-        def __getattr__(cls, name):
-            return MagicMock()
+    # Создаем базовые пакеты-пустышки
+    qgis_mock = MockPackage()
+    pyqt5_mock = MockPackage()
 
-    # Изолируем окружение GitHub от отсутствующих библиотек
-    if os.environ.get("CI"):
-        for module in ['qgis', 'qgis.core', 'qgis.gui', 'qgis.utils', 'PyQt5']:
-            sys.modules[module] = MagicMock()
+    # Регистрируем корневые пакеты и все известные подмодули
+    sys.modules['qgis'] = qgis_mock
+    sys.modules['qgis.PyQt'] = qgis_mock.PyQt
+    sys.modules['qgis.PyQt.QtCore'] = qgis_mock.PyQt.QtCore
+    sys.modules['qgis.PyQt.QtWidgets'] = qgis_mock.PyQt.QtWidgets
+    sys.modules['qgis.PyQt.QtGui'] = qgis_mock.PyQt.QtGui
+    sys.modules['qgis.core'] = qgis_mock.core
+    sys.modules['qgis.gui'] = qgis_mock.gui
+    sys.modules['qgis.utils'] = qgis_mock.utils
+    
+    sys.modules['PyQt5'] = pyqt5_mock
+    sys.modules['PyQt5.QtCore'] = pyqt5_mock.QtCore
+    sys.modules['PyQt5.QtWidgets'] = pyqt5_mock.QtWidgets
+    sys.modules['PyQt5.QtGui'] = pyqt5_mock.QtGui
+
 else:
     # Этот блок выполнится НА ЛОКАЛЬНОМ КОМПЬЮТЕРЕ
     # Если вы запускаете тесты из IDE (PyCharm/VS Code), убедитесь,

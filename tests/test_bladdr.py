@@ -106,6 +106,10 @@ def test_bladdr_comparison_with_invalid_type(custom_vdo):
         # Операторы сравнения величин (<, <=) при NotImplemented вызывают TypeError
         _ = addr < 42
 
+    with pytest.raises(TypeError):
+        # Операторы сравнения величин (<, <=) при NotImplemented вызывают TypeError
+        _ = addr <= 42
+
 
 def test_bladdr_slots_memory_efficiency():
     """Убеждаемся, что дочерний класс зафиксирован в памяти и не имеет __dict__."""

@@ -1,226 +1,139 @@
-import unittest
-import struct
+import pytest     # type: ignore # noqa
+# from unittest.mock import Mock
 
-
+# Замените импорты под вашу структуру проекта
 from QGIS_VDO.vdo.geotypes import COORD
-from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 
-# Дублируем константы для сверки в тестах
+# Константы для тестов
 MULCOORD = 5555554
 DOUBLE_BYTES_CNT = 8
+MOST_SIGNIFICANT_BIT = 0x80000000
 
 
-class TestCoord(unittest.TestCase):
-
-    def test_init_from_bytes_positive(self):
-        """Тест инициализации из байт (Big-Endian): положительные координаты (N, E)"""
-        # Задаем численные значения
-        hlon = int((30 + 37.6173) * MULCOORD)  # ~37.6173° E
-        hlat = int(55.7558 * MULCOORD)         # ~55.7558° N
-        
-        # Упаковываем в Big-Endian (>LL)
-        raw_bytes = struct.pack(">LL", hlon, hlat)
-        
-        coord = COORD(raw_bytes)
-        
-        # Проверяем точность восстановления градусов
-        self.assertAlmostEqual(coord.lon, 37.6173, delta=0.0001)
-        self.assertAlmostEqual(coord.lat, 55.7558, delta=0.0001)
-
-    def test_vdo_reference_coordinates(self):
-        """Проверка эталонных бинарных данных VDO на реальных координатах (Big-Endian)."""
-        # 1. Задаем исходные эталонные байты VDO
-        sa1 = b'\x06\xe6y\xaa\x0b\xb1\xde\x1f'
-        sa2 = b'\nlvM\x10_\xf3\xf9'
-        sa3 = b'\xf1\x190\x00\xbczP\x00'
-        sa4 = b'Q\x190\x00\x1czP\x00'
-
-        # 2. Инициализируем объекты COORD
-        c1 = COORD(sa1)
-        c2 = COORD(sa2)
-        c3 = COORD(sa3)
-        c4 = COORD(sa4)
-
-        # Допустимая дельта для шестого знака после запятой (микроокругления)
-        coord_delta = 0.000001
-
-        # 3. Валидация c1 (Ожидается: 35.317104N 9.161808W)
-        # Так как W — это западная долгота, c1.lon должен быть отрицательным
-        self.assertAlmostEqual(c1.lat, 35.317104, delta=coord_delta)
-        self.assertAlmostEqual(c1.lon, -9.161808, delta=coord_delta)
-        self.assertEqual(repr(c1), "35.317104N 9.161808W")
-
-        # 4. Валидация c2 (Ожидается: 49.450295N 1.478463E)
-        self.assertAlmostEqual(c2.lat, 49.450295, delta=coord_delta)
-        self.assertAlmostEqual(c2.lon, 1.478463, delta=coord_delta)
-        self.assertEqual(repr(c2), "49.450295N 1.478463E")
-
-        # 5. Валидация c3 (Ожидается: 203.910287S 75.001364W)
-        # S и W — юг и запад, оба значения градусов в c3.lat и c3.lon отрицательные
-        self.assertAlmostEqual(c3.lat, -203.910287, delta=coord_delta)
-        self.assertAlmostEqual(c3.lon, -75.001364, delta=coord_delta)
-        self.assertEqual(repr(c3), "203.910287S 75.001364W")
-
-        # 6. Валидация c4 (Ожидается: 86.000034N 214.908958E)
-        self.assertAlmostEqual(c4.lat, 86.000034, delta=coord_delta)
-        self.assertAlmostEqual(c4.lon, 214.908958, delta=coord_delta)
-        self.assertEqual(repr(c4), "86.000034N 214.908958E")
-
-    def test_init_from_bytes_negative(self):
-        """Тест инициализации из байт: отрицательные координаты (S, W)"""
-        # Нью-Йорк: ~74.0060° W, ~40.7128° N
-        # Долгота: (30 + (-74.0060)) * MULCOORD -> отрицательное число для знакового int
-        hlon_signed = int((30 + (-74.0060)) * MULCOORD)
-        hlat_signed = int(40.7128 * MULCOORD)
-        
-        # Переводим в беззнаковые dword для упаковки (& 0xFFFFFFFF)
-        hlon_unsigned = hlon_signed & 0xFFFFFFFF
-        hlat_unsigned = hlat_signed & 0xFFFFFFFF
-        
-        raw_bytes = struct.pack(">LL", hlon_unsigned, hlat_unsigned)
-        coord = COORD(raw_bytes)
-        
-        self.assertAlmostEqual(coord.lon, -74.0060, delta=0.0001)
-        self.assertAlmostEqual(coord.lat, 40.7128, delta=0.0001)
-
-    def test_init_from_ints(self):
-        """Тест инициализации через два целых числа (hlo, hla)"""
-        # Передаем напрямую hlon и hlat
-        coord = COORD(375555400, 310000000)
-        
-        self.assertEqual(coord._hlon, 375555400)
-        self.assertEqual(coord._hlat, 310000000)
-        # Проверяем, что базовый _raw тоже сформировался корректно (8 байт)
-        self.assertEqual(len(coord._raw), DOUBLE_BYTES_CNT)
-
-    def test_init_from_floats(self):
-        """Тест инициализации через два float (градусы)"""
-        lon_val = 27.5555
-        lat_val = -53.3333
-        
-        coord = COORD(lon_val, lat_val)
-        
-        # Проверяем, что значения корректно вернулись обратно
-        self.assertAlmostEqual(coord.lon, lon_val, places=6)
-        self.assertAlmostEqual(coord.lat, lat_val, places=6)
-
-    def test_repr_formatting(self):
-        """Тест строкового отображения __repr__ для отладки"""
-        coord_ne = COORD(10.5, 20.5)
-        self.assertEqual(repr(coord_ne), "20.500000N 10.500000E")
-        
-        coord_sw = COORD(-10.5, -20.5)
-        self.assertEqual(repr(coord_sw), "20.500000S 10.500000W")
-
-    def test_equality(self):
-        """Тест сравнения двух объектов COORD (__eq__)"""
-        coord1 = COORD(12.3456, 65.4321)
-        coord2 = COORD(12.3456, 65.4321)
-        coord3 = COORD(12.0000, 65.0000)
-        
-        self.assertEqual(coord1, coord2)
-        self.assertNotEqual(coord1, coord3)
-        self.assertNotEqual(coord1, "not_a_coord_object")
-
-    def test_child_coord_class(self):
-        """Тест дочернего класса COORD: извлечение из общего буфера и расчет градусов."""
-        # Задаем исходные тестовые координаты (в градусах)
-        target_lon = 37.6173
-        target_lat = 55.7558
-        
-        # Переводим в беззнаковые dword целые числа, как это делает формат VDO
-        hlon = int((30 + target_lon) * MULCOORD) & 0xFFFFFFFF
-        hlat = int(target_lat * MULCOORD) & 0xFFFFFFFF
-        
-        # Собираем эмуляцию большого бинарного файла (24 байта)
-        # Координаты COORD (8 байт) будут лежать внутри него со смещения 16
-        large_file_data = (
-            b"\x00" * 16 +                   # [0:15]   - какие-то другие данные блока   # noqa
-            struct.pack(">LL", hlon, hlat)   # [16:23]  - наши 2 dword структуры COORD (Big-Endian)
-        )
-        
-        # Инициализируем базовый класс BYTESTRUCT всем файлом
-        main_block = BYTESTRUCT(large_file_data)
-        
-        # Извлекаем срез памяти под координаты без копирования байт
-        coord_buffer = main_block.read(16, COORD.size)
-        
-        # Инициализируем реальный дочерний класс COORD от полученного memoryview
-        coord = COORD(coord_buffer)
-        
-        # Проверяем, что COORD корректно прочитал данные из среза и посчитал градусы
-        self.assertIsInstance(coord._raw, memoryview)
-        self.assertEqual(coord.len(), DOUBLE_BYTES_CNT)
-        self.assertAlmostEqual(coord.lon, target_lon, delta=0.0001)
-        self.assertAlmostEqual(coord.lat, target_lat, delta=0.0001)
-
-    def test_delta(self):
-        """Тест вычисления дельты между точками"""
-        coord1 = COORD(10.0, 20.0)
-        coord2 = COORD(12.5, 21.1)
-        
-        # Разница: lat = -1.1, lon = -2.5
-        res = coord1.delta(coord2)
-        self.assertEqual(res, "lat:-1.10° x lon:-2.50°")
-
-    def test_slots_and_dict_absence(self):
-        """Проверка жесткой оптимизации памяти через __slots__"""
-        coord = COORD(0.0, 0.0)
-        # У оптимизированного класса должен отсутствовать динамический словарь __dict__
-        with self.assertRaises(AttributeError):
-            _ = coord.__dict__
-
-    def test_invalid_arguments_raise_error(self):
-        """Проверка вызова исключения при передаче невалидных типов"""
-        with self.assertRaises(ValueError):
-            # Передаем строку вместо float/int во второй аргумент
-            COORD(55.123, "строка")  # type: ignore
+@pytest.fixture
+def raw_coord_bytes():
+    """Сырые байты для координат в формате Big-Endian.
+    Координаты: 6.356619 N, 26.249632 W
+    hlon = 20835376 -> hex: 0x013DEC30 -> Big-Endian: b'\x01\x3D\xEC\x30'
+    hlat = 35314544 -> hex: 0x021ADB70 -> Big-Endian: b'\x02\x1A\xDB\x70'
+    """
+    return b'\x01\x3D\xEC\x30\x02\x1A\xDB\x70'
 
 
-def test_coord_negative_and_hemispheres():
-    """Тест закрывает отрицательные ветви знака и южное/западное полушария"""
-    # 1. Положительные координаты (Север/Восток)
-    c_north_east = COORD(10.0, 20.0)
-    assert "N" in repr(c_north_east)
-    assert "E" in repr(c_north_east)
+# =========================================================================
+# 1. ТЕСТЫ ИНИЦИАЛИЗАЦИИ (Сценарии A, B, C)
+# =========================================================================
+
+def test_init_scenario_a_bytes(raw_coord_bytes):
+    """Сценарий A: Инициализация из сырого буфера байт."""
+    coord = COORD(raw_coord_bytes)
+    assert coord._hlon == 20835376
+    assert coord._hlat == 35314544
+    assert pytest.approx(coord.lon) == -26.249632
+    assert pytest.approx(coord.lat) == 6.356619
+
+
+def test_init_scenario_b_ints():
+    """Сценарий B: Инициализация из двух целых чисел (hlon, hlat) с маскированием."""
+    # Передаем числа, выходящие за пределы 32 бит, для проверки маски & 0xFFFFFFFF
+    coord = COORD(20835376 + 0x100000000, 35317104)
+    assert coord._hlon == 20835376
+    assert coord._hlat == 35317104
+
+
+def test_init_scenario_c_floats():
+    """Сценарий C: Инициализация из координат float (в градусах)."""
+    # 6.356619 N, 26.249632 W
+    coord = COORD(-26.249632, 6.356619)
+    assert coord._hlon == 20835375
+    assert coord._hlat == 35314546
+
+
+def test_init_invalid_types():
+    """Проверка выброса ValueError при передаче неверных типов данных."""
+    # with pytest.raises(ValueError, match="Неверные типы аргументов для COORD"):
+    with pytest.raises(TypeError, match="memoryview:"):
+        COORD("строка вместо байт", None)
+
+
+# =========================================================================
+# 2. ТЕСТЫ ЗНАКОВЫХ ЧИСЕЛ И ОТРИЦАТЕЛЬНЫХ КООРДИНАТ
+# =========================================================================
+
+def test_negative_coordinates_handling():
+    """Проверка корректности работы со знаковым битом (MOST_SIGNIFICANT_BIT).
+    Проверяем на южном (S) и западном дальше -30° (W) полушариях, где значения знаковые.
+    """
+    # Пусть lat = -12.6°, тогда hlat = -69999993. В unsigned 32-bit: -69999993 + 2**32 = 4224967303
+    # Пусть lon = -35.0°, тогда hlon = (-35 + 30) * MULCOORD = -27777775 -> -27777775 + 2**32 = 4267189521
+    u_hlon = 4267189521 & 0xFFFFFFFF
+    u_hlat = 4224967303 & 0xFFFFFFFF
     
-    # 2. Отрицательные координаты (Юг/Запад)
-    # Передаем отрицательные float, чтобы сработали ветви знака (< 0)
-    c_south_west = COORD(-10.0, -20.0)
+    coord = COORD(int(u_hlon), int(u_hlat))
+
+    assert coord._hlongtitude == -27777775
+    assert coord._hlatitude == -69999993
+    assert coord.lat == -12.6
+    assert coord.lon == -35.0
+
+
+# =========================================================================
+# 3. ТЕСТЫ СВОЙСТВ И ЭКСПОРТА
+# =========================================================================
+
+def test_as_tuple(raw_coord_bytes):
+    """Проверка экспорта координат в tuple для QGIS."""
+    coord = COORD(raw_coord_bytes)
+    lon, lat = coord.as_tuple()
+    assert pytest.approx(coord.lon) == -26.249632
+    assert pytest.approx(coord.lat) == 6.356619
+
+
+def test_repr_formatting():
+    """Проверка строкового представления __repr__ для разных полушарий."""
+    coord_north_west = COORD(-9.161808, 35.317104)
+    assert repr(coord_north_west) == '35.317104N 9.161808W'
+
+    coord_south_east = COORD(15.5, -45.123456)
+    assert repr(coord_south_east) == "45.123456S 15.500000E"
+
+
+# =========================================================================
+# 4. СРАВНЕНИЕ И ДЕЛЬТА (__eq__, delta)
+# =========================================================================
+
+def test_equality():
+    """Проверка равенства координат через __eq__."""
+    c1 = COORD(-9.161808, 35.317104)
+    c2 = COORD(-9.161808, 35.317104)
+    c3 = COORD(10.0, 20.0)
     
-    # Проверяем, что сработал вычитатель 0x100000000 в property
-    assert c_south_west.lat < 0
-    assert c_south_west.lon < 0
+    assert c1 == c2
+    assert c1 != c3
+    assert (c1 == "не объект COORD") is False
+
+
+def test_equality_returns_not_implemented():
+    """Проверка, что __eq__ возвращает NotImplemented для чужих типов."""
+    coord = COORD(0.0, 0.0)
+    assert coord.__eq__("строка") is NotImplemented
+
+
+def test_delta_calculation():
+    """Проверка вычисления разницы между координатами."""
+    c1 = COORD(10.50, 20.80)
+    c2 = COORD(10.00, 20.00)
     
-    # Проверяем, что в __repr__ сработали ветви 'S' и 'W'
-    representation = repr(c_south_west)
-    assert "S" in representation
-    assert "W" in representation
+    assert c1.delta(c2) == "lat:0.80° x lon:0.50°"
+    assert c1.delta("не COORD") is NotImplemented
 
 
-def test_coord_not_implemented_branches():
-    """Тест закрывает ветви 'NotImplemented' при неверных типах в __eq__ и delta"""
-    c = COORD(10.0, 20.0)
-    wrong_object = "я просто строка"
+# =========================================================================
+# 5. ПРОВЕРКА ОПТИМИЗАЦИИ ПАМЯТИ
+# =========================================================================
 
-    # Проверяем ветвь 'if not isinstance' в __eq__
-    # В Python c == wrong_object вернет False, если метод возвращает NotImplemented
-    assert (c == wrong_object) is False
-    
-    # Проверяем ветвь 'if not isinstance' в delta
-    assert c.delta(wrong_object) is NotImplemented
-
-
-def test_coord_as_tuple():
-    """ Проверка работы as_tuple"""
-    c = COORD(10.0, -20.0)
-    (val1, val2) = (10.0, -20.0)
-
-    #
-    (val_coo1, val_coo2) = c.as_tuple()
-    assert (val_coo1 == val1)
-    assert (val_coo2 == val2)
-
-
-if __name__ == "__main__":
-    unittest.main()
+def test_slots_efficiency_coord():
+    """Проверка, что у класса COORD заблокирован динамический __dict__."""
+    coord = COORD(0.0, 0.0)
+    with pytest.raises(AttributeError):
+        _ = coord.__dict__

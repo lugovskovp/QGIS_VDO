@@ -89,7 +89,7 @@ class VDO_FILE():
     """ класс работы с файлом формата carindb """
 
     def __init__(self, path: str | None = None) -> None:
-        if path:
+        if path and os.path.exists(path) and os.path.getsize(path) > OFFSET_ONE_SEG_SIZE:
             self.path: str | None = path
             # Используем unpack_from для безопасности типов ReadableBuffer
             self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]

@@ -116,7 +116,7 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
         return
 
     # Формируем SQL-выражение для поиска существующих имен: "name" IN ('Имя1', 'Имя2')
-    safe_names_str = ", ".join(f"'{name.replace("'", "''")}'" for name in packet_names)
+    safe_names_str = ", ".join(f"""'{name.replace("'", "''")}'""" for name in packet_names)
     exist_expression = f"\"name\" IN ({safe_names_str})"
     
     request = QgsFeatureRequest().setFilterExpression(exist_expression).setSubsetOfAttributes([field_name_index])  # noqa

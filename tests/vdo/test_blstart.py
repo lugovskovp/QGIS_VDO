@@ -2,6 +2,41 @@ import pytest   # type: ignore # noqa
 from QGIS_VDO.vdo.datatypes import BLSTART, BlockType
 
 
+def test_blstart_init_too_small_buffer(custom_vdo):
+    """Попытка создания из маленького буфера"""
+    buffer = b'\01' * 3
+
+    with pytest.raises(TypeError):
+        head = BLSTART(buffer, vdo=custom_vdo)    # noqa
+    
+
+def test_blstart_init_empty_vdo():
+    """Тест blstart без vdo."""
+    buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
+
+    head = BLSTART(buffer)
+
+    assert head.bladdr.vdo.file_size == 0
+
+
+def test_blstart_init_wrong_vdo():
+    """Тест blstart без vdo."""
+    buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
+    wrong_vdo = 'la-la-la'
+
+    with pytest.raises(ValueError):
+        head = BLSTART(buffer, wrong_vdo)   # noqa
+
+
+def test_blstart_headhex(custom_vdo):
+    """Строковое представление заголовка в соответствии с разметкой байт."""
+    buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
+    
+    head = BLSTART(buffer, vdo=custom_vdo)
+
+    assert head.headhex() == '00000105 0012 00 00'
+
+
 def test_blstart_uncompressed_block(custom_vdo):
     """Тест парсинга несжатого блока известного типа (ABSTRACT=0x12)."""
     # 8 байт:

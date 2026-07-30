@@ -17,7 +17,7 @@ import importlib
 
 from typing import TYPE_CHECKING, Union, Any
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:       # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
     from _typeshed import ReadableBuffer
 else:
@@ -89,7 +89,7 @@ class VDO_FILE():
     """ класс работы с файлом формата carindb """
 
     def __init__(self, path: str | None = None) -> None:
-        if path:
+        if path and os.path.exists(path) and os.path.getsize(path) > OFFSET_ONE_SEG_SIZE:
             self.path: str | None = path
             # Используем unpack_from для безопасности типов ReadableBuffer
             self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
@@ -137,6 +137,8 @@ class VDO_FILE():
         Returns:
             Block instance или None, если адрес невалиден или это не блок.
         """
+        if not self.path:
+            return None
         if addr is None:
             return None
         
@@ -145,7 +147,8 @@ class VDO_FILE():
         elif isinstance(addr, BLADDR):  # Исправлена проверка типа
             if addr.isZero:  # Используем оптимизированное свойство
                 return None
-            offset = addr.offset
+            # какой бы ни пришёл BLADDR, используем только его номер, и размер сегмента vdo
+            offset = addr.blocknumber * self.segsize
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
 
@@ -408,13 +411,16 @@ class BYTESTRUCT:
         return struct_UINT.unpack_from(self._raw, near_offset)[0]
     
 
-# Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
-class EmptyVDO:
-    segsize = 512  # дефолтный размер сегмента для безопасных математических операций
-    path = ""
+# # Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
+# class EmptyVDO:
+#     segsize = DEFAULT_ONE_SEG_SIZE  # дефолтный размер сегмента для безопасных математических операций
+#     dbrev = DEFAULT_DB_REVISION
+#     path = ""
+#     file_size = 0
 
 
-EMPTY_VDO = EmptyVDO()
+# # EMPTY_VDO = EmptyVDO()
+EMPTY_VDO = VDO_FILE()
 
 
 class BLADDR(BYTESTRUCT):
@@ -434,7 +440,10 @@ class BLADDR(BYTESTRUCT):
         if not vdo or self.value == 0:
             self.vdo = EMPTY_VDO
         else:
-            self.vdo = vdo
+            if isinstance(vdo, VDO_FILE):
+                self.vdo = vdo
+            else:
+                raise ValueError(f"vdo должен быть или VDO_FILE или никаким, но не {type(vdo)}")
 
     @property
     def isZero(self) -> bool:
@@ -479,8 +488,6 @@ class BLADDR(BYTESTRUCT):
         v = '' if self.vdo.path else ' virt'
         return self.hex + v
     
-    # --- ИСПРАВЛЕННЫЕ ОПЕРАЦИИ СРАВНЕНИЯ ---
-
     def _check_context(self, other: 'BLADDR') -> None:
         """Внутренняя проверка на совместимость контекстов данных"""
         if self.vdo.segsize != other.vdo.segsize:
@@ -769,7 +776,8 @@ class BLSTART(BYTESTRUCT):
 
 
 # =========================================================================
-if __name__ == '__main__':
+if __name__ == '__main__':      # pragma: no cover
+    # Весь этот блок теперь официально игнорируется тестами
     
     vdo2 = VDO_FILE()
 

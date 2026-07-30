@@ -1,0 +1,34 @@
+name: QGIS Plugin Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: qgis/qgis:release-3_34
+      options: --user root
+
+    env:
+      # Добавляем пути QGIS и путь к вашей папке ext_libs
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/ext_libs
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies and pytest-qgis
+        run: |
+          apt-get update && apt-get install -y python3-pip xvfb
+          pip install --no-cache-dir pytest pytest-qgis
+
+      - name: Run pytest
+        run: |
+          xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ -v
+
+
+### Важные нюансы настройки
+# * **Контейнер QGIS:** Использование официального образа `qgis/qgis` избавляет от необходимости вручную собирать QGIS, так как в нем уже установлены все библиотеки PyQt, GDAL и сам движок QGIS.
+# * **Переменная `PYTHONPATH`:** Указывает Python внутри контейнера, где искать модули `qgis.core` и `qgis.gui`.
+# * **Виртуальный экран (`xvfb-run`):** Запускает тесты в виртуальном окружении без реального монитора, что позволяет отрабатывать элементам интерфейса и инициализации `QgsApplication`.

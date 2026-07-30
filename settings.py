@@ -13,10 +13,12 @@ the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.'''
 
 # c:\Users\plugo\AppData\Roaming\QGIS\QGIS3\profiles\default\QGIS\QGIS3.ini
-import os.path
+
+from pathlib import Path
+
 from qgis.PyQt.QtCore import Qt, QSettings
 
-DEFAULT_SCALE = 4
+from QGIS_VDO.vdo.consts import DEFAULT_SCALE
 
 
 class Settings():
@@ -62,9 +64,9 @@ class Settings():
         return path
 
     @classmethod
-    def setLastFileNamePath(cls, path: os.path) -> None:
+    def setLastFileNamePath(cls, p: Path) -> None:
         """ Setting last opened file path """
-        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_LAST_PATH}', path)
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_LAST_PATH}', p)
 
     # chousen scale
     @classmethod
@@ -155,13 +157,13 @@ class Settings():
     @classmethod
     def HideNonActiveVdoEnabled(cls) -> bool:
         """ Enable to show clear recent files in menu """
-        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}',
+        return QSettings().value(f'{cls.PREFIX}/{cls.NAME_HIDE_NON_ACTIVE_VDO_GROUPS}',
                                  False, type=bool)
 
     @classmethod
     def setHideNonActiveVdo(cls, state: bool) -> None:
         """ Enable or disable to show clear recent files in menu """
-        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_ENABLE_SHOW_CLEAR_ACTION}', state)
+        QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_HIDE_NON_ACTIVE_VDO_GROUPS}', state)
 
     # ------- tab_info CollapsibleGroupBox state into settings
     # ShowGroupBox

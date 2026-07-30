@@ -30,6 +30,21 @@ def test_ch_idx_cp1250_encoding(custom_vdo):
     assert idx.ch == "Ć"
 
 
+def test_ch_idx_init_too_small_buffer(custom_vdo):
+    """Проверка, если подать слишком маленький буффер"""
+    buffer = b'\x00\x00\x00\x00'
+
+    with pytest.raises(TypeError):
+        idx = CH_IDX(buffer, vdo=custom_vdo)    # noqa
+
+
+def test_ch_idx_repr(custom_vdo):
+    buffer = b'\x00' * 12
+    idx = CH_IDX(buffer, vdo=custom_vdo)
+
+    assert ' out:' in idx.__repr__()
+
+
 def test_ch_idx_property_caching(custom_vdo):
     """Проверка, что свойства .bladdr и .list сохраняют один и тот же объект в памяти."""
     buffer = b'\x00' * 12

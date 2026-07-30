@@ -11,7 +11,7 @@ jobs:
 
     env:
       # Добавляем пути QGIS и путь к вашей папке ext_libs
-      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/ext_libs
+      PYTHONPATH: ${{ github.workspace }}:/usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/ext_libs
       QT_QPA_PLATFORM: offscreen
 
     steps:

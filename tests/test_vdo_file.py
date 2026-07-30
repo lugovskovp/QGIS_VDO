@@ -6,7 +6,7 @@ from typing import Any
 from pathlib import Path
 
 # Импортируем тестируемый класс и функцию генерации словаря
-from QGIS_VDO.vdo.datatypes import VDO_FILE, setup_known_types
+from QGIS_VDO.vdo.datatypes import VDO_FILE, setup_known_types, EMPTY_BUFFER
 
 
 # --- Заглушки для сопутствующих классов (BLSTART и BLADDR) ---
@@ -104,6 +104,14 @@ def test_vdo_files_init_wrong_path():
     assert vdo.path is None
 
 
+def test_vdo_files_read_from_empty():
+    """Проверка чтения из пустого vdo"""
+    vdo = VDO_FILE()
+
+    assert vdo.read(10, 5) == EMPTY_BUFFER
+    assert vdo.read(-10, 5) == EMPTY_BUFFER
+
+
 def test_vdo_files_init_too_little_file():
     """Проверка создания VDO_FILE carindb_0h_1Fh.bin """
     FIXTURES_DIR = Path(__file__).parent
@@ -111,6 +119,7 @@ def test_vdo_files_init_too_little_file():
     vdo = VDO_FILE(too_little_file_path)
 
     assert vdo.path is None
+    assert vdo.QGISvdoGroupName is None
 
 
 # --------------------------------------------------------------
@@ -139,8 +148,9 @@ def test_vdo_files_init_exists_fixture_files(bin_file_path):
     assert vdo.path != ''
 
 
+@pytest.mark.slow
 def test_vdo_files_expected_dbrev(real_vdo):
-    """ """
+    """ При инициализации правильно считывается версия БД - dbrev """
     # Извлекаем чистое имя файла из пути (например, 'DB34_0h_3A01h.bin')
     filename = os.path.basename(real_vdo.path)
     # Получаем эталонный набор для текущего файла
@@ -149,8 +159,9 @@ def test_vdo_files_expected_dbrev(real_vdo):
     assert real_vdo.dbrev == expected["dbrev"]
 
 
+@pytest.mark.slow
 def test_vdo_files_expected_segsize(real_vdo):
-    """ """
+    """ При инициализации правильно считывается размеры сегмента """
     # Извлекаем чистое имя файла из пути (например, 'DB34_0h_3A01h.bin')
     filename = os.path.basename(real_vdo.path)
     expected = EXPECTED_VDO_METRICS[filename]
@@ -158,11 +169,21 @@ def test_vdo_files_expected_segsize(real_vdo):
     assert real_vdo.segsize == expected["segsize"]
 
 
+@pytest.mark.slow
 def test_vdo_files_expected_size(real_vdo):
-    """ """
+    """ При инициализации правильно считывается размер файла и работает QGISvdoGroupName"""
     # Извлекаем чистое имя файла из пути (например, 'DB34_0h_3A01h.bin')
     filename = os.path.basename(real_vdo.path)
     expected = EXPECTED_VDO_METRICS[filename]
 
     assert real_vdo.file_size == expected["file_size"]
+    assert real_vdo.QGISvdoGroupName == f'fixtures_0x{real_vdo.file_size:X}'
 # 'fixtures_0x3A01'
+
+
+@pytest.mark.slow
+def test_vdo_files_read_success(real_vdo):
+    """Проверка чтения реальных данных"""
+    expected = b'\x00\x01\x00\x12\x00'
+
+    assert real_vdo.read(2, 5) == expected

@@ -15,7 +15,10 @@ jobs:
 
     env:
       # Добавляем пути QGIS и путь к вашей папке ext_libs
-      PYTHONPATH: ${{ github.workspace }}:/usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/ext_libs
+      # PYTHONPATH: ${{ github.workspace }}:/usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/ext_libs
+      # QT_QPA_PLATFORM: offscreen
+      # Заменяем ${{ github.workspace }} на родительскую папку, чтобы имя QGIS_VDO стало доступно как модуль
+      PYTHONPATH: /__w/QGIS_VDO:/usr/share/qgis/python/plugins:/usr/share/qgis/python:/__w/QGIS_VDO/QGIS_VDO/ext_libs
       QT_QPA_PLATFORM: offscreen
 
     steps:

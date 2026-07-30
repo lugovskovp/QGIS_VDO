@@ -92,3 +92,4 @@ def test_vdo_get_block_integration(tmp_path, monkeypatch):
     assert block_instance.type == 11          # 0x0B в десятичной системе
     assert block_instance.type_name == "block_0x0B"
     assert block_instance.bladdr.offset == 100
+    assert block_instance.bladdr.isZero is False

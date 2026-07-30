@@ -54,7 +54,7 @@ jobs:
           
           # Обновляем pip и ставим пакеты из кэша
           pip install --upgrade pip
-          pip install pytest pytest-qgis
+          pip install pytest pytest-qgis bitarray
 
       - name: Run pytest
         run: |

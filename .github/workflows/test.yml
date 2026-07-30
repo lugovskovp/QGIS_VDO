@@ -1,67 +1,28 @@
-name: QGIS Plugin Tests
+name: QGIS Plugin Tests (Smart Isolation)
 
-on: 
-  # [push, pull_request]
-  workflow_dispatch: # Включает кнопку ручного запуска в интерфейсе GitHub
+on:
+  workflow_dispatch:
 
 jobs:
   test:
-    # Запускать job только если текущая ветка — main
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    container:
-      image: qgis/qgis:release-3_34
-      options: --user root
-
-    env:
-      # Добавляем пути QGIS и путь к вашей папке ext_libs
-      # PYTHONPATH: ${{ github.workspace }}:/usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/ext_libs
-      # QT_QPA_PLATFORM: offscreen
-      # Заменяем ${{ github.workspace }} на родительскую папку, чтобы имя QGIS_VDO стало доступно как модуль
-      PYTHONPATH: /__w/QGIS_VDO:/usr/share/qgis/python/plugins:/usr/share/qgis/python:/__w/QGIS_VDO/QGIS_VDO/ext_libs
-      QT_QPA_PLATFORM: offscreen
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Кэширование системных пакетов apt (включая базы данных apt)
-      - name: Cache apt packages
-        uses: actions/cache@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/test.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-
+          python-version: '3.10'
+          cache: 'pip'
 
-      # 2. Кэширование pip-пакетов (pytest, pytest-qgis и их зависимости)
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('.github/workflows/test.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      # 3. Быстрая установка (использует кэш, если он есть)
-      - name: Install dependencies and pytest-qgis
+      - name: Install Pytest
         run: |
-          # Проверяем, нужны ли обновления, или используем закешированные списки
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends xvfb python3-pip
-          
-          # Обновляем pip и ставим пакеты из кэша
-          pip install --upgrade pip
-          pip install pytest pytest-qgis
+          python -m pip install --upgrade pip
+          pip install pytest
 
       - name: Run pytest
         run: |
-          xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ -v
-
-
-### Важные нюансы настройки
-# * **Контейнер QGIS:** Использование официального образа `qgis/qgis` избавляет от необходимости вручную собирать QGIS, так как в нем уже установлены все библиотеки PyQt, GDAL и сам движок QGIS.
-# * **Переменная `PYTHONPATH`:** Указывает Python внутри контейнера, где искать модули `qgis.core` и `qgis.gui`.
-# * **Виртуальный экран (`xvfb-run`):** Запускает тесты в виртуальном окружении без реального монитора, что позволяет отрабатывать элементам интерфейса и инициализации `QgsApplication`.
+          pytest tests/ -v

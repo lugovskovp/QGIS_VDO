@@ -17,7 +17,7 @@ import importlib
 
 from typing import TYPE_CHECKING, Union, Any
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:       # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
     from _typeshed import ReadableBuffer
 else:
@@ -137,6 +137,8 @@ class VDO_FILE():
         Returns:
             Block instance или None, если адрес невалиден или это не блок.
         """
+        if not self.path:
+            return None
         if addr is None:
             return None
         
@@ -408,13 +410,16 @@ class BYTESTRUCT:
         return struct_UINT.unpack_from(self._raw, near_offset)[0]
     
 
-# Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
-class EmptyVDO:
-    segsize = 512  # дефолтный размер сегмента для безопасных математических операций
-    path = ""
+# # Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
+# class EmptyVDO:
+#     segsize = DEFAULT_ONE_SEG_SIZE  # дефолтный размер сегмента для безопасных математических операций
+#     dbrev = DEFAULT_DB_REVISION
+#     path = ""
+#     file_size = 0
 
 
-EMPTY_VDO = EmptyVDO()
+# # EMPTY_VDO = EmptyVDO()
+EMPTY_VDO = VDO_FILE()
 
 
 class BLADDR(BYTESTRUCT):
@@ -434,7 +439,10 @@ class BLADDR(BYTESTRUCT):
         if not vdo or self.value == 0:
             self.vdo = EMPTY_VDO
         else:
-            self.vdo = vdo
+            if isinstance(vdo, VDO_FILE):
+                self.vdo = vdo
+            else:
+                raise ValueError(f"vdo должен быть или VDO_FILE или никаким, но не {type(vdo)}")
 
     @property
     def isZero(self) -> bool:
@@ -479,8 +487,6 @@ class BLADDR(BYTESTRUCT):
         v = '' if self.vdo.path else ' virt'
         return self.hex + v
     
-    # --- ИСПРАВЛЕННЫЕ ОПЕРАЦИИ СРАВНЕНИЯ ---
-
     def _check_context(self, other: 'BLADDR') -> None:
         """Внутренняя проверка на совместимость контекстов данных"""
         if self.vdo.segsize != other.vdo.segsize:

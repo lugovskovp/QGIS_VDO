@@ -44,6 +44,14 @@ def test_far_list_identity_preservation(custom_vdo):
     assert far.list is first_list
 
 
+def test_far_list_repr_eq_hex(custom_vdo):
+    """Проверка, что __repr__ показывает .hex"""
+    buffer = b'\x01\x02\x03\x04\x05\x06\x07\x08'
+    far = FAR_LIST(buffer, vdo=custom_vdo)
+
+    assert far.__repr__() == far.hex
+
+
 def test_far_list_slots(custom_vdo):
     """Проверка, что структура FAR_LIST и её компоненты защищены от __dict__."""
     far = FAR_LIST(b'\x00' * 8, vdo=custom_vdo)

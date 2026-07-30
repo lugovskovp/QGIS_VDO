@@ -147,7 +147,8 @@ class VDO_FILE():
         elif isinstance(addr, BLADDR):  # Исправлена проверка типа
             if addr.isZero:  # Используем оптимизированное свойство
                 return None
-            offset = addr.offset
+            # какой бы ни пришёл BLADDR, используем только его номер, и размер сегмента vdo
+            offset = addr.blocknumber * self.segsize
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
 

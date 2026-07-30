@@ -1,9 +1,13 @@
 name: QGIS Plugin Tests
 
-on: [push, pull_request]
+on: 
+  # [push, pull_request]
+  workflow_dispatch: # Включает кнопку ручного запуска в интерфейсе GitHub
 
 jobs:
   test:
+    # Запускать job только если текущая ветка — main
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     container:
       image: qgis/qgis:release-3_34
@@ -18,10 +22,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 1. Кэширование системных пакетов apt (включая базы данных apt)
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/apt/archives
+            /var/lib/apt/lists
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/test.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
+      # 2. Кэширование pip-пакетов (pytest, pytest-qgis и их зависимости)
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('.github/workflows/test.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # 3. Быстрая установка (использует кэш, если он есть)
       - name: Install dependencies and pytest-qgis
         run: |
-          apt-get update && apt-get install -y python3-pip xvfb
-          pip install --no-cache-dir pytest pytest-qgis
+          # Проверяем, нужны ли обновления, или используем закешированные списки
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends xvfb python3-pip
+          
+          # Обновляем pip и ставим пакеты из кэша
+          pip install --upgrade pip
+          pip install pytest pytest-qgis
 
       - name: Run pytest
         run: |

@@ -196,7 +196,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 * [ ] почистить bitstream? av_, v_, ??
 * [ ] Settings show RecentFiles
 * [ ] 
-* [ ] 
+* [ ] выводить процент покрытия кода прямо в README.md вашего репозитория в виде динамического бейджа (badge)
 * [ ] 
 
 

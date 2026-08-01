@@ -1,8 +1,11 @@
 import pytest   # type: ignore # noqa
+# from unittest.mock import MagicMock
+from pathlib import Path
 
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR
 from QGIS_VDO.vdo.blocks import block_0x12
+from QGIS_VDO.vdo.consts import struct_UINT
 
 
 @pytest.mark.parametrize("invalid_addr", [
@@ -98,3 +101,142 @@ def test_vdo_file_allowed_slots_exist(real_vdo_fixture, slot_name):
     # Проверяем, что класс содержит описание слота, либо объект имеет этот атрибут
     assert slot_name in VDO_FILE.__slots__
     assert hasattr(real_vdo, slot_name)
+
+
+def test_get_bladdr_with_int_argument(all_vdo_fixture):
+    """get_bladdr корректно упаковывает int и возвращает BLADDR с привязанным vdo"""
+    real_vdo, _ = all_vdo_fixture
+    
+    # Передаем целое число (например, 0x01020304)
+    int_addr = 0x01020304
+    res = real_vdo.get_bladdr(int_addr)
+    
+    # Проверяем, что вернулся именно объект класса BLADDR
+    assert isinstance(res, BLADDR)
+    
+    # Проверяем, что в BLADDR передался правильный self (текущий vdo)
+    assert getattr(res, "vdo", None) is real_vdo
+    
+    # Проверяем правильность упаковки struct_UINT (Big-Endian или Little-Endian)
+    # Если struct_UINT пакует в Big-Endian (например, '>I'), то будет b'\x01\x02\x03\x04'
+    assert res._raw == struct_UINT.pack(int_addr)
+
+
+def test_get_bladdr_with_bladdr_argument(all_vdo_fixture):
+    """get_bladdr корректно упаковывает int и возвращает BLADDR с привязанным vdo"""
+    real_vdo, _ = all_vdo_fixture
+
+    if real_vdo.filename == "carindb34_0h_6800h.bin":
+        another_file = Path(__file__).parent.parent / 'fixtures' / "wrong_empty"
+    else:
+        another_file = Path(__file__).parent.parent / 'fixtures' / "carindb34_0h_6800h.bin"
+    another_vdo = VDO_FILE(another_file)
+    
+    bladdr_addr_slf = BLADDR(struct_UINT.pack(0x01020304), real_vdo)
+    bladdr_addr_ant = BLADDR(struct_UINT.pack(0x01020304), another_vdo)
+
+    # Передаем bladdr (например, 0x01020304)
+    res_slf = real_vdo.get_bladdr(bladdr_addr_slf)
+    res_anth = real_vdo.get_bladdr(bladdr_addr_ant)
+    
+    # Проверяем, что вернулся именно объект класса BLADDR
+    assert isinstance(res_slf, BLADDR)
+    assert isinstance(res_anth, BLADDR)
+    
+    # Проверяем, что в BLADDR передался правильный self (текущий vdo)
+    assert getattr(res_slf, "vdo", None) is real_vdo
+    assert getattr(res_anth, "vdo", None) is real_vdo
+
+
+def test_vdo_file_get_QGISvdoGroupName(all_vdo_fixture):
+    """Проверка, правильно ли формируется имя корневой группы qgis"""
+    vdo: VDO_FILE
+    vdo, _ = all_vdo_fixture
+
+    if vdo.is_empty:
+        assert vdo.QGISvdoGroupName is None
+    else:
+        assert vdo.QGISvdoGroupName == f'fixtures_0x{vdo.file_size:X}'
+
+# ==================================================================
+#  chatGPT was here
+# def test_get_block_fallback_to_block_base_when_type_unknown(real_vdo_fixture, monkeypatch):
+    """
+    Проверяет, что если тип блока отсутствует в KNOWN_BLOCKS
+    метод корректно инициализирует и возвращает базовый класс block_base.
+    """
+
+
+# 1. Создаем легковесный Stub-класс, имитирующий структуру BLSTART со слотами
+class StubBLType:
+    __slots__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+
+# Наследуемся от оригинального BLADDR
+class StubBLAddr(BLADDR):
+    # Добавляем offset в слоты дочернего класса, чтобы не создавался __dict__
+    __slots__ = ("offset",)
+    
+    def __init__(self, offset):
+        # Передаем 4 байта (или сколько ожидает struct_UINT) в базовый класс,
+        # чтобы свойства .isZero и .value успешно отрабатывали на реальных байтах
+        super().__init__(b'\x00' * 4)
+        self.offset = offset
+
+
+class StubBLSTART:
+    __slots__ = ("bladdr", "bltype")
+    size = 16  # Имитируем переменную класса размера заголовка
+
+    def __init__(self, bladdr_offset, type_value):
+        self.bladdr = StubBLAddr(offset=bladdr_offset)
+        self.bltype = StubBLType(value=type_value)
+
+
+# 2. Пишем изолированный тест-кейс
+def test_get_block_fallback_to_block_base_when_type_unknown(real_vdo_fixture, monkeypatch):
+    """
+    Проверяет, что если тип блока отсутствует в KNOWN_BLOCKS,
+    метод корректно инициализирует и возвращает базовый класс block_base.
+    Тест полностью совместим со __slots__ в BLSTART.
+    """
+    real_vdo, _ = real_vdo_fixture
+    
+    # Смещение, по которому будем имитировать чтение (например, 0)
+    target_offset = 0
+    # Гарантированно неизвестный тип блока (которого точно нет в KNOWN_BLOCKS)
+    unknown_type = 0x99
+
+    # 1. Создаем Stub, имитирующий заголовок BLSTART со слотами
+    fake_head = StubBLSTART(bladdr_offset=target_offset, type_value=unknown_type)
+    
+    # 2. Создаем класс-фабрику, у которого есть атрибут size,
+    # а при вызове он возвращает наш fake_head
+    class FakeBLSTARTClass:
+        size = StubBLSTART.size  # Сохраняем размер для успешного self.read(..., BLSTART.size)
+        
+        def __new__(cls, bytes_data, vdo_obj):
+            return fake_head
+
+    # 3. Подменяем оригинальный BLSTART на наш FakeBLSTARTClass
+    # (Замените 'QGIS_VDO.vdo_file.BLSTART' на ваш реальный путь импорта)
+    monkeypatch.setattr("QGIS_VDO.vdo.datatypes.BLSTART", FakeBLSTARTClass)
+    
+    # 4. Подменяем метод read у КЛАССА VDO_FILE, чтобы избежать ошибок teardown
+    monkeypatch.setattr(VDO_FILE, "read", lambda vdo_self, offset, size: b"\x00" * StubBLSTART.size)
+
+    # Вызываем тестируемый метод get_block
+    block = real_vdo.get_block(target_offset)
+    
+    # --- ПРОВЕРКИ ---
+    assert block is not None
+    assert block.type == unknown_type
+    assert block.type_name == "block_base"
+    
+    # Проверяем, что динамически загрузился именно базовый класс
+    # (Замените путь импорта на ваш актуальный)
+    from QGIS_VDO.vdo.block_base import block_base
+    assert isinstance(block, block_base)

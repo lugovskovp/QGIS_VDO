@@ -15,9 +15,11 @@ from QGIS_VDO.vdo.datatypes import BLADDR
 def test_get_block_always_returns_none_when_vdo_is_empty(empty_vdo_fixture, any_addr):
     """Если VDO пустой/невалидный, get_block всегда возвращает None для любых аргументов"""
     empty_vdo, expected = empty_vdo_fixture
-    
+
     assert empty_vdo.is_empty is expected["is_empty"]
     assert empty_vdo.get_block(any_addr) is None
+    # QGISvdoGroupName
+    assert empty_vdo.QGISvdoGroupName is None
 
 
 def test_empty_vdo_slots_integrity(empty_vdo_fixture):

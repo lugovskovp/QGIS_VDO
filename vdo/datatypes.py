@@ -184,6 +184,19 @@ class VDO_FILE():
         except (OSError, FileNotFoundError):
             return EMPTY_BUFFER
 
+    def get_bladdr(self, bladdr: Union[int, BLADDR]) -> BLADDR:
+        """
+        Args:
+            bladdr :int - uint значение bladdr, BLADDR
+        Returns:
+            res :BLADDR с vdo self
+        """
+        if isinstance(bladdr, int):
+            buffer = struct_UINT.pack(bladdr)
+        else:
+            buffer = bladdr._raw
+        return BLADDR(buffer, self)
+
     def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
         """
         Возвращает экземпляр блока по смещению offset (int) или из структуры BLADDR.
@@ -395,7 +408,7 @@ class BYTESTRUCT:
 
     def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
         if not (isinstance(buffer, ReadableBuffer) or isinstance(buffer, memoryview) or isinstance(buffer, bytearray)):
-            raise ValueError("buffer must be ReadableBuffer", type(buffer))
+            raise TypeError("buffer must be ReadableBuffer", type(buffer))
         # Создаем memoryview. Если buffer уже memoryview, избегаем двойного оборачивания
         view = buffer if isinstance(buffer, memoryview) else memoryview(buffer)
         self._raw: memoryview = view[:size]
@@ -462,18 +475,6 @@ class BYTESTRUCT:
     def uint(self, near_offset: int = 0) -> int:
         """Return unsigned int (4 bytes, dword), offset from _raw begin"""
         return struct_UINT.unpack_from(self._raw, near_offset)[0]
-    
-
-# # Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
-# class EmptyVDO:
-#     segsize = DEFAULT_ONE_SEG_SIZE  # дефолтный размер сегмента для безопасных математических операций
-#     dbrev = DEFAULT_DB_REVISION
-#     path = ""
-#     file_size = 0
-
-
-# # EMPTY_VDO = EmptyVDO()
-# EMPTY_VDO = VDO_FILE()
 
 
 class BLADDR(BYTESTRUCT):

@@ -72,6 +72,13 @@ def test_bladdr_repr_with_path_real_vdo(all_vdo_fixture):
         assert repr(addr) == "000005 01"
 
 
+def test_bladdr_initialization_with_incorrect_type_vdo():
+    """Проверка, что класс корректно отказывается инициализироваться, если не ReadableBuffer."""
+    wrong_vdo = "not ReadableBuffer"
+    with pytest.raises(AttributeError):
+        bladdr = BLADDR(b'\x00\x00\x05\x01', wrong_vdo)    # noqa
+
+
 def test_bladdr_comparisons():
     """Тест всех операторов сравнения (__eq__, __lt__, __le__) между блоками."""
 

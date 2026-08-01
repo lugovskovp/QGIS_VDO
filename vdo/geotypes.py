@@ -20,7 +20,7 @@ import struct
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:                   # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
     from _typeshed import ReadableBuffer
 else:

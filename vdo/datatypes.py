@@ -15,7 +15,7 @@ from __future__ import annotations  # Обязательно на самой п�
 import os.path
 import importlib
 
-from typing import TYPE_CHECKING, Union, Any
+from typing import TYPE_CHECKING, Union, Any, Optional
 
 if TYPE_CHECKING:       # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
@@ -87,42 +87,98 @@ KNOWN_BLOCKS = setup_known_types()
 # ----
 class VDO_FILE():
     """ класс работы с файлом формата carindb """
+    # Запрещаем создание __dict__, жестко фиксируем свойства экземпляра
+    __slots__ = (
+        "file_path",
+        "is_empty",
+        "filename",
+        "_initialized",
+        "dbrev",
+        "segsize",
+        "file_size",
+    )
+    
+    # Переменная класса для хранения синглтона (не входит в __slots__)
+    _singleton_instance = None
 
-    def __init__(self, path: str | None = None) -> None:
-        if path and os.path.exists(path) and os.path.getsize(path) > OFFSET_ONE_SEG_SIZE:
-            self.path: str | None = path
+    def __new__(cls, file_path: Optional[str] = None):
+        """
+        Если строка пустая, он должен создать singletone экземпляр этого класса
+        """
+        # Безопасно преобразуем None в пустую строку
+        path_str = file_path or ""
+
+        # Проверяем условия валидности файла
+        is_valid_file = (
+            path_str
+            and os.path.exists(path_str)
+            and os.path.getsize(path_str) > OFFSET_ONE_SEG_SIZE
+        )
+
+        # Если файл пустой, None, не существует или мал -> возвращаем синглтон
+        if not is_valid_file:
+            if cls._singleton_instance is None:
+                cls._singleton_instance = super().__new__(cls)
+                cls._singleton_instance._initialized = False
+            return cls._singleton_instance
+
+        # Если файл прошел все проверки -> создаем новый объект
+        return super().__new__(cls)
+
+    def __init__(self, file_path: Optional[str] = None):
+        # Защита от повторной инициализации синглтона
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+
+        # Безопасно преобразуем None в пустую строку
+        path_str = file_path or ""
+
+        # Повторно проверяем валидность для правильной настройки атрибутов
+        is_valid_file = (
+            path_str
+            and os.path.exists(path_str)
+            and os.path.getsize(path_str) > OFFSET_ONE_SEG_SIZE
+        )
+
+        if not is_valid_file:
+            # Фиксируем синглтон
+            self.file_path = ""
+            self.is_empty = True
+            self.filename = ""
+            self._initialized = True  # Фиксируем синглтон
+            self.file_size = 0
+            self.dbrev = DEFAULT_DB_REVISION
+            self.segsize = DEFAULT_ONE_SEG_SIZE
+        else:
+            # Для обычных файлов
+            self.file_path: str = path_str
+            self.is_empty = False
+            self.filename = os.path.basename(path_str)
+            self._initialized = False
+            self.file_size = os.path.getsize(self.file_path)
             # Используем unpack_from для безопасности типов ReadableBuffer
             self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
             # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
             self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
-        else:
-            self.empty()
 
     def __repr__(self) -> str:
-        return f"VDO v.{self.dbrev}[{self.segsize}]:{self.path}"
-
-    @property
-    def file_size(self) -> int:
-        """Размер файла VDO на диске."""
-        if self.path and os.path.exists(self.path):
-            return os.path.getsize(self.path)
-        return 0
+        return f"VDO v.{self.dbrev}[{self.segsize}]:{self.filename}"
 
     @property
     def QGISvdoGroupName(self) -> str | None:
         """Генерация уникального имени для корневой группы слоев QGIS."""
-        if not self.path:
+        if self.is_empty:
             return None
         # Замена ручного split("/") на кроссплатформенный os.path.split
-        _, folder_name = os.path.split(os.path.dirname(self.path))
+        _, folder_name = os.path.split(os.path.dirname(self.file_path))
         return f"{folder_name}_0x{self.file_size:04X}"
 
     def read(self, offset: int, size: int) -> bytes:
         """Чтение блока байт заданной длины по указанному смещению."""
-        if not self.path or size <= 0:
+        if self.is_empty or size <= 0 or (offset + size) > self.file_size:
             return EMPTY_BUFFER
         try:
-            with open(self.path, "rb") as f:
+            with open(self.file_path, "rb") as f:
                 f.seek(offset)
                 return f.read(size)
         except (OSError, FileNotFoundError):
@@ -137,7 +193,7 @@ class VDO_FILE():
         Returns:
             Block instance или None, если адрес невалиден или это не блок.
         """
-        if not self.path:
+        if self.is_empty:
             return None
         if addr is None:
             return None
@@ -147,7 +203,7 @@ class VDO_FILE():
         elif isinstance(addr, BLADDR):  # Исправлена проверка типа
             if addr.isZero:  # Используем оптимизированное свойство
                 return None
-            # какой бы ни пришёл BLADDR, используем только его номер, и размер сегмента vdo
+            # какой бы ни пришёл BLADDR, используем его только номер, и размер сегмента vdo
             offset = addr.blocknumber * self.segsize
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
@@ -205,11 +261,6 @@ class VDO_FILE():
     #             weights[key_id] = value_weight
     #         ptr += HUFFMAN_PAIR_SIZE
     #     return weights
-
-    def empty(self) -> None:
-        self.path = None
-        self.dbrev = DEFAULT_DB_REVISION
-        self.segsize = DEFAULT_ONE_SEG_SIZE
 
     # def generate_canonical_lookup(self, weights_table):
     #     """Строит каноническую lookup-мапу: { бинарная_строка: int_байт }"""
@@ -343,6 +394,8 @@ class BYTESTRUCT:
     __slots__ = ("_raw",)
 
     def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
+        if not (isinstance(buffer, ReadableBuffer) or isinstance(buffer, memoryview) or isinstance(buffer, bytearray)):
+            raise ValueError("buffer must be ReadableBuffer", type(buffer))
         # Создаем memoryview. Если buffer уже memoryview, избегаем двойного оборачивания
         view = buffer if isinstance(buffer, memoryview) else memoryview(buffer)
         self._raw: memoryview = view[:size]
@@ -420,7 +473,7 @@ class BYTESTRUCT:
 
 
 # # EMPTY_VDO = EmptyVDO()
-EMPTY_VDO = VDO_FILE()
+# EMPTY_VDO = VDO_FILE()
 
 
 class BLADDR(BYTESTRUCT):
@@ -436,14 +489,13 @@ class BLADDR(BYTESTRUCT):
         # Передаем буфер строго фиксированной длины в базовый класс
         super().__init__(buffer, size=UINT_BYTES_CNT)
         
-        # Экономим память: не создаем новый VDO_FILE() на каждый чих
-        if not vdo or self.value == 0:
-            self.vdo = EMPTY_VDO
+        # Экономим память: создаем новый VDO_FILE() - singletone
+        if vdo is None:
+            self.vdo = VDO_FILE()    # EMPTY_VDO
+        elif isinstance(vdo, VDO_FILE):
+            self.vdo = vdo
         else:
-            if isinstance(vdo, VDO_FILE):
-                self.vdo = vdo
-            else:
-                raise ValueError(f"vdo должен быть или VDO_FILE или никаким, но не {type(vdo)}")
+            raise AttributeError(f"vdo должен быть или VDO_FILE или никаким, но не {type(vdo)}")
 
     @property
     def isZero(self) -> bool:
@@ -485,7 +537,7 @@ class BLADDR(BYTESTRUCT):
         return f'{self.blocknumber:06x} {self._raw[3]:02x}'
 
     def __repr__(self) -> str:
-        v = '' if self.vdo.path else ' virt'
+        v = ' virt' if self.vdo.is_empty else ''
         return self.hex + v
     
     def _check_context(self, other: 'BLADDR') -> None:
@@ -593,10 +645,13 @@ class FAR_LIST(BYTESTRUCT):
         
         # Защита от создания лишних тяжелых инстансов VDO
         # Используем встроенное свойство uint базового класса для мгновенной проверки первых 4 байт
-        if not vdo or self.uint(0) == 0:
-            self.vdo = EMPTY_VDO
-        else:
-            self.vdo = vdo
+        if vdo is None:
+            self.vdo = VDO_FILE()    # EMPTY_VDO
+        elif isinstance(vdo, VDO_FILE):
+            if self.uint(0) == 0:
+                self.vdo = VDO_FILE()    # EMPTY_VDO
+            else:
+                self.vdo = vdo
             
         # ОПТИМИЗАЦИЯ: Создаем дочерние структуры ОДИН раз при инициализации.
         # Передаем zero-copy срезы memoryview, чтобы избежать копирования байт.
@@ -652,10 +707,15 @@ class CH_IDX(BYTESTRUCT):
         super().__init__(buffer, size=self.size)
         
         # Используем глобальный EMPTY_VDO, если контекст не задан или адрес пустой
-        if not vdo or self.uint(0) == 0:
-            self.vdo = EMPTY_VDO
+        if vdo is None:
+            self.vdo = VDO_FILE()    # EMPTY_VDO
+        elif isinstance(vdo, VDO_FILE):
+            if self.uint(0) == 0:
+                self.vdo = VDO_FILE()    # EMPTY_VDO
+            else:
+                self.vdo = vdo
         else:
-            self.vdo = vdo
+            raise AttributeError
 
         # ОПТИМИЗАЦИЯ: Создаем и кэшируем вложенные типы строго один раз при инициализации
         self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
@@ -708,12 +768,14 @@ class BLSTART(BYTESTRUCT):
     def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
         if len(buffer) < self.size:
             raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
+        if vdo is not None and not isinstance(vdo, VDO_FILE):
+            raise TypeError(f"Тип vdo {len(buffer)} не VDO_FILE и не None")
             
         super().__init__(buffer, size=self.size)
         
         # Используем оптимизированный синглтон-заглушку
         if not vdo or self.uint(0) == 0:
-            self.vdo = EMPTY_VDO
+            self.vdo = VDO_FILE()    # EMPTY_VDO
         else:
             self.vdo = vdo
 

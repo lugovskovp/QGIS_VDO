@@ -35,23 +35,20 @@ class block_base(BYTESTRUCT):
 
     def __init__(self, addr: BLADDR) -> None:
         """ """
-        if addr._raw == ZERO_DWORD:
-            #nothing
-            zero = ZERO_DWORD + ZERO_DWORD
-            self._raw = zero
-            return
-        if not addr.vdo.path:
-            # virtual BLADDR
-            zero = ZERO_DWORD + ZERO_DWORD
-            self._raw = zero
-            return
-        #
-        self.dbrev = addr.vdo.dbrev
-        self.path = addr.vdo.path
-        #
+        if not isinstance(addr, BLADDR):
+            raise ValueError("addr must be BLADDR", addr, type(addr))
+
+        if addr.isZero:
+            return None
+
+        if addr.vdo.is_empty:
+            return None
+
         self.vdo = addr.vdo
+        
         # и тут инициировать BYTESTRUCT
-        size = addr.sizeofblock if addr.offset else BLOCK_0x12_SIZE
+        size = BLOCK_0x12_SIZE if addr.blocknumber == 0 else addr.sizeofblock
+
         # что бы ни было в файле, но размер блока 0х12 всегда 1*0х800
         buffer = self.vdo.read(addr.offset, size)
         # property self.head = - информация о блоке: тип, архивирован ли, размер(ы)
@@ -84,6 +81,14 @@ class block_base(BYTESTRUCT):
         packed = '@ ' if self.head.arch_type else ''
         return packed + self.head.__repr__()
 
+    @property
+    def dbrev(self):
+        return self.vdo.dbrev
+
+    @property
+    def segsize(self):
+        return self.vdo.segsize
+    
     @property
     def head(self) -> BLSTART:
         """ Заголовок, первые 8 байт блока

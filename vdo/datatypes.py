@@ -181,7 +181,7 @@ class VDO_FILE():
             with open(self.file_path, "rb") as f:
                 f.seek(offset)
                 return f.read(size)
-        except (OSError, FileNotFoundError):
+        except (OSError, FileNotFoundError):    # pragma: no cover
             return EMPTY_BUFFER
 
     def get_bladdr(self, bladdr: Union[int, BLADDR]) -> BLADDR:

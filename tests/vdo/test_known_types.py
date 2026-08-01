@@ -55,7 +55,7 @@ def test_setup_known_types_returns_empty_dict_on_os_error(monkeypatch):
         if path == fake_dir:
             # Бросаем стандартное системное исключение (наследник OSError)
             raise PermissionError("[Errno 13] Permission denied")
-        return os.listdir(path)
+        return os.listdir(path)   # pragma: no cover
 
     monkeypatch.setattr(os, "listdir", mock_listdir)
 

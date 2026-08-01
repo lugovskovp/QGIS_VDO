@@ -22,6 +22,15 @@ def test_far_list_unpacking(all_vdo_fixture):
     assert far.list.cnt == 0x0405
 
 
+def test_far_list_init_vdo_none():
+    """Тест инициализации None vdo"""
+    buffer = b'\x00\x00\x02\x01\x00\x0A\x00\x01'
+
+    far = FAR_LIST(buffer)
+
+    assert far.vdo.is_empty
+    
+
 def test_far_list_offset_calculation(all_vdo_fixture):
     """Тест математики расчета абсолютного смещения в файле."""
     custom_vdo, metric = all_vdo_fixture

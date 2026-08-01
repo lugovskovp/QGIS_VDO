@@ -1,18 +1,20 @@
 import pytest   # type: ignore
+import os
 from QGIS_VDO.vdo.datatypes import BLADDR, VDO_FILE  # Настройте импорт BYTESTRUCT
 
 # Константы для тестирования
 ZERO_DWORD = b'\x00\x00\x00\x00'
 
 
-def test_bladdr_parsing_big_endian(custom_vdo):
+def test_bladdr_parsing_big_endian(real_vdo_fixture):
     """Тест разбора полей адреса блока из сырых байт (Big-Endian)."""
+    vdo, metrix = real_vdo_fixture
     # b'\x00\x02\x03\x04'
     # В Big-Endian первые 3 байта: 0x000203 -> 515 (номер блока)
     # Последний байт: 0x04 -> 4 (количество сегментов)
     raw_bytes = b'\x00\x02\x03\x04'
     
-    addr = BLADDR(raw_bytes, vdo=custom_vdo)
+    addr = BLADDR(raw_bytes, vdo)
     
     assert addr.isZero is False
     assert addr.blocknumber == 515
@@ -20,9 +22,10 @@ def test_bladdr_parsing_big_endian(custom_vdo):
     assert addr.value == 0x00020304  # Проверка полной uint-структуры
     
     # Проверка математики смещений (515 * 2048)
-    assert addr.offset == 515 * 2048
-    assert addr.sizeofblock == 4 * 2048
-    assert addr.next_block_offset() == (515 * 2048) + (4 * 2048)
+    segsize = metrix["segsize"]
+    assert addr.offset == 515 * segsize
+    assert addr.sizeofblock == 4 * segsize
+    assert addr.next_block_offset() == (515 * segsize) + (4 * segsize)
 
 
 def test_bladdr_zero_stub():
@@ -52,22 +55,40 @@ def test_bladdr_formatting_and_repr_virtual(raw_bytes, expected_hex, expected_re
     assert repr(addr) == expected_repr_virt
 
 
-def test_bladdr_repr_with_path(custom_vdo):
+def test_bladdr_repr_with_path_empty_vdo(empty_vdo_fixture):
     """Тест repr, когда у файла VDO задан путь (слово 'virt' должно отсутствовать)."""
-    addr = BLADDR(b'\x00\x00\x05\x01', vdo=custom_vdo)
-    assert repr(addr) == "000005 01"
+    empty_vdo, _ = empty_vdo_fixture
+
+    addr = BLADDR(b'\x00\x00\x05\x01', vdo=empty_vdo)
+    assert repr(addr) == '000005 01 virt'
 
 
-def test_bladdr_comparisons(custom_vdo):
+def test_bladdr_repr_with_path_real_vdo(all_vdo_fixture):
+    """Тест repr, когда у файла VDO задан путь (слово 'virt' должно отсутствовать)."""
+    (real_vdo, expected) = all_vdo_fixture
+
+    addr = BLADDR(b'\x00\x00\x05\x01', vdo=real_vdo)
+    if not real_vdo.is_empty:
+        assert repr(addr) == "000005 01"
+
+
+def test_bladdr_comparisons():
     """Тест всех операторов сравнения (__eq__, __lt__, __le__) между блоками."""
+
+    base_dir = os.path.dirname(__file__)
+    fixtures_dir = os.path.join(base_dir, os.path.pardir, "fixtures")
+    full_path = os.path.join(fixtures_dir, "DB34_0h_3A01h.bin")
+    custom_vdo = VDO_FILE(full_path)
+    #  'c:\\Work\\QGIS_VDO\\tests\\ vdo \\fixtures\\DB34_0h_3A01h.bin'
+
     # Блоки с одинаковым размером сегмента (custom_vdo.segsize = 2048)
     addr1 = BLADDR(b'\x00\x00\x10\x01', vdo=custom_vdo)  # Блок 16, размер 1
     addr2 = BLADDR(b'\x00\x00\x10\x05', vdo=custom_vdo)  # Блок 16, размер 5 (номера равны!)
     addr3 = BLADDR(b'\x00\x00\x20\x01', vdo=custom_vdo)  # Блок 32, размер 1
     
     # Блок с другим размером сегмента
-    different_vdo = VDO_FILE()
-    different_vdo.segsize = 4096
+    full_path = os.path.join(fixtures_dir, "carindb30_0h_9000h.bin")
+    different_vdo = VDO_FILE(full_path)
     addr_diff_vdo = BLADDR(b'\x00\x00\x10\x01', vdo=different_vdo)
 
     # 1. Проверка равенства в рамках одного контекста
@@ -95,8 +116,10 @@ def test_bladdr_comparisons(custom_vdo):
         _ = addr1 <= addr_diff_vdo
 
 
-def test_bladdr_comparison_with_invalid_type(custom_vdo):
+def test_bladdr_comparison_with_invalid_type(all_vdo_fixture):
     """Проверка, что сравнение с другими типами возвращает NotImplemented (или False)."""
+    custom_vdo, _ = all_vdo_fixture
+
     addr = BLADDR(b'\x00\x00\x10\x01', vdo=custom_vdo)
     
     # В Python сравнение с левым типом через ассерты падает или возвращает False

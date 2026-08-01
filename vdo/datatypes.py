@@ -716,7 +716,7 @@ class CH_IDX(BYTESTRUCT):
             else:
                 self.vdo = vdo
         else:
-            raise AttributeError
+            raise AttributeError(f"У vdo неверный тип: {type(vdo)}")
 
         # ОПТИМИЗАЦИЯ: Создаем и кэшируем вложенные типы строго один раз при инициализации
         self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)

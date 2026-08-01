@@ -44,6 +44,23 @@ def test_ch_idx_init_too_small_buffer(all_vdo_fixture):
         idx = CH_IDX(buffer, vdo=custom_vdo)    # noqa
 
 
+def test_ch_idx_init_vdo_none():
+    """Тест инициализации None vdo"""
+    buffer = b'\x01\x02\x00\x00\xC6\x00\x00\x00\x00\x00\x00\x00'
+
+    idx = CH_IDX(buffer)
+
+    assert idx.vdo.is_empty
+
+
+def test_ch_idx_init_wrong_vdo():
+    """Проверка инициализации с неправильным типом vdo"""
+    buffer = b'\x01\x02\x00\x00\xC6\x00\x00\x00\x00\x00\x00\x00'
+
+    with pytest.raises(AttributeError):
+        idx = CH_IDX(buffer, vdo="строковое значение@")    # noqa
+
+
 def test_ch_idx_repr(all_vdo_fixture):
     """Проверка, что в __repr__ есть out:"""
     custom_vdo, _ = all_vdo_fixture

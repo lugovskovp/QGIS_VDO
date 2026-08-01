@@ -188,15 +188,30 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] раскраска полигонов
 
 
-* [x] запрет commit при наличии ошибок flake8
-* [x] запрет commit при наличии ошибок pytest
+* [x] refactor 
+    * [x] COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
+    * [ ] VDO_FILE
+
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
-* [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
 * [ ] почистить bitstream? av_, v_, ??
-* [ ] Settings show RecentFiles
-* [ ] 
-* [ ] выводить процент покрытия кода прямо в README.md вашего репозитория в виде динамического бейджа (badge)
+* [ ] Settings show RecentFiles qty
+
+* [ ] tests
+    * [x] локально организовать
+    * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
+    * [ ] при коммите - только измененные/коммичующиеся
+    * [x] vdo.datatypes 98 %
+    * [ ] vdo.geotypes
+    * [x] settings 99 %
+    * [x] thread 36 %
+    * [ ] 
+    * [ ] 
+
+* [x] запрет commit при наличии ошибок flake8
+* [x] запрет commit при наличии ошибок pytest
+* [ ] github workflow
+* [ ] выводить процент покрытия кода прямо в README.md репозитория в виде динамического бейджа (badge)
 * [ ] 
 
 

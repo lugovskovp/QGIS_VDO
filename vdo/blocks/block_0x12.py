@@ -81,7 +81,7 @@ class block_0x12(block_base):
         super().__init__(bladdr0x12)
         self.cd_map = None
         # в русской версии, где dbrev == 30  карты вообще нет
-        if self.get_dbrev == 34:
+        if self.dbrev == 34:
             # карта размещения групп блоков на CD, кроме 08, 09, 19, 1a, 1b, 1f
             CD_MAP_ITEM_SIZE = 0x10
             self.cd_map = {}
@@ -107,9 +107,8 @@ class block_0x12(block_base):
         """ size of one segment """
         return self.ushort(OFFSET_ONE_SEG_SIZE)
 
-    @property
     def get_dbrev(self) -> int:
-        """ carindb revision """
+        """ read REAL carindb revision """
         return self.ushort(OFFSET_DB_REVISION)
 
     @property

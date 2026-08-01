@@ -92,6 +92,7 @@ class VDO_FILE():
         "file_path",
         "is_empty",
         "filename",
+        "QGISvdoGroupName",
         "_initialized",
         "dbrev",
         "segsize",
@@ -149,6 +150,7 @@ class VDO_FILE():
             self.file_size = 0
             self.dbrev = DEFAULT_DB_REVISION
             self.segsize = DEFAULT_ONE_SEG_SIZE
+            self.QGISvdoGroupName = None
         else:
             # Для обычных файлов
             self.file_path: str = path_str
@@ -160,12 +162,12 @@ class VDO_FILE():
             self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
             # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
             self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
+            self.QGISvdoGroupName = self._create_QGISvdoGroupName()
 
     def __repr__(self) -> str:
         return f"VDO v.{self.dbrev}[{self.segsize}]:{self.filename}"
 
-    @property
-    def QGISvdoGroupName(self) -> str | None:
+    def _create_QGISvdoGroupName(self) -> str | None:
         """Генерация уникального имени для корневой группы слоев QGIS."""
         if self.is_empty:
             return None

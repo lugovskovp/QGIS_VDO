@@ -49,8 +49,8 @@ TSTR_struct = struct.Struct(">Hbb")
 
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
-MULCOORD = 0x54C563     # dec 5555555 - волшебный коэффициент перевода.
-                        
+MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный коэффициент перевода.
+
 MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
 
 # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
@@ -167,12 +167,12 @@ class MAP_AREA(BYTESTRUCT):
     def __init__(self, buffer: bytearray) -> None:
         super().__init__(buffer[:self.size])
         self.left_bottom = COORD(self._raw[0:COORD.size])
-        self.rigth_top = COORD(self._raw[COORD.size:(COORD.size * 2)])
+        self.right_top = COORD(self._raw[COORD.size:(COORD.size * 2)])
         self._scale = self.ushort(0x12)    # 2**scale, на сколько сдвигать влево ху вертекса чтобы получить координаты   # noqa: E501
     
     def __repr__(self):
         ''' View while debug value '''
-        val = "{:s}  {:s}".format(self.left_bottom.__repr__(), self.rigth_top.__repr__())   # noqa: E501
+        val = "{:s}  {:s}".format(self.left_bottom.__repr__(), self.right_top.__repr__())   # noqa: E501
         return val
     
     @property
@@ -182,17 +182,17 @@ class MAP_AREA(BYTESTRUCT):
            1,85224768519 км в одной минуте, делим на 60 секунд:
          0,0308707947531 км (30,8707947531 м) в одной секунде.'''
         KM_IN_DEGREE = 111.134861111
-        grad = (KM_IN_DEGREE * (self.rigth_top._hlon - self.left_bottom._hlon)) / MULCOORD      # mul = 5555555 # noqa: E501
-        val = '{:x}*{:x} ({:0.3f}km)'.format((self.rigth_top._hlat - self.left_bottom._hlat),   # noqa: E501
-                                             (self.rigth_top._hlon - self.left_bottom._hlon),   # noqa: E501
+        grad = (KM_IN_DEGREE * (self.right_top._hlon - self.left_bottom._hlon)) / MULCOORD      # mul = 5555555 # noqa: E501
+        val = '{:x}*{:x} ({:0.3f}km)'.format((self.right_top._hlat - self.left_bottom._hlat),   # noqa: E501
+                                             (self.right_top._hlon - self.left_bottom._hlon),   # noqa: E501
                                              grad)          # noqa: E501
         return val
        
     @property
     def max_vrt_val(self) -> str:
         ''' Максимально возможное значение Х или Y вертекса'''
-        max_x = (self.rigth_top._hlon - self.left_bottom._hlon) >> self._scale
-        max_y = (self.rigth_top._hlat - self.left_bottom._hlat) >> self._scale
+        max_x = (self.right_top._hlon - self.left_bottom._hlon) >> self._scale
+        max_y = (self.right_top._hlat - self.left_bottom._hlat) >> self._scale
         return "{:04X} {:04X}".format(max_x, max_y)
 
 

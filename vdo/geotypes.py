@@ -206,40 +206,43 @@ class MAP_AREA(BYTESTRUCT):
 # ----
 class GEO_CATEGORY(BYTESTRUCT):
     '''GEO CATEGORY портотип?, используемый класс - дочерний'''
-    cat: en_GEO_CATEGORY | None = None
-    draw: en_DRAW_TYPE | None = None  # SHAPE = 0, POLILINE = 1
-    cnt: int = 0    # сколько элементов в категории (расчетом, разница со следующим ptr
-    ptr: int = 0    # near на первый объект
-    obj_size: int = 0          # shape size = 0x14, line = 0x10
-    size: int = 4               # b b w
+    
+    # Жестко резервируем память под атрибуты экземпляра. __dict__ отсутствует.
+    __slots__ = ('category', 'draw', 'obj_size', 'cnt', 'ptr')
+    
+    size: int = 4  # b b w
 
-    def __init__(self, buffer) -> None:
+    def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
         """
-        size = 4, но в следующих 4 есть следующий CAT, с ptr, и по их разнице
-                получим количество элементов этой категории
+        Принимает буфер (минимум 8 байт для GEO_CATEGORY_struct),
+        но сохраняет в базовый класс только свои 4 байта.
         """
-        (cat, draw, ptr, next_draw, next_ptr) = GEO_CATEGORY_struct.unpack(buffer)
-        # 4 важны, для инициализации нужны ещё ptr следущего
+        # Распаковываем данные (требуется 8 байт из-за структуры GEO_CATEGORY_struct)
+        (cat, draw, ptr, next_draw, next_ptr) = GEO_CATEGORY_struct.unpack(buffer[:8])
+        
+        # Передаем базовому классу строго его 4 байта
         super().__init__(buffer[:self.size])
+        
         self.category = en_GEO_CATEGORY(cat)
         self.draw = en_DRAW_TYPE(draw)
-        self.obj_size = 0x10 if draw else 0x14  # 0x10 if POLILINE else if SHAPE 0x14
+        self.obj_size = 0x10 if draw else 0x14  # 0x10 if POLILINE else 0x14
+        
+        # Вычисляем количество элементов
         self.cnt = int((next_ptr - ptr) / self.obj_size)
-        # последний полигон, если не нулевой след полилайн - пустой по значениям
-        if not draw and next_draw:  # draw = 0 and next_draw=1
+        
+        # Корректировка для последнего полигона
+        if not draw and next_draw:  # draw == 0 (SHAPE) и next_draw == 1 (POLILINE)
             self.cnt -= 1
+            
         self.ptr = ptr
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' View while debug value'''
         name = self.draw.name if self.draw else 'NOT DEFINED'
-        val = f"{name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
-        return val
+        return f"{name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
     
     def __str__(self) -> str:
         return self.__repr__()
-
-    pass  # GEO_CATEGORY_PROTO
 
 
 # ----
@@ -253,30 +256,53 @@ class GEO_SHAPE(BYTESTRUCT):
         2h = 00 00 - aligment (??? or POI?)
         2h - ptr2 list strPtr
     '''
-    size: int = 0x14              # ptr ptr dword qword w ptr
-    name: str = ''
+    
+    # Жестко фиксируем память под все атрибуты экземпляра. __dict__ удален.
+    __slots__ = (
+        'p_str_name',
+        'ptr_vrtx',
+        'cnt_vrtx',
+        'id',
+        'coord',
+        'ptr_tstr',
+        'name',
+        'cat'
+    )
+    
+    size: int = 0x14  # 20 байт
 
     def __init__(self, buffer: ReadableBuffer, category: en_GEO_CATEGORY) -> None:
         OFFSET_COORD = 8
-        VRTX_OBJ_SIZE = 4       # word x, word y
-        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(memoryview(buffer)[:(self.size * 2)])  # noqa: E501
-        super().__init__(memoryview(buffer)[:self.size])  # первые 0x14 в raw, для инициализации нужны ещё ptr следущего # noqa: E501
-        self.p_str_name = p_str_name    # begin zero-ended string
+        VRTX_OBJ_SIZE = 4  # word x, word y
+        
+        # Оптимизация: берем срез memoryview один раз, чтобы не плодить объекты в цикле/парсере
+        mem_buf = memoryview(buffer)
+        
+        # Для распаковки следующего ptr_vrtx нам нужно прочитать 2 структуры (self.size * 2)
+        # Использование структуры GEO_SHAPE_struct.unpack_from эффективнее, так как не создает срез
+        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack_from(mem_buf, 0)
+        
+        # Передаем базовому классу только его размер (0x14)
+        super().__init__(mem_buf[:self.size])
+        
+        self.p_str_name = p_str_name  # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.id = id
+        
+        # Метод self.read() должен возвращать байты из self._raw
         self.coord = COORD(self.read(OFFSET_COORD, COORD.size))
         self.ptr_tstr = ptr_tstr
         self.name = "Proto shape. Need read from parent"
         self.cat = category
-        pass
-  
-    def __repr__(self):
-        ''' View while debug value'''
+
+    def __repr__(self) -> str:
+        ''' View while debug value '''
         name = self.cat.name if self.cat else "NOT DEFINED"
-        val = f"{name}:[{self.cnt_vrtx}] {self.name}"
-        return val
-    pass    # GEO_SHAPE_PROTO
+        return f"{name}:[{self.cnt_vrtx}] {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 # ----

@@ -162,6 +162,10 @@ class COORD(BYTESTRUCT):
 
 class MAP_AREA(BYTESTRUCT):
     ''' Near offs 0x20 - координаты нижнего левого и верхнего правого, 0x32 - масштаб '''  # noqa: E501
+    
+    # Регистрируем атрибуты экземпляра для оптимизации памяти и C-style быстродействия
+    __slots__ = ('left_bottom', 'right_top', '_scale')
+    
     size: int = 20
 
     def __init__(self, buffer: bytearray) -> None:

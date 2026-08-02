@@ -196,6 +196,7 @@ class StubBLSTART:
         self.bltype = StubBLType(value=type_value)
 
 
+@pytest.mark.slow
 # 2. Пишем изолированный тест-кейс
 def test_get_block_fallback_to_block_base_when_type_unknown(real_vdo_fixture, monkeypatch):
     """

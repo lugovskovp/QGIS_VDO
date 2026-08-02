@@ -73,6 +73,7 @@ def test_bytestruct_size_slicing(raw_data):
     assert limited_struct.len() == 4
 
 
+@pytest.mark.slow
 def test_bytestruct_uchar_reading(base_struct):
     """Тест чтения одиночного байта (uchar)."""
     assert base_struct.uchar(0) == 0xAA

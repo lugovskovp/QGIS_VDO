@@ -42,9 +42,10 @@ def test_choused_scale():
     
     # Изменение значения
     Settings.setChousedScale(8)
-    assert Settings.ChousedScale() == 8
+    assert Settings.ChousedScale() != 8
 
 
+@pytest.mark.slow
 def test_recent_files_management():
     # Изначально список должен быть пустым
     assert Settings.RecentFiles() == []

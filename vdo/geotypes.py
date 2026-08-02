@@ -304,6 +304,8 @@ class GEO_SHAPE(BYTESTRUCT):
     def __str__(self) -> str:
         return self.__repr__()
 
+    # GEO_SHAPE
+
 
 # ----
 
@@ -372,22 +374,31 @@ class GEO_LINE(BYTESTRUCT):
 
     def __str__(self) -> str:
         return self.__repr__()
+    # GEO_LINE
 
 
 # ----
 class VERTEX(BYTESTRUCT):
     '''' прототип класса вертекса - координаты ХY точек на map area карты'''
+    
+    # Фиксируем слоты для полей координат. __dict__ отсутствует.
+    __slots__ = ('_x', '_y')
+    
     size: int = 4   # размер элемента класса в байтах
 
-    def __init__(self, buffer: bytearray) -> None:
-        """ """
-        if len(buffer) < self.size:
-            (self._x, self._y) = (None, None)
+    def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
+        mem_buf = memoryview(buffer)
+        
+        if len(mem_buf) < self.size:
+            # Инициализируем родительский слот пустой памятью, чтобы не ломать архитектуру __slots__
+            super().__init__(mem_buf[:0])
+            self._x = None
+            self._y = None
             return
-        super().__init__(buffer[:self.size])
-        (self._x, self._y) = VERTEX_struct.unpack(buffer)
-        # self.x = self.ushort(0)
-        # self.y = self.ushort(2)
+            
+        super().__init__(mem_buf[:self.size])
+        # Распаковываем напрямую из memoryview без создания промежуточных объектов в RAM
+        self._x, self._y = VERTEX_struct.unpack_from(mem_buf, 0)
     
     @property
     def x(self) -> int | None:        # координата х
@@ -397,14 +408,18 @@ class VERTEX(BYTESTRUCT):
     def y(self) -> int | None:        # координата y
         return self._y
 
-    def getXY(self) -> tuple:
-        return (self.x, self.y)
+    def getXY(self) -> tuple[int | None, int | None]:
+        return (self._x, self._y)
     
     def __repr__(self) -> str:
         ''' View vertex hex val - debug value '''
-        val = "{:04X} {:04X}".format(self.x, self.y)
-        return val
-    pass    # VERTEX_PROTO
+        if self._x is None or self._y is None:
+            return "INVALID VERTEX (EMPTY BUF)"
+        return "{:04X} {:04X}".format(self._x, self._y)
+
+    def __str__(self) -> str:
+        return self.__repr__()
+    # VERTEX_PROTO
 
 
 # ----

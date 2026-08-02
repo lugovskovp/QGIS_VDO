@@ -42,7 +42,7 @@ def test_choused_scale():
     
     # Изменение значения
     Settings.setChousedScale(8)
-    assert Settings.ChousedScale() != 8
+    assert Settings.ChousedScale() == 8
 
 
 @pytest.mark.slow

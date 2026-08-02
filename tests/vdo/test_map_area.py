@@ -1,6 +1,8 @@
 import pytest   # type: ignore
 import struct
+import copy
 
+from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 from QGIS_VDO.vdo.geotypes import MAP_AREA
 from QGIS_VDO.vdo.consts import struct_2UINT
 
@@ -75,3 +77,30 @@ def test_map_area_max_vrt_val_with_scales(map_buffer_factory, scale, expected_ma
     area = MAP_AREA(buf)
     
     assert area.max_vrt_val == expected_max
+
+
+def test_map_area_slots_optimization(map_buffer_factory):
+    """Проверяем, что у класса MAP_AREA и родителя отсутствуют __dict__."""
+    buf = map_buffer_factory(30000000, 0, 40000000, 10000000, 2)
+    area = MAP_AREA(buf)
+    
+    # Защита от случайного удаления __slots__ в будущем
+    assert not hasattr(area, '__dict__')
+    
+    # Проверяем, что нельзя динамически добавлять новые атрибуты
+    with pytest.raises(AttributeError):
+        area.undefined_field = "error"  # type: ignore
+
+
+def test_map_area_slots_integrity(map_buffer_factory):
+    """Проверяем состав слотов и возможность поверхностного копирования."""
+    buf = map_buffer_factory(30000000, 0, 40000000, 10000000, 2)
+    area = MAP_AREA(buf)
+    
+    assert set(MAP_AREA.__slots__) == {'left_bottom', 'right_top', '_scale'}
+    assert set(BYTESTRUCT.__slots__) == {'_raw'}
+    
+    # Проверяем, что копия корректно наследует значения слотов
+    area_copy = copy.copy(area)
+    assert area_copy.left_bottom == area.left_bottom
+    assert area_copy._scale == area._scale

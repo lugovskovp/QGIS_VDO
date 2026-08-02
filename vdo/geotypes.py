@@ -419,6 +419,7 @@ class VERTEX(BYTESTRUCT):
 
     def __str__(self) -> str:
         return self.__repr__()
+    
     # VERTEX_PROTO
 
 
@@ -427,9 +428,9 @@ class TSTR(BYTESTRUCT):
     """
     прототип TSTR - набора переводов/синонимов
             typedef struct{
-            PTR p_str;
-            en_LANGUAGE lang;
-            en_GEO_OBJ_STR str_type;
+        0    PTR p_str;
+        2    en_LANGUAGE lang;
+        3    en_GEO_OBJ_STR str_type;
             typedef enum <uchar>{
                 __shape =   0,
                 __alias =   2,
@@ -437,21 +438,32 @@ class TSTR(BYTESTRUCT):
                 __poliline =0x10
             }en_GEO_OBJ_STR
     """
+    
+    # Фиксируем слоты для всех полей экземпляра класса. __dict__ полностью удален.
+    __slots__ = ('p_str', 'lang', 'geotype', 'name')
+    
     size: int = 4   # размер элемента класса в байтах
 
-    def __init__(self, buffer: bytearray) -> None:
-        """ """
+    def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
+        # Сохраняем первые 4 байта в базовый класс
         super().__init__(buffer[:self.size])
-        (self.p_str, lang, obj_type) = TSTR_struct.unpack(self._raw)
+        
+        # Распаковываем данные из сохраненного memoryview (_raw)
+        (p_str, lang, obj_type) = TSTR_struct.unpack(self._raw)
+        
+        self.p_str = p_str
         self.lang = en_CARINET_LANGUAGE(lang)
         self.geotype = hex(obj_type)
         self.name = "Proto. Name set where called"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' View while debug value '''
-        val = f"{self.lang.value} {self.geotype}:[{self.lang.name}]: {self.name}"
-        return val
-    pass    # GEO_LINE_PROTO
+        return f"{self.lang.value} {self.geotype}:[{self.lang.name}]: {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    # TSTR
 
 
 class POI_CATEGORY(BYTESTRUCT):

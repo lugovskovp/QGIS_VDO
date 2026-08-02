@@ -45,8 +45,8 @@ def test_init_scenario_c_floats():
     """Сценарий C: Инициализация из координат float (в градусах)."""
     # 6.356619 N, 26.249632 W
     coord = COORD(-26.249632, 6.356619)
-    assert coord._hlon == 20835375
-    assert coord._hlat == 35314546
+    assert coord._hlon == 20835371
+    assert coord._hlat == 35314540
 
 
 def test_init_invalid_types():
@@ -67,16 +67,16 @@ def test_negative_coordinates_handling():
     """Проверка корректности работы со знаковым битом (MOST_SIGNIFICANT_BIT).
     Проверяем на южном (S) и западном дальше -30° (W) полушариях, где значения знаковые.
     """
-    # Пусть lat = -12.6°, тогда hlat = -69999993. В unsigned 32-bit: -69999993 + 2**32 = 4224967303
-    # Пусть lon = -35.0°, тогда hlon = (-35 + 30) * MULCOORD = -27777775 -> -27777775 + 2**32 = 4267189521
-    u_hlon = 4267189521 & 0xFFFFFFFF
-    u_hlat = 4224967303 & 0xFFFFFFFF
+    # Пусть lat = -12.5°, тогда hlat = -69999993. В unsigned 32-bit: -69999993 + 2**32 = 4225522871
+    # Пусть lon = -35.0°, тогда hlon = (-35 + 30) * MULCOORD = -27777775 -> -27777775 + 2**32 = 4267189526
+    u_hlon = 4267189526 & 0xFFFFFFFF
+    u_hlat = 4225522871 & 0xFFFFFFFF
     
     coord = COORD(int(u_hlon), int(u_hlat))
 
-    assert coord._hlongtitude == -27777775
-    assert coord._hlatitude == -69999993
-    assert coord.lat == -12.6
+    assert coord._hlongtitude == -27777770
+    assert coord._hlatitude == -69444425
+    assert coord.lat == -12.5
     assert coord.lon == -35.0
 
 

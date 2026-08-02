@@ -309,72 +309,69 @@ class GEO_SHAPE(BYTESTRUCT):
 
 class GEO_LINE(BYTESTRUCT):
     '''
-    # noqa: E501
     Geo segment of line - poligon
         2h - PTR         p_str_name - ptr2str/0;    nullable
         2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
         4h - DWORD       id
-                // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
         2h - PTR   tstr_regi      ptr_linesign, p_line_sign; // Or start pstr
         2h - WORD  or_b_or_c;   (??? lenght? time for drive???)
         2h - PTR   tstr_name         ptr_tstr   gbr border - 04  p_p_str_name; // ptr to GEO_OBJ_STR
         4h - WORD   or_38_or_0_b_country; ???en_country??? gbr border - 0
     '''
-    size: int = 0x10              # ptr ptr dword qword w ptr
-    name: str = ''
-    cnt_vrtx: int = 0
+    
+    # Резервируем память под все атрибуты экземпляра. Снижает потребление RAM и ускоряет доступ.
+    __slots__ = (
+        'p_str_name',
+        'ptr_vrtx',
+        'id',
+        'POI_regi',
+        'or_b_or_c',
+        'tstr_name',
+        'or_38_or_0_b_country',
+        'cnt_vrtx',
+        'name',
+        'cat'
+    )
+    
+    size: int = 0x10  # 16 байт
 
-    def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
+    def __init__(self, buffer: bytearray | bytes | memoryview, category: en_GEO_CATEGORY) -> None:
         VRTX_OBJ_SIZE = 4       # word x, word y
+        
+        # Оптимизация: создаем memoryview один раз для прямого чтения без создания копий буфера
+        mem_buf = memoryview(buffer)
+        
+        # Используем unpack_from для чтения данных на Си-уровне без нарезки buffer[:size*2]
         (p_str_name,
          ptr_vrtx,
          id,
-         POI_regi,      # p_line_sign; // Or start pstr // START POI
+         POI_regi,
          or_b_or_c,
-         tstr_name,      # p_p_str_name; // ptr to GEO_OBJ_STR
+         tstr_name,
          or_38_or_0_b_country,
-         next_ptr_vrtx) = GEO_LINE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
-        super().__init__(buffer[:self.size])  # первые 0x10 в raw
+         next_ptr_vrtx) = GEO_LINE_struct.unpack_from(mem_buf, 0)
+         
+        # Передаем базовому классу первые 16 байт (size)
+        super().__init__(mem_buf[:self.size])
+        
         self.p_str_name = p_str_name           # begin zero-ended string
-        self.ptr_vrtx = ptr_vrtx         # begin vertexes
+        self.ptr_vrtx = ptr_vrtx               # begin vertexes
         self.id = id
-        self.POI_regi = POI_regi      # ptstr - but strange, unkn
-        self.or_b_or_c = or_b_or_c   # named as "b or c" but bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
-        self.tstr_name = tstr_name    # ptr to GEO_OBJ_STR
-        self.or_38_or_0_b_country = or_38_or_0_b_country    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501
+        self.POI_regi = POI_regi               # ptstr - but strange, unkn
+        self.or_b_or_c = or_b_or_c             # estimated length or travel time
+        self.tstr_name = tstr_name             # ptr to GEO_OBJ_STR
+        self.or_38_or_0_b_country = or_38_or_0_b_country
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.name = "Proto line. Need read from parent"
         self.cat = category
-        """
-        blnum = struct_UINT.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
-        self.or_b_or_c
-        
-        [1C98 011C, 1F0F 0021]
-        679 - расстояние по пифагору
-        0xdb 219 - значение
 
-        0 0x10:[noLang]: e77
-        [1A06 0082, 1BE1 0000]
-        [1A06,0082], [1BE1, 0000]
-        492
-        0x95 149
-
-        ROAD_HIGHWAY:[2] e77
-        [7F83 3040, 80A4 2FD0]
-        [7F83,3040], [80A4,2FD0]
-        309,94
-        0x80  128
-
-        вообще похоже на оценочную длинну? время?
-        """
-        return
-    
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' View while debug value '''
         name = self.cat.name if self.cat else "NOT DEFINED"
-        val = f"{name}:[{self.cnt_vrtx}] {self.name}"
-        return val
-    pass    # GEO_LINE_PROTO
+        return f"{name}:[{self.cnt_vrtx}] {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
 
 # ----

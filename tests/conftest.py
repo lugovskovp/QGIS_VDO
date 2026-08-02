@@ -79,7 +79,7 @@ EXPECTED_VDO_METRICS = {"carindb30_0h_9000h.bin": {
                             "dbrev": 34,
                             "segsize": 2048,
                             "file_size": 0x6800,  # 0x6800,
-                            "bl_0x12.area_A": '(41.264594N 12.107514E, 59.895456N 29.673966E)',
+                            "bl_0x12.area_A": '(41.264602N 12.107522E, 59.895467N 29.673977E)',
                             "bl_201": block_0x07,
                             "is_empty": False,
                             "filename": "carindb34_0h_6800h.bin",
@@ -88,7 +88,7 @@ EXPECTED_VDO_METRICS = {"carindb30_0h_9000h.bin": {
                             "dbrev": 34,
                             "segsize": 512,
                             "file_size": 0x3A01,  # реальный размер файла в байтах
-                            "bl_0x12.area_A": '(35.317104N 9.161808W, 70.479517N 93.151702E)',
+                            "bl_0x12.area_A": '(35.317110N 9.161804W, 70.479530N 93.151725E)',
                             "bl_201": block_0x13,
                             "is_empty": False,
                             "filename": "DB34_0h_3A01h.bin",

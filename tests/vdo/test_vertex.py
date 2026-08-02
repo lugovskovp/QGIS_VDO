@@ -35,6 +35,7 @@ def test_vertex_short_buffer_handling():
     assert vtx.getXY() == (None, None)
     assert hasattr(vtx, '_raw')  # Базовый слот существует и не вызывает AttributeError
     assert repr(vtx) == "INVALID VERTEX (EMPTY BUF)"
+    assert str(vtx) == repr(vtx)
 
 
 def test_vertex_slots_optimization():

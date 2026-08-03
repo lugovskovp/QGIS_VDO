@@ -1,7 +1,8 @@
 import pytest   # type: ignore # noqa
+import os
 
 
-from QGIS_VDO.vdo.datatypes import BLADDR
+from QGIS_VDO.vdo.datatypes import BLADDR, VDO_FILE
 # from QGIS_VDO.vdo.blocks import block_0x12
 
 
@@ -30,3 +31,19 @@ def test_empty_vdo_slots_integrity(empty_vdo_fixture):
     
     with pytest.raises(AttributeError):
         empty_vdo.new_arbitrary_property = 42
+
+
+def test_vdo_file_init_too_small_file():
+    """Проверка создания пустого синглтона на слишком маленьком файле"""
+    filename = 'too_small_carindb.bin'
+    # тестовые файлы лежат в папке с тестами
+    file_path = f"tests/fixtures/{filename}"
+    
+    # Дополнительная проверка на случай, если файла физически нет на диске
+    if not os.path.exists(file_path):             # pragma: no cover
+        pytest.skip(f"Тестовый файл {filename} не найден на диске, пропускаем.")
+
+    empty_vdo = VDO_FILE()
+    test_vdo = VDO_FILE(file_path)
+
+    assert empty_vdo is test_vdo

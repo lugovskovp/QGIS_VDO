@@ -106,7 +106,7 @@ class VDO_FILE:
 
     @staticmethod
     def _validate_file(file_path: Optional[str]) -> bool:
-        """Внутренний метод сквозной валидации файла (вызывается один раз)."""
+        """Внутренний метод сквозной валидации файла (вызывается один раз в __new__)."""
         path_str = file_path or ""
         if not path_str or not os.path.exists(path_str):
             return False
@@ -114,11 +114,12 @@ class VDO_FILE:
         try:
             if os.path.getsize(path_str) <= OFFSET_ONE_SEG_SIZE:
                 return False
-            
+                
             with open(path_str, "rb") as f:
                 # Читаем первые 4 байта и проверяем маркер формата (big-endian uint == 1)
+                # Проверка идет через распаковку глобального struct_UINT
                 return struct_UINT.unpack(f.read(4))[0] == 1
-        except (OSError, FileNotFoundError, struct.error):  # pragma: no cover
+        except (OSError, FileNotFoundError, struct.error, IndexError):  # pragma: no cover
             return False
 
     def __new__(cls, file_path: Optional[str] = None):
@@ -129,7 +130,7 @@ class VDO_FILE:
                 cls._singleton_instance._initialized = False
             return cls._singleton_instance
 
-        # Если файл прошел все проверки -> создаем новый объект
+        # Если файл валидный -> создаем новый объект
         obj = super().__new__(cls)
         obj._initialized = False
         return obj
@@ -141,8 +142,7 @@ class VDO_FILE:
 
         path_str = file_path or ""
         
-        # Так как невалидные файлы отсекаются в __new__,
-        # здесь мы точно знаем: пустая строка или плохой файл — это синглтон.
+        # Если мы попали сюда и файл не валидный, значит это синглтон
         if not path_str or not os.path.exists(path_str):
             self.file_path = ""
             self.is_empty = True
@@ -154,18 +154,18 @@ class VDO_FILE:
             self._initialized = True
             return
 
-        # Для обычных валидных файлов
+        # Настройка свойств для валидного рабочего файла
         self.file_path = path_str
         self.is_empty = False
         self.filename = os.path.basename(path_str)
         self.file_size = os.path.getsize(self.file_path)
         
-        # Безопасное чтение метаданных с защитой от пустых буферов
+        # Безопасное чтение метаданных напрямую через распаковку bytes
         dbrev_bytes = self.read(OFFSET_DB_REVISION, 2)
-        self.dbrev = struct_WORD.unpack_from(dbrev_bytes)[0] if len(dbrev_bytes) >= 2 else DEFAULT_DB_REVISION
+        self.dbrev = struct_WORD.unpack(dbrev_bytes)[0] if len(dbrev_bytes) == 2 else DEFAULT_DB_REVISION
         
         segsize_bytes = self.read(OFFSET_ONE_SEG_SIZE, 2)
-        self.segsize = struct_WORD.unpack_from(segsize_bytes)[0] if len(segsize_bytes) >= 2 else DEFAULT_ONE_SEG_SIZE
+        self.segsize = struct_WORD.unpack(segsize_bytes)[0] if len(segsize_bytes) == 2 else DEFAULT_ONE_SEG_SIZE
         
         self.QGISvdoGroupName = self._create_QGISvdoGroupName()
         self._initialized = True
@@ -177,7 +177,6 @@ class VDO_FILE:
         """Генерация уникального имени для корневой группы слоев QGIS."""
         if self.is_empty:
             return None
-        # Кроссплатформенный разбор пути
         _, folder_name = os.path.split(os.path.dirname(self.file_path))
         return f"{folder_name}_0x{self.file_size:04X}"
 
@@ -189,7 +188,7 @@ class VDO_FILE:
             with open(self.file_path, "rb") as f:
                 f.seek(offset)
                 return f.read(size)
-        except (OSError, FileNotFoundError):    # # pragma: no cover
+        except (OSError, FileNotFoundError):    # pragma: no cover
             return EMPTY_BUFFER
 
     def get_bladdr(self, bladdr: Union[int, 'BLADDR']) -> 'BLADDR':

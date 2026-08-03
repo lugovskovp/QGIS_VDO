@@ -200,9 +200,9 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 * [ ] tests
     * [x] локально организовать
     * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
-    * [ ] при коммите - только измененные/коммичующиеся
+    * [ ] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
     * [x] vdo.datatypes 98 %
-    * [ ] vdo.geotypes
+    * [x] vdo.geotypes
     * [x] settings 99 %
     * [x] thread 36 %
     * [ ] 

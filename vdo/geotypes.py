@@ -14,7 +14,7 @@ functions:
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
-import ctypes
+# import ctypes
 # import re
 import struct
 
@@ -29,7 +29,7 @@ else:
 
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
-from QGIS_VDO.vdo.consts import struct_UINT, struct_2UINT
+from QGIS_VDO.vdo.consts import struct_2UINT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
@@ -159,6 +159,8 @@ class COORD(BYTESTRUCT):
         d_lon = self.lon - other.lon
         return f"lat:{d_lat:.2f}° x lon:{d_lon:.2f}°"
 
+    # COORD
+
 
 class MAP_AREA(BYTESTRUCT):
     ''' Near offs 0x20 - координаты нижнего левого и верхнего правого, 0x32 - масштаб '''  # noqa: E501
@@ -198,6 +200,8 @@ class MAP_AREA(BYTESTRUCT):
         max_x = (self.right_top._hlon - self.left_bottom._hlon) >> self._scale
         max_y = (self.right_top._hlat - self.left_bottom._hlat) >> self._scale
         return "{:04X} {:04X}".format(max_x, max_y)
+
+    # MAP_AREA
 
 
 # -------------------------------------------------------------------------
@@ -243,6 +247,8 @@ class GEO_CATEGORY(BYTESTRUCT):
     
     def __str__(self) -> str:
         return self.__repr__()
+
+    # GEO_CATEGORY
 
 
 # ----
@@ -469,19 +475,40 @@ class TSTR(BYTESTRUCT):
 class POI_CATEGORY(BYTESTRUCT):
     """
     POI_CATEGORY 3*DWORD
-        QWORD   POIs  FAR_LIST
-        WORD    en_POI_CATEGORY - enum тип, категория POI
-        WORD    reference_addr_start  В 0x0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
+    0     QWORD   POIs  FAR_LIST
+    8     WORD    en_POI_CATEGORY - enum тип, категория POI
+    10    WORD    reference_addr_start  В 0x0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
     """
-    bytescnt: int = 12  # 3*DWORD 0a 0c размер элемента класса в байтах
+    
+    # Жестко резервируем память под все атрибуты экземпляра. __dict__ удален.
+    __slots__ = ('fl_POIs', 'poi_type', 'p_str', 'name')
+    
+    size: int = 12  # 3*DWORD = 12 байт
 
     def __init__(self, buffer: ReadableBuffer, parent_vdo: VDO_FILE) -> None:
-        """ """
-        super().__init__(memoryview(buffer)[:self.bytescnt])
-        self.fl_POIs = FAR_LIST(self.read(0, FAR_LIST.size), parent_vdo)
-        self.poi_type = en_POI_CAT(self.ushort(8))  # offs en_POI_CATEGORY - enum тип, категория POI # noqa
+        mem_buf = memoryview(buffer)
+        
+        # Передаем буфер в родительский BYTESTRUCT (срез до 12 байт через self.size)
+        super().__init__(mem_buf[:self.size])
+        
+        # Оптимизация: берем zero-copy срез напрямую из сохраненного self._raw
+        self.fl_POIs = FAR_LIST(self._raw[0:FAR_LIST.size], parent_vdo)
+        
+        # Извлекаем тип категории (unsigned short по смещению 8)
+        self.poi_type = en_POI_CAT(self.ushort(8))
+        
+        # Извлекаем указатель на строковые данные (unsigned short по смещению 10)
         self.p_str = self.ushort(10)
+        
+        # Инициализируем имя по умолчанию
         self.name = "Proto. Name set where called"
+
+    def __repr__(self) -> str:
+        ''' View while debug value '''
+        return f"{self.poi_type.name} [{self.fl_POIs.hex}] -> 0x{self.p_str:04X}: {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
     # @property
     # def fl_POIs(self):
@@ -505,23 +532,23 @@ class POI_CATEGORY(BYTESTRUCT):
 # -------------------------------------------------------------------------
 # functions
 
-def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
-    """
-    Create COORD by hex_vdo values lo + la
-        Args:
-            # lon - x we, lat - y sn
-        Returns:
-            res: COORD
-    """
-    # to unsigned dword
-    hex_latitude = ctypes.c_uint32(hex_latitude).value
-    hex_longtude = ctypes.c_uint32(hex_longtude).value
+# def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
+#     """
+#     Create COORD by hex_vdo values lo + la
+#         Args:
+#             # lon - x we, lat - y sn
+#         Returns:
+#             res: COORD
+#     """
+#     # to unsigned dword
+#     hex_latitude = ctypes.c_uint32(hex_latitude).value
+#     hex_longtude = ctypes.c_uint32(hex_longtude).value
 
-    # to bytes
-    coo_by = (struct_UINT.pack(hex_longtude)
-              + struct_UINT.pack(hex_latitude))
-    res = COORD(coo_by)
-    return res
+#     # to bytes
+#     coo_by = (struct_UINT.pack(hex_longtude)
+#               + struct_UINT.pack(hex_latitude))
+#     res = COORD(coo_by)
+#     return res
     """
     hex_latitude = 0xffffffff & hex_latitude    # to dword
     if hex_latitude < 0:                        # Negative val
@@ -583,31 +610,31 @@ def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
 #     return res
 
 
-def normLatLng(n_latitude: float, e_longtude: float):
-    ''' Нормализует координаты в градусах (широта, долгота)
-        возвращает нормализованные (N_lat, E_lng)
-    Args:
-        n_latitude: float   # Широта, latitude градусы
-        e_longtude: float   # Долгота, longtitude градусы
-    Returns:
-        coordinates: tuple(N_lat: float, E_lng: float)
-    '''
-    # избавление от кратности круга (370 = 10), КРОМЕ ЭТОГО ПЕРЕВОД В -110 % 360 = 250
-    E_lng = float(e_longtude) % 360
-    N_lat = float(n_latitude) % 360
-    # При переходе в противоположное полушарие широты, долгота +=180
-    if 90 < N_lat < 270:     # II and III quadrant.
-        # 100N = 80N     # Долгота, longtitude 0 -> 90 -> 0-> -90 -> 0
-        N_lat = 180 - n_latitude
-        # перепрыг в иное полушарие
-        E_lng += 180
-    # избавление от кратности круга (370 = 10)
-    N_lat = float(N_lat) % 360
-    E_lng = float(E_lng) % 360
-    # N-S, E-W
-    E_lng = E_lng - 360 if E_lng > 180 else E_lng      # 270E = 90W = -90E; 190E = -170E
-    N_lat = N_lat - 360 if N_lat > 180 else N_lat      # 350N = -10N
-    return (N_lat, E_lng)
+# def normLatLng(n_latitude: float, e_longtude: float):
+#     ''' Нормализует координаты в градусах (широта, долгота)
+#         возвращает нормализованные (N_lat, E_lng)
+#     Args:
+#         n_latitude: float   # Широта, latitude градусы
+#         e_longtude: float   # Долгота, longtitude градусы
+#     Returns:
+#         coordinates: tuple(N_lat: float, E_lng: float)
+#     '''
+#     # избавление от кратности круга (370 = 10), КРОМЕ ЭТОГО ПЕРЕВОД В -110 % 360 = 250
+#     E_lng = float(e_longtude) % 360
+#     N_lat = float(n_latitude) % 360
+#     # При переходе в противоположное полушарие широты, долгота +=180
+#     if 90 < N_lat < 270:     # II and III quadrant.
+#         # 100N = 80N     # Долгота, longtitude 0 -> 90 -> 0-> -90 -> 0
+#         N_lat = 180 - n_latitude
+#         # перепрыг в иное полушарие
+#         E_lng += 180
+#     # избавление от кратности круга (370 = 10)
+#     N_lat = float(N_lat) % 360
+#     E_lng = float(E_lng) % 360
+#     # N-S, E-W
+#     E_lng = E_lng - 360 if E_lng > 180 else E_lng      # 270E = 90W = -90E; 190E = -170E
+#     N_lat = N_lat - 360 if N_lat > 180 else N_lat      # 350N = -10N
+#     return (N_lat, E_lng)
 
 # -------------------------------------------------------------------------
 

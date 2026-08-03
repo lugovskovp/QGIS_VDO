@@ -775,7 +775,7 @@ class BLSTART(BYTESTRUCT):
         self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
 
     def __repr__(self) -> str:
-        v = '' if self.vdo.path else ' virt'
+        v = 'virt ' if self.vdo.is_empty else ''
         try:
             type_name = self.bltype.name
         except ValueError:

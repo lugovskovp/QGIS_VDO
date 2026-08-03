@@ -14,3 +14,4 @@ ui_files/vdo_explorer_dockwidget_base.ui
 ui_files/citroen_kbd_dialog.ui
 .coverage
 htmlcov/
+_base_block.bin

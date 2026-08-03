@@ -14,6 +14,7 @@ from __future__ import annotations  # Обязательно на самой п�
 
 import os.path
 import importlib
+import struct
 
 from typing import TYPE_CHECKING, Union, Any, Optional
 
@@ -85,8 +86,9 @@ KNOWN_BLOCKS = setup_known_types()
 
 
 # ----
-class VDO_FILE():
+class VDO_FILE:
     """ класс работы с файлом формата carindb """
+    
     # Запрещаем создание __dict__, жестко фиксируем свойства экземпляра
     __slots__ = (
         "file_path",
@@ -102,67 +104,71 @@ class VDO_FILE():
     # Переменная класса для хранения синглтона (не входит в __slots__)
     _singleton_instance = None
 
-    def __new__(cls, file_path: Optional[str] = None):
-        """
-        Если строка пустая, он должен создать singletone экземпляр этого класса
-        """
-        # Безопасно преобразуем None в пустую строку
+    @staticmethod
+    def _validate_file(file_path: Optional[str]) -> bool:
+        """Внутренний метод сквозной валидации файла (вызывается один раз)."""
         path_str = file_path or ""
+        if not path_str or not os.path.exists(path_str):
+            return False
+            
+        try:
+            if os.path.getsize(path_str) <= OFFSET_ONE_SEG_SIZE:
+                return False
+            
+            with open(path_str, "rb") as f:
+                # Читаем первые 4 байта и проверяем маркер формата (big-endian uint == 1)
+                return struct_UINT.unpack(f.read(4))[0] == 1
+        except (OSError, FileNotFoundError, struct.error):  # pragma: no cover
+            return False
 
-        # Проверяем условия валидности файла
-        is_valid_file = (
-            path_str
-            and os.path.exists(path_str)
-            and os.path.getsize(path_str) > OFFSET_ONE_SEG_SIZE
-        )
-
-        # Если файл пустой, None, не существует или мал -> возвращаем синглтон
-        if not is_valid_file:
+    def __new__(cls, file_path: Optional[str] = None):
+        """Если файл не валиден — возвращает синглтон пустого VDO."""
+        if not cls._validate_file(file_path):
             if cls._singleton_instance is None:
                 cls._singleton_instance = super().__new__(cls)
                 cls._singleton_instance._initialized = False
             return cls._singleton_instance
 
         # Если файл прошел все проверки -> создаем новый объект
-        return super().__new__(cls)
+        obj = super().__new__(cls)
+        obj._initialized = False
+        return obj
 
     def __init__(self, file_path: Optional[str] = None):
         # Защита от повторной инициализации синглтона
-        if hasattr(self, "_initialized") and self._initialized:
+        if getattr(self, "_initialized", False):
             return
 
-        # Безопасно преобразуем None в пустую строку
         path_str = file_path or ""
-
-        # Повторно проверяем валидность для правильной настройки атрибутов
-        is_valid_file = (
-            path_str
-            and os.path.exists(path_str)
-            and os.path.getsize(path_str) > OFFSET_ONE_SEG_SIZE
-        )
-
-        if not is_valid_file:
-            # Фиксируем синглтон
+        
+        # Так как невалидные файлы отсекаются в __new__,
+        # здесь мы точно знаем: пустая строка или плохой файл — это синглтон.
+        if not path_str or not os.path.exists(path_str):
             self.file_path = ""
             self.is_empty = True
             self.filename = ""
-            self._initialized = True  # Фиксируем синглтон
             self.file_size = 0
             self.dbrev = DEFAULT_DB_REVISION
             self.segsize = DEFAULT_ONE_SEG_SIZE
-        else:
-            # Для обычных файлов
-            self.file_path: str = path_str
-            self.is_empty = False
-            self.filename = os.path.basename(path_str)
-            self._initialized = False
-            self.file_size = os.path.getsize(self.file_path)
-            # Используем unpack_from для безопасности типов ReadableBuffer
-            self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
-            # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
-            self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
-        # для всех
+            self.QGISvdoGroupName = self._create_QGISvdoGroupName()
+            self._initialized = True
+            return
+
+        # Для обычных валидных файлов
+        self.file_path = path_str
+        self.is_empty = False
+        self.filename = os.path.basename(path_str)
+        self.file_size = os.path.getsize(self.file_path)
+        
+        # Безопасное чтение метаданных с защитой от пустых буферов
+        dbrev_bytes = self.read(OFFSET_DB_REVISION, 2)
+        self.dbrev = struct_WORD.unpack_from(dbrev_bytes)[0] if len(dbrev_bytes) >= 2 else DEFAULT_DB_REVISION
+        
+        segsize_bytes = self.read(OFFSET_ONE_SEG_SIZE, 2)
+        self.segsize = struct_WORD.unpack_from(segsize_bytes)[0] if len(segsize_bytes) >= 2 else DEFAULT_ONE_SEG_SIZE
+        
         self.QGISvdoGroupName = self._create_QGISvdoGroupName()
+        self._initialized = True
 
     def __repr__(self) -> str:
         return f"VDO v.{self.dbrev}[{self.segsize}]:{self.filename}"
@@ -171,7 +177,7 @@ class VDO_FILE():
         """Генерация уникального имени для корневой группы слоев QGIS."""
         if self.is_empty:
             return None
-        # Замена ручного split("/") на кроссплатформенный os.path.split
+        # Кроссплатформенный разбор пути
         _, folder_name = os.path.split(os.path.dirname(self.file_path))
         return f"{folder_name}_0x{self.file_size:04X}"
 
@@ -183,47 +189,31 @@ class VDO_FILE():
             with open(self.file_path, "rb") as f:
                 f.seek(offset)
                 return f.read(size)
-        except (OSError, FileNotFoundError):    # pragma: no cover
+        except (OSError, FileNotFoundError):    # # pragma: no cover
             return EMPTY_BUFFER
 
-    def get_bladdr(self, bladdr: Union[int, BLADDR]) -> BLADDR:
-        """
-        Args:
-            bladdr :int - uint значение bladdr, BLADDR
-        Returns:
-            res :BLADDR с vdo self
-        """
+    def get_bladdr(self, bladdr: Union[int, 'BLADDR']) -> 'BLADDR':
+        """Возвращает экземпляр BLADDR, привязанный к текущему vdo context."""
         if isinstance(bladdr, int):
             buffer = struct_UINT.pack(bladdr)
         else:
             buffer = bladdr._raw
         return BLADDR(buffer, self)
 
-    def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
-        """
-        Возвращает экземпляр блока по смещению offset (int) или из структуры BLADDR.
-        
-        Args:
-            addr: int offset | BLADDR block address
-        Returns:
-            Block instance или None, если адрес невалиден или это не блок.
-        """
-        if self.is_empty:
-            return None
-        if addr is None:
+    def get_block(self, addr: Union[int, 'BLADDR'], *args: Any) -> Any | None:
+        """Возвращает экземпляр динамического блока по смещению."""
+        if self.is_empty or addr is None:
             return None
         
         if isinstance(addr, int):
             offset = addr
-        elif isinstance(addr, BLADDR):  # Исправлена проверка типа
-            if addr.isZero:  # Используем оптимизированное свойство
+        elif isinstance(addr, BLADDR):
+            if addr.isZero:
                 return None
-            # какой бы ни пришёл BLADDR, используем его только номер, и размер сегмента vdo
             offset = addr.blocknumber * self.segsize
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
 
-        # Чтение заголовка блока
         head_bytes = self.read(offset, BLSTART.size)
         if len(head_bytes) < BLSTART.size:
             return None
@@ -234,10 +224,8 @@ class VDO_FILE():
 
         block_type = head.bltype.value
 
-        # Динамический импорт класса блока
         if block_type in KNOWN_BLOCKS:
             bl_module_name = KNOWN_BLOCKS[block_type]
-            # Безопасный относительный импорт без жесткого префикса QGIS_VDO
             module = importlib.import_module(f"..blocks.{bl_module_name}", package=__name__)
             bl_class = getattr(module, bl_module_name)
         else:

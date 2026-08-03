@@ -85,7 +85,7 @@ class block_0x12(block_base):
             # карта размещения групп блоков на CD, кроме 08, 09, 19, 1a, 1b, 1f
             CD_MAP_ITEM_SIZE = 0x10
             self.cd_map = {}
-            l_cd_map = self.list(OFFSET_CD_MAP_BLOCKS)
+            l_cd_map = self.read_list(OFFSET_CD_MAP_BLOCKS)
             for i in range(l_cd_map.cnt):
                 # zTzz, BLADDR idxidx08, BLADDR firstBl, BLADDR lastBl; len=0x10
                 raw = self.read(l_cd_map.ptr + i * CD_MAP_ITEM_SIZE, CD_MAP_ITEM_SIZE)
@@ -135,7 +135,7 @@ class block_0x12(block_base):
         Return:
             BLADDR: SCALES type 0x07
         """
-        li_scales = self.list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
+        li_scales = self.read_list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
         return self.read_bladdr(li_scales.ptr)
         # 000002 01 : 0001:0000 cnt:0 34
         # 000002 01 : 0001:0000 cnt:0 30
@@ -164,8 +164,8 @@ class block_0x12(block_base):
         if self.dbrev != 34:
             # db_rev=30 - w|o rectangle area
             return None
-        lb = self.coord(OFFSET_AREA_A)                    # left bottom
-        rt = self.coord(OFFSET_AREA_A + COORD.size)       # right top
+        lb = self.read_coord(OFFSET_AREA_A)                    # left bottom
+        rt = self.read_coord(OFFSET_AREA_A + COORD.size)       # right top
         return (lb, rt)
 
     @property

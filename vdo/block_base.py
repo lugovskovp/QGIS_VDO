@@ -5,22 +5,23 @@
 
 import zlib             # распаковка архивов типа 2 и 3
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, Type, TypeVar
 
 if TYPE_CHECKING:
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
-    from _typeshed import ReadableBuffer
+    from _typeshed import ReadableBuffer  # pragma: no cover
 else:
     # Запасной вариант для рантайма, чтобы не было NameError
     ReadableBuffer = bytes
 
 
-from QGIS_VDO.vdo.consts import struct_UINT
+# from QGIS_VDO.vdo.consts import struct_UINT
 
 # from vdo.enums import BlockType
-from .datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX, PTR
-from .datatypes import MAX_STR_LEN
-from .geotypes import COORD
+from QGIS_VDO.vdo.datatypes import BYTESTRUCT, BLADDR, BLSTART, LIST, FAR_LIST, CH_IDX, PTR
+from QGIS_VDO.vdo.datatypes import MAX_STR_LEN
+from QGIS_VDO.vdo.geotypes import COORD
+# from QGIS_VDO.vdo.enums import BlockType
 
 ZLIB_BEGIN_OFFSET = 8         # for archive type 2
 BLOCK_0x12_SIZE = 0x800
@@ -30,197 +31,151 @@ BLOCK_0x12_SIZE = 0x800
 ZERO_DWORD = "\x00" * 4
 
 
+# Выносим декомпрессоры на уровень модуля
+def _decompress_zlib(buffer: memoryview, head: BLSTART, vdo) -> bytearray:
+    max_bufsize = head.segcnt * vdo.segsize
+    unarc_raw = bytearray(buffer[:ZLIB_BEGIN_OFFSET])
+    unarc_raw += zlib.decompress(buffer[ZLIB_BEGIN_OFFSET:], bufsize=max_bufsize)
+    return unarc_raw
+
+
+# Мапа стратегий: arch_type -> функция обработки
+COMPRESSION_REGISTRY = {
+    2: _decompress_zlib,
+    3: _decompress_zlib,
+}
+
+
+# 1. Жестко перечисляем разрешенные классы для статического анализа (IDE / Mypy)
+ALLOWED_STRUCTURES = TypeVar(
+    'ALLOWED_STRUCTURES',
+    BLADDR, FAR_LIST, LIST, PTR, COORD, CH_IDX
+)
+
+# 2. Множество для молниеносной рантайм-проверки (O(1))
+_VALID_STRUCTS = {BLADDR, FAR_LIST, LIST, PTR, COORD, CH_IDX}
+
+
 class block_base(BYTESTRUCT):
-    """ Родительский класс для любого блока """
+    """Родительский класс для любого блока данных карты с оптимизированной структурой."""
+
+    __slots__ = ('vdo', 'is_unpacked', '_head_cached', 'type', 'type_name')
 
     def __init__(self, addr: BLADDR) -> None:
-        """ """
+        # 1. Валидация на входе
         if not isinstance(addr, BLADDR):
-            raise ValueError("addr must be BLADDR", addr, type(addr))
-
-        if addr.isZero:
-            return None
-
-        if addr.vdo.is_empty:
-            return None
+            raise TypeError(f"addr must be BLADDR, got {type(addr)}")
+        if addr.isZero or addr.vdo.is_empty:
+            raise ValueError(f"Cannot initialize block from zero address: {addr.isZero}, or empty VDO: {addr.vdo.is_empty} context")  # noqa
 
         self.vdo = addr.vdo
-        
-        # и тут инициировать BYTESTRUCT
-        size = BLOCK_0x12_SIZE if addr.blocknumber == 0 else addr.sizeofblock
-
-        # что бы ни было в файле, но размер блока 0х12 всегда 1*0х800
-        buffer = self.vdo.read(addr.offset, size)
-        # property self.head = - информация о блоке: тип, архивирован ли, размер(ы)
-        self._raw = buffer[:BLSTART.size]
-        # при необходимости, распаковать
         self.is_unpacked = True
-        if self.head.arch_type == 0:
+        self._head_cached = None
+
+        # 2. Чтение буфера
+        size = BLOCK_0x12_SIZE if addr.blocknumber == 0 else addr.sizeofblock
+        buffer = self.vdo.read(addr.offset, size)
+        
+        if not buffer:
+            super().__init__(b"")
+            self.is_unpacked = False
+            return
+
+        # 3. Парсинг заголовка
+        temp_view = memoryview(buffer)
+        head_obj = BLSTART(temp_view[:BLSTART.size], self.vdo)
+        self._head_cached = head_obj
+
+        #
+        self.type = head_obj.bltype.value
+        self.type_name = head_obj.bltype.value
+
+        # 4. Диспетчеризация распаковки (Паттерн Стратегия)
+        arch_type = head_obj.arch_type
+        
+        if arch_type == 0:
             super().__init__(buffer)
             return
-        elif self.head.arch_type in [2, 3]:
-            #zlib  третий тип вообще-то не ясно - почему отдельно от 2, то же самое
-            # ТИПЫ БЛОКОВ archived by zlib in bmw:
-            # 17 1E 09 1D 14 1C 15 16 01 02 03 04 00 06 10 11 0E 0F 0C 0D 0A 13
-            unarc_raw = buffer[:ZLIB_BEGIN_OFFSET]    # - начало не запаковано
-            # распаковать запакованное
-            unarc_raw += zlib.decompress(buffer[ZLIB_BEGIN_OFFSET:],
-                                         bufsize=self.head.segcnt * self.vdo.segsize)
-            super().__init__(unarc_raw)
-            return
-        elif self.head.arch_type == 1:
-            # ВОТ ТУТ САМОЕ ПЕЧАЛЬНОЕ
-            #raise ValueError("пока что вот так, запаковано")
-            self.is_unpacked = False
-            pass
-        super().__init__(buffer)
-        
-        pass
 
-    def __repr__(self) -> str:
-        packed = '@ ' if self.head.arch_type else ''
-        return packed + self.head.__repr__()
+        decoder = COMPRESSION_REGISTRY.get(arch_type)
+        if decoder is None:
+            # Сюда попадает arch_type == 1 и любые неизвестные типы
+            super().__init__(buffer)
+            self.is_unpacked = False
+            return
+
+        try:
+            unpacked_data = decoder(temp_view, head_obj, self.vdo)
+            super().__init__(unpacked_data)
+        except (zlib.error, ValueError):
+            super().__init__(buffer)
+            self.is_unpacked = False
 
     @property
-    def dbrev(self):
+    def head(self) -> BLSTART:
+        return self._head_cached
+
+    @property
+    def dbrev(self) -> int:
         return self.vdo.dbrev
 
     @property
-    def segsize(self):
+    def segsize(self) -> int:
         return self.vdo.segsize
-    
-    @property
-    def head(self) -> BLSTART:
-        """ Заголовок, первые 8 байт блока
-        Args:
-            self: from _raw
-        Returns:
-            BLSTART: structure
-        """
-        return BLSTART(self.read(0, BLSTART.size), self.vdo)
 
-    def offset_next(self) -> int:
-        """
-        offset следующего блока (да, если последний - то и упс)
-        """
-        if not len(self.vdo.path):
+    def __repr__(self) -> str:
+        if not self.head:
+            return "NO_HEAD"
+        packed = '@ ' if self.head.arch_type else ''
+        return f"{packed}{repr(self.head)}"
+
+    def offset_next(self) -> Union[int, None]:
+        if not getattr(self.vdo, 'file_path', None):
             return None
-        # if filesize < next ????
-        next = self.head.bladdr.offset + (self.vdo.segsize * self.head.segcnt)
-        return next
+        res = self.head.bladdr.offset + (self.vdo.segsize * self.head.bladdr.segcnt)
+        if res < self.vdo.file_size:
+            return res
+        return None  # это был последний блок, следущего нет
 
-    def bladdr(self, value: ReadableBuffer | int) -> BLADDR:
-        """
-        Args:
-            value: или массив байтов, или НОМЕР БЛОКА, откуда их взять в _raw
-        Returns:
-            BLADDR: - block adress
-        """
-        if isinstance(value, int):
-            # bl_addr
-            value = struct_UINT.pack(value)
-            # value = self.read(value, BLADDR.size)
-        return BLADDR(value, self.vdo)
+    # --- Универсальный интерфейс чтения вместо 6 дубликатов ---
 
-    def read_bladdr(self, offset: int) -> BLADDR:
-        """
-        Args:
-            offset: int откуда их взять в _raw
-        Returns:
-            BLADDR: - block adress
-        """
-        value = self.read(offset, BLADDR.size)
-        return BLADDR(value, self.vdo)
+    def read_struct(self, offset: int, struct_cls: Type[ALLOWED_STRUCTURES]) -> ALLOWED_STRUCTURES:
+        """Быстрое чтение строго ограниченного списка структур по смещению."""
         
-    def farlist(self, value: bytearray | int) -> FAR_LIST:
-        """
-        Args:
-            value: или массив байтов, или offset, откуда их взять в _raw
-        Returns:
-            FAR_LIST: - block adress, ptr and counter
-        """
-        if type(value) is int:
-            # offset
-            value = self.read(value, FAR_LIST.size)
-        return FAR_LIST(value, self.vdo)
+        # Защита в рантайме
+        if struct_cls not in _VALID_STRUCTS:
+            raise TypeError(f"Класс {struct_cls.__name__} не разрешен для чтения через read_struct")
+            
+        if type(offset) is not int:
+            raise TypeError(f"Смещение должно быть int, получено {type(offset)}")
+        
+        raw_bytes = self.read(offset, struct_cls.size)
+        try:
+            return struct_cls(raw_bytes, self.vdo)
+        except TypeError:
+            return struct_cls(raw_bytes)
 
-    def list(self, value: bytearray | int) -> LIST:
-        """
-        Args:
-            value: или массив байтов, или offset, откуда их взять в _raw
-        Returns:
-            LIST: - ptr-cnt
-        """
-        if type(value) is int:
-            # offset
-            return LIST(self.read(value, LIST.size))
-        #bytearray
-        return LIST(value)
+    # --- Сахар для обратной совместимости (теперь со 100% точной типизацией) ---
+    def read_bladdr(self, offset: int) -> BLADDR: return self.read_struct(offset, BLADDR)       # noqa
+    def read_farlist(self, offset: int) -> FAR_LIST: return self.read_struct(offset, FAR_LIST)       # noqa
+    def read_list(self, offset: int) -> LIST: return self.read_struct(offset, LIST)       # noqa
+    def read_ptr(self, offset: int) -> PTR: return self.read_struct(offset, PTR)       # noqa
+    def read_coord(self, offset: int) -> COORD: return self.read_struct(offset, COORD)       # noqa
+    def read_ch_idx(self, offset: int) -> CH_IDX: return self.read_struct(offset, CH_IDX)       # noqa
 
-    def ptr(self, offset: int) -> PTR:
-        """
-        PTR по адресу
-        Args:
-            self: from _raw
-            offset: offset from block start
-        Returns:
-            PTR: structure
-        """
-        return PTR(self.read(offset, PTR.size))
-
-    def coord(self, offset: int) -> COORD:
-        """ Координаты - 8 байт блока
-        Args:
-            self: from _raw
-            offset: offset from block start
-        Returns:
-            COORD: structure
-        """
-        return COORD(self.read(offset, COORD.size))
-
-    def ch_idx(self, ptr_ch_idx: int) -> CH_IDX:
-        """
-        CH_IDX указатель на список букв или (страны, города, улицы, poi)
-        Args:
-            ptr_ch_idx: offset
-        Returns:
-            CH_IDX: object
-        """
-        buf = self.read(ptr_ch_idx, CH_IDX.size)
-        return CH_IDX(buf, self.vdo)
-
-    def read_li_str(self, ptr_list_str: int):
-        """
-        Строка, адрес и размер которой в LIST по offset
-        Args:
-            ptr_list_str: int offset to ptr-cnt
-        Returns:
-            str: строка
-        """
-        li = self.list(ptr_list_str)
-        # -1: 'no label\x00', последний char \x00
+    def read_li_str(self, ptr_list_str: int) -> str:
+        li = self.read_list(ptr_list_str)
         return bytes(self.read(li.ptr, li.cnt - 1)).decode('cp1250')
 
     def read_str(self, offset: int) -> str:
-        """
-        Чтение строки, в vdo_file не выйдет, запакованные блоки
-        Args:
-            offset: offset в текущем блоке
-        Returns:
-            str: 0-ended строка
-        """
-        # offset = 0 -> нет строки
-        if offset:
-            string = self.read(offset, MAX_STR_LEN).tobytes()
-            return string.decode('cp1250').split('\x00')[0]
-        return ''
+        if not offset:
+            return ''
+        if type(offset) is not int:
+            raise TypeError(f"Смещение должно быть int, получено {type(offset)}")
+        return super().read_str(offset, MAX_STR_LEN)
 
-    def write_raw(self, name: str = "base_block.txt"):
-        """
-        сохранить текущее в файл
-        """
-        fname = "c:/temp/" + name
-        with open(fname, "bw") as f:
+    def write_raw(self, name: str = "_base_block.bin") -> None:
+        with open(name, "wb") as f:
             f.write(self._raw)
 
 

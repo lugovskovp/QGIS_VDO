@@ -6,6 +6,7 @@ from pathlib import Path
 from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR
 from QGIS_VDO.vdo.blocks import block_0x12
 from QGIS_VDO.vdo.consts import struct_UINT
+from QGIS_VDO.vdo.enums import BlockType
 
 
 @pytest.mark.parametrize("invalid_addr", [
@@ -167,33 +168,13 @@ def test_vdo_file_get_QGISvdoGroupName(all_vdo_fixture):
     """
 
 
-# 1. Создаем легковесный Stub-класс, имитирующий структуру BLSTART со слотами
-class StubBLType:
-    __slots__ = ("value",)
-
-    def __init__(self, value):
-        self.value = value
-
-
-# Наследуемся от оригинального BLADDR
-class StubBLAddr(BLADDR):
-    # Добавляем offset в слоты дочернего класса, чтобы не создавался __dict__
-    __slots__ = ("offset",)
-    
-    def __init__(self, offset):
-        # Передаем 4 байта (или сколько ожидает struct_UINT) в базовый класс,
-        # чтобы свойства .isZero и .value успешно отрабатывали на реальных байтах
-        super().__init__(b'\x00' * 4)
-        self.offset = offset
-
-
 class StubBLSTART:
     __slots__ = ("bladdr", "bltype")
     size = 16  # Имитируем переменную класса размера заголовка
 
-    def __init__(self, bladdr_offset, type_value):
-        self.bladdr = StubBLAddr(offset=bladdr_offset)
-        self.bltype = StubBLType(value=type_value)
+    def __init__(self, bladdr):
+        self.bladdr = bladdr
+        self.bltype = BlockType.UNKNOWN                    # StubBLType(value=type_value)
 
 
 @pytest.mark.slow
@@ -209,16 +190,17 @@ def test_get_block_fallback_to_block_base_when_type_unknown(real_vdo_fixture, mo
     # Смещение, по которому будем имитировать чтение (например, 0)
     target_offset = 0
     # Гарантированно неизвестный тип блока (которого точно нет в KNOWN_BLOCKS)
-    unknown_type = 0x99
+    unknown_type = 0xff
 
     # 1. Создаем Stub, имитирующий заголовок BLSTART со слотами
-    fake_head = StubBLSTART(bladdr_offset=target_offset, type_value=unknown_type)
+    st_bladdr = BLADDR(b'\x00\x00\x00\x01', real_vdo)
+    fake_head = StubBLSTART(st_bladdr)
     
     # 2. Создаем класс-фабрику, у которого есть атрибут size,
     # а при вызове он возвращает наш fake_head
     class FakeBLSTARTClass:
         size = StubBLSTART.size  # Сохраняем размер для успешного self.read(..., BLSTART.size)
-        
+
         def __new__(cls, bytes_data, vdo_obj):
             return fake_head
 
@@ -227,7 +209,7 @@ def test_get_block_fallback_to_block_base_when_type_unknown(real_vdo_fixture, mo
     monkeypatch.setattr("QGIS_VDO.vdo.datatypes.BLSTART", FakeBLSTARTClass)
     
     # 4. Подменяем метод read у КЛАССА VDO_FILE, чтобы избежать ошибок teardown
-    monkeypatch.setattr(VDO_FILE, "read", lambda vdo_self, offset, size: b"\x00" * StubBLSTART.size)
+    monkeypatch.setattr(VDO_FILE, "read", lambda vdo_self, offset, size: b"\x01" * StubBLSTART.size)
 
     # Вызываем тестируемый метод get_block
     block = real_vdo.get_block(target_offset)

@@ -61,7 +61,7 @@ import pytest                       # type: ignore  # noqa
 from QGIS_VDO.vdo.datatypes import VDO_FILE      # noqa
 
 # Явно импортируем фикстуру, чтобы pytest её увидел
-from fixtures import bin_file_path      # noqa
+# from fixtures import bin_file_path                          # noqa
 from QGIS_VDO.vdo.blocks import block_0x13, block_0x07       # noqa
 
 

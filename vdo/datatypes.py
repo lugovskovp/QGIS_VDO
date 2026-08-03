@@ -150,7 +150,6 @@ class VDO_FILE():
             self.file_size = 0
             self.dbrev = DEFAULT_DB_REVISION
             self.segsize = DEFAULT_ONE_SEG_SIZE
-            self.QGISvdoGroupName = None
         else:
             # Для обычных файлов
             self.file_path: str = path_str
@@ -162,7 +161,8 @@ class VDO_FILE():
             self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
             # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
             self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
-            self.QGISvdoGroupName = self._create_QGISvdoGroupName()
+        # для всех
+        self.QGISvdoGroupName = self._create_QGISvdoGroupName()
 
     def __repr__(self) -> str:
         return f"VDO v.{self.dbrev}[{self.segsize}]:{self.filename}"
@@ -655,6 +655,8 @@ class FAR_LIST(BYTESTRUCT):
                 self.vdo = VDO_FILE()    # EMPTY_VDO
             else:
                 self.vdo = vdo
+        else:
+            raise AttributeError(f"vdo '{vdo}' is not VDO_FILE: {type(vdo)}")
             
         # ОПТИМИЗАЦИЯ: Создаем дочерние структуры ОДИН раз при инициализации.
         # Передаем zero-copy срезы memoryview, чтобы избежать копирования байт.

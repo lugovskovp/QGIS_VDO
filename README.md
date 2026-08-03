@@ -201,8 +201,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] локально организовать
     * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
     * [ ] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
-    * [x] vdo.datatypes 98 %
-    * [x] vdo.geotypes
+    * [x] vdo.datatypes 100 %
+    * [x] vdo.geotypes 100 %
     * [x] settings 99 %
     * [x] thread 36 %
     * [ ] 
@@ -218,7 +218,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 где искать qtutils
 c:/OSGeo4W/apps/Qt5/bin/designer.exe 
 
-
+pytest --cov=your_source_folder_name --cov-report=html
+pytest --cov=your_source_folder_name --cov-report=html --cov-show-missing
 
 
 # i18n

@@ -29,6 +29,14 @@ def test_far_list_init_vdo_none():
     far = FAR_LIST(buffer)
 
     assert far.vdo.is_empty
+
+
+def test_far_list_init_vdo_wrong_type():
+    """Тест инициализации str 'vdo'"""
+    buffer = b'\x00\x00\x02\x01\x00\x0A\x00\x01'
+
+    with pytest.raises(AttributeError):
+        assert FAR_LIST(buffer, "this is not vdo")
     
 
 def test_far_list_offset_calculation(all_vdo_fixture):

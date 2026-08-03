@@ -95,6 +95,16 @@ def test_bytestruct_read_str_zero_terminated(base_struct):
     assert extracted_str == "Test"
 
 
+def test_bytestruct_read_str_without_null_terminator():
+    # Создаем данные БЕЗ нулевого байта внутри лимита
+    obj = BYTESTRUCT(b"ABCDEFGH")
+    
+    # Передаем max_len, который принудительно обрежет строку раньше времени
+    result = obj.read_str(ptr=0, max_len=3)
+    
+    assert result == "ABC"
+
+
 def test_bytestruct_hex_property_formatting_if_len_gt_16():
     """Проверка ветки hex, где BYTESTRUCT > 16"""
     tail_data = b"\xAA" * 9

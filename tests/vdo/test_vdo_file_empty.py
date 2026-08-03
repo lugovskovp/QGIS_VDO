@@ -47,3 +47,19 @@ def test_vdo_file_init_too_small_file():
     test_vdo = VDO_FILE(file_path)
 
     assert empty_vdo is test_vdo
+
+
+def test_vdo_file_init_first_bl_not_0x12():
+    """Проверка создания vdo, если первые 4 байта не 00 00 00 01"""
+    filename = 'block_0x13_v30.bin'
+    # тестовые файлы лежат в папке с тестами
+    file_path = f"tests/fixtures/{filename}"
+    
+    # Дополнительная проверка на случай, если файла физически нет на диске
+    if not os.path.exists(file_path):             # pragma: no cover
+        pytest.skip(f"Тестовый файл {filename} не найден на диске, пропускаем.")
+
+    empty_vdo = VDO_FILE()
+    test_vdo = VDO_FILE(file_path)
+
+    assert empty_vdo is test_vdo

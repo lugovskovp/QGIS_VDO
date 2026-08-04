@@ -16,7 +16,7 @@ class block_0x0B(block_base):
     @property
     def li_toc(self):
         """ LIST to table of contents """
-        return self.list(OFFSET_TOC)
+        return self.read_list(OFFSET_TOC)
 
     def get_chidxs(self, li: LIST) -> dict:
         """
@@ -57,7 +57,7 @@ class block_0x0B(block_base):
         """
         offset = li.ptr
         for _ in range(li.cnt):
-            chidx = self.ch_idx(offset)
+            chidx = self.read_ch_idx(offset)
             offset += CH_IDX.size
             yield chidx
 

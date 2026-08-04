@@ -10,11 +10,11 @@ from fixtures import FIXTURES_DIR
 
 # Словарь ожидаемых значений прямо внутри файла с тестами
 EXPECTED_SINGLE_METRIC = {
-    "block_0x13_v30.bin": {
+    "carindb30_0h_9000h.bin": {
         "init": {"dbrev": 30, "segsize": 0x800},  # Передаем как позиционные аргументы по порядку
         "expected_dbrev": 30,
         "expected_segsize": 0x800,
-        "bl_type": 0x13,
+        "bl_type": 0x12,
     },
     "block_0x13_v34_0x200_zlib.bin": {
         "init": {"dbrev": 34, "segsize": 0x200},
@@ -22,13 +22,13 @@ EXPECTED_SINGLE_METRIC = {
         "expected_segsize": 0x200,
         "bl_type": 0x13,
     },
-    "block_0xee_v30.bin": {
+    "carindb34_0h_6800h.bin": {
         "init": {},  # Пустой словарь для дефолтных значений
         "expected_dbrev": 34,
         "expected_segsize": 0x800,
-        "bl_type": 0xFF,
+        "bl_type": 0x12,
     },
-    "carindb30_0h_9000h.bin": {
+    "DB34_0h_3A01h.bin": {
         "init": {"dbrev": 30, "segsize": 0x800},  # Передаем как позиционные аргументы по порядку
         "expected_dbrev": 30,
         "expected_segsize": 0x800,
@@ -96,6 +96,8 @@ def test_block_0x12_specific_logic(block_0x12_fixture):
             assert block.cd_map is None
             assert block.area_A is None
             assert block.area_B is None
+        else:
+            assert str(block.area_A)
             
         # Общие свойства, доступные на блоке 0x12
         assert isinstance(block.likely_const_ALLWAYS_12, int)

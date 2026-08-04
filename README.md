@@ -190,7 +190,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 * [x] refactor 
     * [x] COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
-    * [ ] VDO_FILE
+    * [x] VDO_FILE single block load
+    * [x] COORD precalculated_coord _do_calculate_lon_lat on init
 
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
@@ -200,17 +201,25 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 * [ ] tests
     * [x] локально организовать
     * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
-    * [ ] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
+    * [x] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
     * [x] vdo.datatypes 100 %
     * [x] vdo.geotypes 100 %
     * [x] settings 99 %
     * [x] thread 36 %
-    * [x] block_base 93 %
-    * [ ] 
+    * [x] block_base 100 %
+    * [x] запрет commit при наличии ошибок flake8
+    * [x] запрет commit при наличии ошибок pytest
 
-* [x] запрет commit при наличии ошибок flake8
-* [x] запрет commit при наличии ошибок pytest
 * [ ] github workflow
+    * [x] отключить запрет коммитов в main напрямую
+    * [ ] отладить Action tests - на qgis docker образе
+    * [ ] отладить Action tests - запуск при мерже в main
+    * [ ] отладить Action release - запуск вручную
+    * [ ] включить запрет коммитов в main напрямую
+
+
+
+
 * [ ] выводить процент покрытия кода прямо в README.md репозитория в виде динамического бейджа (badge)
 * [ ] 
 
@@ -224,7 +233,6 @@ pytest --cov=your_source_folder_name --cov-report=html --cov-show-missing
 
 
 Разделяет пул тестов между ядрами процессора.
-
 pip install pytest-xdist
 # Запустить тесты на всех доступных ядрах процессора
 pytest -n auto
@@ -232,6 +240,11 @@ pytest -n auto
 
 pytest --durations=10  # Показать 10 самых долгих тестов и фикстур
 pytest --durations=0   # Показать время выполнения вообще всех тестов
+
+пределяет, какие именно тесты вызывают измененные методы класса
+pip install pytest-testmon
+pytest --testmon
+
 
 
 # i18n

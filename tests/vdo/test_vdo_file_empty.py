@@ -32,7 +32,7 @@ EXPECTED_SINGLE_METRIC = {
         "expected_segsize": 0x800,
         "bl_type": 0x13,
     },
-    "block_0x13_v34_0x200.bin": {
+    "block_0x13_v34_0x200_zlib.bin": {
         "init": [34, 0x200],
         "expected_dbrev": 34,
         "expected_segsize": 0x200,
@@ -43,6 +43,12 @@ EXPECTED_SINGLE_METRIC = {
         "expected_dbrev": 34,
         "expected_segsize": 0x800,
         "bl_type": 0xFF,
+    },
+    "carindb30_0h_9000h.bin": {
+        "init": [30, 0x800],  # Передаем как позиционные аргументы по порядку
+        "expected_dbrev": 30,
+        "expected_segsize": 0x800,
+        "bl_type": 0x12,
     },
 }
 
@@ -79,6 +85,7 @@ def test_empty_load_single_block(single_block_fixture):
     assert block.vdo.dbrev == metric["expected_dbrev"]
     assert block.vdo.segsize == metric["expected_segsize"]
     assert block.type == metric["bl_type"]
+    assert block.offset_next() is None          # вообще строго верно это для когда только один блок
 
 
 def test_empty_load_single_after_load_single(single_block_fixture):

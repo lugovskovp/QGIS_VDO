@@ -27,12 +27,16 @@ EXPECTED_SINGLE_METRIC = {
         "expected_dbrev": 34,
         "expected_segsize": 0x800,
         "bl_type": 0x12,
+        "expected_area_A": "(41.264602N 12.107522E, 59.895467N 29.673977E)",
+        "expected_area_B": "(41.264602N 12.107522E, 59.668607N 29.673977E)",
     },
     "DB34_0h_3A01h.bin": {
-        "init": {"dbrev": 30, "segsize": 0x800},  # Передаем как позиционные аргументы по порядку
-        "expected_dbrev": 30,
+        "init": {"dbrev": 34, "segsize": 0x800},  # Передаем как позиционные аргументы по порядку
+        "expected_dbrev": 34,
         "expected_segsize": 0x800,
         "bl_type": 0x12,
+        "expected_area_A": "(35.317110N 9.161804W, 70.479530N 93.151725E)",
+        "expected_area_B": "(41.282702N 19.767144E, 69.948190N 93.151725E)",
     },
 }
 
@@ -97,7 +101,8 @@ def test_block_0x12_specific_logic(block_0x12_fixture):
             assert block.area_A is None
             assert block.area_B is None
         else:
-            assert str(block.area_A)
+            assert metric["expected_area_A"] in str(block.area_A)
+            assert metric["expected_area_B"] in str(block.area_B)
             
         # Общие свойства, доступные на блоке 0x12
         assert isinstance(block.likely_const_ALLWAYS_12, int)

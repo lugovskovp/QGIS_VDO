@@ -198,7 +198,7 @@ class block_0x07(block_base):
         if bl_addr.vdo.dbrev == 34:
             OFFSET_SCALES = 0x14
             SIZE_SCALE = 0x1C
-            self.li_countries = self.list(OFFSET_COUNTRY_LIST)
+            self.li_countries = self.read_list(OFFSET_COUNTRY_LIST)
         else:       # 30
             OFFSET_SCALES = 0x10
             SIZE_SCALE = 0x18
@@ -211,7 +211,7 @@ class block_0x07(block_base):
         pass
 
         # <<< TERR_DIVISIONS
-        self.li_country_divisions = self.list(OFFSET_TERR_DIVISIONS)
+        self.li_country_divisions = self.read_list(OFFSET_TERR_DIVISIONS)
 
         # <<< POIs self.li_POI_cat = self.li_toc
         """
@@ -240,7 +240,7 @@ class block_0x07(block_base):
     @property
     def li_toc(self):
         """ LIST to table of contents """
-        return self.list(OFFSET_TOC)
+        return self.read_list(OFFSET_TOC)
 
     def find_by_coord(self, point: COORD, idScale: int) -> BLADDR | None:
         """

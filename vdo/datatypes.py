@@ -14,8 +14,9 @@ from __future__ import annotations  # Обязательно на самой п�
 
 import os.path
 import importlib
+import struct
 
-from typing import TYPE_CHECKING, Union, Any
+from typing import TYPE_CHECKING, Union, Any, Optional
 
 if TYPE_CHECKING:       # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
@@ -85,88 +86,150 @@ KNOWN_BLOCKS = setup_known_types()
 
 
 # ----
-class VDO_FILE():
+class VDO_FILE:
     """ класс работы с файлом формата carindb """
+    
+    # Запрещаем создание __dict__, жестко фиксируем свойства экземпляра
+    __slots__ = (
+        "file_path",
+        "is_empty",
+        "is_single",
+        "filename",
+        "QGISvdoGroupName",
+        "_initialized",
+        "dbrev",
+        "segsize",
+        "file_size",
+    )
+    
+    # Переменная класса для хранения синглтона (не входит в __slots__)
+    _singleton_instance = None
 
-    def __init__(self, path: str | None = None) -> None:
-        if path and os.path.exists(path) and os.path.getsize(path) > OFFSET_ONE_SEG_SIZE:
-            self.path: str | None = path
-            # Используем unpack_from для безопасности типов ReadableBuffer
-            self.dbrev: int = struct_WORD.unpack_from(self.read(OFFSET_DB_REVISION, 2))[0]
-            # :dbrev: database revision, 30 (0x1e) or 34 (0x22)
-            self.segsize: int = struct_WORD.unpack_from(self.read(OFFSET_ONE_SEG_SIZE, 2))[0]
-        else:
-            self.empty()
+    @staticmethod
+    def _validate_file(file_path: Optional[str]) -> bool:
+        """Внутренний метод сквозной валидации файла (вызывается один раз в __new__)."""
+        path_str = file_path or ""
+        if not path_str or not os.path.exists(path_str):
+            return False
+            
+        try:
+            if os.path.getsize(path_str) <= OFFSET_ONE_SEG_SIZE:
+                return False
+                
+            with open(path_str, "rb") as f:
+                # Читаем первые 4 байта и проверяем маркер формата (big-endian uint == 1)
+                # Проверка идет через распаковку глобального struct_UINT
+                return struct_UINT.unpack(f.read(4))[0] == 1
+        except (OSError, FileNotFoundError, struct.error, IndexError):  # pragma: no cover
+            return False
+
+    def __new__(cls, file_path: Optional[str] = None):
+        """Если файл не валиден — возвращает синглтон пустого VDO."""
+        if not cls._validate_file(file_path):
+            if cls._singleton_instance is None:
+                cls._singleton_instance = super().__new__(cls)
+                cls._singleton_instance._initialized = False
+            return cls._singleton_instance
+
+        # Если файл валидный -> создаем новый объект
+        obj = super().__new__(cls)
+        obj._initialized = False
+        return obj
+
+    def __init__(self, file_path: Optional[str] = None):
+        # Защита от повторной инициализации синглтона
+        if getattr(self, "_initialized", False):
+            return
+
+        path_str = file_path or ""
+        
+        # Если мы попали сюда и файл не валидный, значит это синглтон
+        if not path_str or not os.path.exists(path_str):
+            self.file_path = ""
+            self.is_empty = True
+            self.is_single = False
+            self.filename = ""
+            self.file_size = 0
+            self.dbrev = DEFAULT_DB_REVISION
+            self.segsize = DEFAULT_ONE_SEG_SIZE
+            self.QGISvdoGroupName = self._create_QGISvdoGroupName()
+            self._initialized = True
+            return
+
+        # Настройка свойств для валидного рабочего файла
+        self.file_path = path_str
+        self.is_empty = False
+        self.is_single = False
+        self.filename = os.path.basename(path_str)
+        self.file_size = os.path.getsize(self.file_path)
+        
+        # Безопасное чтение метаданных напрямую через распаковку bytes
+        dbrev_bytes = self.read(OFFSET_DB_REVISION, 2)
+        self.dbrev = struct_WORD.unpack(dbrev_bytes)[0] if len(dbrev_bytes) == 2 else DEFAULT_DB_REVISION
+        
+        segsize_bytes = self.read(OFFSET_ONE_SEG_SIZE, 2)
+        self.segsize = struct_WORD.unpack(segsize_bytes)[0] if len(segsize_bytes) == 2 else DEFAULT_ONE_SEG_SIZE
+        
+        self.QGISvdoGroupName = self._create_QGISvdoGroupName()
+        self._initialized = True
 
     def __repr__(self) -> str:
-        return f"VDO v.{self.dbrev}[{self.segsize}]:{self.path}"
+        return f"VDO v.{self.dbrev}[{self.segsize}]:{self.filename}"
 
-    @property
-    def file_size(self) -> int:
-        """Размер файла VDO на диске."""
-        if self.path and os.path.exists(self.path):
-            return os.path.getsize(self.path)
-        return 0
-
-    @property
-    def QGISvdoGroupName(self) -> str | None:
+    def _create_QGISvdoGroupName(self) -> str | None:
         """Генерация уникального имени для корневой группы слоев QGIS."""
-        if not self.path:
+        if self.is_empty:
             return None
-        # Замена ручного split("/") на кроссплатформенный os.path.split
-        _, folder_name = os.path.split(os.path.dirname(self.path))
+        _, folder_name = os.path.split(os.path.dirname(self.file_path))
         return f"{folder_name}_0x{self.file_size:04X}"
 
     def read(self, offset: int, size: int) -> bytes:
         """Чтение блока байт заданной длины по указанному смещению."""
-        if not self.path or size <= 0:
+        if self.is_empty or size <= 0 or (offset + size) > self.file_size:
             return EMPTY_BUFFER
         try:
-            with open(self.path, "rb") as f:
+            with open(self.file_path, "rb") as f:
                 f.seek(offset)
                 return f.read(size)
-        except (OSError, FileNotFoundError):
+        except (OSError, FileNotFoundError):    # pragma: no cover
             return EMPTY_BUFFER
 
-    def get_block(self, addr: Union[int, BLADDR], *args: Any) -> Any | None:
-        """
-        Возвращает экземпляр блока по смещению offset (int) или из структуры BLADDR.
-        
-        Args:
-            addr: int offset | BLADDR block address
-        Returns:
-            Block instance или None, если адрес невалиден или это не блок.
-        """
-        if not self.path:
-            return None
-        if addr is None:
+    def get_bladdr(self, bladdr: Union[int, 'BLADDR']) -> 'BLADDR':
+        """Возвращает экземпляр BLADDR, привязанный к текущему vdo context."""
+        if isinstance(bladdr, int):
+            buffer = struct_UINT.pack(bladdr)
+        else:
+            buffer = bladdr._raw
+        return BLADDR(buffer, self)
+
+    def get_block(self, addr: Union[int, 'BLADDR'], *args: Any) -> Any | None:
+        """Возвращает экземпляр динамического блока по смещению."""
+        if self.is_empty or addr is None:
             return None
         
         if isinstance(addr, int):
             offset = addr
-        elif isinstance(addr, BLADDR):  # Исправлена проверка типа
-            if addr.isZero:  # Используем оптимизированное свойство
+        elif isinstance(addr, BLADDR):
+            if addr.isZero:
                 return None
-            # какой бы ни пришёл BLADDR, используем только его номер, и размер сегмента vdo
             offset = addr.blocknumber * self.segsize
         else:
             raise ValueError(f"Неверный тип адреса {type(addr)}: ожидается int или BLADDR")
 
-        # Чтение заголовка блока
         head_bytes = self.read(offset, BLSTART.size)
         if len(head_bytes) < BLSTART.size:
             return None
             
         head = BLSTART(head_bytes, self)
-        if head.bladdr.offset != offset:
+
+        # Если это НЕ одиночный блок, выполняем строгую проверку смещения
+        if not self.is_single and head.bladdr.offset != offset:
             return None
 
         block_type = head.bltype.value
 
-        # Динамический импорт класса блока
         if block_type in KNOWN_BLOCKS:
             bl_module_name = KNOWN_BLOCKS[block_type]
-            # Безопасный относительный импорт без жесткого префикса QGIS_VDO
             module = importlib.import_module(f"..blocks.{bl_module_name}", package=__name__)
             bl_class = getattr(module, bl_module_name)
         else:
@@ -180,6 +243,85 @@ class VDO_FILE():
 
         return bl_instance
         pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
+
+    def load_single_block(self, path_to_single: str, **kwargs: Any) -> Any:
+        """
+        Загружает одиночный блок и возвращает настроенный контекст VDO_FILE.
+        Внутри считывает структуру блока, начиная с 0-го смещения.
+        Args:
+            dbrev: int [30, 34]
+            segsize: int [0x800, 0x200]
+        Returns:
+            base_block or block type one from KNOWN_TYPES
+        """
+        cls = type(self)
+        
+        # Строгая проверка: вызывать можно ТОЛЬКО у пустого синглтона
+        if self is not cls._singleton_instance or not self.is_empty:
+            raise RuntimeError(
+                f"Метод load_single_block предназначен только для пустого синглтона. "
+                f"Вызов у рабочего объекта '{self.filename}' запрещен."
+            )
+        
+        # Передаем правильный путь к файлу вместо self
+        dbrev = kwargs.get('dbrev', 34)
+        segsize = kwargs.get('segsize', 0x800)
+        vdo = self._single_create_vdo(path_to_single, dbrev=dbrev, segsize=segsize)
+        
+        # Загружаем блок, принудительно считая offset с 0 адреса.
+        # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"
+        block = vdo.get_block(0)
+
+        return block
+
+    def _single_create_vdo(self, path_to_single: str, dbrev: int = 34, segsize: int = 0x800) -> VDO_FILE:
+        """
+        Создаёт vdo для одиночного блока. Метод не изменяет текущий синглтон,
+        а возвращает НОВЫЙ полноценный рабочий экземпляр VDO_FILE,
+        отвязывая его от системы синглтонов.
+        
+        Raises:
+            RuntimeError: Если метод вызван у обычного (не синглтон) объекта.
+        """
+        cls = type(self)
+        
+        # Строгая проверка: вызывать можно ТОЛЬКО у пустого синглтона
+        if self is not cls._singleton_instance or not self.is_empty:
+            raise RuntimeError(
+                f"Метод load_single_block предназначен только для пустого синглтона. "
+                f"Вызов у рабочего объекта '{self.filename}' запрещен."
+            )
+
+        if not path_to_single or not os.path.exists(path_to_single):
+            raise FileNotFoundError(f"Файл одиночного блока не найден: {path_to_single}")
+
+        try:
+            # 1. Создаем абсолютно НОВЫЙ экземпляр в обход __new__
+            new_obj = super().__new__(cls)
+            new_obj._initialized = False
+            
+            # 2. Наполняем свойства нового объекта через __slots__
+            new_obj.file_path = path_to_single
+            new_obj.is_empty = False
+            new_obj.is_single = True
+            new_obj.filename = os.path.basename(path_to_single)
+            new_obj.file_size = os.path.getsize(path_to_single)
+            new_obj.dbrev = dbrev
+            new_obj.segsize = segsize
+            
+            # 3. Вызываем внутренний метод генерации имени группы QGIS
+            # Используем ИМЕННО new_obj.filename, так как у исходного синглтона имя пустое
+            new_obj.QGISvdoGroupName = f"sngl_{new_obj.filename}_0x{new_obj.file_size:X}"
+            new_obj._initialized = True
+            
+            # 4. КРИТИЧЕСКИЙ ШАГ: Сбрасываем ссылку на синглтон в классе.
+            cls._singleton_instance = None
+            
+            # 5. Возвращаем новый созданный объект наружу
+            return new_obj
+            
+        except OSError as e:
+            raise RuntimeError(f"Ошибка при инициализации файла одиночного блока: {e}")
 
     # def get_huffman_weights(self) -> dict:
     #     """
@@ -205,11 +347,6 @@ class VDO_FILE():
     #             weights[key_id] = value_weight
     #         ptr += HUFFMAN_PAIR_SIZE
     #     return weights
-
-    def empty(self) -> None:
-        self.path = None
-        self.dbrev = DEFAULT_DB_REVISION
-        self.segsize = DEFAULT_ONE_SEG_SIZE
 
     # def generate_canonical_lookup(self, weights_table):
     #     """Строит каноническую lookup-мапу: { бинарная_строка: int_байт }"""
@@ -336,6 +473,7 @@ class VDO_FILE():
     
 # ================================================
 
+
 class BYTESTRUCT:
     """Base for other data structures"""
 
@@ -343,6 +481,8 @@ class BYTESTRUCT:
     __slots__ = ("_raw",)
 
     def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
+        if not (isinstance(buffer, ReadableBuffer) or isinstance(buffer, memoryview) or isinstance(buffer, bytearray)):
+            raise TypeError("buffer must be ReadableBuffer", type(buffer))
         # Создаем memoryview. Если buffer уже memoryview, избегаем двойного оборачивания
         view = buffer if isinstance(buffer, memoryview) else memoryview(buffer)
         self._raw: memoryview = view[:size]
@@ -409,18 +549,6 @@ class BYTESTRUCT:
     def uint(self, near_offset: int = 0) -> int:
         """Return unsigned int (4 bytes, dword), offset from _raw begin"""
         return struct_UINT.unpack_from(self._raw, near_offset)[0]
-    
-
-# # Глобальный синглтон-заглушка для пустых VDO объектов, чтобы не плодить инстансы в памяти
-# class EmptyVDO:
-#     segsize = DEFAULT_ONE_SEG_SIZE  # дефолтный размер сегмента для безопасных математических операций
-#     dbrev = DEFAULT_DB_REVISION
-#     path = ""
-#     file_size = 0
-
-
-# # EMPTY_VDO = EmptyVDO()
-EMPTY_VDO = VDO_FILE()
 
 
 class BLADDR(BYTESTRUCT):
@@ -436,14 +564,13 @@ class BLADDR(BYTESTRUCT):
         # Передаем буфер строго фиксированной длины в базовый класс
         super().__init__(buffer, size=UINT_BYTES_CNT)
         
-        # Экономим память: не создаем новый VDO_FILE() на каждый чих
-        if not vdo or self.value == 0:
-            self.vdo = EMPTY_VDO
+        # Экономим память: создаем новый VDO_FILE() - singletone
+        if vdo is None:
+            self.vdo = VDO_FILE()    # EMPTY_VDO
+        elif isinstance(vdo, VDO_FILE):
+            self.vdo = vdo
         else:
-            if isinstance(vdo, VDO_FILE):
-                self.vdo = vdo
-            else:
-                raise ValueError(f"vdo должен быть или VDO_FILE или никаким, но не {type(vdo)}")
+            raise AttributeError(f"vdo должен быть или VDO_FILE или никаким, но не {type(vdo)}")
 
     @property
     def isZero(self) -> bool:
@@ -485,7 +612,7 @@ class BLADDR(BYTESTRUCT):
         return f'{self.blocknumber:06x} {self._raw[3]:02x}'
 
     def __repr__(self) -> str:
-        v = '' if self.vdo.path else ' virt'
+        v = ' virt' if self.vdo.is_empty else ''
         return self.hex + v
     
     def _check_context(self, other: 'BLADDR') -> None:
@@ -593,10 +720,15 @@ class FAR_LIST(BYTESTRUCT):
         
         # Защита от создания лишних тяжелых инстансов VDO
         # Используем встроенное свойство uint базового класса для мгновенной проверки первых 4 байт
-        if not vdo or self.uint(0) == 0:
-            self.vdo = EMPTY_VDO
+        if vdo is None:
+            self.vdo = VDO_FILE()    # EMPTY_VDO
+        elif isinstance(vdo, VDO_FILE):
+            if self.uint(0) == 0:
+                self.vdo = VDO_FILE()    # EMPTY_VDO
+            else:
+                self.vdo = vdo
         else:
-            self.vdo = vdo
+            raise AttributeError(f"vdo '{vdo}' is not VDO_FILE: {type(vdo)}")
             
         # ОПТИМИЗАЦИЯ: Создаем дочерние структуры ОДИН раз при инициализации.
         # Передаем zero-copy срезы memoryview, чтобы избежать копирования байт.
@@ -652,10 +784,15 @@ class CH_IDX(BYTESTRUCT):
         super().__init__(buffer, size=self.size)
         
         # Используем глобальный EMPTY_VDO, если контекст не задан или адрес пустой
-        if not vdo or self.uint(0) == 0:
-            self.vdo = EMPTY_VDO
+        if vdo is None:
+            self.vdo = VDO_FILE()    # EMPTY_VDO
+        elif isinstance(vdo, VDO_FILE):
+            if self.uint(0) == 0:
+                self.vdo = VDO_FILE()    # EMPTY_VDO
+            else:
+                self.vdo = vdo
         else:
-            self.vdo = vdo
+            raise AttributeError(f"У vdo неверный тип: {type(vdo)}")
 
         # ОПТИМИЗАЦИЯ: Создаем и кэшируем вложенные типы строго один раз при инициализации
         self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
@@ -708,12 +845,14 @@ class BLSTART(BYTESTRUCT):
     def __init__(self, buffer: ReadableBuffer, vdo: Union[VDO_FILE, None] = None) -> None:
         if len(buffer) < self.size:
             raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
+        if vdo is not None and not isinstance(vdo, VDO_FILE):
+            raise TypeError(f"Тип vdo {len(buffer)} не VDO_FILE и не None")
             
         super().__init__(buffer, size=self.size)
         
         # Используем оптимизированный синглтон-заглушку
         if not vdo or self.uint(0) == 0:
-            self.vdo = EMPTY_VDO
+            self.vdo = VDO_FILE()    # EMPTY_VDO
         else:
             self.vdo = vdo
 
@@ -721,7 +860,7 @@ class BLSTART(BYTESTRUCT):
         self._bladdr_obj = BLADDR(self._raw[:4], self.vdo)
 
     def __repr__(self) -> str:
-        v = '' if self.vdo.path else ' virt'
+        v = 'virt ' if self.vdo.is_empty else ''
         try:
             type_name = self.bltype.name
         except ValueError:

@@ -1,4 +1,6 @@
 import pytest   # type: ignore # noqa
+import os
+
 from QGIS_VDO.vdo.datatypes import setup_known_types
 
 
@@ -35,3 +37,32 @@ def test_setup_known_types_non_exist_path():
     result_dict = setup_known_types(blocks_dir=non_exists_path)
 
     assert result_dict == {}
+
+
+def test_setup_known_types_returns_empty_dict_on_os_error(monkeypatch):
+    """
+    Проверяет, что если при чтении директории возникает OSError (например, PermissionError),
+    функцияsetup_known_types не падает, а безопасно возвращает пустой словарь.
+    """
+    # 1. Задаем фейковый существующий путь, чтобы пройти проверку os.path.exists
+    fake_dir = "/fake/existing/blocks/dir"
+    
+    # Подменяем os.path.exists, чтобы он вернул True для нашей фейковой папки
+    monkeypatch.setattr(os.path, "exists", lambda path: path == fake_dir or os.path.exists(path))
+
+    # 2. Имитируем системную ошибку внутри os.listdir
+    def mock_listdir(path):
+        if path == fake_dir:
+            # Бросаем стандартное системное исключение (наследник OSError)
+            raise PermissionError("[Errno 13] Permission denied")
+        return os.listdir(path)   # pragma: no cover
+
+    monkeypatch.setattr(os, "listdir", mock_listdir)
+
+    # 3. Вызываем тестируемую функцию
+    # Замените путь импорта setup_known_types на ваш актуальный
+    result = setup_known_types(blocks_dir=fake_dir)
+
+    # 4. Проверяем, что исключение перехвачено и возвращен пустой словарь
+    assert result == {}
+    assert isinstance(result, dict)

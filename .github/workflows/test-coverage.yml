@@ -1,0 +1,58 @@
+name: QGIS Plugin Tests (Docker + Coverage)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    container:
+      image: qgis/qgis:release-3_34
+      options: --user root
+
+    env:
+      PYTHONPATH: /__w/QGIS_VDO/QGIS_VDO:/usr/share/qgis/python/plugins:/usr/share/qgis/python
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Cache pip packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-docker-
+
+      - name: Install system dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends xvfb python3-pip
+
+      # 1. Добавляем pytest-cov в список установки
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pytest pytest-qgis bitarray pytest-cov
+
+      # 2. Запускаем тесты с флагами покрытия
+      - name: Run pytest with coverage
+        run: |
+          xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
+            -v \
+            --cov=QGIS_VDO \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov
+
+      # 3. Сохраняем HTML-отчет в артефакты GitHub, чтобы его можно было скачать
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: htmlcov/
+          retention-days: 14

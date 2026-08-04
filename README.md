@@ -188,21 +188,64 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [ ] раскраска полигонов
 
 
-* [x] запрет commit при наличии ошибок flake8
-* [x] запрет commit при наличии ошибок pytest
+* [x] refactor 
+    * [x] COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
+    * [x] VDO_FILE single block load
+    * [x] COORD precalculated_coord _do_calculate_lon_lat on init
+
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
-* [x] refactor COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
 * [ ] почистить bitstream? av_, v_, ??
-* [ ] Settings show RecentFiles
-* [ ] 
-* [ ] 
+* [ ] Settings show RecentFiles qty
+
+* [ ] tests
+    * [x] локально организовать
+    * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
+    * [x] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
+    * [x] vdo.datatypes 100 %
+    * [x] vdo.geotypes 100 %
+    * [x] settings 99 %
+    * [x] thread 36 %
+    * [x] block_base 100 %
+    * [x] block_0x12 100 %
+    * [x] block_0x13 100 %
+    * [x] запрет commit при наличии ошибок flake8
+    * [x] запрет commit при наличии ошибок pytest
+
+* [ ] github workflow
+    * [x] отключить запрет коммитов в main напрямую
+    * [ ] отладить Action tests - на qgis docker образе
+    * [ ] отладить Action tests - запуск при мерже в main
+    * [ ] отладить Action release - запуск вручную
+    * [ ] включить запрет коммитов в main напрямую
+
+
+
+
+* [ ] выводить процент покрытия кода прямо в README.md репозитория в виде динамического бейджа (badge)
 * [ ] 
 
 
 где искать qtutils
 c:/OSGeo4W/apps/Qt5/bin/designer.exe 
 
+pytest --cov=your_source_folder_name --cov-report=html
+pytest --cov=your_source_folder_name --cov-report=html --cov-show-missing
+
+
+
+Разделяет пул тестов между ядрами процессора.
+pip install pytest-xdist
+# Запустить тесты на всех доступных ядрах процессора
+pytest -n auto
+
+
+pytest --durations=10  # Показать 10 самых долгих тестов и фикстур
+pytest --durations=0   # Показать время выполнения вообще всех тестов
+
+пределяет, какие именно тесты вызывают измененные методы класса
+pip install pytest-testmon
+pytest --testmon
 
 
 

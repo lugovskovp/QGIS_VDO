@@ -2,8 +2,9 @@ import pytest   # type: ignore # noqa
 from QGIS_VDO.vdo.datatypes import BLSTART, BlockType
 
 
-def test_blstart_init_too_small_buffer(custom_vdo):
+def test_blstart_init_too_small_buffer(all_vdo_fixture):
     """Попытка создания из маленького буфера"""
+    custom_vdo, _ = all_vdo_fixture
     buffer = b'\01' * 3
 
     with pytest.raises(TypeError):
@@ -24,12 +25,14 @@ def test_blstart_init_wrong_vdo():
     buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
     wrong_vdo = 'la-la-la'
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         head = BLSTART(buffer, wrong_vdo)   # noqa
 
 
-def test_blstart_headhex(custom_vdo):
+def test_blstart_headhex(all_vdo_fixture):
     """Строковое представление заголовка в соответствии с разметкой байт."""
+    custom_vdo, _ = all_vdo_fixture
+
     buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
     
     head = BLSTART(buffer, vdo=custom_vdo)
@@ -37,13 +40,15 @@ def test_blstart_headhex(custom_vdo):
     assert head.headhex() == '00000105 0012 00 00'
 
 
-def test_blstart_uncompressed_block(custom_vdo):
+def test_blstart_uncompressed_block(all_vdo_fixture):
     """Тест парсинга несжатого блока известного типа (ABSTRACT=0x12)."""
     # 8 байт:
     # [0:4] -> BLADDR (block 1, segcnt 5)
     # [4:6] -> Type 0x0012 (ABSTRACT)
     #   -> Is_arch = 0 (Не сжато)
     #   -> Unarch_size = 0
+    custom_vdo, _ = all_vdo_fixture
+
     buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
     
     head = BLSTART(buffer, vdo=custom_vdo)
@@ -55,11 +60,13 @@ def test_blstart_uncompressed_block(custom_vdo):
     assert head.sizeofblock == 5 * custom_vdo.segsize
 
 
-def test_blstart_compressed_block(custom_vdo):
+def test_blstart_compressed_block(all_vdo_fixture):
     """Тест парсинга сжатого блока (COUNTRY=0x0A) со своими сегментами."""
     # [4:6] -> Type 0x000A (COUNTRY)
     #   -> Is_arch = 2 (zlib)
     #   -> Unarch_size = 12 сегментов
+    custom_vdo, _ = all_vdo_fixture
+
     buffer = b'\x00\x00\x01\x05\x00\x0A\x02\x0C'
     
     head = BLSTART(buffer, vdo=custom_vdo)
@@ -70,8 +77,10 @@ def test_blstart_compressed_block(custom_vdo):
     assert head.sizeofblock == 12 * custom_vdo.segsize
 
 
-def test_blstart_unknown_type_safety(custom_vdo):
+def test_blstart_unknown_type_safety(all_vdo_fixture):
     """Проверка защиты от падения (ValueError) при встрече с неизвестным типом блока."""
+    custom_vdo, _ = all_vdo_fixture
+
     # Передаем несуществующий тип типа 0x9999
     buffer = b'\x00\x00\x01\x05\x99\x99\x00\x00'
     head = BLSTART(buffer, vdo=custom_vdo)
@@ -79,8 +88,10 @@ def test_blstart_unknown_type_safety(custom_vdo):
     assert head.bltype == BlockType.UNKNOWN
 
 
-def test_blstart_slots_and_caching(custom_vdo):
+def test_blstart_slots_and_caching(all_vdo_fixture):
     """Проверка сохранения идентичности кэша свойств и изоляции slots."""
+    custom_vdo, _ = all_vdo_fixture
+
     buffer = b'\x00\x00\x01\x05\x00\x12\x00\x00'
     head = BLSTART(buffer, vdo=custom_vdo)
     

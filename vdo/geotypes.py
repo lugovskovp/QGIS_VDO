@@ -14,13 +14,13 @@ functions:
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
-import ctypes
+# import ctypes
 # import re
 import struct
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:                   # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
     from _typeshed import ReadableBuffer
 else:
@@ -29,7 +29,7 @@ else:
 
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
-from QGIS_VDO.vdo.consts import struct_UINT, struct_2UINT
+from QGIS_VDO.vdo.consts import struct_2UINT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
@@ -49,8 +49,8 @@ TSTR_struct = struct.Struct(">Hbb")
 
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
-MULCOORD = 0x54C563     # dec 5555555 - волшебный коэффициент перевода.
-                        
+MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный коэффициент перевода.
+
 MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
 
 # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
@@ -66,7 +66,7 @@ class COORD(BYTESTRUCT):
     #_lat: float         # double lat = 1.0f * hlat / MULCOORD;
     
     # Регистрируем новые атрибуты экземпляра. Память теперь идеальна, __dict__ нет.
-    __slots__ = ('_hlon', '_hlat')
+    __slots__ = ('_hlon', '_hlat', '_precalculatet_lon', '_precalculatet_lat')
     
     size: int = DOUBLE_BYTES_CNT
 
@@ -85,6 +85,7 @@ class COORD(BYTESTRUCT):
             
             # Быстро распаковываем сразу оба dword за один проход на Си
             self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
+            self._do_calculate_lon_lat()
             return
 
         # Сценарий B: На входе два целых числа (hlon, hlat)
@@ -96,6 +97,7 @@ class COORD(BYTESTRUCT):
             # Упаковываем сразу 8 байт
             coo_bytes = struct_2UINT.pack(self._hlon, self._hlat)
             super().__init__(coo_bytes)
+            self._do_calculate_lon_lat()
             return
 
         # Сценарий C: На входе две координаты float (в градусах)
@@ -109,6 +111,7 @@ class COORD(BYTESTRUCT):
             
             coo_bytes = struct_2UINT.pack(hlongtitude, hlatitude)
             super().__init__(coo_bytes)
+            self._do_calculate_lon_lat()
             return
 
         else:
@@ -131,12 +134,17 @@ class COORD(BYTESTRUCT):
     @property
     def lon(self) -> float:
         """ Longtitude, x, w|e """
-        return (self._hlongtitude / MULCOORD) - 30
+        return self._precalculatet_lon
 
     @property
     def lat(self) -> float:
         """ Latitude, y, n/s """
-        return self._hlatitude / MULCOORD
+        return self._precalculatet_lat
+
+    def _do_calculate_lon_lat(self):
+        """Предрасчет при инициализации lon, lat для кеширования"""
+        self._precalculatet_lon = (self._hlongtitude / MULCOORD) - 30
+        self._precalculatet_lat = self._hlatitude / MULCOORD
 
     def as_tuple(self) -> tuple[float, float]:
         """ Быстрый экспорт в формате (lon, lat) для QGIS (например, для QgsPointXY) """
@@ -159,20 +167,26 @@ class COORD(BYTESTRUCT):
         d_lon = self.lon - other.lon
         return f"lat:{d_lat:.2f}° x lon:{d_lon:.2f}°"
 
+    # COORD
+
 
 class MAP_AREA(BYTESTRUCT):
     ''' Near offs 0x20 - координаты нижнего левого и верхнего правого, 0x32 - масштаб '''  # noqa: E501
+    
+    # Регистрируем атрибуты экземпляра для оптимизации памяти и C-style быстродействия
+    __slots__ = ('left_bottom', 'right_top', '_scale')
+    
     size: int = 20
 
     def __init__(self, buffer: bytearray) -> None:
         super().__init__(buffer[:self.size])
         self.left_bottom = COORD(self._raw[0:COORD.size])
-        self.rigth_top = COORD(self._raw[COORD.size:(COORD.size * 2)])
+        self.right_top = COORD(self._raw[COORD.size:(COORD.size * 2)])
         self._scale = self.ushort(0x12)    # 2**scale, на сколько сдвигать влево ху вертекса чтобы получить координаты   # noqa: E501
     
     def __repr__(self):
         ''' View while debug value '''
-        val = "{:s}  {:s}".format(self.left_bottom.__repr__(), self.rigth_top.__repr__())   # noqa: E501
+        val = "{:s}  {:s}".format(self.left_bottom.__repr__(), self.right_top.__repr__())   # noqa: E501
         return val
     
     @property
@@ -182,18 +196,20 @@ class MAP_AREA(BYTESTRUCT):
            1,85224768519 км в одной минуте, делим на 60 секунд:
          0,0308707947531 км (30,8707947531 м) в одной секунде.'''
         KM_IN_DEGREE = 111.134861111
-        grad = (KM_IN_DEGREE * (self.rigth_top._hlon - self.left_bottom._hlon)) / MULCOORD      # mul = 5555555 # noqa: E501
-        val = '{:x}*{:x} ({:0.3f}km)'.format((self.rigth_top._hlat - self.left_bottom._hlat),   # noqa: E501
-                                             (self.rigth_top._hlon - self.left_bottom._hlon),   # noqa: E501
+        grad = (KM_IN_DEGREE * (self.right_top._hlon - self.left_bottom._hlon)) / MULCOORD      # mul = 5555555 # noqa: E501
+        val = '{:x}*{:x} ({:0.3f}km)'.format((self.right_top._hlat - self.left_bottom._hlat),   # noqa: E501
+                                             (self.right_top._hlon - self.left_bottom._hlon),   # noqa: E501
                                              grad)          # noqa: E501
         return val
        
     @property
     def max_vrt_val(self) -> str:
         ''' Максимально возможное значение Х или Y вертекса'''
-        max_x = (self.rigth_top._hlon - self.left_bottom._hlon) >> self._scale
-        max_y = (self.rigth_top._hlat - self.left_bottom._hlat) >> self._scale
+        max_x = (self.right_top._hlon - self.left_bottom._hlon) >> self._scale
+        max_y = (self.right_top._hlat - self.left_bottom._hlat) >> self._scale
         return "{:04X} {:04X}".format(max_x, max_y)
+
+    # MAP_AREA
 
 
 # -------------------------------------------------------------------------
@@ -202,40 +218,45 @@ class MAP_AREA(BYTESTRUCT):
 # ----
 class GEO_CATEGORY(BYTESTRUCT):
     '''GEO CATEGORY портотип?, используемый класс - дочерний'''
-    cat: en_GEO_CATEGORY | None = None
-    draw: en_DRAW_TYPE | None = None  # SHAPE = 0, POLILINE = 1
-    cnt: int = 0    # сколько элементов в категории (расчетом, разница со следующим ptr
-    ptr: int = 0    # near на первый объект
-    obj_size: int = 0          # shape size = 0x14, line = 0x10
-    size: int = 4               # b b w
+    
+    # Жестко резервируем память под атрибуты экземпляра. __dict__ отсутствует.
+    __slots__ = ('category', 'draw', 'obj_size', 'cnt', 'ptr')
+    
+    size: int = 4  # b b w
 
-    def __init__(self, buffer) -> None:
+    def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
         """
-        size = 4, но в следующих 4 есть следующий CAT, с ptr, и по их разнице
-                получим количество элементов этой категории
+        Принимает буфер (минимум 8 байт для GEO_CATEGORY_struct),
+        но сохраняет в базовый класс только свои 4 байта.
         """
-        (cat, draw, ptr, next_draw, next_ptr) = GEO_CATEGORY_struct.unpack(buffer)
-        # 4 важны, для инициализации нужны ещё ptr следущего
+        # Распаковываем данные (требуется 8 байт из-за структуры GEO_CATEGORY_struct)
+        (cat, draw, ptr, next_draw, next_ptr) = GEO_CATEGORY_struct.unpack(buffer[:8])
+        
+        # Передаем базовому классу строго его 4 байта
         super().__init__(buffer[:self.size])
+        
         self.category = en_GEO_CATEGORY(cat)
         self.draw = en_DRAW_TYPE(draw)
-        self.obj_size = 0x10 if draw else 0x14  # 0x10 if POLILINE else if SHAPE 0x14
+        self.obj_size = 0x10 if draw else 0x14  # 0x10 if POLILINE else 0x14
+        
+        # Вычисляем количество элементов
         self.cnt = int((next_ptr - ptr) / self.obj_size)
-        # последний полигон, если не нулевой след полилайн - пустой по значениям
-        if not draw and next_draw:  # draw = 0 and next_draw=1
+        
+        # Корректировка для последнего полигона
+        if not draw and next_draw:  # draw == 0 (SHAPE) и next_draw == 1 (POLILINE)
             self.cnt -= 1
+            
         self.ptr = ptr
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' View while debug value'''
         name = self.draw.name if self.draw else 'NOT DEFINED'
-        val = f"{name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
-        return val
+        return f"{name} {self.category.name}[{self.cnt}] :0x{self.ptr:02x}"
     
     def __str__(self) -> str:
         return self.__repr__()
 
-    pass  # GEO_CATEGORY_PROTO
+    # GEO_CATEGORY
 
 
 # ----
@@ -249,118 +270,149 @@ class GEO_SHAPE(BYTESTRUCT):
         2h = 00 00 - aligment (??? or POI?)
         2h - ptr2 list strPtr
     '''
-    size: int = 0x14              # ptr ptr dword qword w ptr
-    name: str = ''
+    
+    # Жестко фиксируем память под все атрибуты экземпляра. __dict__ удален.
+    __slots__ = (
+        'p_str_name',
+        'ptr_vrtx',
+        'cnt_vrtx',
+        'id',
+        'coord',
+        'ptr_tstr',
+        'name',
+        'cat'
+    )
+    
+    size: int = 0x14  # 20 байт
 
     def __init__(self, buffer: ReadableBuffer, category: en_GEO_CATEGORY) -> None:
         OFFSET_COORD = 8
-        VRTX_OBJ_SIZE = 4       # word x, word y
-        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(memoryview(buffer)[:(self.size * 2)])  # noqa: E501
-        super().__init__(memoryview(buffer)[:self.size])  # первые 0x14 в raw, для инициализации нужны ещё ptr следущего # noqa: E501
-        self.p_str_name = p_str_name    # begin zero-ended string
+        VRTX_OBJ_SIZE = 4  # word x, word y
+        
+        # Оптимизация: берем срез memoryview один раз, чтобы не плодить объекты в цикле/парсере
+        mem_buf = memoryview(buffer)
+        
+        # Для распаковки следующего ptr_vrtx нам нужно прочитать 2 структуры (self.size * 2)
+        # Использование структуры GEO_SHAPE_struct.unpack_from эффективнее, так как не создает срез
+        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack_from(mem_buf, 0)
+        
+        # Передаем базовому классу только его размер (0x14)
+        super().__init__(mem_buf[:self.size])
+        
+        self.p_str_name = p_str_name  # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.id = id
+        
+        # Метод self.read() должен возвращать байты из self._raw
         self.coord = COORD(self.read(OFFSET_COORD, COORD.size))
         self.ptr_tstr = ptr_tstr
         self.name = "Proto shape. Need read from parent"
         self.cat = category
-        pass
-  
-    def __repr__(self):
-        ''' View while debug value'''
+
+    def __repr__(self) -> str:
+        ''' View while debug value '''
         name = self.cat.name if self.cat else "NOT DEFINED"
-        val = f"{name}:[{self.cnt_vrtx}] {self.name}"
-        return val
-    pass    # GEO_SHAPE_PROTO
+        return f"{name}:[{self.cnt_vrtx}] {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    # GEO_SHAPE
 
 
 # ----
 
 class GEO_LINE(BYTESTRUCT):
     '''
-    # noqa: E501
     Geo segment of line - poligon
         2h - PTR         p_str_name - ptr2str/0;    nullable
         2h - PTR         ptr_vrtx       p_vertexes_obj; ptr2vertexes
         4h - DWORD       id
-                // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
         2h - PTR   tstr_regi      ptr_linesign, p_line_sign; // Or start pstr
         2h - WORD  or_b_or_c;   (??? lenght? time for drive???)
         2h - PTR   tstr_name         ptr_tstr   gbr border - 04  p_p_str_name; // ptr to GEO_OBJ_STR
         4h - WORD   or_38_or_0_b_country; ???en_country??? gbr border - 0
     '''
-    size: int = 0x10              # ptr ptr dword qword w ptr
-    name: str = ''
-    cnt_vrtx: int = 0
+    
+    # Резервируем память под все атрибуты экземпляра. Снижает потребление RAM и ускоряет доступ.
+    __slots__ = (
+        'p_str_name',
+        'ptr_vrtx',
+        'id',
+        'POI_regi',
+        'or_b_or_c',
+        'tstr_name',
+        'or_38_or_0_b_country',
+        'cnt_vrtx',
+        'name',
+        'cat'
+    )
+    
+    size: int = 0x10  # 16 байт
 
-    def __init__(self, buffer: bytearray, category: en_GEO_CATEGORY) -> None:
+    def __init__(self, buffer: bytearray | bytes | memoryview, category: en_GEO_CATEGORY) -> None:
         VRTX_OBJ_SIZE = 4       # word x, word y
+        
+        # Оптимизация: создаем memoryview один раз для прямого чтения без создания копий буфера
+        mem_buf = memoryview(buffer)
+        
+        # Используем unpack_from для чтения данных на Си-уровне без нарезки buffer[:size*2]
         (p_str_name,
          ptr_vrtx,
          id,
-         POI_regi,      # p_line_sign; // Or start pstr // START POI
+         POI_regi,
          or_b_or_c,
-         tstr_name,      # p_p_str_name; // ptr to GEO_OBJ_STR
+         tstr_name,
          or_38_or_0_b_country,
-         next_ptr_vrtx) = GEO_LINE_struct.unpack(buffer[:(self.size * 2)])  # noqa: E501
-        super().__init__(buffer[:self.size])  # первые 0x10 в raw
+         next_ptr_vrtx) = GEO_LINE_struct.unpack_from(mem_buf, 0)
+         
+        # Передаем базовому классу первые 16 байт (size)
+        super().__init__(mem_buf[:self.size])
+        
         self.p_str_name = p_str_name           # begin zero-ended string
-        self.ptr_vrtx = ptr_vrtx         # begin vertexes
+        self.ptr_vrtx = ptr_vrtx               # begin vertexes
         self.id = id
-        self.POI_regi = POI_regi      # ptstr - but strange, unkn
-        self.or_b_or_c = or_b_or_c   # named as "b or c" but bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
-        self.tstr_name = tstr_name    # ptr to GEO_OBJ_STR
-        self.or_38_or_0_b_country = or_38_or_0_b_country    # last 2 butes - strange w|o system length?)  or_38_or_0_b_country; # noqa: E501
+        self.POI_regi = POI_regi               # ptstr - but strange, unkn
+        self.or_b_or_c = or_b_or_c             # estimated length or travel time
+        self.tstr_name = tstr_name             # ptr to GEO_OBJ_STR
+        self.or_38_or_0_b_country = or_38_or_0_b_country
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.name = "Proto line. Need read from parent"
         self.cat = category
-        """
-        blnum = struct_UINT.pack(0x03c68a03)    # bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad = 0 # noqa: E501
-        self.or_b_or_c
-        
-        [1C98 011C, 1F0F 0021]
-        679 - расстояние по пифагору
-        0xdb 219 - значение
 
-        0 0x10:[noLang]: e77
-        [1A06 0082, 1BE1 0000]
-        [1A06,0082], [1BE1, 0000]
-        492
-        0x95 149
-
-        ROAD_HIGHWAY:[2] e77
-        [7F83 3040, 80A4 2FD0]
-        [7F83,3040], [80A4,2FD0]
-        309,94
-        0x80  128
-
-        вообще похоже на оценочную длинну? время?
-        """
-        return
-    
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' View while debug value '''
         name = self.cat.name if self.cat else "NOT DEFINED"
-        val = f"{name}:[{self.cnt_vrtx}] {self.name}"
-        return val
-    pass    # GEO_LINE_PROTO
+        return f"{name}:[{self.cnt_vrtx}] {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+    # GEO_LINE
 
 
 # ----
 class VERTEX(BYTESTRUCT):
     '''' прототип класса вертекса - координаты ХY точек на map area карты'''
+    
+    # Фиксируем слоты для полей координат. __dict__ отсутствует.
+    __slots__ = ('_x', '_y')
+    
     size: int = 4   # размер элемента класса в байтах
 
-    def __init__(self, buffer: bytearray) -> None:
-        """ """
-        if len(buffer) < self.size:
-            (self._x, self._y) = (None, None)
+    def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
+        mem_buf = memoryview(buffer)
+        
+        if len(mem_buf) < self.size:
+            # Инициализируем родительский слот пустой памятью, чтобы не ломать архитектуру __slots__
+            super().__init__(mem_buf[:0])
+            self._x = None
+            self._y = None
             return
-        super().__init__(buffer[:self.size])
-        (self._x, self._y) = VERTEX_struct.unpack(buffer)
-        # self.x = self.ushort(0)
-        # self.y = self.ushort(2)
+            
+        super().__init__(mem_buf[:self.size])
+        # Распаковываем напрямую из memoryview без создания промежуточных объектов в RAM
+        self._x, self._y = VERTEX_struct.unpack_from(mem_buf, 0)
     
     @property
     def x(self) -> int | None:        # координата х
@@ -370,14 +422,19 @@ class VERTEX(BYTESTRUCT):
     def y(self) -> int | None:        # координата y
         return self._y
 
-    def getXY(self) -> tuple:
-        return (self.x, self.y)
+    def getXY(self) -> tuple[int | None, int | None]:
+        return (self._x, self._y)
     
     def __repr__(self) -> str:
         ''' View vertex hex val - debug value '''
-        val = "{:04X} {:04X}".format(self.x, self.y)
-        return val
-    pass    # VERTEX_PROTO
+        if self._x is None or self._y is None:
+            return "INVALID VERTEX (EMPTY BUF)"
+        return "{:04X} {:04X}".format(self._x, self._y)
+
+    def __str__(self) -> str:
+        return self.__repr__()
+    
+    # VERTEX_PROTO
 
 
 # ----
@@ -385,9 +442,9 @@ class TSTR(BYTESTRUCT):
     """
     прототип TSTR - набора переводов/синонимов
             typedef struct{
-            PTR p_str;
-            en_LANGUAGE lang;
-            en_GEO_OBJ_STR str_type;
+        0    PTR p_str;
+        2    en_LANGUAGE lang;
+        3    en_GEO_OBJ_STR str_type;
             typedef enum <uchar>{
                 __shape =   0,
                 __alias =   2,
@@ -395,39 +452,71 @@ class TSTR(BYTESTRUCT):
                 __poliline =0x10
             }en_GEO_OBJ_STR
     """
+    
+    # Фиксируем слоты для всех полей экземпляра класса. __dict__ полностью удален.
+    __slots__ = ('p_str', 'lang', 'geotype', 'name')
+    
     size: int = 4   # размер элемента класса в байтах
 
-    def __init__(self, buffer: bytearray) -> None:
-        """ """
+    def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
+        # Сохраняем первые 4 байта в базовый класс
         super().__init__(buffer[:self.size])
-        (self.p_str, lang, obj_type) = TSTR_struct.unpack(self._raw)
+        
+        # Распаковываем данные из сохраненного memoryview (_raw)
+        (p_str, lang, obj_type) = TSTR_struct.unpack(self._raw)
+        
+        self.p_str = p_str
         self.lang = en_CARINET_LANGUAGE(lang)
         self.geotype = hex(obj_type)
         self.name = "Proto. Name set where called"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' View while debug value '''
-        val = f"{self.lang.value} {self.geotype}:[{self.lang.name}]: {self.name}"
-        return val
-    pass    # GEO_LINE_PROTO
+        return f"{self.lang.value} {self.geotype}:[{self.lang.name}]: {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+    # TSTR
 
 
 class POI_CATEGORY(BYTESTRUCT):
     """
     POI_CATEGORY 3*DWORD
-        QWORD   POIs  FAR_LIST
-        WORD    en_POI_CATEGORY - enum тип, категория POI
-        WORD    reference_addr_start  В 0x0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
+    0     QWORD   POIs  FAR_LIST
+    8     WORD    en_POI_CATEGORY - enum тип, категория POI
+    10    WORD    reference_addr_start  В 0x0a - УКАЗЫВАЕТ НА НАЧАЛО СТРОКОВЫХ ДАННЫХ '''
     """
-    bytescnt: int = 12  # 3*DWORD 0a 0c размер элемента класса в байтах
+    
+    # Жестко резервируем память под все атрибуты экземпляра. __dict__ удален.
+    __slots__ = ('fl_POIs', 'poi_type', 'p_str', 'name')
+    
+    size: int = 12  # 3*DWORD = 12 байт
 
     def __init__(self, buffer: ReadableBuffer, parent_vdo: VDO_FILE) -> None:
-        """ """
-        super().__init__(memoryview(buffer)[:self.bytescnt])
-        self.fl_POIs = FAR_LIST(self.read(0, FAR_LIST.size), parent_vdo)
-        self.poi_type = en_POI_CAT(self.ushort(8))  # offs en_POI_CATEGORY - enum тип, категория POI # noqa
+        mem_buf = memoryview(buffer)
+        
+        # Передаем буфер в родительский BYTESTRUCT (срез до 12 байт через self.size)
+        super().__init__(mem_buf[:self.size])
+        
+        # Оптимизация: берем zero-copy срез напрямую из сохраненного self._raw
+        self.fl_POIs = FAR_LIST(self._raw[0:FAR_LIST.size], parent_vdo)
+        
+        # Извлекаем тип категории (unsigned short по смещению 8)
+        self.poi_type = en_POI_CAT(self.ushort(8))
+        
+        # Извлекаем указатель на строковые данные (unsigned short по смещению 10)
         self.p_str = self.ushort(10)
+        
+        # Инициализируем имя по умолчанию
         self.name = "Proto. Name set where called"
+
+    def __repr__(self) -> str:
+        ''' View while debug value '''
+        return f"{self.poi_type.name} [{self.fl_POIs.hex}] -> 0x{self.p_str:04X}: {self.name}"
+
+    def __str__(self) -> str:
+        return self.__repr__()
 
     # @property
     # def fl_POIs(self):
@@ -451,23 +540,23 @@ class POI_CATEGORY(BYTESTRUCT):
 # -------------------------------------------------------------------------
 # functions
 
-def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
-    """
-    Create COORD by hex_vdo values lo + la
-        Args:
-            # lon - x we, lat - y sn
-        Returns:
-            res: COORD
-    """
-    # to unsigned dword
-    hex_latitude = ctypes.c_uint32(hex_latitude).value
-    hex_longtude = ctypes.c_uint32(hex_longtude).value
+# def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
+#     """
+#     Create COORD by hex_vdo values lo + la
+#         Args:
+#             # lon - x we, lat - y sn
+#         Returns:
+#             res: COORD
+#     """
+#     # to unsigned dword
+#     hex_latitude = ctypes.c_uint32(hex_latitude).value
+#     hex_longtude = ctypes.c_uint32(hex_longtude).value
 
-    # to bytes
-    coo_by = (struct_UINT.pack(hex_longtude)
-              + struct_UINT.pack(hex_latitude))
-    res = COORD(coo_by)
-    return res
+#     # to bytes
+#     coo_by = (struct_UINT.pack(hex_longtude)
+#               + struct_UINT.pack(hex_latitude))
+#     res = COORD(coo_by)
+#     return res
     """
     hex_latitude = 0xffffffff & hex_latitude    # to dword
     if hex_latitude < 0:                        # Negative val
@@ -529,31 +618,31 @@ def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
 #     return res
 
 
-def normLatLng(n_latitude: float, e_longtude: float):
-    ''' Нормализует координаты в градусах (широта, долгота)
-        возвращает нормализованные (N_lat, E_lng)
-    Args:
-        n_latitude: float   # Широта, latitude градусы
-        e_longtude: float   # Долгота, longtitude градусы
-    Returns:
-        coordinates: tuple(N_lat: float, E_lng: float)
-    '''
-    # избавление от кратности круга (370 = 10), КРОМЕ ЭТОГО ПЕРЕВОД В -110 % 360 = 250
-    E_lng = float(e_longtude) % 360
-    N_lat = float(n_latitude) % 360
-    # При переходе в противоположное полушарие широты, долгота +=180
-    if 90 < N_lat < 270:     # II and III quadrant.
-        # 100N = 80N     # Долгота, longtitude 0 -> 90 -> 0-> -90 -> 0
-        N_lat = 180 - n_latitude
-        # перепрыг в иное полушарие
-        E_lng += 180
-    # избавление от кратности круга (370 = 10)
-    N_lat = float(N_lat) % 360
-    E_lng = float(E_lng) % 360
-    # N-S, E-W
-    E_lng = E_lng - 360 if E_lng > 180 else E_lng      # 270E = 90W = -90E; 190E = -170E
-    N_lat = N_lat - 360 if N_lat > 180 else N_lat      # 350N = -10N
-    return (N_lat, E_lng)
+# def normLatLng(n_latitude: float, e_longtude: float):
+#     ''' Нормализует координаты в градусах (широта, долгота)
+#         возвращает нормализованные (N_lat, E_lng)
+#     Args:
+#         n_latitude: float   # Широта, latitude градусы
+#         e_longtude: float   # Долгота, longtitude градусы
+#     Returns:
+#         coordinates: tuple(N_lat: float, E_lng: float)
+#     '''
+#     # избавление от кратности круга (370 = 10), КРОМЕ ЭТОГО ПЕРЕВОД В -110 % 360 = 250
+#     E_lng = float(e_longtude) % 360
+#     N_lat = float(n_latitude) % 360
+#     # При переходе в противоположное полушарие широты, долгота +=180
+#     if 90 < N_lat < 270:     # II and III quadrant.
+#         # 100N = 80N     # Долгота, longtitude 0 -> 90 -> 0-> -90 -> 0
+#         N_lat = 180 - n_latitude
+#         # перепрыг в иное полушарие
+#         E_lng += 180
+#     # избавление от кратности круга (370 = 10)
+#     N_lat = float(N_lat) % 360
+#     E_lng = float(E_lng) % 360
+#     # N-S, E-W
+#     E_lng = E_lng - 360 if E_lng > 180 else E_lng      # 270E = 90W = -90E; 190E = -170E
+#     N_lat = N_lat - 360 if N_lat > 180 else N_lat      # 350N = -10N
+#     return (N_lat, E_lng)
 
 # -------------------------------------------------------------------------
 

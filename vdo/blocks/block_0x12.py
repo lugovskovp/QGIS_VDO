@@ -44,7 +44,7 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 
 from QGIS_VDO.vdo.enums import BlockType
 from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR, FAR_LIST
-from QGIS_VDO.vdo.datatypes import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
+# from QGIS_VDO.vdo.datatypes import OFFSET_DB_REVISION, OFFSET_ONE_SEG_SIZE
 from QGIS_VDO.vdo.geotypes import COORD
 from QGIS_VDO.vdo.block_base import block_base
 
@@ -72,116 +72,109 @@ OFFSET_AREA_B = 0x50
 
 
 class block_0x12(block_base):
-    ''' Самый первый, 0й, уникальный и единственный блок type = 0x12 '''
+    """Самый первый, 0-й, уникальный и единственный блок (type = 0x12)."""
+
+    # Жестко фиксируем локальные свойства экземпляра дочернего класса.
+    # Свойства родителя ('vdo', 'is_unpacked', и др.) здесь НЕ дублируются.
+    __slots__ = ('cd_map',)
 
     def __init__(self, unused_bladdr: BLADDR) -> None:
-        """ --- """
         vdo: VDO_FILE = unused_bladdr.vdo
+        # Принудительно инициализируем базовый класс с адресом нулевого блока
         bladdr0x12 = BLADDR(b'\x00\x00\x00\x01', vdo)
+        
+        # Вызов super().__init__ создаст все слоты родительского класса
         super().__init__(bladdr0x12)
+        
+        # Инициализируем наш слот. Запись в некомпилированные атрибуты теперь вызовет AttributeError
         self.cd_map = None
-        # в русской версии, где dbrev == 30  карты вообще нет
-        if self.get_dbrev == 34:
-            # карта размещения групп блоков на CD, кроме 08, 09, 19, 1a, 1b, 1f
+        
+        # В русской версии (dbrev == 30) карты размещения блоков на CD вообще нет
+        if self.dbrev == 34:
             CD_MAP_ITEM_SIZE = 0x10
             self.cd_map = {}
-            l_cd_map = self.list(OFFSET_CD_MAP_BLOCKS)
-            for i in range(l_cd_map.cnt):
-                # zTzz, BLADDR idxidx08, BLADDR firstBl, BLADDR lastBl; len=0x10
-                raw = self.read(l_cd_map.ptr + i * CD_MAP_ITEM_SIZE, CD_MAP_ITEM_SIZE)
-                type = BlockType(raw[1])       # второй байт - тип блока
-                idxidx08 = BLADDR(raw[4:8], self.vdo)
-                first = BLADDR(raw[8:12], self.vdo)      # BLADDR firstBlock
-                last = BLADDR(raw[12:16], self.vdo)      # BLADDR lastBlock
-                self.cd_map[type] = {"first" : first,
-                                     "last" : last,
-                                     "idxidx08" : idxidx08}
-
-                pass
-            pass
+            l_cd_map = self.read_list(OFFSET_CD_MAP_BLOCKS)
             
+            for i in range(l_cd_map.cnt):
+                # Структура элемента: zTzz (4b), BLADDR idxidx08 (4b), BLADDR firstBl (4b), BLADDR lastBl (4b)
+                raw = self.read(l_cd_map.ptr + i * CD_MAP_ITEM_SIZE, CD_MAP_ITEM_SIZE)
+                
+                # Достаем байт типа ДО попытки преобразования в Enum
+                type_byte = raw[1]
+                
+                try:
+                    block_type = BlockType(type_byte)
+                except ValueError:
+                    # Жестко роняем приложение, как и задумано, но с понятным сообщением
+                    raise ValueError(
+                        f"Все типы блоков известны, но встретился неизвестный тип: 0x{type_byte:02X}"
+                    )
+                
+                idxidx08 = BLADDR(raw[4:8], self.vdo)
+                first = BLADDR(raw[8:12], self.vdo)
+                last = BLADDR(raw[12:16], self.vdo)
+                
+                self.cd_map[block_type] = {
+                    "first": first,
+                    "last": last,
+                    "idxidx08": idxidx08
+                }
+
     # -------------------------------------------------------
-
-    @property
-    def get_segsize(self) -> int:
-        """ size of one segment """
-        return self.ushort(OFFSET_ONE_SEG_SIZE)
-
-    @property
-    def get_dbrev(self) -> int:
-        """ carindb revision """
-        return self.ushort(OFFSET_DB_REVISION)
+    # Свойства блока (Вычитка флагов и адресов связанных блоков)
 
     @property
     def likely_const_ALLWAYS_12(self) -> int:
-        """ not sure: max segments in unpacked block """
+        """Предположительно: максимальное количество сегментов в распакованном блоке."""
         return self.ushort(OFFSET_ALLWAYS_12)
 
     @property
     def likely_MAX_SEGS_UNPACKED(self) -> int:
-        """ вероятно, максимальное количество сегментов в распакованном"""
+        """Вероятно, максимальное количество сегментов в распакованном виде."""
         return self.ushort(OFFSET_MAX_SEGS_UNPACKED_SH)
 
     @property
     def bladdr_bibliogr(self) -> BLADDR:
-        """
-        Return:
-            BLADDR: BIBLIOGR type 0x13
-        """
+        """Возвращает адрес блока BIBLIOGR (тип 0x13)."""
         return self.read_bladdr(OFFSET_BLADDR_13_BIBLIOGR)
 
     @property
     def bladdr_scales(self) -> BLADDR:
-        """
-        Return:
-            BLADDR: SCALES type 0x07
-        """
-        li_scales = self.list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
+        """Возвращает адрес блока SCALES (тип 0x07)."""
+        li_scales = self.read_list(OFFSET_LIST_PTR_07_LST_WORLD_SCALES)
         return self.read_bladdr(li_scales.ptr)
-        # 000002 01 : 0001:0000 cnt:0 34
-        # 000002 01 : 0001:0000 cnt:0 30
-        # 000003 04 : 0001:0000 cnt:0 bmw
 
     def get_farlist_ch_country(self) -> FAR_LIST:
-        """
-        Return:
-            FAR_LIST: CH_country type 0x0b  and list of ch # fully parsed chars idxs
-        """
-        return self.farlist(OFFSET_FARLIST_0B_CH_COUNTRYES)
+        """Возвращает структуру FAR_LIST для стран CH_country (тип 0x0b)."""
+        return self.read_farlist(OFFSET_FARLIST_0B_CH_COUNTRYES)
 
     @property
     def bladdr_ch_country(self) -> FAR_LIST:
-        """
-        Return:
-            BLADDR: CH_country type 0x0b  # fully parsed chars idxs
-        """
+        """Возвращает адрес BLADDR из структуры FAR_LIST стран CH_country."""
         return self.get_farlist_ch_country().bladdr
+
+    # -------------------------------------------------------
+    # Географические границы прямоугольных областей карты
 
     @property
     def area_A(self) -> tuple[COORD, COORD] | None:
-        """
-        Return (coord(left_bott), coort(right_top))
-        """
+        """Ограничивающий прямоугольник области A (left_bottom, right_top)."""
         if self.dbrev != 34:
-            # db_rev=30 - w|o rectangle area
             return None
-        lb = self.coord(OFFSET_AREA_A)                    # left bottom
-        rt = self.coord(OFFSET_AREA_A + COORD.size)       # right top
+        lb = self.read_coord(OFFSET_AREA_A)
+        rt = self.read_coord(OFFSET_AREA_A + COORD.size)
         return (lb, rt)
 
     @property
     def area_B(self) -> tuple[COORD, COORD] | None:
-        """
-        Return (coord(left_bott), coort(right_top))
-        """
+        """Ограничивающий прямоугольник области B (left_bottom, right_top)."""
         if self.dbrev != 34:
-            # db_rev=30 - w|o rectangle area
             return None
-        lb = self.coord(OFFSET_AREA_B)                    # left bottom
-        rt = self.coord(OFFSET_AREA_A + COORD.size)       # right top
+        lb = self.read_coord(OFFSET_AREA_B)
+        rt = self.read_coord(OFFSET_AREA_B + COORD.size)
         return (lb, rt)
 
-
+    
 """
 # noqa: E501
 

@@ -1,4 +1,41 @@
 
+"""
+BIBLIOGR = 0x13
+
+typedef struct{
+    BL_HEAD head; // заголовок
+// local size-offset для LIST
+    local ushort size <format=hex, hidden=true> = head.addr.size * 0x800; // size of this block
+    local uint   offset < hidden=true> = head.addr.offset;     // absolute block offset
+    if(head.is_compressed){
+        DWORD   q[4]<bgcolor=cLtPurple>;
+        break;
+    }
+    LIST data;
+    LIST coord;
+
+//:data
+    CONST_S hex0001(1);
+    WORD db_ver <comment="=bibliogr.DB-REL  (30/34) ex unkn_1Eh_or_22h", bgcolor=cLtBlue, fgcolor=cYellow>;
+    LIST   chr_label; // cnt = chrs + \0?
+    LIST   chr_descr; // description string
+//:coord
+   // CONST_I c1(0x69f6bc7); CONST_I c2(0xd3ed78e); //DWORD   dec111111111, dec222222222
+   // CONST_I c3(0x13de4355); CONST_I c4(0x1a7daf1c); //DWORD   dec333333333, dec444444444
+    LON_LAT corner_bott_left, corner_upper_right;
+    
+    CONST_S hex0001(1);
+    CONST_S hex0001(1);
+    WORD db_ver_again <comment="=bibliogr.DB-REL  (30/34) ex unkn_1Eh_or_22h", bgcolor=cLtBlue, fgcolor=cYellow>;
+    LIST   chr_all_least_str;
+    CONST_S align(0);
+    
+    char label[chr_label.cnt]<bgcolor=cLtGreen, fgcolor=cBlue>;
+    char description[chr_descr.cnt]<bgcolor=cLtGreen, fgcolor=cBlue>;
+    char all_info[chr_all_least_str.cnt]<bgcolor=cLtGreen, fgcolor=cBlue>;
+
+"""
+
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR
 
@@ -11,20 +48,14 @@ class block_0x13(block_base):
     '''
     class BlockType(enum.Enum):    BIBLIOGR = 0x13
     '''
+    __slots__ = ('str_label', 'str_description', 'str_information')
+                 
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
 
-    @property
-    def str_label(self):
-        return self.read_li_str(OFFSET_LIST_STR_LABEL)
-
-    @property
-    def str_description(self):
-        return self.read_li_str(OFFSET_LIST_STR_DESCRIPTION)
-
-    @property
-    def str_information(self):
-        return self.read_li_str(OFFSET_LIST_STR_INFORMATION)
+        self.str_label = self.read_li_str(OFFSET_LIST_STR_LABEL)
+        self.str_description = self.read_li_str(OFFSET_LIST_STR_DESCRIPTION)
+        self.str_information = self.read_li_str(OFFSET_LIST_STR_INFORMATION)
 
 
 # -------------------------------------------------------------------------
@@ -32,8 +63,8 @@ class block_0x13(block_base):
 if __name__ == '__main__':  # pragma: no cover
     # Весь этот блок теперь официально игнорируется тестами
     
-    from vdo.datatypes import VDO_FILE, BYTESTRUCT
-    from vdo.blocks import block_0x12
+    from QGIS_VDO.vdo.datatypes import VDO_FILE, BYTESTRUCT
+    from QGIS_VDO.vdo.blocks import block_0x12
 
     fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
     vdo30 = VDO_FILE(fpath30)
@@ -50,8 +81,18 @@ if __name__ == '__main__':  # pragma: no cover
     vdo = vdobmv
     vdo = vdo34
     vdo = vdoRu
-    bla = BLADDR(b'\x00\x00\x00\x01', vdo)
+    vdo = vdo30
 
+    bla = BLADDR(b'\x00\x00\x01\x01', vdo)
+    inf = block_0x13(bla)
+
+    vdo = VDO_FILE()
+    bla = BLADDR(b'\x00\x00\x01\x01', vdo)
+    inf = block_0x13(bla)
+    inf.write_raw()
+
+    vdo = VDO_FILE("tests/fixtures/carindb30_0h_9000h.bin")
+    vdo_bl = VDO_FILE("tests/fixtures/block_0x13_v30.bin")
     #
     tos = block_0x12(vdo)
     inf = block_0x13(tos.bladdr_bibliogr)

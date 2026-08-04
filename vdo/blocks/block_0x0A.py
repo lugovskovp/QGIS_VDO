@@ -6,6 +6,8 @@ lzw packeble
 """
 import struct
 
+from typing import Iterator
+
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, BLADDR, LIST, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import OFFSET_TOC
@@ -117,6 +119,8 @@ class MORE_INFO_0xA(BYTESTRUCT):
             16: const DWORD =33; 20: const DWORD =44
         Example:
             (00 00 00 0b 00 00 00 16 00 00 00 21 00 00 00 2c )
+
+            а не MAP_AREA ли это??????
         """
         (c1, c2, c3, c4) = struct.unpack(">LLLL", self._raw[8:24])
         if c1 != 11 or c2 != 22 or c3 != 33 or c4 != 44:
@@ -171,20 +175,19 @@ class MORE_INFO_0xA(BYTESTRUCT):
         """
         40: +WORD    en_eng_strname - enum United Nations - номер в списке стран ООН 
                                 (на актуальный составлению год) United Nations
-# noqa: E501, W291
-vdoRu
-Предоставленный вами список не имеет отношения к ООН. Данный перечень — это база данных 
-европейских стран из автомобильной навигационной системы (вероятнее всего, карт семейства 
-TeleAtlas).
-Это можно легко определить по техническим признакам структуры списка:
-Наличие Ватикана (id 229), Монако (id 141), Сан-Марино (id 183) и Андорры (id 5): 
-Эти микрогосударства включены в список, так как они нанесены на дорожные карты Европы, 
-хотя Ватикан не является членом ООН (имеет статус постоянного наблюдателя).
-Специфические ID: Числа рядом с названиями — это внутренние системные идентификаторы 
-регионов навигационного диска или прошивки, а не официальные коды ООН или ISO.
-Ошибки кодировки: Символы вроде espańa (Испания) и cittŕ (Ватикан) выдают классический 
-сбой расширенной кодировки ASCII (Latin-1 / ISO-8859-1), которая использовалась в старых 
-бортовых компьютерах автомобилей в конце 2000-х — первой половине 2010-х годов
+        # noqa: E501, W291
+        vdoRu
+        Предоставленный вами список база данных европейских стран из автомобильной 
+        навигационной системы (вероятнее всего, карт семейства TeleAtlas).
+        Это можно легко определить по техническим признакам структуры списка:
+        Наличие Ватикана (id 229), Монако (id 141), Сан-Марино (id 183) и Андорры (id 5): 
+        Эти микрогосударства включены в список, так как они нанесены на дорожные карты Европы, 
+        хотя Ватикан не является членом ООН (имеет статус постоянного наблюдателя).
+        Специфические ID: Числа рядом с названиями — это внутренние системные идентификаторы 
+        регионов навигационного диска или прошивки, а не официальные коды ООН или ISO.
+        Ошибки кодировки: Символы вроде espańa (Испания) и cittŕ (Ватикан) выдают классический 
+        сбой расширенной кодировки ASCII (Latin-1 / ISO-8859-1), которая использовалась в старых 
+        бортовых компьютерах автомобилей в конце 2000-х — первой половине 2010-х годов
         """
         ret = en_TeleAtlasRegion(self.ushort(40))
         return ret
@@ -226,10 +229,10 @@ class block_0x0A(block_base):
     @property
     def li_toc(self):
         """ LIST to table of contents """
-        return self.list(OFFSET_TOC)
+        return self.read_list(OFFSET_TOC)
 
-    def get_brifs(self, li: LIST) -> BRIF_0xA:
-        """ Генератор BRIF_0xA из li: ptr-cnt
+    def get_brifs(self, li: LIST) -> Iterator[BRIF_0xA]:
+        """ Итератор BRIF_0xA из li: ptr-cnt
         Args:
             li: LIST - ptr-cnt массива BRIF_0xA
         Yelds:
@@ -271,9 +274,9 @@ class block_0x0A(block_base):
 
 if __name__ == '__main__':
 
-    from vdo.datatypes import CH_IDX
-    from vdo.blocks import block_0x12
-    from vdo.blocks import block_0x0B
+    from QGIS_VDO.vdo.datatypes import CH_IDX
+    from QGIS_VDO.vdo.blocks import block_0x12
+    from QGIS_VDO.vdo.blocks import block_0x0B
 
     vdo2 = VDO_FILE()
 

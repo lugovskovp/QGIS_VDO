@@ -1,0 +1,11 @@
+repos:
+  - repo: local
+    hooks:
+      - id: pytest-testmon
+        name: Pytest Testmon (Affected tests only)
+        entry: pytest --testmon
+        language: system
+        # Важно: отключаем передачу имени файла кода в аргументы pytest
+        pass_filenames: false  
+        always_run: true
+        args: ["-p", "no:cov", "-q"]

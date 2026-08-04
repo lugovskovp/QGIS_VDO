@@ -15,3 +15,4 @@ ui_files/citroen_kbd_dialog.ui
 .coverage
 htmlcov/
 _base_block.bin
+.testmondata

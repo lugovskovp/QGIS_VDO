@@ -1,15 +1,15 @@
 import pytest   # type: ignore # noqa
 # import struct
 # import os
-# import zlib
+import zlib
 
 # from typing import Any, Union
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 # from types import MethodType
 
-from QGIS_VDO.vdo.block_base import block_base
+from QGIS_VDO.vdo.block_base import block_base, COMPRESSION_REGISTRY
 from QGIS_VDO.vdo.geotypes import COORD
-from QGIS_VDO.vdo.datatypes import BLADDR, BLSTART, FAR_LIST, PTR, CH_IDX, LIST
+from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR, BLSTART, FAR_LIST, PTR, CH_IDX, LIST
 # from QGIS_VDO.vdo.enums import en_POI_CAT
 # from QGIS_VDO.vdo.consts import struct_UINT
 
@@ -180,3 +180,50 @@ def test_block_base_write_raw(real_block):
         real_block.write_raw("test_dump_block.bin")
         mock_file.assert_called_once_with("test_dump_block.bin", "wb")
         mock_file().write.assert_called_once()
+
+
+#  --- 5. Тесты для покрытия ошибок декомпрессии
+
+# Определяем имя тестового файла из вашего набора фикстур
+TEST_FILE = "tests/fixtures/block_0x13_v34_0x200_zlib.bin"
+
+
+def test_block_base_zlib_error_handling():
+    """
+    Проверяет, что при возникновении zlib.error во время декомпрессии
+    блок не падает, а корректно сохраняет исходный буфер и выставляет is_unpacked = False.
+    """
+    # Создаем мок-функцию декомпрессии, которая всегда выбрасывает zlib.error
+    mock_decoder = MagicMock(side_effect=zlib.error("Data error during decompression"))
+    
+    # Временно подменяем декодер в глобальном реестре COMPRESSION_REGISTRY.
+    # Предполагаем, что у тестового блока arch_type равен, например, 2.
+    # (Замените '2' на реальный arch_type вашего тестового файла, если он отличается)
+    with patch.dict(COMPRESSION_REGISTRY, {2: mock_decoder}):
+        
+        # Загружаем одиночный блок через пустой синглтон VDO_FILE
+        block = VDO_FILE().load_single_block(TEST_FILE)
+        
+        # Проверяем, что сработала ветка except:
+        assert block.is_unpacked is False
+        
+        # Проверяем, что данные внутри блока остались исходными (сырыми), а не распакованными
+        # (Так как super().__init__(buffer) отработал в ветке except)
+        assert len(block._raw) > 0  # Буфер не пустой, содержит оригинальные байты
+
+
+def test_block_base_value_error_handling():
+    """
+    Проверяет, что при возникновении ValueError во время декомпрессии
+    блок восстанавливает сырой буфер и выставляет флаг ошибки распаковки.
+    """
+    # Мок-функция, выбрасывающая ValueError (например, некорректный размер заголовка)
+    mock_decoder = MagicMock(side_effect=ValueError("Invalid packed data size"))
+    
+    with patch.dict(COMPRESSION_REGISTRY, {2: mock_decoder}):
+        
+        block = VDO_FILE().load_single_block(TEST_FILE)
+        
+        # Убеждаемся, что ошибка перехвачена и объект остался в безопасном состоянии
+        assert block.is_unpacked is False
+        assert len(block._raw) > 0

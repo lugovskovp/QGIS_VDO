@@ -73,8 +73,13 @@ class block_base(BYTESTRUCT):
         self._head_cached = None
 
         # 2. Чтение буфера
-        size = BLOCK_0x12_SIZE if addr.blocknumber == 0 else addr.sizeofblock
-        buffer = self.vdo.read(addr.offset, size)
+        if self.vdo.is_single:   # одиночный файл
+            offset = 0
+            size = addr.sizeofblock
+        else:
+            offset = addr.offset
+            size = BLOCK_0x12_SIZE if addr.blocknumber == 0 else addr.sizeofblock
+        buffer = self.vdo.read(offset, size)
         
         if not buffer:
             super().__init__(b"")
@@ -133,6 +138,7 @@ class block_base(BYTESTRUCT):
         if not getattr(self.vdo, 'file_path', None):
             return None
         res = self.head.bladdr.offset + (self.vdo.segsize * self.head.bladdr.segcnt)
+        # TODO: а что делать с vdo.is_single ?
         if res < self.vdo.file_size:
             return res
         return None  # это был последний блок, следущего нет

@@ -62,23 +62,30 @@ class block_base(BYTESTRUCT):
     __slots__ = ('vdo', 'is_unpacked', '_head_cached', 'type', 'type_name')
 
     def __init__(self, addr: BLADDR) -> None:
-        # 1. Валидация на входе
+        # 1. Валидация на входе (теперь строго ожидаем BLADDR, так как get_block его гарантирует)
         if not isinstance(addr, BLADDR):
             raise TypeError(f"addr must be BLADDR, got {type(addr)}")
+            
         if addr.isZero or addr.vdo.is_empty:
-            raise ValueError(f"Cannot initialize block from zero address: {addr.isZero}, or empty VDO: {addr.vdo.is_empty} context")  # noqa
+            raise ValueError(
+                f"Cannot initialize block from zero address: {addr.isZero}, "
+                f"or empty VDO: {addr.vdo.is_empty} context"
+            )
 
         self.vdo = addr.vdo
         self.is_unpacked = True
         self._head_cached = None
 
-        # 2. Чтение буфера
+        # 2. Вычисление смещения и размера буфера (напрямую через слот is_single)
         if self.vdo.is_single:   # одиночный файл
+            self.vdo.file_size = addr.sizeofblock
             offset = 0
-            size = addr.sizeofblock
+            size = self.vdo.file_size  # Слот file_size содержит точный размер этого файла в байтах
         else:
             offset = addr.offset
             size = BLOCK_0x12_SIZE if addr.blocknumber == 0 else addr.sizeofblock
+            
+        # Чтение буфера
         buffer = self.vdo.read(offset, size)
         
         if not buffer:
@@ -91,7 +98,6 @@ class block_base(BYTESTRUCT):
         head_obj = BLSTART(temp_view[:BLSTART.size], self.vdo)
         self._head_cached = head_obj
 
-        #
         self.type = head_obj.bltype.value
         self.type_name = head_obj.bltype.value
 
@@ -104,7 +110,6 @@ class block_base(BYTESTRUCT):
 
         decoder = COMPRESSION_REGISTRY.get(arch_type)
         if decoder is None:
-            # Сюда попадает arch_type == 1 и любые неизвестные типы
             super().__init__(buffer)
             self.is_unpacked = False
             return

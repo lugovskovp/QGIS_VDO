@@ -254,6 +254,14 @@ class VDO_FILE:
         Returns:
             base_block or block type one from KNOWN_TYPES
         """
+        cls = type(self)
+        
+        # Строгая проверка: вызывать можно ТОЛЬКО у пустого синглтона
+        if self is not cls._singleton_instance or not self.is_empty:
+            raise RuntimeError(
+                f"Метод load_single_block предназначен только для пустого синглтона. "
+                f"Вызов у рабочего объекта '{self.filename}' запрещен."
+            )
         
         # Передаем правильный путь к файлу вместо self
         vdo = self._single_create_vdo(path_to_single, *args)

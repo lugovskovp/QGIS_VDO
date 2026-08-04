@@ -207,6 +207,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] settings 99 %
     * [x] thread 36 %
     * [x] block_base 100 %
+    * [x] block_0x12 100 %
+    * [x] block_0x13 100 %
     * [x] запрет commit при наличии ошибок flake8
     * [x] запрет commit при наличии ошибок pytest
 

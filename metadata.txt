@@ -1,12 +1,12 @@
 [general]
-name= Carindb VDO
-icon= resources/plugin.icons/qgis-vdo_i.svg
-version= 0.0.1
+name= CarindbViewer
 qgisMinimumVersion=3.22
 qgisMaximumVersion=4.0
 description=Let discover geodata from CarinDB VDO files
 description[ru]=Просмотр картографической информации из файлов автомобильной навигации Carindb VDO
-about=Carindb VDO discover
+version= 0.0.1
 author=Paul Lugovskov
 email=p.lugovskov@gmail.com
- 
+license=GPLv3
+icon= resources/plugin.icons/qgis-vdo_i.svg
+about=Carindb VDO discover

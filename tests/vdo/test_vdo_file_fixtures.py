@@ -89,6 +89,7 @@ def test_vdo_file_slots_prevent_dynamic_attributes(real_vdo_fixture):
 @pytest.mark.parametrize("slot_name", [
     "file_path",
     "is_empty",
+    "is_single",
     "filename",
     "_initialized",
     "dbrev",

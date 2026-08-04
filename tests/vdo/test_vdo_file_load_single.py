@@ -41,7 +41,7 @@ EXPECTED_SINGLE_METRIC = {
     params=list(EXPECTED_SINGLE_METRIC),
     ids=list(EXPECTED_SINGLE_METRIC)
 )
-def single_block_fixture(request):
+def block_single_fixture(request):
     filename = request.param
     metric = EXPECTED_SINGLE_METRIC[filename]
     
@@ -61,9 +61,9 @@ def single_block_fixture(request):
 # ==================================================================
 
 
-def test_empty_load_single_block(single_block_fixture):
+def test_empty_load_single_block(block_single_fixture):
     """Проверка правильности формирования vdo при загрузке"""
-    block, metric = single_block_fixture
+    block, metric = block_single_fixture
 
     assert block.vdo.is_single
     assert block.vdo.dbrev == metric["expected_dbrev"]
@@ -72,17 +72,17 @@ def test_empty_load_single_block(single_block_fixture):
     assert block.offset_next() is None          # вообще строго верно это для когда только один блок
 
 
-def test_empty_load_single_after_load_single(single_block_fixture):
+def test_empty_load_single_after_load_single(block_single_fixture):
     """Попытка загрузить еще блок после single load"""
-    block, metric = single_block_fixture
+    block, metric = block_single_fixture
 
     with pytest.raises(RuntimeError):
         block.vdo.load_single_block("empty_path")
 
 
-def test_empty__single_create_vdo_after_load_single(single_block_fixture):
+def test_empty__single_create_vdo_after_load_single(block_single_fixture):
     """Попытка загрузить еще блок после single load"""
-    block, metric = single_block_fixture
+    block, metric = block_single_fixture
 
     with pytest.raises(RuntimeError):
         block.vdo._single_create_vdo("до проверки пути там не дойдёт")

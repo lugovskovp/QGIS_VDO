@@ -244,7 +244,7 @@ class VDO_FILE:
         return bl_instance
         pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
 
-    def load_single_block(self, path_to_single: str, *args: Any) -> Any:
+    def load_single_block(self, path_to_single: str, **kwargs: Any) -> Any:
         """
         Загружает одиночный блок и возвращает настроенный контекст VDO_FILE.
         Внутри считывает структуру блока, начиная с 0-го смещения.
@@ -264,7 +264,9 @@ class VDO_FILE:
             )
         
         # Передаем правильный путь к файлу вместо self
-        vdo = self._single_create_vdo(path_to_single, *args)
+        dbrev = kwargs.get('dbrev', 34)
+        segsize = kwargs.get('segsize', 0x800)
+        vdo = self._single_create_vdo(path_to_single, dbrev=dbrev, segsize=segsize)
         
         # Загружаем блок, принудительно считая offset с 0 адреса.
         # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"

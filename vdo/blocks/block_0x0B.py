@@ -3,6 +3,8 @@ CH_country = 0x0b  # fully parsed chars idxs
 0x0B -> 0x0D 0x0F 0x11
 """
 
+from typing import Iterator
+
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR, LIST, CH_IDX, OFFSET_TOC
 
@@ -45,8 +47,8 @@ class block_0x0B(block_base):
                 return chi
         return None
 
-    def get_indexes(self, li: LIST) -> CH_IDX:
-        """ Генератор ch_idx из li: ptr-cnt
+    def get_indexes(self, li: LIST) -> Iterator[CH_IDX]:
+        """ Итератор ch_idx из li: ptr-cnt
         Args:
             li: LIST - ptr-cnt массива ch_idx
         Returns:

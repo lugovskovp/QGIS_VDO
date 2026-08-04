@@ -93,6 +93,7 @@ class VDO_FILE:
     __slots__ = (
         "file_path",
         "is_empty",
+        "is_single",
         "filename",
         "QGISvdoGroupName",
         "_initialized",
@@ -146,6 +147,7 @@ class VDO_FILE:
         if not path_str or not os.path.exists(path_str):
             self.file_path = ""
             self.is_empty = True
+            self.is_single = False
             self.filename = ""
             self.file_size = 0
             self.dbrev = DEFAULT_DB_REVISION
@@ -157,6 +159,7 @@ class VDO_FILE:
         # Настройка свойств для валидного рабочего файла
         self.file_path = path_str
         self.is_empty = False
+        self.is_single = False
         self.filename = os.path.basename(path_str)
         self.file_size = os.path.getsize(self.file_path)
         
@@ -218,7 +221,9 @@ class VDO_FILE:
             return None
             
         head = BLSTART(head_bytes, self)
-        if head.bladdr.offset != offset:
+
+        # Если это НЕ одиночный блок, выполняем строгую проверку смещения
+        if not self.is_single and head.bladdr.offset != offset:
             return None
 
         block_type = head.bltype.value
@@ -238,6 +243,75 @@ class VDO_FILE:
 
         return bl_instance
         pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
+
+    def load_single_block(self, path_to_single: str, *args: Any) -> Any:
+        """
+        Загружает одиночный блок и возвращает настроенный контекст VDO_FILE.
+        Внутри считывает структуру блока, начиная с 0-го смещения.
+        Args:
+            dbrev: int [30, 34]
+            segsize: int [0x800, 0x200]
+        Returns:
+            base_block or block type one from KNOWN_TYPES
+        """
+        
+        # Передаем правильный путь к файлу вместо self
+        vdo = self._single_create_vdo(path_to_single, *args)
+        
+        # Загружаем блок, принудительно считая offset с 0 адреса.
+        # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"
+        block = vdo.get_block(0)
+
+        return block
+
+    def _single_create_vdo(self, path_to_single: str, dbrev: int = 34, segsize: int = 0x800) -> VDO_FILE:
+        """
+        Создаёт vdo для одиночного блока. Метод не изменяет текущий синглтон,
+        а возвращает НОВЫЙ полноценный рабочий экземпляр VDO_FILE,
+        отвязывая его от системы синглтонов.
+        
+        Raises:
+            RuntimeError: Если метод вызван у обычного (не синглтон) объекта.
+        """
+        cls = type(self)
+        
+        # Строгая проверка: вызывать можно ТОЛЬКО у пустого синглтона
+        if self is not cls._singleton_instance or not self.is_empty:
+            raise RuntimeError(
+                f"Метод load_single_block предназначен только для пустого синглтона. "
+                f"Вызов у рабочего объекта '{self.filename}' запрещен."
+            )
+
+        if not path_to_single or not os.path.exists(path_to_single):
+            raise FileNotFoundError(f"Файл одиночного блока не найден: {path_to_single}")
+
+        try:
+            # 1. Создаем абсолютно НОВЫЙ экземпляр в обход __new__
+            new_obj = super().__new__(cls)
+            new_obj._initialized = False
+            
+            # 2. Наполняем свойства нового объекта через __slots__
+            new_obj.file_path = path_to_single
+            new_obj.is_empty = False
+            new_obj.is_single = True
+            new_obj.filename = os.path.basename(path_to_single)
+            new_obj.file_size = os.path.getsize(path_to_single)
+            new_obj.dbrev = dbrev
+            new_obj.segsize = segsize
+            
+            # 3. Вызываем внутренний метод генерации имени группы QGIS
+            # Используем ИМЕННО new_obj.filename, так как у исходного синглтона имя пустое
+            new_obj.QGISvdoGroupName = f"sngl_{new_obj.filename}_0x{new_obj.file_size:X}"
+            new_obj._initialized = True
+            
+            # 4. КРИТИЧЕСКИЙ ШАГ: Сбрасываем ссылку на синглтон в классе.
+            cls._singleton_instance = None
+            
+            # 5. Возвращаем новый созданный объект наружу
+            return new_obj
+            
+        except OSError as e:
+            raise RuntimeError(f"Ошибка при инициализации файла одиночного блока: {e}")
 
     # def get_huffman_weights(self) -> dict:
     #     """
@@ -388,6 +462,7 @@ class VDO_FILE:
 
     
 # ================================================
+
 
 class BYTESTRUCT:
     """Base for other data structures"""

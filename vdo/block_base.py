@@ -135,8 +135,6 @@ class block_base(BYTESTRUCT):
         return f"{packed}{repr(self.head)}"
 
     def offset_next(self) -> Union[int, None]:
-        if not getattr(self.vdo, 'file_path', None):
-            return None
         res = self.head.bladdr.offset + (self.vdo.segsize * self.head.bladdr.segcnt)
         # TODO: а что делать с vdo.is_single ?
         if res < self.vdo.file_size:

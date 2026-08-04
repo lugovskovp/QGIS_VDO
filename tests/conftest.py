@@ -2,6 +2,8 @@ import os
 import sys
 # from unittest.mock import MagicMock
 
+from fixtures import FIXTURES_DIR
+
 # 1. Жесткая настройка путей для всех уровней вложенности
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 EXT_LIBS_DIR = os.path.join(BASE_DIR, "ext_libs")
@@ -65,7 +67,6 @@ from QGIS_VDO.vdo.datatypes import VDO_FILE      # noqa
 from QGIS_VDO.vdo.blocks import block_0x13, block_0x07       # noqa
 
 
-# Словарь ожидаемых значений прямо внутри файла с тестами
 EXPECTED_VDO_METRICS = {"carindb30_0h_9000h.bin": {
                             "dbrev": 30,
                             "segsize": 2048,
@@ -127,7 +128,7 @@ def real_vdo_fixture(request):
     expected = EXPECTED_VDO_METRICS[filename]
     
     # тестовые файлы лежат в папке с тестами
-    file_path = f"tests/fixtures/{filename}"
+    file_path = FIXTURES_DIR / filename
     
     # Дополнительная проверка на случай, если файла физически нет на диске
     if not os.path.exists(file_path):             # pragma: no cover
@@ -159,7 +160,7 @@ def all_vdo_fixture(request):
     expected = EXPECTED_VDO_METRICS[filename]
     
     # тестовые файлы лежат в папке с тестами
-    file_path = f"tests/fixtures/{filename}"
+    file_path = FIXTURES_DIR / filename
             
     vdo = VDO_FILE(file_path)
     return vdo, expected

@@ -66,7 +66,7 @@ class COORD(BYTESTRUCT):
     #_lat: float         # double lat = 1.0f * hlat / MULCOORD;
     
     # Регистрируем новые атрибуты экземпляра. Память теперь идеальна, __dict__ нет.
-    __slots__ = ('_hlon', '_hlat')
+    __slots__ = ('_hlon', '_hlat', '_precalculatet_lon', '_precalculatet_lat')
     
     size: int = DOUBLE_BYTES_CNT
 
@@ -85,6 +85,7 @@ class COORD(BYTESTRUCT):
             
             # Быстро распаковываем сразу оба dword за один проход на Си
             self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
+            self._do_calculate_lon_lat()
             return
 
         # Сценарий B: На входе два целых числа (hlon, hlat)
@@ -96,6 +97,7 @@ class COORD(BYTESTRUCT):
             # Упаковываем сразу 8 байт
             coo_bytes = struct_2UINT.pack(self._hlon, self._hlat)
             super().__init__(coo_bytes)
+            self._do_calculate_lon_lat()
             return
 
         # Сценарий C: На входе две координаты float (в градусах)
@@ -109,6 +111,7 @@ class COORD(BYTESTRUCT):
             
             coo_bytes = struct_2UINT.pack(hlongtitude, hlatitude)
             super().__init__(coo_bytes)
+            self._do_calculate_lon_lat()
             return
 
         else:
@@ -131,12 +134,17 @@ class COORD(BYTESTRUCT):
     @property
     def lon(self) -> float:
         """ Longtitude, x, w|e """
-        return (self._hlongtitude / MULCOORD) - 30
+        return self._precalculatet_lon
 
     @property
     def lat(self) -> float:
         """ Latitude, y, n/s """
-        return self._hlatitude / MULCOORD
+        return self._precalculatet_lat
+
+    def _do_calculate_lon_lat(self):
+        """Предрасчет при инициализации lon, lat для кеширования"""
+        self._precalculatet_lon = (self._hlongtitude / MULCOORD) - 30
+        self._precalculatet_lat = self._hlatitude / MULCOORD
 
     def as_tuple(self) -> tuple[float, float]:
         """ Быстрый экспорт в формате (lon, lat) для QGIS (например, для QgsPointXY) """

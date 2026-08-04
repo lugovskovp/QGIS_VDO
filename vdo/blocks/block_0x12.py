@@ -146,7 +146,7 @@ class block_0x12(block_base):
         Return:
             FAR_LIST: CH_country type 0x0b  and list of ch # fully parsed chars idxs
         """
-        return self.farlist(OFFSET_FARLIST_0B_CH_COUNTRYES)
+        return self.read_farlist(OFFSET_FARLIST_0B_CH_COUNTRYES)
 
     @property
     def bladdr_ch_country(self) -> FAR_LIST:

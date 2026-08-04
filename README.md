@@ -205,7 +205,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
     * [x] vdo.geotypes 100 %
     * [x] settings 99 %
     * [x] thread 36 %
-    * [ ] 
+    * [x] block_base 93 %
     * [ ] 
 
 * [x] запрет commit при наличии ошибок flake8
@@ -220,6 +220,18 @@ c:/OSGeo4W/apps/Qt5/bin/designer.exe
 
 pytest --cov=your_source_folder_name --cov-report=html
 pytest --cov=your_source_folder_name --cov-report=html --cov-show-missing
+
+
+
+Разделяет пул тестов между ядрами процессора.
+
+pip install pytest-xdist
+# Запустить тесты на всех доступных ядрах процессора
+pytest -n auto
+
+
+pytest --durations=10  # Показать 10 самых долгих тестов и фикстур
+pytest --durations=0   # Показать время выполнения вообще всех тестов
 
 
 # i18n

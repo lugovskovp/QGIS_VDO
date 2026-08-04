@@ -39,7 +39,7 @@ def all_vdo(all_vdo_fixture):
 
 
 @pytest.fixture
-def real_block(real_vdo_fixture):
+def real_base_block(real_vdo_fixture):
     """Распаковывает фиктуру контеста и возвращает чистый объект block_base."""
     vdo, _ = real_vdo_fixture
     tos = block_base(vdo.get_bladdr(1))      # 0x12 - from begin 00 00 00 01
@@ -68,74 +68,74 @@ def test_block_base_init_zero_or_empty_vdo(all_vdo):
 
 # --- 2. ТЕСТЫ ДЛЯ READ_STRUCT И ЗАЩИТЫ ТИПОВ (O(1) RUNTIME) ---
 
-def test_block_base_read_struct_invalid_class(real_block):
+def test_block_base_read_struct_invalid_class(real_base_block):
     """Рантайм-защита: отказ в чтении класса, не входящего в _VALID_STRUCTS."""
     with pytest.raises(TypeError, match="не разрешен для чтения"):
-        real_block.read_struct(0, BLSTART)
+        real_base_block.read_struct(0, BLSTART)
 
 
-def test_block_base_read_struct_invalid_offset_type(real_block):
+def test_block_base_read_struct_invalid_offset_type(real_base_block):
     """Рантайм-защита: смещение должно быть строго int."""
     with pytest.raises(TypeError, match="Смещение должно быть int"):
-        real_block.read_struct("0", BLADDR)  # type: ignore
+        real_base_block.read_struct("0", BLADDR)  # type: ignore
 
 
-def test_block_base_read_struct_types_success(real_block):
+def test_block_base_read_struct_types_success(real_base_block):
     """Проверяем чтение всех поддерживаемых структур на реальном блоке."""
-    assert isinstance(real_block.read_bladdr(0), BLADDR)
-    assert isinstance(real_block.read_farlist(0), FAR_LIST)
-    assert isinstance(real_block.read_list(0), LIST)
-    assert isinstance(real_block.read_ptr(0), PTR)
-    assert isinstance(real_block.read_coord(0), COORD)
-    assert isinstance(real_block.read_ch_idx(0), CH_IDX)
+    assert isinstance(real_base_block.read_bladdr(0), BLADDR)
+    assert isinstance(real_base_block.read_farlist(0), FAR_LIST)
+    assert isinstance(real_base_block.read_list(0), LIST)
+    assert isinstance(real_base_block.read_ptr(0), PTR)
+    assert isinstance(real_base_block.read_coord(0), COORD)
+    assert isinstance(real_base_block.read_ch_idx(0), CH_IDX)
 
 
 # --- 3. ТЕСТЫ СВОЙСТВ И СТРОК ---
 
-def test_block_base_properties(real_block):
+def test_block_base_properties(real_base_block):
     """Проверяем базовые прокси-свойства, завязанные на реальный VDO."""
-    assert isinstance(real_block.dbrev, int)
-    assert isinstance(real_block.segsize, int)
-    assert real_block.is_unpacked is True
-    assert isinstance(real_block.head, BLSTART)
+    assert isinstance(real_base_block.dbrev, int)
+    assert isinstance(real_base_block.segsize, int)
+    assert real_base_block.is_unpacked is True
+    assert isinstance(real_base_block.head, BLSTART)
 
 
-def test_block_base_offset_next_behavior(real_block):
+def test_block_base_offset_next_behavior(real_base_block):
     """Проверяем расчет смещения следующего блока или возврат None."""
-    offset = real_block.offset_next()
+    offset = real_base_block.offset_next()
     if offset is not None:
         assert isinstance(offset, int)
         assert offset > 0
     else:
-        assert real_block.vdo.file_path is None
+        assert real_base_block.vdo.file_path is None
 
 
-def test_block_base_read_str_behavior(real_block):
+def test_block_base_read_str_behavior(real_base_block):
     """Тестирование чтения обычных нуль-терминированных строк."""
-    assert real_block.read_str(0) == ''
-    
+    assert real_base_block.read_str(0) == ''
+    # read_str
     with pytest.raises(TypeError, match="Смещение должно быть int"):
-        real_block.read_str("не_инт")
+        real_base_block.read_str("не_инт")
 
 
-def test_block_base_repr_output(real_block):
+def test_block_base_repr_output(real_base_block):
     """Проверяем, что __repr__ не падает и формирует корректную строку."""
-    representation = repr(real_block)
+    representation = repr(real_base_block)
     assert isinstance(representation, str)
-    if real_block.head.arch_type:
+    if real_base_block.head.arch_type:
         assert representation.startswith('@ ')
 
 
 # --- 4. ТЕСТЫ ДЛЯ ИСКЛЮЧИТЕЛЬНЫХ СИТУАЦИЙ (ПОВРЕЖДЕНИЯ ДАННЫХ ИЛИ СЖАТИЕ) ---
 
-def test_block_base_init_empty_buffer_fallback(real_block):
+def test_block_base_init_empty_buffer_fallback(real_base_block):
     """Имитируем внезапный конец файла, когда vdo.read() возвращает пустой буфер."""
 
     # Используем уже существующий валидный адрес из реального блока
-    valid_addr = real_block.head.bladdr
+    valid_addr = real_base_block.head.bladdr
     
     # Подменяем read на уровне класса, чтобы вернуть пустой буфер
-    with patch.object(real_block.vdo.__class__, 'read', return_value=b""):
+    with patch.object(real_base_block.vdo.__class__, 'read', return_value=b""):
         block = block_base(valid_addr)
         
         # Проверяем, что сработал fallback-блок
@@ -174,10 +174,10 @@ def test_block_base_init_corrupted_zlib(real_vdo_fixture):
     #     assert block.is_unpacked is False
 
 
-def test_block_base_write_raw(real_block):
+def test_block_base_write_raw(real_base_block):
     """Тестирование записи дампа блока на диск без реального создания файла."""
     with patch("builtins.open", mock_open()) as mock_file:
-        real_block.write_raw("test_dump_block.bin")
+        real_base_block.write_raw("test_dump_block.bin")
         mock_file.assert_called_once_with("test_dump_block.bin", "wb")
         mock_file().write.assert_called_once()
 
@@ -185,7 +185,19 @@ def test_block_base_write_raw(real_block):
 #  --- 5. Тесты для покрытия ошибок декомпрессии
 
 # Определяем имя тестового файла из вашего набора фикстур
-TEST_FILE = "tests/fixtures/block_0x13_v34_0x200_zlib.bin"
+TEST_ZIP_x13_FILE = "tests/fixtures/block_0x13_v34_0x200_zlib.bin"
+TEST_xee_FILE = "tests/fixtures/block_0xee_v30.bin"
+
+
+def test_block_base_read_str_from_bibliogr():
+    """"""
+    block = VDO_FILE().load_single_block(TEST_xee_FILE)
+    ptr_to_str = block.ushort(0x14)  # li to 'no label'
+    str_label = block.read_str(ptr_to_str)
+
+    # Проверяем, что сработала ветка except:
+    assert block.is_unpacked is True
+    assert str_label == 'no label'
 
 
 def test_block_base_zlib_error_handling():
@@ -202,7 +214,7 @@ def test_block_base_zlib_error_handling():
     with patch.dict(COMPRESSION_REGISTRY, {2: mock_decoder}):
         
         # Загружаем одиночный блок через пустой синглтон VDO_FILE
-        block = VDO_FILE().load_single_block(TEST_FILE)
+        block = VDO_FILE().load_single_block(TEST_ZIP_x13_FILE)
         
         # Проверяем, что сработала ветка except:
         assert block.is_unpacked is False
@@ -222,7 +234,7 @@ def test_block_base_value_error_handling():
     
     with patch.dict(COMPRESSION_REGISTRY, {2: mock_decoder}):
         
-        block = VDO_FILE().load_single_block(TEST_FILE)
+        block = VDO_FILE().load_single_block(TEST_ZIP_x13_FILE)
         
         # Убеждаемся, что ошибка перехвачена и объект остался в безопасном состоянии
         assert block.is_unpacked is False

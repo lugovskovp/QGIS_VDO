@@ -42,7 +42,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install pytest pytest-qgis bitarray pytest-cov
+          # python3 -m pip install pytest pytest-qgis bitarray pytest-cov
           
       #python3 -m pip install --break-system-packages pytest pytest-qgis bitarray pytest-cov
 

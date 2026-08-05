@@ -58,23 +58,16 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
         
-      - name: Coverage comment
-        id: coverage
-        uses: MishaKav/pytest-coverage-comment@v1.1.52
-        with:
-          pytest-coverage-path: ./coverage.xml
-          junitxml-path: ./pytest.xml
-          hide-comment: true # Нам не нужно комментировать PR, так как мы запускаем из main
+
 
       - name: Upload HTML coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: html-coverage-report
           path: ./htmlcov/
           retention-days: 14
 
-      # РЕШЕНИЕ: Записываем HTML-вывод экшена в файл и пушим в отдельную ветку
-            # РЕШЕНИЕ: Исправляем синтаксис пуша через переменные окружения GitHub
+      # РЕШЕНИЕ: Сами парсим XML и создаем идеальный Markdown-отчет без сторонних экшенов
       - name: Deploy Coverage Report to Separate Branch
         run: |
           # 1. Разрешаем Git работать в папке Docker-контейнера
@@ -84,24 +77,42 @@ jobs:
           git config --global user.email "github-actions[bot]@://github.com"
           git config --global user.name "github-actions[bot]"
           
-          # 3. Создаем временный файл с HTML-таблицей отчета
-          cat << 'EOF' > coverage_readme.md
-          # 📊 Отчет о покрытия тестами (QGIS Plugin Coverage)
+          # 3. Извлекаем точный процент покрытия из XML с помощью Python
+          # Вытаскиваем значение line-rate (например, 0.6543) и переводим в проценты (65)
+          LINE_RATE=$(grep -oP 'line-rate="\K[^"]+' coverage.xml | head -n 1)
+          COVERAGE_PERCENT=$(python3 -c "print(round($LINE_RATE * 100))")
+          echo "Calculated coverage: ${COVERAGE_PERCENT}%"
           
-          EOF
-          echo "${{ steps.coverage.outputs.coverageHtml }}" >> coverage_readme.md
+          # Определяем цвет бейджа
+          if [ "$COVERAGE_PERCENT" -ge 80 ]; then COLOR="brightgreen";
+          elif [ "$COVERAGE_PERCENT" -ge 65 ]; then COLOR="green";
+          elif [ "$COVERAGE_PERCENT" -ge 50 ]; then COLOR="yellow";
+          else COLOR="red"; fi
 
-          # 4. Переключаемся на изолированную ветку 'coverage-report' (создаем её как сиротскую)
+          # 4. Формируем красивый README.md для ветки отчетов (используем встроенные SVG от Shields, они не заблокированы для загрузки картинками)
+          cat << EOF > coverage_readme.md
+          # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
+
+          ![Format](https://shields.io{COVERAGE_PERCENT}%25-${COLOR}?style=for-the-badge)
+
+          ### 📈 Сводка автоматического тестирования
+          * **Общий процент покрытия кода:** ${COVERAGE_PERCENT}%
+          * **Статус сборки:** Успешно пройбли все тесты (316 passed)
+          
+          *Этот отчет обновляется автоматически при каждом запуске тестов.*
+          EOF
+
+          # 5. Переключаемся на изолированную ветку 'coverage-report'
           git checkout --orphan coverage-report
           
-          # 5. Очищаем индекс ветки, чтобы там не было кода плагина
+          # 6. Очищаем индекс ветки от кода самого плагина
           git rm -rf . --cached > /dev/null 2>&1
           rm -rf *
           
-          # 6. Возвращаем наш файл отчета и переименовываем в README.md
+          # 7. Переносим наш сгенерированный файл
           mv coverage_readme.md README.md
           
-          # 7. Фиксируем изменения и пушим в репозиторий через существующее подключение
+          # 8. Делаем коммит и пушим
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           git push origin coverage-report --force

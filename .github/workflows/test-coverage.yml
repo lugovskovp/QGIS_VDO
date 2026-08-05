@@ -58,14 +58,11 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
 
-      # 1. ОТПРАВКА В CODECOV
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-commenter@v1.1.52
         with:
-          files: ./coverage.xml
-          # Для публичных репозиториев токен необязателен, но для приватных он нужен:
-          # token: $ {{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
+          pytest-coverage-path: ./coverage.xml
+          junitxml-path: ./pytest.xml
 
       # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB
       - name: Upload HTML coverage artifact

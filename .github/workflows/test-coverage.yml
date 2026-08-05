@@ -39,11 +39,11 @@ jobs:
           apt-get install -y -qq --no-install-recommends xvfb
 
       # ИСПРАВЛЕНИЕ: Ставим зависимости напрямую через встроенный pip с флагом безопасности
+      # ИСПРАВЛЕНИЕ: Исправлен флаг pip для обхода PEP 668
       - name: Install Python dependencies
         run: |
           # python3 -m pip install --break-system-packages --upgrade pip
-          python3 -m pip install --break-system-package pytest pytest-qgis pytest-cov pytest-mock pytest-qt
-          # python3 -m pip install --upgrade pip
+          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt          # python3 -m pip install --upgrade pip
           # python3 -m pip install pytest pytest-qgis bitarray pytest-cov
           
       #python3 -m pip install --break-system-packages pytest pytest-qgis bitarray pytest-cov
@@ -52,7 +52,7 @@ jobs:
         run: |
           xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
             -v \
-            --cov=QGIS_VDO \
+            --cov=. \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov

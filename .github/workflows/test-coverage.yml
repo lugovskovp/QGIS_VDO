@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: qgis/qgis:release-3_44
+      image: qgis/qgis:ltr-3_44
       options: --user root
 
     env:

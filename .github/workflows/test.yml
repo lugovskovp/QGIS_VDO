@@ -1,4 +1,4 @@
-name: ChatGPT Test and Coverage
+name: pip install QGIS_VDO, Test and Coverage
 
 on:
   workflow_dispatch:

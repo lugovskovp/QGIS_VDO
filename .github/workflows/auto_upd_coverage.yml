@@ -64,7 +64,7 @@ jobs:
         with:
           pytest-coverage-path: ./pytest-coverage.txt
           junitxml-path: ./pytest.xml
-          hide-comment: true
+          hide-comment: true # Нам не нужно комментировать PR, так как мы запускаем из main
 
       - name: Upload HTML coverage artifact
         uses: actions/upload-artifact@v4
@@ -73,13 +73,34 @@ jobs:
           path: ./htmlcov/
           retention-days: 14
 
-      - name: Update README
+      # РЕШЕНИЕ: Записываем HTML-вывод экшена в файл и пушим в отдельную ветку
+      - name: Deploy Coverage Report to Separate Branch
         run: |
-          # Обновляем блок комментариев в README.md
-          sed -i '/<!-- Pytest Coverage Comment:Begin -->/,/<!-- Pytest Coverage Comment:End -->/c\<!-- Pytest Coverage Comment:Begin -->\n${{ steps.coverage.outputs.coverageHtml }}\n<!-- Pytest Coverage Comment:End -->' ./README.md
+          # 1. Исправляем ошибку Git "dubious ownership" для безопасной работы внутри Docker
+          git config --global --add safe.directory /github/workspace
+          
+          # 2. Создаем изолированную папку для деплоя
+          mkdir -p deploy_report
+          
+          # 3. Достаем HTML-код таблицы из outputs экшена и сохраняем как README.md
+          cat << 'EOF' > deploy_report/README.md
+          # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
+          
+          EOF
+          
+          # Записываем сгенерированную экшеном таблицу
+          echo "${{ steps.coverage.outputs.coverageHtml }}" >> deploy_report/README.md
 
-      - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'docs: update coverage badge [skip ci]'
-          file_pattern: README.md
+          # 4. Инициализируем чистую ветку и отправляем на GitHub
+          cd deploy_report
+          git init
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout -b coverage-report
+          git add README.md
+          git commit -m "chore: update coverage report [skip ci]"
+          
+          # Безопасный пуш через GITHUB_TOKEN в обход защиты ветки main
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{{ github.repository }}.git" coverage-report --force
+
+

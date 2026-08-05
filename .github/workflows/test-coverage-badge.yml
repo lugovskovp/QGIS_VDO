@@ -65,8 +65,8 @@ jobs:
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@v1
         with:
-          pytest-coverage-path: ./pytest-coverage.txt
-          junitxml-path: ./pytest.xml
+          pytest-coverage-path: /github/workspace/.ci_env/QGIS_VDO/coverage.xml
+          junitxml-path: /github/workspace/.ci_env/QGIS_VDO/pytest.xml
 
       # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB
       - name: Upload HTML coverage artifact

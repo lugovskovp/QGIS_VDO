@@ -41,7 +41,8 @@ jobs:
       # ИСПРАВЛЕНИЕ: Ставим зависимости напрямую через встроенный pip с флагом безопасности
       - name: Install Python dependencies
         run: |
-          ls
+          python3 -m pip install --break-system-packages --upgrade pip
+          python3 -m pip install --break-system-package pytest pytest-qgis pytest-cov pytest-mock pytest-qt
           # python3 -m pip install --upgrade pip
           # python3 -m pip install pytest pytest-qgis bitarray pytest-cov
           

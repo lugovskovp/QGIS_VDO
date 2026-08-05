@@ -221,6 +221,10 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 
+github settings 
+    Enable release immutability Loading
+    Social preview
+
 
 * [ ] выводить процент покрытия кода прямо в README.md репозитория в виде динамического бейджа (badge)
 * [ ] 

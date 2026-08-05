@@ -1,6 +1,6 @@
 [general]
 name= VDOExplorerPlugin
-qgisMinimumVersion=3.22
+qgisMinimumVersion=3.44
 qgisMaximumVersion=4.0
 description=Let discover geodata from CarinDB VDO files
 description[ru]=Просмотр картографической информации из файлов автомобильной навигации Carindb VDO

@@ -46,11 +46,13 @@ try:
 except ImportError:
     logger.info("Библиотека bitarray не найдена. Попытка автоматической установки...")
     try:
-        # sys.executable гарантирует, что мы используем именно тот Python,
-        # в котором сейчас запущен QGIS (включая ваш Docker-контейнер)
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "bitarray"])
+        # ДОБАВЛЕН ФЛАГ --break-system-packages ДЛЯ СОВМЕСТИМОСТИ С DOCKER/LINUX (PEP 668)
+        subprocess.check_call([
+            sys.executable, "-m", "pip",
+            "install", "--break-system-packages", "bitarray"
+        ])
         from bitarray import bitarray                     # type: ignore # noqa
-        from bitarray.util import ba2int    # type: ignore # noqa
+        from bitarray.util import ba2int                  # type: ignore # noqa
         logger.info("Библиотека bitarray успешно установлена!")
     except Exception as e:
         logger.error(f"Не удалось автоматически установить bitarray: {e}")
@@ -63,8 +65,7 @@ except ImportError:
 from QGIS_VDO.ui_files import AnimatedGroupBox   # noqa
 
 
-def classFactory(iface):                # pragma: no cover
-    # Весь этот блок теперь официально игнорируется тестами
+def classFactory(iface):
     """Load VDOExplorerPlugin class from file VDOExplorer.
 
     :param iface: A QGIS interface instance.

@@ -64,6 +64,7 @@
   "python.analysis.typeCheckingMode": "off",
   "python.analysis.languageServerMode": "light",
   "github-actions.workflows.pinned.workflows": [
-    ".github/workflows/test-coverage-badge.yml"
+    ".github/workflows/test-coverage-badge.yml",
+    ".github/workflows/auto_upd_coverage.yml"
   ]
 }

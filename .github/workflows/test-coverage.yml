@@ -13,7 +13,7 @@ jobs:
       options: --user root
 
     env:
-      # Направляем Python в нашу изолированную структуру, где гарантированно будет папка QGIS_VDO
+      # Направляем Python в нашу виртуальную структуру
       PYTHONPATH: /github/workspace/.ci_env:/usr/share/qgis/python/plugins:/usr/share/qgis/python
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
@@ -42,7 +42,7 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt
 
-      # КЛЮЧЕВОЙ ШАГ: Создаем виртуальное окружение для импортов
+      # СОЗДАЕМ ВИРТУАЛЬНОЕ ОКРУЖЕНИЕ ДЛЯ ИМПОРТОВ QGIS_VDO
       - name: Create plugin structure link
         run: |
           mkdir -p /github/workspace/.ci_env
@@ -50,16 +50,10 @@ jobs:
 
       - name: Run pytest with coverage
         run: |
+          # В этом режиме убираем --import-mode=importlib, так как мы сами контролируем sys.path через PYTHONPATH
           xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
             -v \
             --cov=. \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
-
-      - name: Upload HTML coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: html-coverage-report
-          path: htmlcov/
-          retention-days: 28

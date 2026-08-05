@@ -56,13 +56,13 @@ jobs:
             --cov=. \
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
-            --cov-report=html:htmlcov | tee pytest-coverage.txt
+            --cov-report=html:htmlcov
         
       - name: Coverage comment
         id: coverage
         uses: MishaKav/pytest-coverage-comment@v1.1.52
         with:
-          pytest-coverage-path: ./pytest-coverage.txt
+          pytest-coverage-path: ./coverage.xml
           junitxml-path: ./pytest.xml
           hide-comment: true # Нам не нужно комментировать PR, так как мы запускаем из main
 
@@ -77,24 +77,32 @@ jobs:
             # РЕШЕНИЕ: Исправляем синтаксис пуша через переменные окружения GitHub
       - name: Deploy Coverage Report to Separate Branch
         run: |
+          # 1. Разрешаем Git работать в папке Docker-контейнера
           git config --global --add safe.directory /github/workspace
           
+          # 2. Создаем структуру отчета
           mkdir -p deploy_report
-          
           cat << 'EOF' > deploy_report/README.md
           # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
           
           EOF
-          
           echo "${{ steps.coverage.outputs.coverageHtml }}" >> deploy_report/README.md
 
+          # 3. Настраиваем данные пользователя Git
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          # 4. Фиксируем изменения в основной папке проекта, чтобы не ломать структуру
+          # Переходим в чистую папку для отчета
           cd deploy_report
           git init -b coverage-report
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           
-          # Пушим напрямую через системную переменную окружения $GITHUB_REPOSITORY
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com" coverage-report --force
+          # 5. Добавляем удаленный репозиторий, используя авторизацию хоста
+          git remote add origin https://github.com{{ github.repository }}.git
+          
+          # 6. Безопасный пуш без ручного прописывания токенов в URL
+          git push origin coverage-report --force
+
 

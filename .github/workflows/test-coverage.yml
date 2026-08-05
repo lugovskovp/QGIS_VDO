@@ -1,4 +1,4 @@
-name: QGIS Plugin Tests (Docker + Coverage)
+name: QGIS Plugin Release Tests (Docker + Coverage)
 
 on:
   workflow_dispatch:
@@ -21,7 +21,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      # ИСПРАВЛЕНИЕ: Делаем root владельцем домашней папки, чтобы actions/cache и pip работали без ошибок прав
       - name: Fix home directory ownership for caching
         run: chown -R root:root /github/home
 
@@ -33,8 +32,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-docker-
 
-      # ОПТИМИЗАЦИЯ: Убрали python3-pip, так как он уже есть в контейнере QGIS
-      # ОПТИМИЗАЦИЯ: Убрали python3-pip из apt-get
+      # ОПТИМИЗАЦИЯ: Убрали python3-pip из apt-get, так как он уже есть в контейнере QGIS
       - name: Install system dependencies
         run: |
           apt-get update -qq
@@ -43,7 +41,10 @@ jobs:
       # ИСПРАВЛЕНИЕ: Ставим зависимости напрямую через встроенный pip с флагом безопасности
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --break-system-packages pytest pytest-qgis bitarray pytest-cov
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pytest pytest-qgis bitarray pytest-cov
+          
+      #python3 -m pip install --break-system-packages pytest pytest-qgis bitarray pytest-cov
 
       - name: Run pytest with coverage
         run: |

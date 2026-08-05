@@ -1,4 +1,4 @@
-name: QGIS Plugin Release Tests (Docker + Coverage)
+name: QGIS Plugin Tests (Docker + Coverage)
 
 on:
   workflow_dispatch:
@@ -62,11 +62,11 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
 
-      # - name: Pytest coverage comment
-      #   uses: MishaKav/pytest-coverage-commenter@v1.1.52
-      #   with:
-      #     pytest-coverage-path: ./coverage.xml
-      #     junitxml-path: ./pytest.xml
+      - name: Pytest coverage comment
+        uses: MishaKav/pytest-coverage-comment@v1
+        with:
+          pytest-coverage-path: ./coverage.xml
+          junitxml-path: ./pytest.xml
 
       # # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB
       # - name: Upload HTML coverage artifact

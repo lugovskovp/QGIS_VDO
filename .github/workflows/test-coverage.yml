@@ -34,16 +34,16 @@ jobs:
             ${{ runner.os }}-pip-docker-
 
       # ОПТИМИЗАЦИЯ: Убрали python3-pip, так как он уже есть в контейнере QGIS
+      # ОПТИМИЗАЦИЯ: Убрали python3-pip из apt-get
       - name: Install system dependencies
         run: |
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends xvfb
 
-      # ИСПРАВЛЕНИЕ: Теперь pip использует кэш без предупреждений, так как права исправлены выше
+      # ИСПРАВЛЕНИЕ: Ставим зависимости напрямую через встроенный pip с флагом безопасности
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pytest pytest-qgis bitarray pytest-cov
+          python3 -m pip install --break-system-packages pytest pytest-qgis bitarray pytest-cov
 
       - name: Run pytest with coverage
         run: |

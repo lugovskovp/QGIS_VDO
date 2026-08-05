@@ -5,7 +5,7 @@ import pytest   # type: ignore # noqa
 # from QGIS_VDO.vdo.blocks import block_0x12
 from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR
 
-from fixtures import FIXTURES_DIR
+from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
 
 # Словарь ожидаемых значений прямо внутри файла с тестами

@@ -1,3 +1,12 @@
+<!-- Pytest Coverage Comment:Begin -->
+<!-- Pytest Coverage Comment:End -->
+
+# 📊 Отчет о покрытии тестами
+
+Актуальный статус тестов и детальную интерактивную таблицу по каждому файлу плагина смотрите здесь:
+👉 [**Открыть детальный отчет о покрытии**](https://github.com)
+
+
 # About
 Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for view/explore a digital road map database for the CARiN- and VDODayton navigation compatible systems
 

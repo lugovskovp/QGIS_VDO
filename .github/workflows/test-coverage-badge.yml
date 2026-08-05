@@ -1,4 +1,4 @@
-name: QGIS Plugin Tests (Docker + Coverage)
+name: Release Tests (Docker + Coverage Badge)
 
 on:
   workflow_dispatch:
@@ -65,14 +65,14 @@ jobs:
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@v1
         with:
-          pytest-coverage-path: ./QGIS_VDO/coverage.xml
-          junitxml-path: QGIS_VDO/pytest.xml
+          pytest-coverage-path: /github/workspace/.ci_env/QGIS_VDO/coverage.xml
+          junitxml-path: /github/workspace/.ci_env/QGIS_VDO/pytest.xml
 
-      # # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB
-      # - name: Upload HTML coverage artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: html-coverage-report
-      #     path: ./htmlcov/
-      #     retention-days: 14  # Срок хранения артефакта в GitHub (дней)
+      # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB
+      - name: Upload HTML coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: ./htmlcov/
+          retention-days: 14  # Срок хранения артефакта в GitHub (дней)
       

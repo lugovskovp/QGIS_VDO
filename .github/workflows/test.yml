@@ -1,28 +1,65 @@
-name: QGIS Plugin Tests (Smart Isolation)
+name: pip install QGIS_VDO, Test and Coverage
 
 on:
   workflow_dispatch:
 
 jobs:
-  test:
+  install-test-and-coverage:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    
+    container:
+      image: qgis/qgis:3.44.10-noble
+      options: --user root
+
+    env:
+      # Возвращаем стандартные пути QGIS. Локальные импорты теперь завязаны на относительные пути Python
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python
+      QT_QPA_PLATFORM: offscreen
+      PIP_ROOT_USER_ACTION: ignore
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Fix home directory ownership for caching
+        run: chown -R root:root /github/home
+
+      - name: Cache pip packages
+        uses: actions/cache@v5
         with:
-          python-version: '3.10'
-          cache: 'pip'
+          path: /github/home/.cache/pip
+          key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test-coverage.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-docker-
 
-      - name: Install Pytest
+      - name: Install system dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install pytest
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends xvfb
 
-      - name: Run pytest
+      - name: Install Python dependencies and Plugin
         run: |
-          pytest tests/ -v
+          # Устанавливаем утилиты тестирования
+          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt
+          
+          # КЛЮЧЕВОЙ МОМЕНТ: Устанавливаем сам плагин в систему как пакет QGIS_VDO
+          # Флаг -e (editable) свяжет имя QGIS_VDO напрямую с текущей папкой коммита
+          python3 -m pip install --break-system-packages -e .
+
+      - name: Run pytest with coverage
+        run: |
+          xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
+            -v \
+            --import-mode=importlib \
+            --cov=QGIS_VDO \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: htmlcov/
+          retention-days: 28

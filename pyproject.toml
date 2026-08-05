@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "QGIS_VDO"
+version = "0.1.0"
+dependencies = [
+    "bitarray",
+]
+
+# ХАК ДЛЯ АВТООБНАРУЖЕНИЯ МОДУЛЕЙ ПЛАГИНА В КОРНЕ
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vdo*", "ui_files*", "i18n*", "research*", "resources*"]

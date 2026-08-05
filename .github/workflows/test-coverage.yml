@@ -57,3 +57,20 @@ jobs:
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
+
+      # 1. ОТПРАВКА В CODECOV
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          # Для публичных репозиториев токен необязателен, но для приватных он нужен:
+          # token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
+      # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB
+      - name: Upload HTML coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: html-coverage-report
+          path: ./htmlcov/
+          retention-days: 14  # Срок хранения артефакта в GitHub (дней)

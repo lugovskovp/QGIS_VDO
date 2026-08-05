@@ -15,31 +15,36 @@ jobs:
     env:
       PYTHONPATH: /__w/QGIS_VDO/QGIS_VDO:/usr/share/qgis/python/plugins:/usr/share/qgis/python
       QT_QPA_PLATFORM: offscreen
+      PIP_ROOT_USER_ACTION: ignore  # Отключает предупреждение о root для всех шагов
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      # ИСПРАВЛЕНИЕ: Делаем root владельцем домашней папки, чтобы actions/cache и pip работали без ошибок прав
+      - name: Fix home directory ownership for caching
+        run: chown -R root:root /github/home
+
       - name: Cache pip packages
         uses: actions/cache@v5
         with:
-          path: ~/.cache/pip
+          path: /github/home/.cache/pip
           key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test.yml') }}
           restore-keys: |
             ${{ runner.os }}-pip-docker-
 
+      # ОПТИМИЗАЦИЯ: Убрали python3-pip, так как он уже есть в контейнере QGIS
       - name: Install system dependencies
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends xvfb python3-pip
+          apt-get install -y -qq --no-install-recommends xvfb
 
-      # 1. Добавляем pytest-cov в список установки
+      # ИСПРАВЛЕНИЕ: Теперь pip использует кэш без предупреждений, так как права исправлены выше
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install pytest pytest-qgis bitarray pytest-cov
 
-      # 2. Запускаем тесты с флагами покрытия
       - name: Run pytest with coverage
         run: |
           xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
@@ -49,7 +54,7 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
 
-      # 3. Сохраняем HTML-отчет в артефакты GitHub, чтобы его можно было скачать
+      # Шаг без изменений — сохраняет отчет покрытия в артефакты
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
         with:

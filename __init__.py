@@ -33,24 +33,34 @@ except ImportError:
 
 '''
 
-import os
 import sys
+import subprocess
+import logging
 
-from QGIS_VDO.ui_files import AnimatedGroupBox   # noqa
+logger = logging.getLogger("MyQgisPlugin")
 
 # <<< bitarray import
-# Get the path to your plugin's 'ext_libs' folder
-plugin_dir = os.path.dirname(__file__)
-ext_libs_path = os.path.join(plugin_dir, "ext_libs")
-
-# Inject it into the system path if it isn't there already
-if ext_libs_path not in sys.path:
-    sys.path.insert(0, ext_libs_path)
-
-from bitarray import bitarray           # type: ignore # noqa
-from bitarray.util import ba2int        # type: ignore # noqa
-
+try:
+    from bitarray import bitarray                         # type: ignore # noqa
+    from bitarray.util import ba2int        # type: ignore # noqa
+except ImportError:
+    logger.info("Библиотека bitarray не найдена. Попытка автоматической установки...")
+    try:
+        # sys.executable гарантирует, что мы используем именно тот Python,
+        # в котором сейчас запущен QGIS (включая ваш Docker-контейнер)
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "bitarray"])
+        from bitarray import bitarray                     # type: ignore # noqa
+        from bitarray.util import ba2int    # type: ignore # noqa
+        logger.info("Библиотека bitarray успешно установлена!")
+    except Exception as e:
+        logger.error(f"Не удалось автоматически установить bitarray: {e}")
+        # Здесь можно вызвать QMessageBox, чтобы предупредить пользователя,
+        # если плагин запускается в графическом интерфейсе QGIS
 # >>> bitarray import
+# type: ignore # noqa
+
+
+from QGIS_VDO.ui_files import AnimatedGroupBox   # noqa
 
 
 def classFactory(iface):                # pragma: no cover

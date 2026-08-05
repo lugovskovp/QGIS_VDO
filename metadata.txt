@@ -10,3 +10,4 @@ email=p.lugovskov@gmail.com
 license=GPLv3
 icon= resources/plugin.icons/qgis-vdo_i.svg
 about=Carindb VDO discover
+plugin_dependencies=bitarray

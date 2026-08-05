@@ -13,8 +13,8 @@ jobs:
       options: --user root
 
     env:
-      # Возвращаем чистый стандартный путь к плагинам QGIS без костылей с симлинками
-      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python
+      # ДОБАВЛЯЕМ ПАПКУ tests ЧЕРЕЗ ДВОЕТОЧИЕ В КОНЕЦ ПУТИ PYTHONPATH
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/tests
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
 

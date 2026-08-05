@@ -1,4 +1,5 @@
 name: Update Coverage Badge
+
 on:
   workflow_dispatch:
 
@@ -15,6 +16,7 @@ jobs:
       options: --user root
 
     env:
+      # Направляем Python в нашу виртуальную структуру
       PYTHONPATH: /github/workspace/.ci_env:/usr/share/qgis/python/plugins:/usr/share/qgis/python
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
@@ -25,10 +27,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Исправляем права для безопасной работы git внутри Docker-контейнера
-      - name: Configure Git Safe Directory
+      # Защита от ошибок регистра Windows (проверяем имена файлов перед тестами)
+      - name: Check file case sensitivity
         run: |
-          git config --global --add safe.directory /github/workspace
+          echo "Checking for case-folding duplicates..."
+          DUPLICATES=$(git ls-files | tr 'A-Z' 'a-z' | sort | uniq -d)
+          if [ ! -z "$DUPLICATES" ]; then
+            echo "::error::Found files with case conflicts in Git! Linux environment will fail."
+            echo "Affected lowercase paths:"
+            echo "$DUPLICATES"
+            exit 1
+          fi
+          echo "File case check passed successfully."
 
       - name: Fix home directory ownership for caching
         run: chown -R root:root /github/home
@@ -42,6 +52,7 @@ jobs:
         run: |
           python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt
 
+      # Создаем виртуальную структуру для корректных импортов вашего QGIS-плагина
       - name: Create plugin structure link
         run: |
           mkdir -p /github/workspace/.ci_env
@@ -49,7 +60,7 @@ jobs:
 
       - name: Run pytest with coverage
         run: |
-          # Исправлены переносы строк (\) и добавлен пайп (| tee) для сохранения вывода
+          # Запуск тестов во виртуальном фреймбуфере (xvfb) с генерацией отчетов
           xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
             -v \
             --junitxml=pytest.xml \
@@ -57,20 +68,19 @@ jobs:
             --cov-report=term-missing \
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
-        
 
-
+      # Сохранение полного интерактивного HTML-отчета в артефакты сборки GitHub
       - name: Upload HTML coverage artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: html-coverage-report
           path: ./htmlcov/
-          retention-days: 14
+          retention-days: 14  # Срок хранения архива на GitHub (в днях)
 
-      # РЕШЕНИЕ: Сами парсим XML и создаем идеальный Markdown-отчет без сторонних экшенов
+      # Парсинг результатов, создание бейджа и деплой в отдельную ветку
       - name: Deploy Coverage Report to Separate Branch
         run: |
-          # 1. Разрешаем Git работать со всеми путями внутри Docker
+          # 1. Разрешаем Git работать со всеми путями внутри Docker-контейнера
           git config --global --add safe.directory /github/workspace
           git config --global --add safe.directory /__w/QGIS_VDO/QGIS_VDO
           git config --global --add safe.directory '*'
@@ -80,24 +90,24 @@ jobs:
           COVERAGE_PERCENT=$(python3 -c "print(round($LINE_RATE * 100))")
           echo "Calculated coverage: ${COVERAGE_PERCENT}%"
           
-          # Определяем цвет бейджа
+          # Определяем цвет бейджа в зависимости от процентов
           if [ "$COVERAGE_PERCENT" -ge 80 ]; then COLOR="brightgreen";
           elif [ "$COVERAGE_PERCENT" -ge 65 ]; then COLOR="green";
           elif [ "$COVERAGE_PERCENT" -ge 50 ]; then COLOR="yellow";
           else COLOR="red"; fi
 
-          # 3. Настраиваем пользователя Git
+          # 3. Настраиваем системного пользователя Git
           git config --global user.email "github-actions[bot]@://github.com"
           git config --global user.name "github-actions[bot]"
 
-          # 4. Переключаемся на изолированную ветку 'coverage-report'
+          # 4. Переключаемся на изолированную ветку 'coverage-report' (создаем как orphan)
           git checkout --orphan coverage-report
           
-          # 5. Очищаем индекс ветки от кода самого плагина
+          # 5. Полностью очищаем индекс ветки от исходного кода плагина
           git rm -rf . --cached > /dev/null 2>&1
           rm -rf *
 
-          # 6. РЕШЕНИЕ: Создаем README.md ТОЛЬКО ПОСЛЕ очистки папки, чтобы его не удалило
+          # 6. Генерируем новый README.md, который станет лицом нашей ветки отчетов
           cat << EOF > README.md
           # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
 
@@ -110,9 +120,7 @@ jobs:
           *Этот отчет обновляется автоматически при каждом запуске тестов.*
           EOF
           
-          # 7. Делаем коммит и пушим
+          # 7. Фиксируем изменения и пушим в репозиторий (флаг [skip ci] исключает бесконечный цикл)
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           git push origin coverage-report --force
-
-

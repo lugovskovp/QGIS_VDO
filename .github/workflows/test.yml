@@ -13,8 +13,8 @@ jobs:
       options: --user root
 
     env:
-      # ДОБАВЛЯЕМ ПАПКУ tests ЧЕРЕЗ ДВОЕТОЧИЕ В КОНЕЦ ПУТИ PYTHONPATH
-      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python:${{ github.workspace }}/tests
+      # Возвращаем стандартные пути QGIS. Локальные импорты теперь завязаны на относительные пути Python
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
 
@@ -49,7 +49,6 @@ jobs:
 
       - name: Run pytest with coverage
         run: |
-          # Флаг --import-mode=importlib заставит pytest изолировать пути тестов от путей исходников
           xvfb-run -s "+extension GLX -screen 0 1024x768x24" pytest tests/ \
             -v \
             --import-mode=importlib \

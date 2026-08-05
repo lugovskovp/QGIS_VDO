@@ -13,7 +13,8 @@ jobs:
       options: --user root
 
     env:
-      PYTHONPATH: ${{ github.workspace }}/.symlink_root:/usr/share/qgis/python/plugins:/usr/share/qgis/python
+      # Направляем Python в нашу изолированную структуру, где гарантированно будет папка QGIS_VDO
+      PYTHONPATH: /github/workspace/.ci_env:/usr/share/qgis/python/plugins:/usr/share/qgis/python
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
 
@@ -37,15 +38,15 @@ jobs:
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends xvfb
 
-      # ИСПРАВЛЕНИЕ: Очищены все старые закомментированные строки pip для читаемости
       - name: Install Python dependencies
         run: |
           python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt
 
+      # КЛЮЧЕВОЙ ШАГ: Создаем виртуальное окружение для импортов
       - name: Create plugin structure link
         run: |
-          mkdir -p .symlink_root
-          ln -s "${{ github.workspace }}" .symlink_root/QGIS_VDO
+          mkdir -p /github/workspace/.ci_env
+          ln -s /github/workspace /github/workspace/.ci_env/QGIS_VDO
 
       - name: Run pytest with coverage
         run: |
@@ -56,7 +57,6 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
 
-      # ИСПРАВЛЕНИЕ: Здесь используется строго легитимный actions/upload-artifact@v4
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
         with:

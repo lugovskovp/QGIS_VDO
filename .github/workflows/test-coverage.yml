@@ -13,7 +13,8 @@ jobs:
       options: --user root
 
     env:
-      PYTHONPATH: ${{ github.workspace }}/..:/usr/share/qgis/python/plugins:/usr/share/qgis/python      QT_QPA_PLATFORM: offscreen
+      PYTHONPATH: ${{ github.workspace }}/..:/usr/share/qgis/python/plugins:/usr/share/qgis/python      
+      QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore  # Отключает предупреждение о root для всех шагов
 
     steps:

@@ -11,13 +11,13 @@ from QGIS_VDO.vdo.blocks.block_0x0D import block_0x0D   # noqa # ch_idx city
 
 # overall information
 from QGIS_VDO.vdo.blocks.block_0x12 import block_0x12   # noqa# abstract   
-from QGIS_VDO.vdo.blocks.block_0x13 import block_0x13   # noqa # bibliogr   
+from .block_0x13 import block_0x13   # noqa # bibliogr   
 
 # base_geotypes
 from QGIS_VDO.vdo.blocks.block_0x14 import block_0x14    # noqa #
 from QGIS_VDO.vdo.blocks.block_0x15 import block_0x15    # noqa #
 from QGIS_VDO.vdo.blocks.block_0x16 import block_0x16    # noqa #
-from QGIS_VDO.vdo.blocks.block_0x1C import block_0x1C    # noqa #
+from .block_0x1C import block_0x1C    # noqa #
 from QGIS_VDO.vdo.blocks.block_0x1D import block_0x1D    # noqa #
 from QGIS_VDO.vdo.blocks.block_0x1E import block_0x1E    # noqa #
 # from vdo.blocks.block_0x00 import block_0x00    # noqa #

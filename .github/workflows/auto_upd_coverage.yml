@@ -70,7 +70,7 @@ jobs:
       # РЕШЕНИЕ: Сами парсим XML и создаем идеальный Markdown-отчет без сторонних экшенов
       - name: Deploy Coverage Report to Separate Branch
         run: |
-          # 1. СТРОГО ПЕРВОЙ СТРОКОЙ: Разрешаем Git работать со всеми путями внутри Docker
+          # 1. Разрешаем Git работать со всеми путями внутри Docker
           git config --global --add safe.directory /github/workspace
           git config --global --add safe.directory /__w/QGIS_VDO/QGIS_VDO
           git config --global --add safe.directory '*'
@@ -90,8 +90,15 @@ jobs:
           git config --global user.email "github-actions[bot]@://github.com"
           git config --global user.name "github-actions[bot]"
 
-          # 4. Формируем красивый README.md во временный файл
-          cat << EOF > coverage_readme.md
+          # 4. Переключаемся на изолированную ветку 'coverage-report'
+          git checkout --orphan coverage-report
+          
+          # 5. Очищаем индекс ветки от кода самого плагина
+          git rm -rf . --cached > /dev/null 2>&1
+          rm -rf *
+
+          # 6. РЕШЕНИЕ: Создаем README.md ТОЛЬКО ПОСЛЕ очистки папки, чтобы его не удалило
+          cat << EOF > README.md
           # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
 
           ![Format](https://shields.io{COVERAGE_PERCENT}%25-${COLOR}?style=for-the-badge)
@@ -102,21 +109,10 @@ jobs:
           
           *Этот отчет обновляется автоматически при каждом запуске тестов.*
           EOF
-
-          # 5. Переключаемся на изолированную ветку 'coverage-report'
-          git checkout --orphan coverage-report
           
-          # 6. Очищаем индекс ветки от кода самого плагина
-          git rm -rf . --cached > /dev/null 2>&1
-          rm -rf *
-          
-          # 7. Переносим наш сгенерированный файл
-          mv coverage_readme.md README.md
-          
-          # 8. Делаем коммит и пушим
+          # 7. Делаем коммит и пушим
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           git push origin coverage-report --force
-
 
 

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE
 
-from fixtures import FIXTURES_DIR
+from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
 
 EXPECTED_SINGLE_METRIC = {

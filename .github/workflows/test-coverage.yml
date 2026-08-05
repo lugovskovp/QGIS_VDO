@@ -8,6 +8,10 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     
+    # ВАЖНО: разрешаем запись в репозиторий для обновления бейджа
+    permissions:
+      contents: write
+
     container:
       image: qgis/qgis:3.44.10-noble
       options: --user root
@@ -71,3 +75,35 @@ jobs:
           name: html-coverage-report
           path: ./htmlcov/
           retention-days: 14  # Срок хранения артефакта в GitHub (дней)
+      
+      # Извлекаем точный процент покрытия из coverage.xml и обновляем JSON для Shields.io
+      - name: Generate Coverage Badge JSON
+        run: |
+          # Вытаскиваем значение line-rate из XML (например, 0.6543)
+          LINE_RATE=$(grep -oP 'line-rate="\K[^"]+' coverage.xml | head -n 1)
+          # Переводим в проценты и округляем до целого числа (0.6543 -> 65)
+          COVERAGE_PERCENT=$(python3 -c "print(round($LINE_RATE * 100))")
+          echo "Calculated coverage: ${COVERAGE_PERCENT}%"
+          
+          # Определяем цвет в зависимости от уровня покрытия
+          if [ "$COVERAGE_PERCENT" -ge 80 ]; then COLOR="green";
+          elif [ "$COVERAGE_PERCENT" -ge 60 ]; then COLOR="yellowgreen";
+          elif [ "$COVERAGE_PERCENT" -ge 40 ]; then COLOR="yellow";
+          else COLOR="red"; fi
+          
+          # Записываем эти переменные в окружение GitHub для следующего шага
+          echo "COV_PERC=${COVERAGE_PERCENT}" >> $GITHUB_ENV
+          echo "COV_COLOR=${COLOR}" >> $GITHUB_ENV
+
+      - name: Update Badge JSON in repository
+        uses: schnerring/github-dot-github-action@v1.1.0
+        with:
+          # Создает и обновляет файл .github/badges/coverage.json в вашем репозитории
+          path: .github/badges/coverage.json
+          content: |
+            {
+              "schemaVersion": 1,
+              "label": "coverage",
+              "message": "${{ env.COV_PERC }}%",
+              "color": "${{ env.COV_COLOR }}"
+            }

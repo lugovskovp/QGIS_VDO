@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-and-coverage:
+  install-test-and-coverage:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     

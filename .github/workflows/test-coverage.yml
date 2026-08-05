@@ -13,8 +13,8 @@ jobs:
       options: --user root
 
     env:
-      # ДОБАВЛЯЕМ РОДИТЕЛЬСКУЮ ПАПКУ КОРНЯ РЕПОЗИТОРИЯ (через /..)
-      PYTHONPATH: ${{ github.workspace }}/..:/usr/share/qgis/python/plugins:/usr/share/qgis/python
+      # Задаем PYTHONPATH относительно нашей будущей симлинки
+      PYTHONPATH: ${{ github.workspace }}/.symlink_root:/usr/share/qgis/python/plugins:/usr/share/qgis/python
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
 
@@ -29,25 +29,24 @@ jobs:
         uses: actions/cache@v5
         with:
           path: /github/home/.cache/pip
-          key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test-coverage.yml') }} # ИСПРАВЛЕНО имя файла
+          key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test-coverage.yml') }}
           restore-keys: |
             ${{ runner.os }}-pip-docker-
 
-      # ОПТИМИЗАЦИЯ: Убрали python3-pip из apt-get, так как он уже есть в контейнере QGIS
       - name: Install system dependencies
         run: |
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends xvfb
 
-      # ИСПРАВЛЕНИЕ: Ставим зависимости напрямую через встроенный pip с флагом безопасности
-      # ИСПРАВЛЕНИЕ: Исправлен флаг pip для обхода PEP 668
       - name: Install Python dependencies
         run: |
-          # python3 -m pip install --break-system-packages --upgrade pip
-          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt          # python3 -m pip install --upgrade pip
-          # python3 -m pip install pytest pytest-qgis bitarray pytest-cov
-          
-      #python3 -m pip install --break-system-packages pytest pytest-qgis bitarray pytest-cov
+          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt
+
+      # СОЗДАЕМ СИМЛИНКУ: Теперь папка QGIS_VDO физически существует для Python
+      - name: Create plugin structure link
+        run: |
+          mkdir -p .symlink_root
+          ln -s "${{ github.workspace }}" .symlink_root/QGIS_VDO
 
       - name: Run pytest with coverage
         run: |
@@ -58,7 +57,6 @@ jobs:
             --cov-report=xml:coverage.xml \
             --cov-report=html:htmlcov
 
-      # Шаг без изменений — сохраняет отчет покрытия в артефакты
       - name: Upload HTML coverage report
         uses: actions/upload-artifact@v4
         with:

@@ -77,29 +77,24 @@ jobs:
             # РЕШЕНИЕ: Исправляем синтаксис пуша через переменные окружения GitHub
       - name: Deploy Coverage Report to Separate Branch
         run: |
-          # 1. Исправляем ошибку Git "dubious ownership" для безопасной работы внутри Docker
           git config --global --add safe.directory /github/workspace
           
-          # 2. Создаем изолированную папку для деплоя
           mkdir -p deploy_report
           
-          # 3. Достаем HTML-код таблицы из outputs экшена и сохраняем как README.md
           cat << 'EOF' > deploy_report/README.md
           # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
           
           EOF
           
-          # Записываем сгенерированную экшеном таблицу
           echo "${{ steps.coverage.outputs.coverageHtml }}" >> deploy_report/README.md
 
-          # 4. Инициализируем чистую ветку и отправляем на GitHub
           cd deploy_report
-          git init -b coverage-report  # Сразу задаем имя ветки, чтобы убрать hint от Git
+          git init -b coverage-report
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           
-          # Безопасный пуш: используем системную переменную $GITHUB_REPOSITORY вместо контекста $ {{ }} внутри строки
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{$GITHUB_REPOSITORY}.git" coverage-report --force
+          # Пушим напрямую через системную переменную окружения $GITHUB_REPOSITORY
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com" coverage-report --force
 

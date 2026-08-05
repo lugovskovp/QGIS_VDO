@@ -70,15 +70,12 @@ jobs:
       # РЕШЕНИЕ: Сами парсим XML и создаем идеальный Markdown-отчет без сторонних экшенов
       - name: Deploy Coverage Report to Separate Branch
         run: |
-          # 1. Разрешаем Git работать в папке Docker-контейнера
+          # 1. СТРОГО ПЕРВОЙ СТРОКОЙ: Разрешаем Git работать со всеми путями внутри Docker
           git config --global --add safe.directory /github/workspace
+          git config --global --add safe.directory /__w/QGIS_VDO/QGIS_VDO
+          git config --global --add safe.directory '*'
           
-          # 2. Настраиваем пользователя
-          git config --global user.email "github-actions[bot]@://github.com"
-          git config --global user.name "github-actions[bot]"
-          
-          # 3. Извлекаем точный процент покрытия из XML с помощью Python
-          # Вытаскиваем значение line-rate (например, 0.6543) и переводим в проценты (65)
+          # 2. Извлекаем точный процент покрытия из XML с помощью Python
           LINE_RATE=$(grep -oP 'line-rate="\K[^"]+' coverage.xml | head -n 1)
           COVERAGE_PERCENT=$(python3 -c "print(round($LINE_RATE * 100))")
           echo "Calculated coverage: ${COVERAGE_PERCENT}%"
@@ -89,7 +86,11 @@ jobs:
           elif [ "$COVERAGE_PERCENT" -ge 50 ]; then COLOR="yellow";
           else COLOR="red"; fi
 
-          # 4. Формируем красивый README.md для ветки отчетов (используем встроенные SVG от Shields, они не заблокированы для загрузки картинками)
+          # 3. Настраиваем пользователя Git
+          git config --global user.email "github-actions[bot]@://github.com"
+          git config --global user.name "github-actions[bot]"
+
+          # 4. Формируем красивый README.md во временный файл
           cat << EOF > coverage_readme.md
           # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
 
@@ -97,7 +98,7 @@ jobs:
 
           ### 📈 Сводка автоматического тестирования
           * **Общий процент покрытия кода:** ${COVERAGE_PERCENT}%
-          * **Статус сборки:** Успешно пройбли все тесты (316 passed)
+          * **Статус сборки:** Успешно прошли все тесты (316 passed)
           
           *Этот отчет обновляется автоматически при каждом запуске тестов.*
           EOF
@@ -116,5 +117,6 @@ jobs:
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           git push origin coverage-report --force
+
 
 

@@ -80,29 +80,30 @@ jobs:
           # 1. Разрешаем Git работать в папке Docker-контейнера
           git config --global --add safe.directory /github/workspace
           
-          # 2. Создаем структуру отчета
-          mkdir -p deploy_report
-          cat << 'EOF' > deploy_report/README.md
-          # 📊 Отчет о покрытии тестами (QGIS Plugin Coverage)
+          # 2. Настраиваем пользователя
+          git config --global user.email "github-actions[bot]@://github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # 3. Создаем временный файл с HTML-таблицей отчета
+          cat << 'EOF' > coverage_readme.md
+          # 📊 Отчет о покрытия тестами (QGIS Plugin Coverage)
           
           EOF
-          echo "${{ steps.coverage.outputs.coverageHtml }}" >> deploy_report/README.md
+          echo "${{ steps.coverage.outputs.coverageHtml }}" >> coverage_readme.md
 
-          # 3. Настраиваем данные пользователя Git
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-
-          # 4. Фиксируем изменения в основной папке проекта, чтобы не ломать структуру
-          # Переходим в чистую папку для отчета
-          cd deploy_report
-          git init -b coverage-report
+          # 4. Переключаемся на изолированную ветку 'coverage-report' (создаем её как сиротскую)
+          git checkout --orphan coverage-report
+          
+          # 5. Очищаем индекс ветки, чтобы там не было кода плагина
+          git rm -rf . --cached > /dev/null 2>&1
+          rm -rf *
+          
+          # 6. Возвращаем наш файл отчета и переименовываем в README.md
+          mv coverage_readme.md README.md
+          
+          # 7. Фиксируем изменения и пушим в репозиторий через существующее подключение
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
-          
-          # 5. Добавляем удаленный репозиторий, используя авторизацию хоста
-          git remote add origin https://github.com{{ github.repository }}.git
-          
-          # 6. Безопасный пуш без ручного прописывания токенов в URL
           git push origin coverage-report --force
 
 

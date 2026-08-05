@@ -64,7 +64,7 @@ jobs:
         with:
           files: ./coverage.xml
           # Для публичных репозиториев токен необязателен, но для приватных он нужен:
-          # token: ${{ secrets.CODECOV_TOKEN }}
+          # token: $ {{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
       # 2. СОХРАНЕНИЕ HTML-ОТЧЕТА В АРТЕФАКТЫ GITHUB

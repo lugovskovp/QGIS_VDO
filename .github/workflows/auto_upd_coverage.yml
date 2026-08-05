@@ -74,6 +74,7 @@ jobs:
           retention-days: 14
 
       # РЕШЕНИЕ: Записываем HTML-вывод экшена в файл и пушим в отдельную ветку
+            # РЕШЕНИЕ: Исправляем синтаксис пуша через переменные окружения GitHub
       - name: Deploy Coverage Report to Separate Branch
         run: |
           # 1. Исправляем ошибку Git "dubious ownership" для безопасной работы внутри Docker
@@ -93,14 +94,12 @@ jobs:
 
           # 4. Инициализируем чистую ветку и отправляем на GitHub
           cd deploy_report
-          git init
+          git init -b coverage-report  # Сразу задаем имя ветки, чтобы убрать hint от Git
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git checkout -b coverage-report
           git add README.md
           git commit -m "chore: update coverage report [skip ci]"
           
-          # Безопасный пуш через GITHUB_TOKEN в обход защиты ветки main
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{{ github.repository }}.git" coverage-report --force
-
+          # Безопасный пуш: используем системную переменную $GITHUB_REPOSITORY вместо контекста $ {{ }} внутри строки
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com{$GITHUB_REPOSITORY}.git" coverage-report --force
 

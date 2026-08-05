@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     
     container:
-      image: qgis/qgis:release-3_34
+      image: qgis/qgis:release-3_44
       options: --user root
 
     env:
@@ -60,4 +60,4 @@ jobs:
         with:
           name: html-coverage-report
           path: htmlcov/
-          retention-days: 14
+          retention-days: 28

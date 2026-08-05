@@ -3,7 +3,7 @@ import sys
 # from unittest.mock import MagicMock
 
 # Принудительно добавляем родительскую директорию в пути поиска модулей
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__)), '..')
                                    
 from fixtures import FIXTURES_DIR
 

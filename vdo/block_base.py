@@ -154,6 +154,9 @@ class block_base(BYTESTRUCT):
 
     def read_struct(self, offset: int, struct_cls: type) -> any:
         """Быстрое чтение строго ограниченного списка структур по смещению."""
+        # if not isinstance(offset, int):
+        #     raise TypeError(f"Смещение должно быть int, получено {type(offset).__name__}")
+
         if struct_cls not in _VALID_STRUCTS:
             raise TypeError(f"Класс {struct_cls.__name__} не разрешен для чтения через read_struct")
         

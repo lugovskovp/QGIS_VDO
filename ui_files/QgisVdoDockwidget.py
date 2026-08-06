@@ -331,6 +331,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             return
         # в масштабе ищем имя блока или none
         bladdr_map = sc.find_by_coord(srch_coord)
+        # запишем в поле le_bladdr
+        self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
         print(bladdr_map)
         pass
 

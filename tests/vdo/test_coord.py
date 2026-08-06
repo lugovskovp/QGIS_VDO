@@ -74,7 +74,7 @@ def test_negative_coordinates_handling():
     
     coord = COORD(int(u_hlon), int(u_hlat))
 
-    assert coord._hlongtitude == -27777770
+    assert coord._hlongitude == -27777770
     assert coord._hlatitude == -69444425
     assert coord.lat == -12.5
     assert coord.lon == -35.0

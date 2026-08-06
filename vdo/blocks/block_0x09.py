@@ -28,8 +28,8 @@ class block_0x09(block_base):
         super().__init__(bl_addr)
 
         # item - one ptr to map block
-        self.li_items = self.list(OFFSET_LIST_PTR)
-        self.li_valid = self.list(OFFSET_GEOBLOCKS)
+        self.li_items = self.read_list(OFFSET_LIST_PTR)
+        self.li_valid = self.read_list(OFFSET_GEOBLOCKS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
 
         self.origin = origin      # "начало" координат, left bottom

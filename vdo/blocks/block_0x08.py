@@ -50,7 +50,7 @@ class block_0x08(block_base):
         super().__init__(bl_addr)
 
         # item - bladdr value map block
-        self.li_items = self.list(OFFSET_LIST_FOLDEFS)
+        self.li_items = self.read_list(OFFSET_LIST_FOLDEFS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
         
         self.origin = origin      # "начало" координат, left bottom

@@ -654,12 +654,12 @@ bitarray('
         Returns:
             None
         """
-        self.toc.li_cat = self.list(OFFSET_LI_GEOCATEGORY)
-        self.toc.li_shp = self.list(OFFSET_LI_GEOSHAPE)
-        self.toc.li_lin = self.list(OFFSET_LI_GEOLINE)
-        self.toc.li_vrtx = self.list(OFFSET_LI_VERTEX)
-        self.toc.li_poi = self.list(OFFSET_LI_POI)
-        self.toc.li_tstr = self.list(OFFSET_LI_TSTR)
+        self.toc.li_cat = self.read_list(OFFSET_LI_GEOCATEGORY)
+        self.toc.li_shp = self.read_list(OFFSET_LI_GEOSHAPE)
+        self.toc.li_lin = self.read_list(OFFSET_LI_GEOLINE)
+        self.toc.li_vrtx = self.read_list(OFFSET_LI_VERTEX)
+        self.toc.li_poi = self.read_list(OFFSET_LI_POI)
+        self.toc.li_tstr = self.read_list(OFFSET_LI_TSTR)
         self.toc.START_TXT = self.toc.li_tstr.ptr + TSTR.size * self.toc.li_tstr.cnt
 
     def setup_objects(self) -> None:
@@ -717,16 +717,16 @@ bitarray('
         # if hlat:
         #     res = GEO_SHAPE(buff, category)
         res = GEO_SHAPE(buff, category)
-        if True or self.is_unpacked:
+        if self.is_unpacked:
             res.name = self.read_str(res.p_str_name)
             #
-            vrtx = []
+            # vrtx = []
             offset = res.ptr_vrtx
             for vrt in range(res.cnt_vrtx):
                 # read vertexes
-                vrtx.append(self.vrtx(offset))
+                res.vrtx.append(self.vrtx(offset))
                 offset += VERTEX.size
-            res.vrtx = vrtx
+            # res.vrtx = vrtx
             # пара неизвестных???
         return res
         # else:

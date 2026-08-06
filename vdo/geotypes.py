@@ -280,7 +280,8 @@ class GEO_SHAPE(BYTESTRUCT):
         'coord',
         'ptr_tstr',
         'name',
-        'cat'
+        'cat',
+        'vrtx'
     )
     
     size: int = 0x14  # 20 байт
@@ -309,6 +310,7 @@ class GEO_SHAPE(BYTESTRUCT):
         self.ptr_tstr = ptr_tstr
         self.name = "Proto shape. Need read from parent"
         self.cat = category
+        self.vrtx = []
 
     def __repr__(self) -> str:
         ''' View while debug value '''
@@ -346,7 +348,8 @@ class GEO_LINE(BYTESTRUCT):
         'or_38_or_0_b_country',
         'cnt_vrtx',
         'name',
-        'cat'
+        'cat',
+        'vrtx'
     )
     
     size: int = 0x10  # 16 байт
@@ -380,6 +383,7 @@ class GEO_LINE(BYTESTRUCT):
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.name = "Proto line. Need read from parent"
         self.cat = category
+        self.vrtx = []
 
     def __repr__(self) -> str:
         ''' View while debug value '''

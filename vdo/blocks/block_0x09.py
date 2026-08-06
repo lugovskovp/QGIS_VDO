@@ -39,7 +39,7 @@ class block_0x09(block_base):
         
         # Микрооптимизация: побитовый сдвиг или деление с округлением вниз // работает быстрее int(a / b)
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
-        self.qty_x = (max._hlongtitude - origin._hlongtitude) // self.item_side
+        self.qty_x = (max._hlongitude - origin._hlongtitude) // self.item_side
 
     def items_cnt(self) -> int:
         """
@@ -102,7 +102,7 @@ class block_0x09(block_base):
 
                 bladdr_map_val = self.uint(ptr_val)
                 # # Долгота (Lng) E/W - x
-                # hex_lon = self.origin._hlongtitude + x * self.item_side
+                # hex_lon = self.origin._hlongitude+ x * self.item_side
                 # # Широта (Lat) N/S - y
                 # hex_lat = self.origin._hlatitude + y * self.item_side
                 # coord_lb = COORD(hex_lon, hex_lat)
@@ -127,7 +127,7 @@ class block_0x09(block_base):
         orig = self.origin
         # left bottom
         # Долгота (Lng) E/W - x
-        hex_lon = orig._hlongtitude + x * side
+        hex_lon = orig._hlongitude + x * side
         # Широта (Lat) N/S - y
         hex_lat = orig._hlatitude + y * side
         coord_lb = COORD(hex_lon, hex_lat)
@@ -164,16 +164,16 @@ class block_0x09(block_base):
         
         # Быстрая проверка границ через локальные переменные
         max_hlatitude = orig._hlatitude + self.qty_y * side
-        max_hlongtitude = orig._hlongtitude + self.qty_x * side
+        max_hlongitude = orig._hlongitude + self.qty_x * side
         
         # Проверяем также сырые методы .lat/.lon, если они используются в классе COORD
         if (srch._hlatitude < orig._hlatitude or srch._hlatitude > max_hlatitude
-                or srch._hlongtitude < orig._hlongtitude or srch._hlongtitude > max_hlongtitude):
+                or srch._hlongitude < orig._hlongitude or srch._hlongitude > max_hlongitude):
             # Избегаем тяжелых f-строк в легаси-логах, если они не будут напечатаны
             # print(f"bl_0x08: No way: {srch} not in area")
             return None
 
-        delta_x = (srch._hlongtitude - orig._hlongtitude) // side
+        delta_x = (srch._hlongitude - orig._hlongtitude) // side
         delta_y = (srch._hlatitude - orig._hlatitude) // side
         
         return self.get_xy_item(delta_x, delta_y)

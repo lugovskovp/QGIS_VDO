@@ -239,6 +239,8 @@ if __name__ == '__main__':
     #
     bla = BLADDR(struct_UINT.pack(bl_folder), vdo)
     block_maps: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
+    block_maps.write_raw()
+    
     for (bl_map, coord_lb, coord_rt) in block_maps.get_items():
         print(f"0x{bl_map:X}", bl_map, coord_lb, coord_rt)
         if bl_map == 110553640:

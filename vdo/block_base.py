@@ -127,6 +127,10 @@ class block_base(BYTESTRUCT):
     def segsize(self) -> int:
         return self.vdo.segsize
 
+    @property
+    def size(self) -> int:
+        return self.vdo.segsize * self.head.bladdr.segcnt
+
     def __repr__(self) -> str:
         if not self.head:
             return "NO_HEAD"
@@ -138,7 +142,7 @@ class block_base(BYTESTRUCT):
             # Для одиночного файла следующего блока в рамках структуры просто не существует
             return None
             
-        res = self.head.bladdr.offset + (self.vdo.segsize * self.head.bladdr.segcnt)
+        res = self.head.bladdr.offset + self.size
         if res < self.vdo.file_size:
             return res
         return None      # это был последний блок, следущего нет
@@ -147,10 +151,10 @@ class block_base(BYTESTRUCT):
 
     # --- Точная типизация фабрики через сигнатуры перегрузки ---
     @overload
-    def read_struct(self, offset: int, struct_cls: Type[T_Context]) -> T_Context: ...    # noqa
+    def read_struct(self, offset: int, struct_cls: Type[T_Context]) -> T_Context: ...    # noqa # pragma: no cover
     
     @overload
-    def read_struct(self, offset: int, struct_cls: Type[T_NoContext]) -> T_NoContext: ...    # noqa
+    def read_struct(self, offset: int, struct_cls: Type[T_NoContext]) -> T_NoContext: ...    # noqa # pragma: no cover
 
     def read_struct(self, offset: int, struct_cls: type) -> any:
         """Быстрое чтение строго ограниченного списка структур по смещению."""
@@ -181,10 +185,17 @@ class block_base(BYTESTRUCT):
         return bytes(self.read(li.ptr, li.cnt - 1)).decode('cp1250')
 
     def read_str(self, offset: int) -> str:
+        # Быстрая отсечка для корректного нуля или None
         if not offset:
             return ''
-        # Убрана медленная рантайм проверка типа int для горячего метода парсинга строк
-        return super().read_str(offset, MAX_STR_LEN)
+            
+        try:
+            # Пробуем прочитать строку через родительский метод
+            return super().read_str(offset, MAX_STR_LEN)
+        except TypeError:
+            # Если пришла строка "0" или другой невалидный тип —
+            # бизнес-логика гасит ошибку и безопасно отдает пустую строку
+            return ''
 
     def write_raw(self, name: str = "_base_block.bin") -> None:
         with open(name, "wb") as f:

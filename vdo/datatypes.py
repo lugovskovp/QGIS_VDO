@@ -475,79 +475,89 @@ class VDO_FILE:
 
 
 class BYTESTRUCT:
-    """Base for other data structures"""
+    """Base for other data structures with high-performance zero-copy memory management."""
 
-    # Жестко выделяем память только под _raw
+    # Выделяем память строго под один слот
     __slots__ = ("_raw",)
 
-    def __init__(self, buffer: ReadableBuffer, size: int | None = None) -> None:
-        if not (isinstance(buffer, ReadableBuffer) or isinstance(buffer, memoryview) or isinstance(buffer, bytearray)):
-            raise TypeError("buffer must be ReadableBuffer", type(buffer))
-        # Создаем memoryview. Если buffer уже memoryview, избегаем двойного оборачивания
+    def __init__(self, buffer: Union[bytes, bytearray, memoryview], size: Optional[int] = None) -> None:
+        # Проверяем на базовые типы, поддерживающие Buffer Protocol
+        if not isinstance(buffer, (bytes, bytearray, memoryview)):
+            raise TypeError(f"buffer must be bytes, bytearray or memoryview, got {type(buffer).__name__}")
+            
         view = buffer if isinstance(buffer, memoryview) else memoryview(buffer)
-        self._raw: memoryview = view[:size]
+        self._raw: memoryview = view if size is None else view[:size]
 
     def __repr__(self) -> str:
         return self.hex
 
     @property
     def hex(self) -> str:
+        """Красивый дамп блока памяти в Hex-формате (по 16 байт с разделителями)."""
         raw_hex = self._raw.hex().upper()
+        raw_len = len(raw_hex)
+        
+        if not raw_len:
+            return ""
+
         chunks = []
-        # Шаг 32 символа = 16 байт
-        for i in range(0, len(raw_hex), 32):
+        # Шаг 32 символа hex = 16 байт данных
+        for i in range(0, raw_len, 32):
             line = raw_hex[i : i + 32]
             length = len(line)
+            
             if length == 32:
                 chunks.append(f"{line[:16]}  {line[16:]}")
             elif length > 16:
-                # Если хвост больше 8 байт, бьем на 8 байт + остаток
                 chunks.append(f"{line[:16]} {line[16:]}")
             else:
-                # Если хвост меньше или равен 8 байтам
                 chunks.append(line)
 
         return "   ".join(chunks)
 
+    def __len__(self) -> int:
+        """Возвращает длину буфера. Теперь можно использовать стандартный len(obj)."""
+        return len(self._raw)
+
     def len(self) -> int:
-        """length raw in bytes"""
+        """Legacy-метод для обратной совместимости с вашим старым кодом."""
         return len(self._raw)
 
     def read(self, offset: int, cnt: int) -> memoryview:
-        """read from inner bytes array (returns zero-copy view)"""
+        """Быстрый zero-copy срез подбуфера."""
         return self._raw[offset : offset + cnt]
 
-    def read_str(self, ptr: int, max_len: int | None = None) -> str:
-        """Чтение 0-ended строки БЕЗ копирования и лишнего выделения памяти
+    def read_str(self, ptr: int, max_len: Optional[int] = None) -> str:
+        """Чтение 0-ended строки с максимальной Си-скоростью поиска терминатора.
 
         Args:
             ptr: offset в текущем _raw
+            max_len: ограничение длины
         Returns:
-            str: декодированная строка до первого \x00
+            str: строго декодированная строка до первого \x00
         """
         limit = max_len if max_len is not None else MAX_STR_LEN
         sub_view = self._raw[ptr : ptr + limit]
 
-        # Ищем 0x00 перебором прямо по memoryview БЕЗ вызова .tobytes()
-        # Для memoryview итерация возвращает int (коды байт)
-        null_idx = next((i for i, b in enumerate(sub_view) if b == 0), None)
+        # Находим терминатор на уровне скомпилированного Си-кода
+        null_idx = sub_view.tobytes().find(b'\x00')
 
-        if null_idx is not None:
+        if null_idx != -1:
             sub_view = sub_view[:null_idx]
 
-        # Декодируем напрямую через bytes(sub_view) - копия создается только 1 раз при десериализации
+        # Строгое декодирование. Падает при нарушении структуры данных.
         return bytes(sub_view).decode("cp1250")
 
     def uchar(self, near_offset: int = 0) -> int:
-        """Return uchar, offset from _raw begin"""
+        """Быстрое чтение 1 байта (unsigned char) напрямую из Си-буфера."""
         return self._raw[near_offset]
 
     def ushort(self, near_offset: int = 0) -> int:
-        """Return unsigned short (2 bytes, word), offset from _raw begin"""
+        """Return unsigned short (2 bytes, word), offset from _raw begin."""
         return struct_WORD.unpack_from(self._raw, near_offset)[0]
 
     def uint(self, near_offset: int = 0) -> int:
-        """Return unsigned int (4 bytes, dword), offset from _raw begin"""
+        """Return unsigned int (4 bytes, dword), offset from _raw begin."""
         return struct_UINT.unpack_from(self._raw, near_offset)[0]
 
 

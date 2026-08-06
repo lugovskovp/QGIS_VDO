@@ -48,13 +48,7 @@
     * [x] enums
     * [x] блок х12
     * [x] блок х13
-- [ ] работа со строковыми данными
-    * [x] блок CH_country / country
-    * [ ] поиск по наименованию - функция для отладки/тестов
-    * [ ] CH_city / city
-    * [ ] CH_road / road
-    * [ ] CH_poi / poi
-    * [ ] keyboard
+
 - [ ] GEO структуры
     * [x] TOC
     * [x] MAP_AREA
@@ -117,6 +111,19 @@
     * [x] info from block 13
 - [ ] tab address
     * [ ] 
+* [x] tests
+    * [x] локально организовать
+    * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
+    * [x] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
+    * [x] vdo.datatypes 100 %
+    * [x] vdo.geotypes 100 %
+    * [x] settings 99 %
+    * [x] thread 36 %
+    * [x] block_base 100 %
+    * [x] block_0x12 100 %
+    * [x] block_0x13 100 %
+    * [x] запрет commit при наличии ошибок flake8
+    * [x] запрет commit при наличии ошибок pytest
 - [ ] tab topo
     * [x] block_0x07  SCALES
     * [x] block_0x08  ALMANSC
@@ -137,12 +144,15 @@
         * [ ] listWidget POI Categories - имя, номер
         * [ ] listWidget Countries
         * [ ] listWidget terrDivisions - пока просто перечень стран
-
+* [x] refactor 
+    * [x] COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
+    * [x] VDO_FILE single block load
+    * [x] COORD precalculated_coord _do_calculate_lon_lat on init
 
 - [ ] tab block
     * [x] tabBlock - функция взятия по клику map в текущем scale (и проверить "пустые")
     * [ ] draw in child layer
-    * [ ] 
+
 
 - [ ] отрисовка геообъектов
     * [ ] функция возвращения геообъекта - набора координат точек
@@ -150,31 +160,22 @@
     * [ ] класс родитель со свойствами раскраски для полилиний и полигонов
     * [ ] раскраска полилиний
     * [ ] раскраска полигонов
+- [ ] работа со строковыми данными
+    * [x] блок CH_country / country
+    * [ ] поиск по наименованию - функция для отладки/тестов
+    * [ ] CH_city / city
+    * [ ] CH_road / road
+    * [ ] CH_poi / poi
+    * [ ] keyboard
 
 
-* [x] refactor 
-    * [x] COORD: __init__ не только из bytes, но и из целого (hlat) или float (lat)
-    * [x] VDO_FILE single block load
-    * [x] COORD precalculated_coord _do_calculate_lon_lat on init
 
 * [x] dockWidget размер задается как мин+растягивание содержимым
 * [x] tab содержимое - в scroll area
 * [ ] почистить bitstream? av_, v_, ??
 * [ ] Settings show RecentFiles qty
 
-* [ ] tests
-    * [x] локально организовать
-    * [x] fixtures (0x12, 0x13, 0x07, 0x0b, 0x0a, 0x0d), как начало ru30, bmw34, ee30
-    * [x] при коммите - только измененные/коммичующиеся по pytest -m "not slow"
-    * [x] vdo.datatypes 100 %
-    * [x] vdo.geotypes 100 %
-    * [x] settings 99 %
-    * [x] thread 36 %
-    * [x] block_base 100 %
-    * [x] block_0x12 100 %
-    * [x] block_0x13 100 %
-    * [x] запрет commit при наличии ошибок flake8
-    * [x] запрет commit при наличии ошибок pytest
+
 
 * [ ] github workflow
     * [x] отключить запрет коммитов в main напрямую
@@ -185,6 +186,11 @@
 
 * [ ] выводить процент покрытия кода прямо в README.md репозитория в виде динамического бейджа (badge)
 * [ ] 
+
+
+
+https://github.com/users/lugovskovp/projects/2
+
 
 
 github settings 

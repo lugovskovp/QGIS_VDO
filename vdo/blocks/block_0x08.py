@@ -174,10 +174,11 @@ class block_0x08(block_base):
         item_num = y + x * self.qty_y
         offset = self.li_items.ptr + item_num * BLADDR.size
         # bl_folder_val = self.uint(offset)
-        res = self.bladdr(self.uint(offset))
+        res = self.vdo.get_bladdr(self.uint(offset))
         if res.isZero:
             return None
         return res
 
         
 # All block tests in block_0x07
+#05154A03 0008 00 00 [08:SCALE_ALMANAC]

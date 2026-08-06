@@ -12,3 +12,8 @@ class block_0x16(block_basegeo):
     """
     def __init__(self, bladdr: BLADDR) -> None:
         super().__init__(bladdr)
+
+
+"""
+EE block(0x55D7201);   //scale 7 0x16 near SPb
+"""

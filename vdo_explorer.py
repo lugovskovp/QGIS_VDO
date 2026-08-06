@@ -11,6 +11,7 @@ This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version.'''
+from __future__ import annotations
 
 import os.path
 from functools import partial
@@ -251,8 +252,8 @@ class VDOExplorerPlugin:
 
         if os.path.exists(path):
             # open vdo
-            if self.vdo is not None:
-                if self.vdo.path != path:
+            if self.vdo and not self.vdo.is_empty:
+                if self.vdo.file_path != path:
                     # path поменялся
                     # TODO: а открыт ли уже dockwidget?
                     self.iface.removeDockWidget(self.dockwidget)
@@ -374,7 +375,7 @@ class VDOExplorerPlugin:
 
     def ShowMainWidget(self):
         """открывает главный dockwidget"""
-        if self.vdo.path is not None:
+        if not self.vdo.is_empty:
             if self.dockwidget is None:
                 # Create the dockwidget (after translation) and keep reference
                 self.dockwidget = QgisVdoDockwidget(self, self.iface)

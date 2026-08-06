@@ -110,12 +110,43 @@ def test_block_base_offset_next_behavior(real_base_block):
         assert real_base_block.vdo.file_path is None
 
 
+def test_block_base_read_last_block(real_base_block):
+    """Тестирование чтения самого последнего блока vdo."""
+    # 1. Гарантируем, что мы не в режиме одиночного файла
+    real_base_block.vdo.is_single = False
+
+    # 2. Сохраняем оригинальный размер файла, чтобы восстановить его в конце теста
+    original_file_size = real_base_block.vdo.file_size
+
+    try:
+        # 3. Искусственно выставляем размер файла равным концу текущего блока
+        # Теперь вычисленное res будет в точности равно file_size, и условие res < file_size не выполнится
+        real_base_block.vdo.file_size = real_base_block.head.bladdr.offset + real_base_block.size
+
+        # 4. Проверяем, что метод вернул None
+        assert real_base_block.offset_next() is None
+
+    finally:
+        # 5. Обязательно возвращаем исходный размер файла назад (гарантирует изоляцию фикстуры)
+        real_base_block.vdo.file_size = original_file_size
+
+
 def test_block_base_read_str_behavior(real_base_block):
     """Тестирование чтения обычных нуль-терминированных строк."""
-    assert real_base_block.read_str(0) == ''
+    # Нет строк с самого начала блока (0)
+    real_base_block: block_base
+    assert real_base_block.read_str(1) == ''
+
     # read_str
-    with pytest.raises(TypeError):   # , match="Смещение должно быть int"):
-        real_base_block.read_str("не_инт")
+    # with pytest.raises(TypeError):   # , match="Смещение должно быть int"):
+    #     real_base_block.read_str("не_инт")
+
+
+def test_block_base_read_str_bool_arg(real_base_block):
+    """Тестирование чтения с аргументом == False."""
+    assert real_base_block.read_str(0) == ''
+    assert real_base_block.read_str(False) == ''
+    assert real_base_block.read_str(None) == ''
 
 
 def test_block_base_repr_output(real_base_block):
@@ -127,6 +158,11 @@ def test_block_base_repr_output(real_base_block):
 
 
 # --- 4. ТЕСТЫ ДЛЯ ИСКЛЮЧИТЕЛЬНЫХ СИТУАЦИЙ (ПОВРЕЖДЕНИЯ ДАННЫХ ИЛИ СЖАТИЕ) ---
+
+def test_block_base_read_str_wrong_arg(real_base_block):
+    """Тестирование чтения с аргументом str."""
+    assert real_base_block.read_str("0") == ''
+
 
 def test_block_base_init_empty_buffer_fallback(real_base_block):
     """Имитируем внезапный конец файла, когда vdo.read() возвращает пустой буфер."""

@@ -64,6 +64,9 @@
     "C:/OSGeo4W/bin/python3.exe"
   ],
   "flake8.importStrategy": "fromEnvironment",
+  "flake8.args": [
+    "--exclude=C:/OSGeo4W/**,**/node_modules,**/__pycache__,**/.*"
+  ],
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python.analysis.autoImportCompletions": false,
   "python.analysis.typeCheckingMode": "off",

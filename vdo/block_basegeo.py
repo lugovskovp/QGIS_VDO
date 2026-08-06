@@ -719,15 +719,11 @@ bitarray('
         res = GEO_SHAPE(buff, category)
         if self.is_unpacked:
             res.name = self.read_str(res.p_str_name)
-            #
-            # vrtx = []
             offset = res.ptr_vrtx
-            for vrt in range(res.cnt_vrtx):
+            for _ in range(res.cnt_vrtx):
                 # read vertexes
                 res.vrtx.append(self.vrtx(offset))
                 offset += VERTEX.size
-            # res.vrtx = vrtx
-            # пара неизвестных???
         return res
         # else:
         #     return None
@@ -754,13 +750,11 @@ bitarray('
             # res.tstr_regi = self.tstr(res.tstr_regi)  # 2 POI, НЕ регион... self.POI_regi
             res.tstr_name = self.tstr(res.tstr_name)
 
-            vrtx = []
             offset = res.ptr_vrtx
-            for vrt in range(res.cnt_vrtx):
+            for _ in range(res.cnt_vrtx):
                 # read vertexes
-                vrtx.append(self.vrtx(offset))
+                res.vrtx.append(self.vrtx(offset))
                 offset += VERTEX.size
-            res.vrtx = vrtx
         return res
 
     def vrtx(self, offset: int) -> VERTEX:

@@ -65,7 +65,7 @@
   ],
   "flake8.importStrategy": "fromEnvironment",
   "flake8.args": [
-    "--exclude=C:/OSGeo4W/**,**/node_modules,**/__pycache__,**/.*"
+    "--exclude=C:/OSGeo4W/**,**/node_modules,**/__pycache__,**/.*,c:/Users/plugo/.vscode/**/.*,*.pyi"
   ],
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python.analysis.autoImportCompletions": false,

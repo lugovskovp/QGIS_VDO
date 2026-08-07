@@ -17,7 +17,6 @@ OFFSET_FOLDER_SIZE = 0x10
 
 
 # Выносим структуру чтения USHORT на уровень модуля для zero-alloc распаковки массивов
-# Предполагаем, что у вас есть struct_WORD для чтения 2 байт.
 _STRUCT_SHORT = struct_WORD  # struct.Struct('<H')
 
 

@@ -55,7 +55,7 @@ class block_0x08(block_base):
         
         self.origin = origin      # "начало" координат, left bottom
         self.qty_y = int((max._hlatitude - origin._hlatitude) / self.item_side)
-        self.qty_x = int((max._hlongtitude - origin._hlongtitude) / self.item_side)
+        self.qty_x = int((max._hlongitude - origin._hlongitude) / self.item_side)
         pass
 
     def items_cnt(self) -> int:
@@ -115,16 +115,16 @@ class block_0x08(block_base):
         """
         # проверка, что srch в пределах координат блока
         max_hlatitude = self.origin._hlatitude + self.qty_y * self.item_side
-        max_hlongtitude = self.origin._hlongtitude + self.qty_x * self.item_side
+        max_hlongitude = self.origin._hlongitude + self.qty_x * self.item_side
         if srch._hlatitude < self.origin._hlatitude or srch.lat > max_hlatitude \
-           or srch._hlongtitude < self.origin._hlongtitude or srch.lon > max_hlongtitude:
+           or srch._hlongitude < self.origin._hlongitude or srch.lon > max_hlongitude:
             # не попал в квадрат lb-rt
             print(f"bl_0x08: No way: {srch} not in {self.area}")
             return None
         # расчет offset для srch : _hlongtitude - SIGNED!
         # delta_hlon_x = (srch._hlongtitude - self.origin._hlongtitude) / self.item_side
         # delta_hlat_y = (srch._hlatitude - self.origin._hlatitude) / self.item_side
-        delta_x = int((srch._hlongtitude - self.origin._hlongtitude) / self.item_side)
+        delta_x = int((srch._hlongitude - self.origin._hlongitude) / self.item_side)
         delta_y = int((srch._hlatitude - self.origin._hlatitude) / self.item_side)
         # Если есть такой блок в итемах
         if (bladdr_folder_maps := self.get_xy_item(delta_x, delta_y)) is None:
@@ -149,7 +149,7 @@ class block_0x08(block_base):
         """
         # left bottom
         # Долгота (Lng) E/W - x
-        hex_lon = self.origin._hlongtitude + x * self.item_side
+        hex_lon = self.origin._hlongitude + x * self.item_side
         # Широта (Lat) N/S - y
         hex_lat = self.origin._hlatitude + y * self.item_side
         coord_lb = COORD(hex_lon, hex_lat)

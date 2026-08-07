@@ -1,9 +1,10 @@
 import pytest
-# from unittest.mock import MagicMock
+from unittest.mock import MagicMock
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE
 from QGIS_VDO.vdo.geotypes import COORD
 from QGIS_VDO.vdo.blocks import block_0x09
+from QGIS_VDO.vdo.consts import struct_UINT, struct_WORD
 
 from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
@@ -48,7 +49,7 @@ EXPECTED_TEST_POINTS = {
         "map_val": 0x55D4F05,
     },
     "133A3BF012092DD4" : {
-        "name": "outside_folder",
+        "name": "Беларусь outside_folder",
         "coord_str": "54.466475N 28.065053E",
         "map_val": None,
     },
@@ -58,7 +59,7 @@ EXPECTED_TEST_POINTS = {
 @pytest.fixture(
     scope="function",
     params=list(EXPECTED_TEST_POINTS),
-    ids=list(EXPECTED_TEST_POINTS))
+    ids=[EXPECTED_TEST_POINTS[k]["name"] for k in EXPECTED_TEST_POINTS])  # <--- Понятные имена в логах pytest
 def point_fixture(request):
     """
     Реальные координаты и проверяемые метрики
@@ -171,3 +172,110 @@ def test_block_0x09_get_items_flat_tuple_output(ee_09_block):
     # lat_max = 59.19843961556309
     assert pytest.approx(lon_max) == 27.4957
     assert pytest.approx(lat_max) == 59.1984
+
+
+# -------------------------
+
+
+def test_block_0x09_all_four_rle_breaks_coverage():
+    """
+    Тест полностью покрывает ВСЕ ЧЕТЫРЕ ветвления 'if ... >= total_cnt: break'
+    в методе get_items() (два в основных циклах и два внутри RLE по X и Y).
+    """
+    item_side = 100
+    
+    # 1. Сетка 3х3 (Разница 300 единиц)
+    coord_origin = COORD(1000, 2000)
+    # coord_max = COORD(1000 + (3 * item_side), 2000 + (3 * item_side))
+
+    # 2. Создаем бинарный буфер (9 ячеек по 2 байта = 18 байт минимум, выделяем 256)
+    raw_data = bytearray(256)
+    base_ptr = 0x20
+    
+    # Заполняем первые 6 ячеек матрицы (индексы 0-5) одинаковым ptr_val = 0x70
+    ptr_val = 0x70
+    for i in range(6):
+        struct_WORD.pack_into(raw_data, base_ptr + i * 2, ptr_val)
+        
+    # Записываем валидный адрес для этого указателя
+    struct_UINT.pack_into(raw_data, ptr_val, 0x88888)
+
+    # 3. Инициализируем block_0x09 через __new__
+    block = block_0x09.__new__(block_0x09)
+    block._raw = memoryview(raw_data)
+    block.item_side = item_side
+    block.origin_hlon = coord_origin._hlon
+    block.origin_hlat = coord_origin._hlat
+    block.qty_x = 3
+    block.qty_y = 3
+    
+    block.li_valid = MagicMock()
+    block.li_valid.cnt = 1
+    
+    block.li_items = MagicMock()
+    block.li_items.ptr = base_ptr
+    
+    # Искусственно режем total_cnt до 5 (хотя матрица 3х3 ждет 9 элементов).
+    # Это заставит алгоритм "врезаться" в край на всех этапах обхода.
+    block.li_items.cnt = 5
+
+    # 4. Вызываем генератор
+    results = list(block.get_items())
+
+    # --- Результат проверки ---
+    # Генератор должен успешно отработать, не упасть с IndexError и выдать
+    # один склеенный блок, собранный до момента обрыва данных.
+    assert len(results) == 1
+    bladdr, lon_min, lat_min, lon_max, lat_max = results[0]
+    assert bladdr == 0x88888
+
+
+def test_block_0x09_absolute_all_breaks_coverage():
+    """
+    Тест со специфической геометрией сетки (4х2), гарантированно активирующий
+    break во всех четырех местах метода get_items(), включая RLE по оси Y.
+    """
+    item_side = 100
+    
+    # Сетка 4х2 (qty_x = 4, qty_y = 2)
+    # Ширина: 4 * 100 = 400. Высота: 2 * 100 = 200.
+    coord_origin = COORD(1000, 2000)
+    # coord_max = COORD(1000 + (4 * item_side), 2000 + (2 * item_side))
+
+    # Создаем бинарный буфер
+    raw_data = bytearray(256)
+    base_ptr = 0x20
+    
+    # Заполняем первые 5 ячеек матрицы (индексы 0, 1, 2, 3, 4) одинаковым ptr_val
+    ptr_val = 0x80
+    for i in range(5):
+        struct_WORD.pack_into(raw_data, base_ptr + i * 2, ptr_val)
+        
+    # Записываем валидный адрес для этого указателя
+    struct_UINT.pack_into(raw_data, ptr_val, 0x11111)
+
+    # Инициализируем block_0x09 через __new__
+    block = block_0x09.__new__(block_0x09)
+    block._raw = memoryview(raw_data)
+    block.item_side = item_side
+    block.origin_hlon = coord_origin._hlon
+    block.origin_hlat = coord_origin._hlat
+    block.qty_x = 4
+    block.qty_y = 2
+    
+    block.li_valid = MagicMock()
+    block.li_valid.cnt = 1
+    
+    block.li_items = MagicMock()
+    block.li_items.ptr = base_ptr
+    
+    # Урезаем лимит строго до 5 элементов
+    block.li_items.cnt = 5
+
+    # Вызываем генератор
+    results = list(block.get_items())
+
+    # Проверяем корректность выполнения
+    assert len(results) == 1
+    bladdr, lon_min, lat_min, lon_max, lat_max = results[0]
+    assert bladdr == 0x11111

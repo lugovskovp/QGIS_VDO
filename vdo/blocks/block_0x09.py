@@ -21,13 +21,13 @@ _STRUCT_SHORT = struct_WORD  # struct.Struct('<H')
 
 
 class block_0x09(block_base):
-    """0x09 — Высокопроизводительный пространственный индекс гео-блоков."""
+    """0x09 — Высокопроизводительный пространственный индекс гео-блоков с uint32 арифметикой."""
 
     __slots__ = (
         'li_items',
         'li_valid',
         'item_side',
-        'origin_hlon',  # Кэшируем сырые int вместо хранения объекта COORD
+        'origin_hlon',
         'origin_hlat',
         'qty_y',
         'qty_x'
@@ -40,12 +40,11 @@ class block_0x09(block_base):
         self.li_valid = self.read_list(OFFSET_GEOBLOCKS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
 
-        # ОПТИМИЗАЦИЯ: Раскладываем COORD на примитивы int.
-        # Избавляемся от удержания ссылок на тяжелые объекты геометрии.
+        # Кэшируем сырые uint32 значения
         self.origin_hlon = origin._hlon
         self.origin_hlat = origin._hlat
         
-        # Целочисленное деление на Си-уровне
+        # Целочисленное деление с сохранением логики CarInDB
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
         self.qty_x = (max._hlongitude - origin._hlongitude) // self.item_side
 
@@ -53,7 +52,7 @@ class block_0x09(block_base):
         return self.li_valid.cnt
 
     def get_items(self) -> Iterator[Tuple[int, float, float, float, float]]:
-        """Генератор уникальных гео-блоков.
+        """Генератор уникальных гео-блоков с поддержкой uint32 переполнений.
         
         Вместо объектов COORD возвращает плоский кортеж WGS-84 координат:
         (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
@@ -73,6 +72,7 @@ class block_0x09(block_base):
         # Загружаем байты всего списка указателей в memoryview один раз
         # Это позволяет читать ushort() без вызова накладных расходов методов BYTESTRUCT
         raw_buffer = self._raw
+        mul_coord = MULCOORD
 
         for x in range(q_x):
             x_offset = x * q_y
@@ -113,19 +113,17 @@ class block_0x09(block_base):
 
                 bladdr_map_val = struct_UINT.unpack_from(raw_buffer, ptr_val)[0]
 
-                # --- Мгновенный расчет координат ГИС "на лету" без аллокации COORD ---
-                # Рассчитываем сырые VDO-координаты
-                hlon_lb = self.origin_hlon + x * side
-                hlat_lb = self.origin_hlat + y * side
-                hlon_rt = hlon_lb + size_X * side
-                hlat_rt = hlat_lb + size_Y * side
+                # --- Расчет координат ГИС с жесткой эмуляцией uint32 (CarInDB overflow) ---
+                hlon_lb = (self.origin_hlon + x * side) & 0xFFFFFFFF
+                hlat_lb = (self.origin_hlat + y * side) & 0xFFFFFFFF
+                hlon_rt = (hlon_lb + size_X * side) & 0xFFFFFFFF
+                hlat_rt = (hlat_lb + size_Y * side) & 0xFFFFFFFF
 
-                # Переводим в WGS-84 float аналогично логике COORD._do_calculate_lon_lat
-                # (Учитываем знаковые переходы, если координаты могут быть отрицательными)
-                lon_min = (((hlon_lb - 0x100000000 if hlon_lb & 0x80000000 else hlon_lb) / MULCOORD) - 30)
-                lat_min = (hlat_lb - 0x100000000 if hlat_lb & 0x80000000 else hlat_lb) / MULCOORD
-                lon_max = (((hlon_rt - 0x100000000 if hlon_rt & 0x80000000 else hlon_rt) / MULCOORD) - 30)
-                lat_max = (hlat_rt - 0x100000000 if hlat_rt & 0x80000000 else hlat_rt) / MULCOORD
+                # Переводим в WGS-84 float аналогично логике COORD._hlongitude / _hlatitude
+                lon_min = (((hlon_lb - 0x100000000 if hlon_lb & 0x80000000 else hlon_lb) / mul_coord) - 30)
+                lat_min = (hlat_lb - 0x100000000 if hlat_lb & 0x80000000 else hlat_lb) / mul_coord
+                lon_max = (((hlon_rt - 0x100000000 if hlon_rt & 0x80000000 else hlon_rt) / mul_coord) - 30)
+                lat_max = (hlat_rt - 0x100000000 if hlat_rt & 0x80000000 else hlat_rt) / mul_coord
 
                 yield (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
 
@@ -139,22 +137,20 @@ class block_0x09(block_base):
         if not ptr:
             return None
             
-        # Прямое чтение uint значения адреса блока
         bladdr_val = struct_UINT.unpack_from(self._raw, ptr)[0]
         return self.vdo.get_bladdr(bladdr_val)
     
     def find_by_coord(self, srch: COORD) -> BLADDR | None:
         side = self.item_side
         
-        # Проверка границ на основе оригинальных свойств COORD
-        max_hlatitude = self.origin_hlat + self.qty_y * side
-        max_hlongitude = self.origin_hlon + self.qty_x * side
+        # Эмуляция uint32 для вычисления границ
+        max_hlatitude = (self.origin_hlat + self.qty_y * side) & 0xFFFFFFFF
+        max_hlongitude = (self.origin_hlon + self.qty_x * side) & 0xFFFFFFFF
         
         if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlatitude
                 or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlongitude):
             return None
 
-        # Расчет дельт сетки пространственного индекса
         delta_x = (srch._hlongitude - self.origin_hlon) // side
         delta_y = (srch._hlatitude - self.origin_hlat) // side
         

@@ -113,6 +113,12 @@ def test_bytestruct_hex_property_formatting_if_len_gt_16():
     assert hex_output == 'AAAAAAAAAAAAAAAA AA'
 
 
+def test_bytestruct_hex_if_raw_no_len():
+    """"""
+    by_struct = BYTESTRUCT(b"")
+    assert by_struct.hex == ''
+
+
 def test_bytestruct_far_list_repr_eq_hex():
     """Проверка, что __repr__ показывает .hex"""
     buffer = b'\x01\x02\x03\x04\x05\x06\x07\x08'

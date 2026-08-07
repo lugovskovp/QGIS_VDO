@@ -42,9 +42,10 @@ class FolderMapProcessingWorker(QThread):
             #cnt_map = bl_folder.items_cnt()
             # Пакет координат
             areas_packet = []
-            for (bl_map_val, lb, rt) in bl_folder.get_items():
+            # (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
+            for (bl_map_val, lon_min, lat_min, lon_max, lat_max) in bl_folder.get_items():
                 # {"area": [(lat, lon), (lat, lon)], "name": "Имя1"}, ...
-                area = {"area": [(lb.lat, lb.lon), (rt.lat, rt.lon)], "name": f"0x{bl_map_val:X}"}  # noqa
+                area = {"area": [(lat_min, lon_min), (lat_max, lon_max)], "name": f"0x{bl_map_val:X}"}  # noqa
                 areas_packet.append(area)
                 # debug print
                 # print(area)

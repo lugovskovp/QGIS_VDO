@@ -73,7 +73,8 @@ def test_worker_processing_flow(mock_struct_uint, mock_bladdr_cls, mock_vdo_stru
     
     mock_lb = MagicMock(lat=55.75, lon=37.61)
     mock_rt = MagicMock(lat=56.00, lon=38.00)
-    mock_bl_folder.get_items.return_value = [(0xABC, mock_lb, mock_rt)]
+    # (bl_map_val, lon_min, lat_min, lon_max, lat_max)
+    mock_bl_folder.get_items.return_value = [(0xABC, mock_lb.lon, mock_lb.lat, mock_rt.lon, mock_rt.lat)]
     
     mock_struct_uint.pack.return_value = b'\x00\x00\x00\x00'
     

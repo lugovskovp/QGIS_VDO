@@ -29,6 +29,7 @@ else:
 from .enums import BlockType
 from .consts import struct_WORD, struct_UINT
 from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
+# from .geotypes import COORD     # cannot import name 'BYTESTRUCT' from partially initialized module '
 
 
 OFFSET_TOC = 0x08
@@ -244,13 +245,18 @@ class VDO_FILE:
         return bl_instance
         pass        # def get_block(self, addr: Union[int, BLADDR], *args: Any)
 
-    def load_single_block(self, path_to_single: str, **kwargs: Any) -> Any:
+    def load_single_block(self, path_to_single: str,
+                          dbrev: int = 34,
+                          segsize: int = 0x800,
+                          coord_origin: Any = None,
+                          coord_max: Any = None) -> Any:
         """
         Загружает одиночный блок и возвращает настроенный контекст VDO_FILE.
         Внутри считывает структуру блока, начиная с 0-го смещения.
         Args:
             dbrev: int [30, 34]
             segsize: int [0x800, 0x200]
+            coord_origin, coord_max: must be COORD or None
         Returns:
             base_block or block type one from KNOWN_TYPES
         """
@@ -262,19 +268,34 @@ class VDO_FILE:
                 f"Метод load_single_block предназначен только для пустого синглтона. "
                 f"Вызов у рабочего объекта '{self.filename}' запрещен."
             )
-        
-        # Передаем правильный путь к файлу вместо self
-        dbrev = kwargs.get('dbrev', 34)
-        segsize = kwargs.get('segsize', 0x800)
-        vdo = self._single_create_vdo(path_to_single, dbrev=dbrev, segsize=segsize)
+
+        # Проверяем, coord_origin, coord_max: оба либо None, либо COORD
+        is_none = coord_origin is None and coord_max is None
+        is_coord = type(coord_origin).__name__ == 'COORD' and type(coord_max).__name__ == 'COORD'
+
+        coords_ok = is_none or is_coord
+
+        if not coords_ok:
+            raise RuntimeError(
+                f"Метод load_single_block: coord_origin и coord_max должны быть ОБА класса COORD или ОБА None. "
+                f"Фактически получено -> coord_origin: {type(coord_origin).__name__}, coord_max: {type(coord_max).__name__}"  # noqa
+            )
+
+        vdo = self._single_create_vdo(path_to_single, dbrev, segsize)
         
         # Загружаем блок, принудительно считая offset с 0 адреса.
         # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"
-        block = vdo.get_block(0)
+        if is_none:
+            block = vdo.get_block(0)
+        else:
+            block = vdo.get_block(0, coord_origin, coord_max)
 
         return block
 
-    def _single_create_vdo(self, path_to_single: str, dbrev: int = 34, segsize: int = 0x800) -> VDO_FILE:
+    def _single_create_vdo(self,
+                           path_to_single: str,
+                           dbrev: int = 34,
+                           segsize: int = 0x800) -> VDO_FILE:
         """
         Создаёт vdo для одиночного блока. Метод не изменяет текущий синглтон,
         а возвращает НОВЫЙ полноценный рабочий экземпляр VDO_FILE,

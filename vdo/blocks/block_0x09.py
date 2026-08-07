@@ -3,27 +3,33 @@ FOLDER_MAPS = 0x09		# map folders 0x09.
 
 Индекс гео-блоков
 """
-from typing import Iterator
+from typing import Iterator, Tuple
 
 from QGIS_VDO.vdo.datatypes import BLADDR, PTR
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.geotypes import COORD
+from QGIS_VDO.vdo.geotypes import COORD, MULCOORD   # MULCOORD берем из модуля констант
+from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT
+
 
 OFFSET_LIST_PTR = 0x08
 OFFSET_GEOBLOCKS = 0x0c
 OFFSET_FOLDER_SIZE = 0x10
 
 
-class block_0x09(block_base):
-    """0x09 — Индексная папка гео-блоков с оптимизированной структурой памяти."""
+# Выносим структуру чтения USHORT на уровень модуля для zero-alloc распаковки массивов
+# Предполагаем, что у вас есть struct_WORD для чтения 2 байт.
+_STRUCT_SHORT = struct_WORD  # struct.Struct('<H')
 
-    # 1. Жестко фиксируем слоты. __slots__ не наследуются автоматически!
-    # Дочерний класс обязан объявить свои слоты, иначе для него создается __dict__.
+
+class block_0x09(block_base):
+    """0x09 — Высокопроизводительный пространственный индекс гео-блоков."""
+
     __slots__ = (
         'li_items',
         'li_valid',
         'item_side',
-        'origin',
+        'origin_hlon',  # Кэшируем сырые int вместо хранения объекта COORD
+        'origin_hlat',
         'qty_y',
         'qty_x'
     )
@@ -34,149 +40,127 @@ class block_0x09(block_base):
         self.li_items = self.read_list(OFFSET_LIST_PTR)
         self.li_valid = self.read_list(OFFSET_GEOBLOCKS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
-
-        self.origin = origin   # "начало" координат, left bottom
+        self.write_raw("c:/temp/bl.bin")    # ""
+        # ОПТИМИЗАЦИЯ: Раскладываем COORD на примитивы int.
+        # Избавляемся от удержания ссылок на тяжелые объекты геометрии.
+        self.origin_hlon = origin._hlon
+        self.origin_hlat = origin._hlat
         
-        # Микрооптимизация: побитовый сдвиг или деление с округлением вниз // работает быстрее int(a / b)
+        # Целочисленное деление на Си-уровне
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
-        self.qty_x = (max._hlongitude - origin._hlongtitude) // self.item_side
+        self.qty_x = (max._hlongitude - origin._hlongitude) // self.item_side
 
     def items_cnt(self) -> int:
-        """
-        Возвращает количество уникальных итемов
-        """
         return self.li_valid.cnt
 
-    def get_items(self) -> Iterator[tuple[int, COORD, COORD]]:
+    def get_items(self) -> Iterator[Tuple[int, float, float, float, float]]:
         """Генератор уникальных гео-блоков.
-        Returns:
-            res = (bla_val, coord_lb, coord_rt): tuple
-                bla_val: int - значение bladdr map - geoblock
-                coord_lb: COORD left bottom
-                coord_rt: COORD right top
-        Сложность поиска дубликатов снижена с O(N) до O(1).
+        
+        Вместо объектов COORD возвращает плоский кортеж WGS-84 координат:
+        (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
+        Это снижает нагрузку на GC (Garbage Collector) до нуля.
         """
-        # ОПТИМИЗАЦИЯ: Множество (set) гарантирует поиск 'in' за константное время O(1)
         finded_early: set[int] = set()
         step = PTR.size
         base_ptr = self.li_items.ptr
         total_cnt = self.li_items.cnt
-        q_y = self.qty_y  # Локальные переменные в Python читаются быстрее, чем атрибуты self
+        q_y = self.qty_y
+        q_x = self.qty_x
+        side = self.item_side
+        
+        # Кэшируем значения для быстрой float-математики WGS-84 без вызова свойств COORD
+        # MULCOORD берем из модуля констант
 
-        for x in range(self.qty_x):
-            # В VDO-форматах традиционно идет упорядочивание по столбцам (Y), затем по строкам (X)
+        # Загружаем байты всего списка указателей в memoryview один раз
+        # Это позволяет читать ushort() без вызова накладных расходов методов BYTESTRUCT
+        raw_buffer = self._raw
+
+        for x in range(q_x):
             x_offset = x * q_y
             
             for y in range(q_y):
                 curr_item = y + x_offset
                 if curr_item >= total_cnt:
-                    # количество итемов может быть меньше квадрата стороны
                     break
 
                 offset = base_ptr + step * curr_item
-                ptr_val = self.ushort(offset)
+                # Прямая распаковка из буфера без вызова self.ushort()
+                ptr_val = _STRUCT_SHORT.unpack_from(raw_buffer, offset)[0]
+                
                 if not ptr_val or ptr_val in finded_early:
                     continue
 
                 finded_early.add(ptr_val)
 
-                # Вычисляем размер по оси X (смерженные блоки)
+                # Оптимизация RLE по оси X
                 size_X = 0
-                for i in range(x, self.qty_x):
+                for i in range(x, q_x):
                     next_item = y + i * q_y
                     if next_item >= total_cnt:
                         break
-                    if self.ushort(base_ptr + step * next_item) != ptr_val:
+                    if _STRUCT_SHORT.unpack_from(raw_buffer, base_ptr + step * next_item)[0] != ptr_val:
                         break
                     size_X += 1
                 
-                # Вычисляем размер по оси Y
+                # Оптимизация RLE по оси Y
                 size_Y = 0
                 for i in range(y, q_y):
                     next_item = x_offset + i
                     if next_item >= total_cnt:
                         break
-                    if self.ushort(base_ptr + step * next_item) != ptr_val:
+                    if _STRUCT_SHORT.unpack_from(raw_buffer, base_ptr + step * next_item)[0] != ptr_val:
                         break
                     size_Y += 1
 
-                bladdr_map_val = self.uint(ptr_val)
-                # # Долгота (Lng) E/W - x
-                # hex_lon = self.origin._hlongitude+ x * self.item_side
-                # # Широта (Lat) N/S - y
-                # hex_lat = self.origin._hlatitude + y * self.item_side
-                # coord_lb = COORD(hex_lon, hex_lat)
-                # hex_lon += size_X * self.item_side
-                # hex_lat += size_Y * self.item_side
-                # coord_rt = COORD(hex_lon, hex_lat)
-                yield (bladdr_map_val, *self.get_xy_area(x, y, size_X, size_Y))
+                bladdr_map_val = struct_UINT.unpack_from(raw_buffer, ptr_val)[0]
 
-    def get_xy_area(self, x: int, y: int, x_size: int, y_size: int) -> tuple[COORD, COORD]:
-        """
-        Args:
-            x, y: int - "координаты" левого нижнего в квадрате
-            x_size, y_size: int - размеры сторон
-        значения x, y ОБЯЗАНЫ быть 0..qty_x, не проверяется
-        Returns:
-            tuple[left_bottov, right_top]
-                left_bottom: COORD
-                right_top: COORD
-        """
-        # Локальный кэш для устранения повторных обращений через точку внутри горячего метода
-        side = self.item_side
-        orig = self.origin
-        # left bottom
-        # Долгота (Lng) E/W - x
-        hex_lon = orig._hlongitude + x * side
-        # Широта (Lat) N/S - y
-        hex_lat = orig._hlatitude + y * side
-        coord_lb = COORD(hex_lon, hex_lat)
+                # --- Мгновенный расчет координат ГИС "на лету" без аллокации COORD ---
+                # Рассчитываем сырые VDO-координаты
+                hlon_lb = self.origin_hlon + x * side
+                hlat_lb = self.origin_hlat + y * side
+                hlon_rt = hlon_lb + size_X * side
+                hlat_rt = hlat_lb + size_Y * side
 
-        coord_rt = COORD(hex_lon + x_size * side, hex_lat + y_size * side)
-        return coord_lb, coord_rt
+                # Переводим в WGS-84 float аналогично логике COORD._do_calculate_lon_lat
+                # (Учитываем знаковые переходы, если координаты могут быть отрицательными)
+                lon_min = (((hlon_lb - 0x100000000 if hlon_lb & 0x80000000 else hlon_lb) / MULCOORD) - 30)
+                lat_min = (hlat_lb - 0x100000000 if hlat_lb & 0x80000000 else hlat_lb) / MULCOORD
+                lon_max = (((hlon_rt - 0x100000000 if hlon_rt & 0x80000000 else hlon_rt) / MULCOORD) - 30)
+                lat_max = (hlat_rt - 0x100000000 if hlat_rt & 0x80000000 else hlat_rt) / MULCOORD
+
+                yield (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
 
     def get_xy_item(self, x: int, y: int) -> BLADDR | None:
-        """
-        Вернуть bladdr карты
-        Args:
-            x, y: int "координаты" в "квадрате" итемов
-        Returns:
-            block: BLADDR, item self - geo_block
-        """
         item_num = y + x * self.qty_y
         if item_num >= self.li_items.cnt:
             return None
             
         offset = self.li_items.ptr + item_num * PTR.size
-        # items in 0x09 - ptr to bladdr
-        ptr = self.ushort(offset)
+        ptr = _STRUCT_SHORT.unpack_from(self._raw, offset)[0]
         if not ptr:
             return None
             
-        return self.vdo.get_bladdr(self.uint(ptr))
+        # Прямое чтение uint значения адреса блока
+        bladdr_val = struct_UINT.unpack_from(self._raw, ptr)[0]
+        return self.vdo.get_bladdr(bladdr_val)
     
     def find_by_coord(self, srch: COORD) -> BLADDR | None:
-        """
-        Поиск блока КАРТЫ, в который попадают координаты, или None
-        """
-        orig = self.origin
         side = self.item_side
         
-        # Быстрая проверка границ через локальные переменные
-        max_hlatitude = orig._hlatitude + self.qty_y * side
-        max_hlongitude = orig._hlongitude + self.qty_x * side
+        # Проверка границ на основе оригинальных свойств COORD
+        max_hlatitude = self.origin_hlat + self.qty_y * side
+        max_hlongitude = self.origin_hlon + self.qty_x * side
         
-        # Проверяем также сырые методы .lat/.lon, если они используются в классе COORD
-        if (srch._hlatitude < orig._hlatitude or srch._hlatitude > max_hlatitude
-                or srch._hlongitude < orig._hlongitude or srch._hlongitude > max_hlongitude):
-            # Избегаем тяжелых f-строк в легаси-логах, если они не будут напечатаны
-            # print(f"bl_0x08: No way: {srch} not in area")
+        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlatitude
+                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlongitude):
             return None
 
-        delta_x = (srch._hlongitude - orig._hlongtitude) // side
-        delta_y = (srch._hlatitude - orig._hlatitude) // side
+        # Расчет дельт сетки пространственного индекса
+        delta_x = (srch._hlongitude - self.origin_hlon) // side
+        delta_y = (srch._hlatitude - self.origin_hlat) // side
         
         return self.get_xy_item(delta_x, delta_y)
+
 
 # -------------------------------------------------------------------------
 
@@ -253,7 +237,11 @@ if __name__ == '__main__':      # pragma: no cover
     block_maps: block_0x09 = vdo.get_block(bla, coord_lb, coord_rt)
     block_maps.write_raw()
 
-    for (bl_map, coord_lb, coord_rt) in block_maps.get_items():
+    for item in block_maps.get_items():
+        # (bl_map, coord_lb, coord_rt) = item
+        (bl_map, lb_lo, lb_la, rt_lo, rt_la) = item
+        coord_lb = COORD(lb_lo, lb_la)
+        coord_rt = COORD(rt_lo, rt_la)
         print(f"0x{bl_map:X}", bl_map, coord_lb, coord_rt)
         if bl_map == 110553640:
             pass
@@ -261,6 +249,8 @@ if __name__ == '__main__':      # pragma: no cover
         # 110573619 51.459937N 7.102145E 52.026168N 7.385261E
         if bl_map == search_map:    # 110573619
             print("finded")
+            bbb = block_maps.vdo.get_bladdr(0x6973833)
+            bbb_bl = block_maps.vdo.get_block(bbb)
             break
 
     pass

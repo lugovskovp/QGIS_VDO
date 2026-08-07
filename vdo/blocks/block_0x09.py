@@ -39,7 +39,7 @@ class block_0x09(block_base):
         self.li_items = self.read_list(OFFSET_LIST_PTR)
         self.li_valid = self.read_list(OFFSET_GEOBLOCKS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
-        self.write_raw("c:/temp/bl.bin")    # ""
+
         # ОПТИМИЗАЦИЯ: Раскладываем COORD на примитивы int.
         # Избавляемся от удержания ссылок на тяжелые объекты геометрии.
         self.origin_hlon = origin._hlon

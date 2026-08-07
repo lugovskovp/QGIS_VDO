@@ -586,7 +586,7 @@ bitarray('
                 func = self.read_shape
             else:
                 obj_size = GEO_LINE.size
-                func = self.line
+                func = self.read_line
             for j in range(curr_cat.cnt):
                 ob = func(obj_ptr, curr_cat)
                 obj_ptr += obj_size

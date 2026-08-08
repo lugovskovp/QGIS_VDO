@@ -8,7 +8,7 @@ from typing import Iterator, Tuple
 from QGIS_VDO.vdo.datatypes import BLADDR, PTR
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.geotypes import COORD, MULCOORD   # MULCOORD берем из модуля констант
-from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT
+from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT, MOST_SIGNIFICANT_BIT
 
 
 OFFSET_LIST_PTR = 0x08
@@ -41,8 +41,8 @@ class block_0x09(block_base):
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
 
         # Кэшируем сырые uint32 значения
-        self.origin_hlon = origin._hlon
-        self.origin_hlat = origin._hlat
+        self.origin_hlon = origin._hlon - 0x100000000 if origin._hlon & MOST_SIGNIFICANT_BIT else origin._hlon
+        self.origin_hlat = origin._hlat - 0x100000000 if origin._hlat & MOST_SIGNIFICANT_BIT else origin._hlat
         
         # Целочисленное деление с сохранением логики CarInDB
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
@@ -144,11 +144,13 @@ class block_0x09(block_base):
         side = self.item_side
         
         # Эмуляция uint32 для вычисления границ
-        max_hlatitude = (self.origin_hlat + self.qty_y * side) & 0xFFFFFFFF
-        max_hlongitude = (self.origin_hlon + self.qty_x * side) & 0xFFFFFFFF
+        max_hlat = (self.origin_hlat + self.qty_y * side)
+        max_hlat = max_hlat - 0x100000000 if max_hlat & MOST_SIGNIFICANT_BIT else max_hlat   # & 0xFFFFFFFF
+        max_hlon = (self.origin_hlon + self.qty_x * side)
+        max_hlon = max_hlon - 0x100000000 if max_hlon & MOST_SIGNIFICANT_BIT else max_hlon
         
-        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlatitude
-                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlongitude):
+        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlat
+                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlon):
             return None
 
         delta_x = (srch._hlongitude - self.origin_hlon) // side

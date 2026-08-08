@@ -49,3 +49,6 @@ NAME_LAYER_ALMANACS = 'Almanac'
 NAME_LAYER_MAPS = 'Maps'
 
 DEFAULT_SCALE = 4
+
+#
+MOST_SIGNIFICANT_BIT = 0x80000000           # hi bit =1 -> minus val.

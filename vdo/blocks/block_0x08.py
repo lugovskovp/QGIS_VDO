@@ -137,8 +137,11 @@ class block_0x08(block_base):
         max_hlon = (self.origin_hlon + self.qty_x * side)
         max_hlon = max_hlon - 0x100000000 if max_hlon & MOST_SIGNIFICANT_BIT else max_hlon
 
-        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlat
-                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlon):
+        # В геоинформационных системах (ГИС) общепринятый стандарт для ячеек регулярной сетки (растра или индекса)
+        #  — это полуоткрытые интервалы: [left, right) и [bottom, top). То есть левая/нижняя граница включается
+        #  в ячейку, а правая/верхняя — принадлежит уже следующей.
+        if (srch._hlatitude < self.origin_hlat or srch._hlatitude >= max_hlat
+                or srch._hlongitude < self.origin_hlon or srch._hlongitude >= max_hlon):
             return None
 
         delta_x = (srch._hlongitude - self.origin_hlon) // side

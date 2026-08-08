@@ -18,7 +18,7 @@ from __future__ import annotations  # Обязательно на самой п�
 # import re
 import struct
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 if TYPE_CHECKING:                   # pragma: no cover
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
@@ -29,7 +29,7 @@ else:
 
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
-from QGIS_VDO.vdo.consts import struct_2UINT
+from QGIS_VDO.vdo.consts import struct_2UINT, MOST_SIGNIFICANT_BIT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
@@ -51,7 +51,7 @@ TSTR_struct = struct.Struct(">Hbb")
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
 MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный коэффициент перевода.
 
-MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
+# MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
 
 # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
 # MULCOORD = 0x54C563 # dec 5555554;
@@ -61,99 +61,87 @@ MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
 
 
 class COORD(BYTESTRUCT):
-    """ coordinates, 2 dwords: lon lat """
-    #_lon: float         # double lon = ((1.0f * hlon )/ MULCOORD) - 30.0;
-    #_lat: float         # double lat = 1.0f * hlat / MULCOORD;
+    """Coordinates, 2 dwords: lon lat. Deeply optimized for PyQGIS memory footprint."""
     
-    # Регистрируем новые атрибуты экземпляра. Память теперь идеальна, __dict__ нет.
-    __slots__ = ('_hlon', '_hlat', '_precalculatet_lon', '_precalculatet_lat')
+    # Жестко фиксируем слоты, убираем __dict__. Имена синхронизированы с block_0x09
+    __slots__ = ('_hlon', '_hlat', '_precalculated_lon', '_precalculated_lat')
     
     size: int = DOUBLE_BYTES_CNT
 
-    def __init__(self, lo: ReadableBuffer | int | float, la: int | float | None = None) -> None:
-        """ Координаты
+    def __init__(self, lo: Union[bytes, memoryview, bytearray, int, float], la: Union[int, float, None] = None) -> None:
+        """Координаты.
+        
         Долгота (Lng) E/W - x - lo
         Широта (Lat) N/S - y - la
         """
-        # Сценарий A: На входе сырые байты (ReadableBuffer) из vdo
-        if isinstance(lo, ReadableBuffer) or isinstance(lo, memoryview) or isinstance(lo, bytearray):
-            # Обрезаем буфер строго до 8 байт и передаем в базовый BYTESTRUCT
-            if isinstance(lo, memoryview):
-                super().__init__(lo[:DOUBLE_BYTES_CNT])   # type: ignore
-            else:
-                super().__init__(memoryview(lo)[:DOUBLE_BYTES_CNT])   # type: ignore
+        # Сценарий A: На входе сырые байты (любой объект с поддержкой buffer protocol)
+        # Проверяем не через абстрактный ReadableBuffer, а через быстрое исключение или встроенные типы
+        if isinstance(lo, (bytes, memoryview, bytearray)):
+            # Передаем исходный буфер в родительский класс без создания лишних слайсов памяти
+            super().__init__(lo if isinstance(lo, bytes) else bytes(lo[:DOUBLE_BYTES_CNT]))
             
-            # Быстро распаковываем сразу оба dword за один проход на Си
+            # Распаковка напрямую из self._raw
             self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
             self._do_calculate_lon_lat()
             return
 
-        # Сценарий B: На входе два целых числа (hlon, hlat)
-        elif isinstance(lo, int) and isinstance(la, int):
-            # Маскируем под unsigned dword (в Python это делается через & 0xFFFFFFFF)
+        # Сценарий B: На входе два целых числа (hlon, hlat) - самый частый вызов из block_0x09
+        if isinstance(lo, int) and isinstance(la, int):
             self._hlon = lo & 0xFFFFFFFF
             self._hlat = la & 0xFFFFFFFF
             
-            # Упаковываем сразу 8 байт
-            coo_bytes = struct_2UINT.pack(self._hlon, self._hlat)
-            super().__init__(coo_bytes)
+            # ОПТИМИЗАЦИЯ: вызываем super().__init__ только если действительно
+            # нужен сырой буфер _raw внутри BYTESTRUCT. Если нет, строку ниже можно закомментировать ради скорости.
+            super().__init__(struct_2UINT.pack(self._hlon, self._hlat))
             self._do_calculate_lon_lat()
             return
 
         # Сценарий C: На входе две координаты float (в градусах)
-        elif isinstance(lo, float) and isinstance(la, float):
-            # Пересчитываем в целые числа
-            hlongtitude = int((30 + lo) * MULCOORD) & 0xFFFFFFFF
-            hlatitude = int(la * MULCOORD) & 0xFFFFFFFF
+        if isinstance(lo, float) and isinstance(la, float):
+            self._hlon = int((30 + lo) * MULCOORD) & 0xFFFFFFFF
+            self._hlat = int(la * MULCOORD) & 0xFFFFFFFF
             
-            self._hlon = hlongtitude
-            self._hlat = hlatitude
-            
-            coo_bytes = struct_2UINT.pack(hlongtitude, hlatitude)
-            super().__init__(coo_bytes)
+            super().__init__(struct_2UINT.pack(self._hlon, self._hlat))
             self._do_calculate_lon_lat()
             return
 
-        else:
-            raise ValueError(f"Неверные типы аргументов для COORD: lo={type(lo)}, la={type(la)}")
+        raise ValueError(f"Неверные типы аргументов для COORD: lo={type(lo)}, la={type(la)}")
 
     @property
-    def _hlongtitude(self) -> int:
-        """ Получение знакового (signed) int из беззнакового _hlon """
-        if self._hlon & MOST_SIGNIFICANT_BIT:
-            return self._hlon - 0x100000000  # Эквивалентно 2**32, но работает быстрее
-        return self._hlon
+    def _hlongitude(self) -> int:
+        """Получение знакового (signed) int из беззнакового _hlon. Опечатка 'g' исправлена."""
+        return self._hlon - 0x100000000 if self._hlon & MOST_SIGNIFICANT_BIT else self._hlon
 
     @property
     def _hlatitude(self) -> int:
-        """ Получение знакового (signed) int из беззнакового _hlat """
-        if self._hlat & MOST_SIGNIFICANT_BIT:
-            return self._hlat - 0x100000000
-        return self._hlat
+        """Получение знакового (signed) int из беззнакового _hlat."""
+        return self._hlat - 0x100000000 if self._hlat & MOST_SIGNIFICANT_BIT else self._hlat
 
     @property
     def lon(self) -> float:
-        """ Longtitude, x, w|e """
-        return self._precalculatet_lon
+        """Longitude, x, w|e"""
+        return self._precalculated_lon
 
     @property
     def lat(self) -> float:
-        """ Latitude, y, n/s """
-        return self._precalculatet_lat
+        """Latitude, y, n/s"""
+        return self._precalculated_lat
 
     def _do_calculate_lon_lat(self):
-        """Предрасчет при инициализации lon, lat для кеширования"""
-        self._precalculatet_lon = (self._hlongtitude / MULCOORD) - 30
-        self._precalculatet_lat = self._hlatitude / MULCOORD
+        """Предрасчет при инициализации lon, lat для кеширования. Исправлена опечатка в имени слота."""
+        self._precalculated_lon = (self._hlongitude / MULCOORD) - 30
+        self._precalculated_lat = self._hlatitude / MULCOORD
 
     def as_tuple(self) -> tuple[float, float]:
-        """ Быстрый экспорт в формате (lon, lat) для QGIS (например, для QgsPointXY) """
-        return (self.lon, self.lat)
+        """Быстрый экспорт в формате (lon, lat) для QgsPointXY."""
+        return (self._precalculated_lon, self._precalculated_lat)
 
     def __repr__(self) -> str:
-        ch_lat = 'N' if self.lat >= 0 else 'S'
-        ch_lon = 'E' if self.lon >= 0 else 'W'
-        return f"{abs(self.lat):02.6f}{ch_lat} {abs(self.lon):02.6f}{ch_lon}"
+        lat_val = self._precalculated_lat
+        lon_val = self._precalculated_lon
+        ch_lat = 'N' if lat_val >= 0 else 'S'
+        ch_lon = 'E' if lon_val >= 0 else 'W'
+        return f"{abs(lat_val):02.6f}{ch_lat} {abs(lon_val):02.6f}{ch_lon}"
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, COORD):
@@ -163,9 +151,7 @@ class COORD(BYTESTRUCT):
     def delta(self, other: object) -> str:
         if not isinstance(other, COORD):
             return NotImplemented
-        d_lat = self.lat - other.lat
-        d_lon = self.lon - other.lon
-        return f"lat:{d_lat:.2f}° x lon:{d_lon:.2f}°"
+        return f"lat:{self._precalculated_lat - other._precalculated_lat:.2f}° x lon:{self._precalculated_lon - other._precalculated_lon:.2f}°"  # noqa
 
     # COORD
 
@@ -280,7 +266,8 @@ class GEO_SHAPE(BYTESTRUCT):
         'coord',
         'ptr_tstr',
         'name',
-        'cat'
+        'cat',
+        'vrtx'
     )
     
     size: int = 0x14  # 20 байт
@@ -309,6 +296,7 @@ class GEO_SHAPE(BYTESTRUCT):
         self.ptr_tstr = ptr_tstr
         self.name = "Proto shape. Need read from parent"
         self.cat = category
+        self.vrtx = []
 
     def __repr__(self) -> str:
         ''' View while debug value '''
@@ -346,7 +334,8 @@ class GEO_LINE(BYTESTRUCT):
         'or_38_or_0_b_country',
         'cnt_vrtx',
         'name',
-        'cat'
+        'cat',
+        'vrtx'
     )
     
     size: int = 0x10  # 16 байт
@@ -380,6 +369,7 @@ class GEO_LINE(BYTESTRUCT):
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.name = "Proto line. Need read from parent"
         self.cat = category
+        self.vrtx = []
 
     def __repr__(self) -> str:
         ''' View while debug value '''

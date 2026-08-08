@@ -57,6 +57,46 @@ if ext_libs_path not in sys.path:
 ```
 
 
+# i18n
+[В C++/Qt 5 для интернационализации приложений конвейер следующий:](https://www.linux.org.ru/forum/general/14794408?cid=14796450) 
+1. В своём коде вы пишете все строки на английском языке не вылезая за пределы таблицы ASCII-символов.
+2. Строки, которые нужно локализовать, вы оборачиваете в специальную функцию tr("string").
+3. С помощью утилиты lupdate / pylupdate5 вы собираете все эти строки в своём проекте в .ts-файлы.
+4. С помощью программы Qt Linguist вы, или нанятый вами переводчик, переводит .ts-файлы на нужные языки.
+5. С помощью утилиты lrelease или просто с помощью той же программы Qt Linguist вы компилируете .ts-файлы в .qm-файлы.
+6. Внутри исходного кода своей программы с помощью нескольких объектов класса QTranslator вы применяете к своей программе переводы строк в зависимости от системной локали.
+
+Итак:
+- ./i18n/QGIS_VDO.pro - файл проекта
+- ```pylupdate5 .\i18n\QGIS_VDO.pro```
+- c:\Tools\QtLinguist\bin\linguist.exe 
+
+или ```c:\Work\QGIS_VDO\.venv\Scripts\pylupdate5.exe c:\Work\QGIS_VDO\i18n\QGIS_VDO.pro ```
+<TS version="2.1">
+<TS version="2.1" language="ru_RU" sourcelanguage="en_US">
+
+
+# Tests
+
+pytest --cov=your_source_folder_name --cov-report=html
+pytest --cov=your_source_folder_name --cov-report=html --cov-show-missing
+
+
+Разделяет пул тестов между ядрами процессора.
+pip install pytest-xdist
+## Запустить тесты на всех доступных ядрах процессора
+pytest -n auto
+
+
+pytest --durations=10  # Показать 10 самых долгих тестов и фикстур
+pytest --durations=0   # Показать время выполнения вообще всех тестов
+
+## какие именно тесты вызывают измененные методы класса
+pip install pytest-testmon
+pytest --testmon
+
+
+
 
 # Полезные линки
 - [Отладка плагинов QGIS 3.x на Python в Windows 10 с помощью VS Code](https://gist.github.com/thbaumann/73c873d4c49d8c1add8dc97359cebabe)

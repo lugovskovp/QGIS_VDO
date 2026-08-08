@@ -73,6 +73,6 @@ def test_geo_line_slots_contract():
     """Проверяем, что состав слотов полностью соответствует спецификации класса."""
     expected_slots = {
         'p_str_name', 'ptr_vrtx', 'id', 'POI_regi', 'or_b_or_c',
-        'tstr_name', 'or_38_or_0_b_country', 'cnt_vrtx', 'name', 'cat'
+        'tstr_name', 'or_38_or_0_b_country', 'cnt_vrtx', 'name', 'cat', 'vrtx',
     }
     assert set(GEO_LINE.__slots__) == expected_slots

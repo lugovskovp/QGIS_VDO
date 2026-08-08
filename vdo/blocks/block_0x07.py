@@ -268,6 +268,9 @@ if __name__ == '__main__':
     from QGIS_VDO.vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
     from QGIS_VDO.vdo.consts import struct_UINT        # noqa
 
+    # block(0x55D7201);   // EE scale 7 0x16 arch=0 near SPb
+    # block(0x55D6903);   // EE scale 7 0x16 arch=1 near SPb
+
     vdo = vdo30
     # vdo = vdo34ee
     # vdo = vdobmv

@@ -71,6 +71,6 @@ def test_geo_shape_slots_integrity():
     """Проверяем, что все необходимые свойства попали в объявление слотов."""
     expected_slots = {
         'p_str_name', 'ptr_vrtx', 'cnt_vrtx', 'id',
-        'coord', 'ptr_tstr', 'name', 'cat'
+        'coord', 'ptr_tstr', 'name', 'cat', 'vrtx',
     }
     assert set(GEO_SHAPE.__slots__) == expected_slots

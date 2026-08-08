@@ -8,15 +8,15 @@ import re
 from typing import cast
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup  # type: ignore
-from qgis.PyQt.QtCore import QMetaType                      # type: ignore
+from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup, QMessageBox
+from qgis.PyQt.QtCore import QMetaType
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform,
                        QgsCoordinateReferenceSystem)
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
-from QGIS_VDO.vdo import VDO_FILE, COORD
+from QGIS_VDO.vdo import VDO_FILE, COORD, BLADDR
 from QGIS_VDO.vdo.blocks import (block_0x12,
                                  block_0x13,
                                  block_0x07,
@@ -69,7 +69,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # vdo
         self.vdo = parent_plugin.vdo
-        if self.vdo.path is not None:
+        if not self.vdo.is_empty:
             # >>> tab_info
             self._initTabInfo()
 
@@ -85,7 +85,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # self.pb_Action.clicked.connect(self.pbActionEvent)
             # ----------------------------------------------
             pass
-        else:   # if self.vdo.path is not None:
+        else:   # if self.vdo.is_empty:
             # TODO: vdo None -> make unactive groupbox?
             pass
         # TODO: DEBUG привязать pb_DebugClearVDO
@@ -193,8 +193,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         Инициализация вкладки Info
         """
         # path above overall info
-        ap = self.vdo.path.split("/")
-        actionName = ap[-2] + ":::" + ap[-1]
+        # ap = self.vdo.file_path.split("/")
+        # actionName = ap[-2] + ":::" + ap[-1]
+        # del ap
+        ap = self.vdo.file_path.split("/")
+        actionName = ap[-2] + ":::" + self.vdo.filename
         del ap
         self.groupBox_0veral.setTitle(actionName)
         # overall info
@@ -202,7 +205,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.l_vdo_segsize_val.setText(f"0x{self.vdo.segsize:03X} / {self.vdo.segsize}")  # noqa
         formatted = f"{self.vdo.file_size:,}".replace(',', ' ')
         self.l_vdo_size_val.setText(f"0x{self.vdo.file_size:04X} / {formatted}")
-        self.l_vdo_path_val.setText(self.vdo.path)
+        self.l_vdo_path_val.setText(self.vdo.file_path)
         del formatted
         # vdo info
         bl_toc: block_0x12 = self.vdo.get_block(0)
@@ -327,8 +330,16 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             print(f"No way: {srch_coord} not in {sc.area}")
             return
         # в масштабе ищем имя блока или none
-        bladdr_map = sc.find_by_coord(srch_coord)
-        print(bladdr_map)
+        bladdr_map: BLADDR = sc.find_by_coord(srch_coord)
+        # запишем в поле le_bladdr
+        
+        if bladdr_map is None:
+            QMessageBox.warning(
+                self, 'Внимание', 'Ничего не найдено', QMessageBox.Ok
+            )
+        else:
+            self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
+            print(bladdr_map)
         pass
 
     def on_tool_deactivated(self):

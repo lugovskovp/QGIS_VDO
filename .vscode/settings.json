@@ -1,30 +1,35 @@
 {
   "python.languageServer": "Pylance", //  рекомендуется для автодополнения с QGIS/PyQt5;
   "python.analysis.extraPaths": [
-    "C:\\OSGeo4W\\apps\\qgis\\python",
-    "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
-    "C:\\OSGeo4W\\apps\\Python312\\Lib\\site-packages\\PyQt5",
-    "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
+    "C:/OSGeo4W/apps/qgis/python/qgis",
+    // "C:/OSGeo4W/apps/qgis/python/qgis/plugins",
+    "C:/OSGeo4W/apps/qgis/python",
+    "C:/OSGeo4W/apps/Python312/Lib/site-packages",
+    "C:/Users/plugo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins/"
   ],
   "python.analysis.exclude": [
-    "c:/Users/plugo/AppData/Local/Programs/Python/Python312/Lib",
-    "C:/OSGeo4W/apps/qgis/python/qgis",
+    // "c:/Users/plugo/AppData/Local/Programs/Python/Python312/Lib",
+    // "C:/OSGeo4W/apps/qgis/python/qgis",
     "**/node_modules",
     "**/__pycache__",
     "**/.*"
   ],
   "python.autoComplete.extraPaths": [
-    "C:\\OSGeo4W\\apps\\qgis\\python",
-    "C:\\OSGeo4W\\apps\\qgis\\python\\plugins",
-    "C:\\Users\\plugo\\AppData\\Roaming\\QGIS\\QGIS3\\profiles\\default\\python\\plugins\\"
+    "C:/OSGeo4W/apps/qgis/python",
+    "C:/OSGeo4W/apps/Python312/Lib/site-packages",
+    "C:/Users/plugo/AppData/Roaming/QGIS/QGIS3/profiles/default/python/plugins"
   ],
   "python.analysis.indexing": true,
   "python.analysis.packageIndexDepths": [
     {
-      "name": "C:\\OSGeo4W\\apps\\qgis\\python",
-      "depth": 5
+      "name": "C:/OSGeo4W/apps/qgis/python",
+      "depth": 4
     }
   ],
+  // Гарантированно отключаем ложные срабатывания на динамических биндингах PyQGIS
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportInvalidTypeForm": "none"
+  },
   "editor.formatOnSave": true, //  автоматическое форматирование и сортировка импортов при сохранении.
   "[python]": {
     "editor.codeActionsOnSave": {
@@ -47,18 +52,21 @@
       "path": "cmd.exe",
       "args": [
         "/k",
-        "C:\\OSGeo4W\\osgeo4w.bat"
+        "C:/OSGeo4W/osgeo4w.bat"
       ]
     }
   },
   "terminal.integrated.defaultProfile.windows": "OSGeo4W Shell",
-  "python.defaultInterpreterPath": "C:\\OSGeo4W\\bin\\python3.exe",
+  "python.defaultInterpreterPath": "C:/OSGeo4W/bin/python3.exe",
   "qtForPython.qmlls.enabled": false,
   // Заставляем расширение Flake8 использовать интерпретатор QGIS
   "flake8.interpreter": [
-    "C:\\OSGeo4W\\bin\\python3.exe"
+    "C:/OSGeo4W/bin/python3.exe"
   ],
   "flake8.importStrategy": "fromEnvironment",
+  "flake8.args": [
+    "--exclude=C:/OSGeo4W/**,**/node_modules,**/__pycache__,**/.*,c:/Users/plugo/.vscode/**/.*,*.pyi"
+  ],
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python.analysis.autoImportCompletions": false,
   "python.analysis.typeCheckingMode": "off",

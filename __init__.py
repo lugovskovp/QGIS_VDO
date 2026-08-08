@@ -42,27 +42,61 @@ logger = logging.getLogger("MyQgisPlugin")
 # <<< bitarray import
 try:
     from bitarray import bitarray                         # type: ignore # noqa
-    from bitarray.util import ba2int        # type: ignore # noqa
+    from bitarray.util import ba2int                      # type: ignore # noqa
 except ImportError:
-    logger.info("Библиотека bitarray не найдена. Попытка автоматической установки...")
+    logger.info("Библиотека bitarray не найдена. Попытка безопасной установки...")
     try:
-        # ДОБАВЛЕН ФЛАГ --break-system-packages ДЛЯ СОВМЕСТИМОСТИ С DOCKER/LINUX (PEP 668)
-        subprocess.check_call([
-            sys.executable, "-m", "pip",
-            "install", "--break-system-packages", "bitarray"
-        ])
+        # Формируем аргументы для pip
+        # Использование --user изолирует пакет в домашней директории пользователя,
+        # что решает проблему прав администратора в Windows/OSGeo4W и Linux
+        pip_args = [sys.executable, "-m", "pip", "install", "--user", "bitarray"]
+        
+        # Добавляем флаг совместимости с PEP 668 только если Python >= 3.11
+        if sys.version_info >= (3, 11):
+            pip_args.append("--break-system-packages")
+
+        # Запускаем установку скрыто (без всплывающих окон консоли на Windows)
+        # и с таймаутом, чтобы QGIS не завис навсегда, если пропал интернет
+        startupinfo = None
+        if sys.platform == "win32":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        process = subprocess.Popen(
+            pip_args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            startupinfo=startupinfo,
+            text=True
+        )
+        
+        # Ждем максимум 45 секунд (bitarray компилируется/скачивается быстро)
+        stdout, stderr = process.communicate(timeout=45)
+
+        if process.returncode != 0:
+            raise RuntimeError(f"Pip вернул код {process.returncode}. Ошибка: {stderr}")
+
+        # Принудительно обновляем пути поиска модулей, так как папка --user могла создаться только что
+        import importlib
+        importlib.invalidate_caches()
+        
+        # Повторная попытка импорта
         from bitarray import bitarray                     # type: ignore # noqa
         from bitarray.util import ba2int                  # type: ignore # noqa
-        logger.info("Библиотека bitarray успешно установлена!")
+        logger.info("Библиотека bitarray успешно установлена в пользовательское окружение!")
+        
     except Exception as e:
         logger.error(f"Не удалось автоматически установить bitarray: {e}")
-        # Здесь можно вызвать QMessageBox, чтобы предупредить пользователя,
-        # если плагин запускается в графическом интерфейсе QGIS
+        # Если импорт не удался, мы не падаем здесь, а даем QGIS загрузить плагин,
+        # но внутри classFactory или инициализации самого плагина вызовем красивый QMessageBox.
 # >>> bitarray import
-# type: ignore # noqa
 
 
-from QGIS_VDO.ui_files import AnimatedGroupBox   # noqa
+# Импорты UI делаем строго ПОСЛЕ блока установки зависимостей
+try:
+    from QGIS_VDO.ui_files import AnimatedGroupBox       # noqa
+except ImportError as e:
+    logger.error(f"Ошибка импорта UI компонентов плагина: {e}")
 
 
 def classFactory(iface):
@@ -71,11 +105,24 @@ def classFactory(iface):
     :param iface: A QGIS interface instance.
     :type iface: QgsInterface
     """
-    #return MinimalPlugin(iface)
+    # Защита на случай, если bitarray так и не удалось поставить
+    try:
+        from bitarray import bitarray                   # type: ignore # noqa
+    except ImportError:
+        from qgis.pyqt.QtWidgets import QMessageBox     # type: ignore # noqa
+        QMessageBox.critical(
+            iface.mainWindow(),
+            "Ошибка запуска QGIS_VDO",
+            "Для работы плагина необходима библиотека 'bitarray'.\n\n"
+            "Пожалуйста, установите её вручную через консоль:\n"
+            "pip install bitarray"
+        )
+        return None
+
     from QGIS_VDO.vdo_explorer import VDOExplorerPlugin
     return VDOExplorerPlugin(iface)
 
 
 if __name__ == "__main__":
     """Standalone execution."""
-    pass
+    pass    # type: ignore # noqa

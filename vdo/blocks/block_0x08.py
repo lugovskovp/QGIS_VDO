@@ -155,14 +155,17 @@ class block_0x08(block_base):
     def get_xy_area(self, x: int, y: int) -> Tuple[COORD, COORD]:
         """Возвращает оригинальные объекты COORD lb, rt для ячейки x, y."""
         side = self.item_side
-        hex_lon = (self.origin_hlon + x * side) & 0xFFFFFFFF
-        hex_lat = (self.origin_hlat + y * side) & 0xFFFFFFFF
+        hex_lon = (self.origin_hlon + x * side)
+        hex_lat = (self.origin_hlat + y * side)
+
+        hex_lat = hex_lat - 0x100000000 if hex_lat & MOST_SIGNIFICANT_BIT else hex_lat   # & 0xFFFFFFFF
+        hex_lon = hex_lon - 0x100000000 if hex_lon & MOST_SIGNIFICANT_BIT else hex_lon
         
         return COORD(hex_lon, hex_lat), COORD((hex_lon + side) & 0xFFFFFFFF, (hex_lat + side) & 0xFFFFFFFF)
 
     def get_xy_item(self, x: int, y: int) -> BLADDR | None:
         """Вернуть адрес папки по индексам сетки."""
-        item_num = y + x * self.qty_x
+        item_num = x + y * self.qty_y
         if item_num >= self.li_items.cnt:
             return None
             

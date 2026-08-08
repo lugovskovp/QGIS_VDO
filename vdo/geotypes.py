@@ -29,7 +29,7 @@ else:
 
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
-from QGIS_VDO.vdo.consts import struct_2UINT
+from QGIS_VDO.vdo.consts import struct_2UINT, MOST_SIGNIFICANT_BIT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
@@ -51,7 +51,7 @@ TSTR_struct = struct.Struct(">Hbb")
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
 MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный коэффициент перевода.
 
-MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
+# MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
 
 # FFFFFFF = 268435455, / 180 = 1degree = 1491308 (16C16C)=
 # MULCOORD = 0x54C563 # dec 5555554;

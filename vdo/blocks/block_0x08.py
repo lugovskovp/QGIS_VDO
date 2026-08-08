@@ -27,7 +27,7 @@ from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.blocks import block_0x09
 from QGIS_VDO.vdo.datatypes import BLADDR
 from QGIS_VDO.vdo.geotypes import COORD  # , MULCOORD
-from QGIS_VDO.vdo.consts import struct_UINT
+from QGIS_VDO.vdo.consts import struct_UINT, MOST_SIGNIFICANT_BIT
 
 
 OFFSET_LIST_FOLDEFS = 0x08
@@ -57,10 +57,10 @@ class block_0x08(block_base):
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
         
         # Сохраняем сырые uint32 значения для корректной CarInDB-математики
-        self.origin_hlon = origin._hlon
-        self.origin_hlat = origin._hlat
+        self.origin_hlon = origin._hlon - 0x100000000 if origin._hlon & MOST_SIGNIFICANT_BIT else origin._hlon
+        self.origin_hlat = origin._hlat - 0x100000000 if origin._hlat & MOST_SIGNIFICANT_BIT else origin._hlat
         
-        # Вычисляем размеры сетки, сохраняя поведение беззнаковых переполнений
+        # Вычисляем размеры сетки
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
         self.qty_x = (max._hlongitude - origin._hlongitude) // self.item_side
 
@@ -132,11 +132,13 @@ class block_0x08(block_base):
         """Поиск подблока карты, в который попадают координаты."""
         side = self.item_side
         
-        max_hlatitude = self.origin_hlat + self.qty_y * side
-        max_hlongitude = self.origin_hlon + self.qty_x * side
-        
-        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlatitude
-                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlongitude):
+        max_hlat = (self.origin_hlat + self.qty_y * side)
+        max_hlat = max_hlat - 0x100000000 if max_hlat & MOST_SIGNIFICANT_BIT else max_hlat   # & 0xFFFFFFFF
+        max_hlon = (self.origin_hlon + self.qty_x * side)
+        max_hlon = max_hlon - 0x100000000 if max_hlon & MOST_SIGNIFICANT_BIT else max_hlon
+
+        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlat
+                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlon):
             return None
 
         delta_x = (srch._hlongitude - self.origin_hlon) // side

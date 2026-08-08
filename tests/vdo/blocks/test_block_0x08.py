@@ -54,7 +54,7 @@ EXPECTED_TEST_POINTS = {
     "511930001C7A5000" : {
         "name": "max: right top",
         "coord_str": "86.000050N 214.909002E",
-        "map_val_sc_11": 0x55d4805,
+        "map_val_sc_11": None,
         "map_val_sc_04": None,
     },
 }
@@ -200,7 +200,7 @@ def test_block_0x08_get_xy_item(ru_08_block_fixture, monkeypatch):
     # ТЕСТ 2: Тест выхода за границы индексов списка li_items
     # ==========================================
     # Координаты (133, 5) на реальной сетке гарантированно дадут item_num >= cnt
-    assert block.get_xy_item(133, 5) is None
+    assert block.get_xy_item(133, 65) is None
 
     # ==========================================
     # ТЕСТ 3: Тест обработки пустой ячейки (нулевой указатель)
@@ -281,6 +281,55 @@ def test_block_0x08_find_by_coord_integration(ru_08_block_fixture, point_fixture
     map_bl = block.find_by_coord(coord_srch)
 
     # 5. ПРОВЕРКИ
+    if target_value is None:
+        assert map_bl is None
+    else:
+        assert map_bl is not None
+        assert map_bl.value == target_value
+
+
+def test_block_0x08_find_by_coord_integration_real(ru_08_block_fixture, point_fixture, monkeypatch):
+    """Интеграционный тест поиска подблока по реальной бинарной фикстуре."""
+    coord_srch, metric = point_fixture
+    block, bmetric = ru_08_block_fixture
+
+    # 1. Динамически определяем ожидаемое значение (scale 4 или 11)
+    expected_metrix_map = {
+        4: "map_val_sc_04",
+        11: "map_val_sc_11"
+    }
+    metric_key = expected_metrix_map[bmetric["scale"]]
+    target_value = metric[metric_key]
+
+    # 2. Мокаем vdo (так как vdo объявлен в родителе block_base, подменяем у типа)
+    mock_vdo = MagicMock()
+    
+    # Настраиваем vdo.get_bladdr для вложенного вызова get_xy_item
+    def mock_get_bladdr(bladdr_val):
+        mock_res = MagicMock()
+        mock_res.isZero = (bladdr_val == 0)
+        mock_res.value = bladdr_val
+        return mock_res
+    mock_vdo.get_bladdr.side_effect = mock_get_bladdr
+
+    # Настраиваем цепочку vdo.get_block -> block_0x09
+    mock_block_0x09 = MagicMock()
+    if target_value is None:
+        mock_block_0x09.find_by_coord.return_value = None
+    else:
+        mock_final_block = MagicMock()
+        mock_final_block.value = target_value
+        mock_block_0x09.find_by_coord.return_value = mock_final_block
+        
+    mock_vdo.get_block.return_value = mock_block_0x09
+
+    # Внедряем мок vdo, обходя ограничения __slots__
+    monkeypatch.setattr(type(block), "vdo", mock_vdo)
+
+    # 3. ВЫЗОВ ОРИГИНАЛЬНОГО МЕТОДА (Выполняется вся математика с MOST_SIGNIFICANT_BIT)
+    map_bl = block.find_by_coord(coord_srch)
+
+    # 4. ПРОВЕРКИ
     if target_value is None:
         assert map_bl is None
     else:

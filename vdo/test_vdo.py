@@ -20,3 +20,6 @@ vdoRu = VDO_FILE(fpathRu)       # noqa: F841
 
 fpathbmw = 'c:\\DIY\\VDO\\db_src\\bmw34-2010\\DB\\DB_0'
 vdobmv = VDO_FILE(fpathbmw)       # noqa: F841
+
+
+# block = vdoRu.get_block()

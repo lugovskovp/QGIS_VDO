@@ -18,7 +18,7 @@ SCALE
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, Optional, Tuple
 
 
 if TYPE_CHECKING:
@@ -59,96 +59,67 @@ class SCALE(BYTESTRUCT):
     24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
     * - only dbrev.34
     """
-    def __init__(self, byte_array: ReadableBuffer, vdo: VDO_FILE) -> None:
-        if vdo.dbrev == 34:
-            self.size = 0x1C
-        elif vdo.dbrev == 30:
-            self.size = 0x18
-        else:
-            raise ValueError(vdo.dbrev, " dbrev must be 30 or 34")
 
-        super().__init__(byte_array)
+    # 1. Жестко фиксируем слоты. vdo и size теперь легитимно живут в памяти структуры
+    __slots__ = ("vdo", "size")
+
+    def __init__(self, byte_array: Union[bytes, bytearray, memoryview], vdo: "VDO_FILE") -> None:
+        # Определяем размер структуры на основе версии dbrev
+        if vdo.dbrev == 34:
+            structure_size = 0x1C
+        elif vdo.dbrev == 30:
+            structure_size = 0x18
+        else:
+            raise ValueError(f"dbrev must be 30 or 34, got {vdo.dbrev}")
+
+        # 2. Передаем размер в родительский класс, чтобы self._raw был строго нужной длины
+        super().__init__(byte_array, size=structure_size)
+        
+        self.size = structure_size
         self.vdo = vdo
 
-        # area
-        point_lb = COORD(bytearray(self._raw[4:12]))
-        point_rt = COORD(self._raw[12:20])
-        self.area = (point_lb, point_rt)
+    def __repr__(self) -> str:
+        # Используем ленивые свойства, чтобы дамп не падал
+        return f"{self.d_delta} {self.zoom_from}-{self.zoom_to} {self.value_a} [0x{self.square_side:X}]"
 
-        # @properties:
-        # 0   UINT    BLADDR almanac_idx
-        # 20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
-        # 22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
-        # 24* WORD    zoom_to, [0, 1, 3000, 1200, 120, 40, 65535]
-
-        # TODO а оно надо?
-        self.square_side = (self.area[1]._hlat - self.area[0]._hlat)
-        self.d_delta = self.area[1].delta(self.area[0])
-
-        return
-        # Список folders с areas покрытия
-        self.folders = {}  # dict areas, key - block_0x09, val - area
-
-        alm: block_0x08 = vdo.get_block(self.almanac_idx)
-        from_x = point_lb._hlon
-        to_x = point_rt._hlon
-        from_y = point_lb._hlat
-        # to_y = point_rt._hlat
-        x = from_x
-        y = from_y
-        i = 0
-        j = 0
-        for offset in range(alm.li_folders.ptr,
-                            alm.li_folders.ptr + BLADDR.size * alm.li_folders.cnt,
-                            BLADDR.size):
-            ffolder = alm.bladdr(offset)    # следующий folder
-            # lb rt area
-            if x + alm.side > to_x:
-                i = 0
-                j += 1
-                x = from_x
-                y += alm.side
-                # y и не проверяем
-            # Вот тут бы проверить - узкий-высокий...
-            lb = (x, y)
-            rt = (x + alm.side, y + alm.side)
-            i += 1
-            x += alm.side
-            if not ffolder.isZero:
-                self.folders[f"{ffolder}"] = (ffolder, lb, rt, i, j)
-                pass
-            pass
-        # -171088640 x  0x-a329b00
-        # 43008 y 0xa800
-        # 30.795958S 29.992259W lat-lon
-        # '00 00 A8 00 F5 CD 65 00  '
-        pass
-
-    def __repr__(self):
-        res = f"{self.area[1].delta(self.area[0])}"
-        res += f" {self.zoom_from}-{self.zoom_to} {self.value_a}"
-        res += f" [0x{self.square_side:X}]"
-        return res
+    # --- Координаты и Зоны (Zero-Copy) ---
 
     @property
-    def almanac_idx(self) -> BLADDR | None:
-        """
-        bladdr block_0x08 - альманаха
-        """
-        return BLADDR(self._raw[:4], self.vdo)
+    def area(self) -> Tuple["COORD", "COORD"]:
+        """Возвращает лениво инициализированные объекты координат (пара left-bottom, right-top)."""
+        # Используем self.read() для передачи zero-copy memoryview срезов
+        point_lb = COORD(self.read(4, 8))
+        point_rt = COORD(self.read(12, 8))
+        return point_lb, point_rt
+
+    @property
+    def square_side(self) -> int:
+        """Ленивый расчет стороны квадрата (вычисляется только при вызове)."""
+        lb, rt = self.area
+        return rt._hlat - lb._hlat
+
+    @property
+    def d_delta(self):
+        """Ленивый расчет дельты."""
+        lb, rt = self.area
+        return rt.delta(lb)
+
+    # --- Свойства полей структуры ---
+
+    @property
+    def almanac_idx(self) -> Optional["BLADDR"]:
+        """bladdr block_0x08 - альманаха."""
+        # Передаем первые 4 байта как memoryview без копирования
+        return BLADDR(self.read(0, 4), self.vdo)
         
     @property
     def value_a(self) -> int:
-        """
-        20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]
-        """
+        """20  WORD    value_a - unknown, [6, 0, 1, 2, 65535*]"""
         return self.ushort(20)
 
     @property
     def zoom_from(self) -> int:
-        """
-        22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]
-        """
+        """22  WORD    zoom_from, [0, 1, 320, 40, 120, 1200, 3000]"""
         return self.ushort(22)
 
     @property
@@ -159,33 +130,33 @@ class SCALE(BYTESTRUCT):
         """
         if self.vdo.dbrev == 34:
             return self.ushort(24)
-        else:
-            return 0
+        return 0
         
     @property
     def isEmpty(self) -> bool:
-        """ Валидный или пустой"""
-        # если almanac_idx == 0, то scale пустой
-        # return self.almanac_idx.isZero
+        """Валидный или пустой блок (проверка по нулевым координатам area)."""
+        # Сравниваем memoryview с bytes напрямую — это быстро и эффективно на уровне Си
         # return self._raw[:4] == b'\x00' * 4     # а вот херь: у бмв есть 0x04dffa01, но пустой area # noqa
         return self._raw[4:20] == b'\x00' * 16
 
-    def find_by_coord(self, srch_point: COORD) -> BLADDR | None:
-        """
-        Поиск idx блока, в который попадают координаты, или None
-        """
-        # check borders
-        if srch_point.lat < self.area[0].lat or srch_point.lat > self.area[1].lat \
-           or srch_point.lon < self.area[0].lon or srch_point.lon > self.area[1].lon:
-            # не попал в квадрат lb-rt scale
-            print(f"No way: {srch_point} not in {self.area}")
+    # --- Бизнес-логика ---
+
+    def find_by_coord(self, srch_point: "COORD") -> Optional["BLADDR"]:
+        """Поиск idx блока, в который попадают координаты, или None."""
+        lb, rt = self.area
+        
+        # Проверка границ (границы теперь берутся из ленивого свойства area)
+        if (srch_point.lat < lb.lat or srch_point.lat >= rt.lat
+                or srch_point.lon < lb.lon or srch_point.lon >= rt.lon):
+            # print(f"No way: {srch_point} not in ({lb}, {rt})")
             return None
-        # 0x08
+            
         if not self.almanac_idx:
             return None
-        alm: block_0x08 = self.vdo.get_block(self.almanac_idx, self.area[0], self.area[1])
-        res = alm.find_by_coord(srch_point)     # bladdr geoblock
-        return res
+            
+        # Запрашиваем блок через vdo
+        alm: "block_0x08" = self.vdo.get_block(self.almanac_idx, lb, rt)
+        return alm.find_by_coord(srch_point)
 
 
 class block_0x07(block_base):

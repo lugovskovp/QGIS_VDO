@@ -1,29 +1,16 @@
 import pytest
 from unittest.mock import MagicMock  # , patch
 
-from QGIS_VDO.vdo.datatypes import VDO_FILE     # , BLADDR
+from QGIS_VDO.vdo.datatypes import VDO_FILE
 from QGIS_VDO.vdo.geotypes import COORD
-# from QGIS_VDO.vdo.blocks import block_0x08
-# from QGIS_VDO.vdo.consts import struct_UINT, struct_WORD
 
 from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
 
 # --- Настройки окружения и фикстуры ---
 
-
-# COORD_ORIGIN = COORD(0xf1193000, 0xbc7a5000)
 COORD_ORIGIN = COORD(bytes.fromhex('F1193000BC7A5000'))
 COORD_MAX = COORD(bytes.fromhex('511930001C7A5000'))
-
-
-# @pytest.fixture
-# def ee_09_block():
-#     #  EE sc=7  bl=0x0515a202 lo=317323264 la=326782976; lo=334100480 la=343560192
-#     # origin = 58.820952N 27.118204E, max = 61.840852N 30.138103E
-#     #item_side = 524288
-#     bl_09: block_0x09 = VDO_FILE().load_single_block(FIXTURE_09_FILE, 34, 0x800, COORD_ORIGIN, COORD_MAX)
-#     return bl_09
 
 
 EXPECTED_TEST_POINTS = {

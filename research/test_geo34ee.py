@@ -8,7 +8,7 @@ from vdo.enums import BlockType       # noqa
 from vdo.block_base import block_base    # noqa
 from vdo.datatypes import BLADDR
 
-from vdo.test_vdo import vdo34ee as vdo
+from vdo.fixtures_vdo import vdo34ee as vdo
 
 
 tos_bl = vdo.get_block(0)

@@ -85,7 +85,7 @@ beringovo more
     SHAPE WATER[2] :0x90
 """
 import binascii
-from vdo.test_vdo import vdobmv as vdo
+from vdo.fixtures_vdo import vdobmv as vdo
 from vdo.datatypes import BYTESTRUCT
 
 

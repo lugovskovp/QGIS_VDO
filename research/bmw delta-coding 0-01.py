@@ -4,9 +4,10 @@ bmw  //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
 unpack vertexes
 """
 
-import math
-from vdo.test_vdo import vdobmv as vdo
-from vdo.datatypes import BYTESTRUCT
+# import math
+# from QGIS_VDO.vdo.fixtures_vdo import vdo
+# from QGIS_VDO.vdo.datatypes import BYTESTRUCT
+
 
 class TeleAtlasDecoder:
     def __init__(self, data: bytes, base_x: int, base_y: int, max_x_y: int):
@@ -108,6 +109,7 @@ class TeleAtlasDecoder:
             
         return vertices
 
+
 # ==========================================
 # ПРИМЕР РАБОТЫ ДЕКОДЕРА
 # ==========================================
@@ -124,7 +126,7 @@ if __name__ == "__main__":
     # Объединяем X и Y дельты первой точки: '0000100110' -> дополняем нулями до байта -> 00001001 10000000
     # В шестнадцатеричном виде это: 0x09, 0x80
     
-    # compressed_bitstream = bytes([0x09, 0x80]) 
+    # compressed_bitstream = bytes([0x09, 0x80])
 
     # Стартовые абсолютные координаты тайла (например, центр города в локальной сетке)
     # - или 0, 0
@@ -152,6 +154,6 @@ if __name__ == "__main__":
     print("--- Результат декодирования ---")
     print(f"Стартовая точка P0: {polyline[0]}")
     print(f"Декодированная точка P1: {polyline[1]}")
-    print(f"Ожидалось смещение (-1, +3): {polyline[1][0] - polyline[0][0] == -1 and polyline[1][1] - polyline[0][1] == 3}")
+    print(f"Ожидалось смещение (-1, +3): {polyline[1][0] - polyline[0][0] == -1 and polyline[1][1] - polyline[0][1] == 3}")  # noqa
     
     pass

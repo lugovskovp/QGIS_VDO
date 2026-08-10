@@ -4,12 +4,13 @@ bmw  //1Dp3  =2/4/0/11a/0/3  'tail_07154f 02.bin'  # noqa
 unpack vertexes
 """
 
-import math
+# import math
 from bitarray import bitarray
 from bitarray.util import ba2int
 
-from vdo.test_vdo import vdobmv as vdo
-from vdo.datatypes import BYTESTRUCT
+# from vdo.fixtures_vdo import vdobmv as vdo
+# from vdo.datatypes import BYTESTRUCT
+
 
 class PointsDecoder:
     def __init__(self, data: bytes, base_x: int, base_y: int, max_x_y: int):
@@ -73,10 +74,10 @@ class PointsDecoder:
         '111' -> 16 бит значения
         """
         # --- Шаг 1:  РАСЧЕТ ПРЕФИКСА - СКОЛЬКО БАЙТ ЧИТАТЬ
-        # - control prefix? если координата не меняется. Самый длинный 111? 
-        BtR = {                 # bytes to read
-                '0': 9,         # 9 Префикс '0' -> Микро-смещение (4 бита)
-                '10': 9,        # 4(16-FF5F) 5(10-F12A) 6(7-E09C) 7(16-F5FB) 8(29-E4B1) 9(276=0xc0b7)   11 12 13 Префикс '10' -> Малое смещение (8 бит)
+        # - control prefix? если координата не меняется. Самый длинный 111?
+        BtR1 = {'0': 9,         # 9 Префикс '0' -> Микро-смещение (4 бита)
+                '10': 9,        # 4(16-FF5F) 5(10-F12A) 6(7-E09C) 7(16-F5FB) 8(29-E4B1) 9(276=0xc0b7)
+                #  11 12 13 Префикс '10' -> Малое смещение (8 бит)
                 '11': 16        # 16 считать все 16 бит, как значение. []
                 # '110': 13,      # Префикс '110' -> Среднее смещение (12 бит) :на первом шаге 14 валит в -?
                 # '111': 16       # Префикс '111' -> Макси-смещение / Прыжок (16 бит)
@@ -86,16 +87,16 @@ class PointsDecoder:
         bits_to_read = 0            # обнуляем кво битов для чтения
         str_prefix = self._pop(1)             # берём самый первый
         while bits_to_read == 0:
-            if str_prefix.to01() in BtR:
-                bits_to_read = BtR[str_prefix.to01()]
+            if str_prefix.to01() in BtR1:
+                bits_to_read = BtR1[str_prefix.to01()]
                 continue
             str_prefix += self._pop(1)
 
         # Шаг 2: Считываем само закодированное значение
-        bi_prefix = str_prefix.to01()
-        bi_toread = self._touch(bits_to_read).to01()
-        bi_ttafter = self._touch(18, len(bi_toread)).to01()
-        bi_z = bi_prefix + " " + bi_toread + " " + bi_ttafter
+        # bi_prefix = str_prefix.to01()
+        # bi_toread = self._touch(bits_to_read).to01()
+        # bi_ttafter = self._touch(18, len(bi_toread)).to01()
+        # bi_z = bi_prefix + " " + bi_toread + " " + bi_ttafter
         if str_prefix.to01() == '11':
             mode = 'load'
         else:
@@ -165,25 +166,26 @@ class PointsDecoder:
             
         return vertices
 
+
 """
 07154f 02  BlockType.MAP__10k400: 0x1d
 
     Max PTR bites: 11
     cat 0034:0002 cnt:2     next ptr: 0040
     shp 0040:0004 cnt:4     next ptr: 00A4
-    lin 0000:0000 cnt:0 
-    poi 0000:0000 cnt:0 
+    lin 0000:0000 cnt:0
+    poi 0000:0000 cnt:0
     vrt 00A4:011A cnt:282   next ptr: 050C
     tst 050C:0003 cnt:3     next ptr: 0518
-    strs from 0518 
+    strs from 0518
     begin word = 0500:0900
-    Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A  
-    67.880639N 170.605798E  76.940337N 179.665496E 
+    Map_hex: 42 6D 90 00 16 7A 50 00  45 6D 90 00 19 7A 50 00   00 01 00 0A
+    67.880639N 170.605798E  76.940337N 179.665496E
     'C000 x C000'
 
-    01 00 00 40  
-    01 00 00 54  
-    00 00 00 90  
+    01 00 00 40
+    01 00 00 54
+    00 00 00 90
     start_vrtx_num = 0
     0000 00A4 400d9206  387EEDF5 1AF37D90  0000 050C  - первый полигон 4 точки
     0518 00B4 400cd65c  3F579717 18395941  0000 050C    start_vrtx_num = 4
@@ -226,12 +228,12 @@ if __name__ == "__main__":
     # Объединяем X и Y дельты первой точки: '0000100110' -> дополняем нулями до байта -> 00001001 10000000
     # В шестнадцатеричном виде это: 0x09, 0x80
     
-    # compressed_bitstream = bytes([0x09, 0x80]) 
+    # compressed_bitstream = bytes([0x09, 0x80])
 
     # Стартовые абсолютные координаты тайла (например, центр города в локальной сетке)
     # - или 0, 0
-    # - или первое значение в потоке 
-    # - NO! beg A, B,  !!! rus34, 0x08a06b02 begAB=0e00 0900, но макс ХУ = 0хс000 
+    # - или первое значение в потоке
+    # - NO! beg A, B,  !!! rus34, 0x08a06b02 begAB=0e00 0900, но макс ХУ = 0хс000
     # для одинаковых значений нет проблем с очередностью
 
     TILE_BASE_X = 0x500
@@ -251,7 +253,6 @@ if __name__ == "__main__":
     # Инициализируем низкоуровневый декодер
     print(f"({TILE_BASE_X:04x}, {TILE_BASE_Y:04x})")
     decoder = PointsDecoder(compressed_bitstream, TILE_BASE_X, TILE_BASE_Y, MAX_XY_VAL)
-    
 
     # Декодируем следующие вершины
     # 07154d02
@@ -267,6 +268,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     # 2. Создаем DataFrame
+    data = 5
     df = pd.DataFrame(data, columns=['X', 'Y'])
 
     # 3. Строим график
@@ -278,7 +280,8 @@ if __name__ == "__main__":
     # print("")
     # print(f"Стартовая точка P0: {polyline[0]}")
     # print(f"Декодированная точка P1: {polyline[1]}")
-    # print(f"Ожидалось смещение (-1, +3): {polyline[1][0] - polyline[0][0] == -1 and polyline[1][1] - polyline[0][1] == 3}")
+    # print(f"Ожидалось
+    #  смещение (-1, +3): {polyline[1][0] - polyline[0][0] == -1 and polyline[1][1] - polyline[0][1] == 3}")
     
     pass
 

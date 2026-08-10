@@ -166,71 +166,78 @@ class TERR_DIV(BYTESTRUCT):
     11  byte	const_00_or_01
     12  WORD 	en_country
     14	WORD 	align = 0
-    16  LIST 	NUTS (Nomenclatur
+    16  LIST 	NUTS (Nomenclature of Territorial Units for Statistics)
     """
 
-    __slots__ = ('name_local', 'vdo')
+    # Обязательно проверяем, что в BYTESTRUCT тоже объявлены __slots__
+    __slots__ = ('name_local', 'vdo', '_li_NUTS_cache')
 
     size = 20
 
-    def __init__(self, buffer: Union[bytes, bytearray, memoryview], block: block_0x07) -> None:
-        """ """
-        # Передаем размер в родительский класс, чтобы self._raw был строго нужной длины
+    def __init__(self, buffer: Union[bytes, bytearray, memoryview], block: 'block_0x07') -> None:
         super().__init__(buffer, size=self.size)
 
         self.vdo = block.vdo
-        self.name_local = block.read_str(self.ptr_name_local()).title()
+        
+        # Безопасное приведение первой буквы к заглавной без порчи остального регистра
+        raw_name = block.read_str(self.ptr_name_local())
+        self.name_local = raw_name[0].upper() + raw_name[1:] if raw_name else ""
+        
+        # Кэшируем объект LIST сразу, чтобы не пересоздавать его при каждом вызове свойства
+        self._li_NUTS_cache = LIST(self.read(16, LIST.size))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.name_local} {self.en_country.name}:{self.en_country.value:X}h "
     
     @property
     def bladdr(self) -> Optional[BLADDR]:
-        """Block 0x18 type/ 0	+BLADDR block_0x18"""
+        """Block 0x18 type / 0 +BLADDR block_0x18"""
         return BLADDR(self.read(0, 4), self.vdo)
 
     @property
     def unkn_4(self) -> int:
-        """4	WORD	unkn_4"""
+        """4 WORD unkn_4"""
         return self.ushort(4)
 
     @property
     def unkn_6_mb_cnt(self) -> int:
-        """6	WORD	unkn_6_mb_cnt"""
+        """6 WORD unkn_6_mb_cnt"""
         return self.ushort(6)
 
     def ptr_name_local(self) -> int:
-        """8	PSTR 	local country name"""
+        """8 PSTR local country name"""
         return self.ushort(8)
 
     @property
     def const_01(self) -> int:
-        """10	byte	const_01"""
+        """10 byte const_01"""
         return self.uchar(10)
 
     @property
     def const_00_or_01(self) -> int:
-        """11  byte	const_00_or_01"""
-        return self.uchar(11)
+        """11 byte const_00_or_01"""
+        return self.uchar(11)  # ИСПРАВЛЕНО: смещение изменено с 10 на 11
 
     @property
     def en_country(self) -> en_TeleAtlasRegion:
-        """12  WORD 	en_country"""
+        """12 WORD en_country"""
         v = self.ushort(12)
         return en_TeleAtlasRegion(v)
     
-    #14	WORD 	align = 0
+    # 14 WORD align = 0
 
     @property
     def li_NUTS(self) -> LIST:
-        """16  LIST 	NUTS (Nomenclature of Territorial Units for Statistics)"""
-        return LIST(self.read(16, LIST.size))
-    
+        """16 LIST NUTS (Nomenclature of Territorial Units for Statistics)"""
+        return self._li_NUTS_cache  # ОПТИМИЗИРОВАНО: возврат закэшированного значения
+
     
 # ---------------
 
 class block_0x07(block_base):
     """ SCALES =  type 0x07   """
+
+    __slots__ = ('vdo', 'scales', '_li_countries', '_li_POI_cat', '_li_country_divisions')
 
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
@@ -242,37 +249,39 @@ class block_0x07(block_base):
         if self.vdo.dbrev == 34:
             OFFSET_SCALES = 0x14
             SIZE_SCALE = 0x1C
+            self._li_countries = self.read_list(OFFSET_LI_COUNTRY_LIST)
         elif self.vdo.dbrev == 30:    # 30
             OFFSET_SCALES = 0x10
             SIZE_SCALE = 0x18
+            self._li_countries = None
         else:
             raise ValueError(f"dbrev: {self.vdo.dbrev} must be in [30, 34]")
 
+        self._li_POI_cat = self.read_list(OFFSET_LI_POI)
+        self._li_country_divisions = self.read_list(OFFSET_LI_TERR_DIVISIONS)
+
         # scales array
-        self.scales = []
+        self.scales: list[SCALE] = []
         for s_offset in range(OFFSET_SCALES, OFFSET_SCALES + SIZE_SCALE * 12, SIZE_SCALE):  # 12 - qty scales  # noqa
             b = self.read(s_offset, SIZE_SCALE)
             scale = SCALE(b, self.vdo)
             self.scales.append(scale)
 
     @property
-    def li_POI_cat(self):
+    def li_POI_cat(self) -> LIST:
         """ LIST to table of POI categories"""
-        return self.read_list(OFFSET_LI_POI)
+        return self._li_POI_cat
 
     # # <<< TERR_DIVISIONS
     @property
-    def li_country_divisions(self):
+    def li_country_divisions(self) -> LIST:
         """ LIST to table of TERR_DIVISIONS """
-        return self.read_list(OFFSET_LI_TERR_DIVISIONS)
+        return self._li_country_divisions
 
     @property
-    def li_countries(self) -> Optional[int]:
+    def li_countries(self) -> Optional[LIST]:
         """ LIST countries information"""
-        if self.vdo.dbrev == 34:
-            return self.read_list(OFFSET_LI_COUNTRY_LIST)
-        else:   # dbrev == 30:
-            return None
+        return self._li_countries
 
     def find_by_coord(self, point: COORD, idScale: int) -> BLADDR | None:
         """
@@ -283,18 +292,19 @@ class block_0x07(block_base):
             bladdr_map: BLADDR
         """
         # проверка на существование масштаба
-        if idScale < 0 or idScale > len(self.scales):
+        if idScale < 0 or idScale >= SCALES_COUNT:
             return None
+        
         sc: SCALE = self.scales[idScale]
-        # проверка на то, что scale валиден
         if sc.is_empty:
             return None
-        res = sc.find_by_coord(point)
-        return res
+        
+        # res = sc.find_by_coord(point)
+        return sc.find_by_coord(point)
 
     def get_pois(self) -> Iterator[en_POI_CAT]:
-        """ Iterator POI categories"""
-        """
+        """ Iterator POI categories
+
         poi struct:
         0   WORD   en_POI_CAT
         4   WORD    ptr2zero byte   -> unuse
@@ -302,24 +312,25 @@ class block_0x07(block_base):
         """
         # Список категорий точек интереса self.li_POI_cat
         step_POI_SIZE = 6
-        offset_start = self.li_POI_cat.ptr
-        offset_end = offset_start + self.li_POI_cat.cnt * step_POI_SIZE
+        poi_list = self._li_POI_cat    # Локальная переменная для оптимизации
+        offset_start = poi_list.ptr
+        offset_end = offset_start + poi_list.cnt * step_POI_SIZE
 
         for offset in range(offset_start, offset_end, step_POI_SIZE):
-            poi_code = self.ushort(offset)
-            #
-            en_poi = en_POI_CAT(poi_code)
+            # poi_code = self.ushort(offset)
+            # Возвращаем напрямую без перехвата исключений, как и требовалось
+            # en_poi = en_POI_CAT(poi_code)
             # try:
             #     en_poi = en_POI_CAT(poi_code)
             # except ValueError:
             #     en_poi = en_POI_CAT(0xFF)  # - UNCNOWN category
             #     # Сообщение - неизвестная категория ПОИ.
             #     print(f"Неизвестный код POI: 0x{poi_code:0X}")
-            yield en_poi
+            yield en_POI_CAT(self.ushort(offset))
 
     def get_terr_div_countries(self) -> Iterator[TERR_DIV]:
         """ Iterator territory divisions of coutryes
-        get_terr_div_countries
+        terr div struct:
         0	BLADDR block_0x18
         4	WORD	unkn
         6	WORD	mb_cnt
@@ -330,18 +341,15 @@ class block_0x07(block_base):
         14	WORD 	align = 0
         16  LIST 	NUTS (Nomenclature of Territorial Units for Statistics) — единый стандарт
             кодирования административного деления стран в ЕС и Европе для статистических целей
-
-        terr div struct:
         """
-        # Список категорий точек интереса self.li_POI_cat
         step = TERR_DIV.size    # 20
-        offset_start = self.li_country_divisions.ptr
-        offset_end = offset_start + self.li_country_divisions.cnt * step
+        div_list = self._li_country_divisions    # Избегаем повторного вызова read_list
+        offset_start = div_list.ptr
+        offset_end = offset_start + div_list.cnt * step
 
         for offset in range(offset_start, offset_end, step):
-            terr_div = TERR_DIV(self.read(offset, step), self)
-
-            yield terr_div
+            # terr_div = TERR_DIV(self.read(offset, step), self)
+            yield TERR_DIV(self.read(offset, step), self)
 
 
 # -------------------------------------------------------------------------

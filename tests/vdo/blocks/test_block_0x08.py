@@ -100,7 +100,7 @@ def ru_08_block_fixture(request):
     bmetric = ALMANAC_DICT[filename]
     f_path = FIXTURES_DIR / filename
 
-    # Создаем экземпляр вашего класса block_0x08
+    # Создаем экземпляр класса block_0x08
     empty_vdo = VDO_FILE()
     block = empty_vdo.load_single_block(f_path, 34, 0x200, COORD_ORIGIN, COORD_MAX)
     

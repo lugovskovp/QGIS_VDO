@@ -128,7 +128,7 @@ def test_block_0x08_slots_are_effective(ru_08_block_fixture):
     assert 'qty_x' in block.__slots__
 
 
-def test_block_0x09_init_unpacks_and_calculates_correctly(ru_08_block_fixture):
+def test_block_0x08_init_unpacks_and_calculates_correctly(ru_08_block_fixture):
     """Проверяем, что __init__ корректно раскладывает COORD на примитивы int и считает сетку."""
     block, metric = ru_08_block_fixture
 

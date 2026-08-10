@@ -186,7 +186,7 @@ def test_scale_init_err_dbrev():
 def test_scale_init_err_too_small_buffer():
     vdo = VDO_FILE()
 
-    with pytest.raises(ValueError, match='Len byte_array'):
+    with pytest.raises(ValueError, match='Len buffer'):
         SCALE(b'\x00\x01' * 3, vdo)
 
 

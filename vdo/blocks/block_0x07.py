@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Union, Optional, Tuple
 
 if TYPE_CHECKING:
     # Этот блок видит только Pylance, интерпретатор Python его игнорирует
-    from _typeshed import ReadableBuffer
+    from _typeshed import ReadableBuffer        # pragma: no cover
 else:
     # Запасной вариант для рантайма, чтобы не было NameError
     ReadableBuffer = bytes

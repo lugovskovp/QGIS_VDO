@@ -72,6 +72,10 @@ class SCALE(BYTESTRUCT):
         else:
             raise ValueError(f"dbrev must be 30 or 34, got {vdo.dbrev}")
 
+        # too small buffer
+        if len(byte_array) < structure_size:
+            raise ValueError(f"Len byte_array {byte_array}: {len(byte_array)}, but must be {structure_size}")
+
         # 2. Передаем размер в родительский класс, чтобы self._raw был строго нужной длины
         super().__init__(byte_array, size=structure_size)
         
@@ -133,7 +137,7 @@ class SCALE(BYTESTRUCT):
         return 0
         
     @property
-    def isEmpty(self) -> bool:
+    def is_empty(self) -> bool:
         """Валидный или пустой блок (проверка по нулевым координатам area)."""
         # Сравниваем memoryview с bytes напрямую — это быстро и эффективно на уровне Си
         # return self._raw[:4] == b'\x00' * 4     # а вот херь: у бмв есть 0x04dffa01, но пустой area # noqa
@@ -158,6 +162,8 @@ class SCALE(BYTESTRUCT):
         alm: "block_0x08" = self.vdo.get_block(self.almanac_idx, lb, rt)
         return alm.find_by_coord(srch_point)
 
+
+# ---------------
 
 class block_0x07(block_base):
     """ SCALES =  type 0x07   """
@@ -226,7 +232,7 @@ class block_0x07(block_base):
             return None
         sc: SCALE = self.scales[idScale]
         # проверка на то, что scale валиден
-        if sc.isEmpty:
+        if sc.is_empty:
             return None
         res = sc.find_by_coord(point)
         return res

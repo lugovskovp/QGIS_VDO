@@ -236,11 +236,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         # Восстановить из настроек ранее установленный scale
         checkScale = Settings.ChousedScale()
-        if self.scales[checkScale].isEmpty:
+        if self.scales[checkScale].is_empty:
             checkScale = DEFAULT_SCALE
-        if self.scales[checkScale].isEmpty:
+        if self.scales[checkScale].is_empty:
             for i in range(QTY_ALL_SCALES):
-                if not self.scales[i].isEmpty:
+                if not self.scales[i].is_empty:
                     checkScale = i
                     break
         # root group - vdo
@@ -255,9 +255,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             sc: SCALE = self.scales[id]
             rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
             # Установить enabled|disabled
-            rb.setEnabled(not sc.isEmpty)
+            rb.setEnabled(not sc.is_empty)
             # параллельно с rb создаём группы масштабов для отображения.
-            if not sc.isEmpty:
+            if not sc.is_empty:
                 gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
                 if not (root.findGroup(gr_name)):
                     root.insertGroup(-2, gr_name)

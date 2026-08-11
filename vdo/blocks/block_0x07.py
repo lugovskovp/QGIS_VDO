@@ -92,7 +92,7 @@ class SCALE(BYTESTRUCT):
     def square_side(self) -> int:
         """Ленивый расчет стороны квадрата (вычисляется только при вызове)."""
         lb, rt = self.area
-        return rt._hlat - lb._hlat
+        return rt._hlatitude - lb._hlatitude
 
     @property
     def d_delta(self) -> str:
@@ -363,24 +363,26 @@ if __name__ == '__main__':
     # block(0x55D6903);   // EE scale 7 0x16 arch=1 near SPb
 
     vdo = vdo30
-    # vdo = vdo34ee
+    vdo = vdo34ee
     # vdo = vdobmv
     # vdo = vdo34bnl
-    vdo = vdoRu
+    # vdo = vdoRu
 
     # test get_items ---------------------------------------------------------------------
-    # from QGIS_VDO.vdo.blocks import block_0x12, block_0x09
-    # bl_toc: block_0x12 = vdo.get_block(0)
-    # bl_scales: BLADDR = bl_toc.bladdr_scales
+    from QGIS_VDO.vdo.blocks import block_0x12  # , block_0x09
 
-    # block_07: block_0x07 = vdo.get_block(bl_scales)
+    bl_toc: block_0x12 = vdo.get_block(0)
+    bl_scales: BLADDR = bl_toc.bladdr_scales
 
-    # scale_5 = block_07.scales[5]
+    block_07: block_0x07 = vdo.get_block(bl_scales)
+
+    scale_5 = block_07.scales[5]
     # scale_5 = block_07.scales[11]
-    # block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
+    block_almanac: block_0x08 = vdo.get_block(scale_5.almanac_idx, scale_5.area[0], scale_5.area[1])  # noqa
 
-    # # block_08 content
-    # print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
+    # block_08 content
+    print(f"block_08: 0x{block_almanac} block_0x09 : x : y")
+
     # bla_first = None
     # for f in block_almanac.get_items():
     #     if not bla_first:

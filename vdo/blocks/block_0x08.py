@@ -191,9 +191,10 @@ class block_0x08(block_base):
 
         if b_09 is None:
             return None
-        
+
+        bl, c1, c2 = b_09
         # загружаем папку карт - индекс maps
-        bl_folder: block_0x09 = self.vdo.get_block(b_09)
+        bl_folder: block_0x09 = self.vdo.get_block(bl, c1, c2)
 
         return bl_folder.find_by_coord(srch)    # тут будет чистый map, только BLADDR
 

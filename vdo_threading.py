@@ -7,7 +7,7 @@
 from qgis.PyQt.QtCore import QThread, pyqtSignal
 
 from QGIS_VDO.vdo import BLADDR  # , COORD
-from QGIS_VDO.vdo.consts import struct_UINT
+from QGIS_VDO.vdo.consts import struct_UINT     # noqa for tests
 from QGIS_VDO.vdo.blocks import (block_0x08,
                                  block_0x09)
 
@@ -37,6 +37,7 @@ class FolderMapProcessingWorker(QThread):
         for (bla_val, origin, rt_max) in self.almanac_block.get_items():
             index += 1
 
+            # bla = self.almanac_block.vdo.get_bladdr(bla_val)
             bla = BLADDR(struct_UINT.pack(bla_val), self.almanac_block.vdo)
             bl_folder: block_0x09 = self.almanac_block.vdo.get_block(bla, origin, rt_max)  # noqa
             #cnt_map = bl_folder.items_cnt()

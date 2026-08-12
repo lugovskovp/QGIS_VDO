@@ -87,6 +87,11 @@ class block_base(BYTESTRUCT):
             self.is_unpacked = False
             return
 
+        if self.vdo.is_single:  # одиночный файл
+            # Если одиночный файл (fixture) физически обрезан, добить нулями до segsize * blocksize
+            # self.vdo : VDO_FILE
+            buffer = buffer + b'\x00' * (addr.sizeofblock - len(buffer))
+
         # Парсинг заголовка
         temp_view = memoryview(buffer)
         head_obj = BLSTART(temp_view[:BLSTART.size], self.vdo)

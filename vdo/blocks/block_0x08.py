@@ -21,13 +21,13 @@ block_0x08
 
 """
 
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Optional
 
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.blocks import block_0x09
 from QGIS_VDO.vdo.datatypes import BLADDR
-from QGIS_VDO.vdo.geotypes import COORD  # , MULCOORD
-from QGIS_VDO.vdo.consts import struct_UINT, MOST_SIGNIFICANT_BIT
+from QGIS_VDO.vdo.geotypes import COORD         # , MULCOORD
+from QGIS_VDO.vdo.consts import struct_UINT     # , struct_2UINT, MOST_SIGNIFICANT_BIT
 
 
 OFFSET_LIST_FOLDEFS = 0x08
@@ -47,7 +47,7 @@ class block_0x08(block_base):
         'origin_hlon',
         'origin_hlat',
         'qty_y',
-        'qty_x'
+        'qty_x',
     )
 
     def __init__(self, bl_addr: BLADDR, origin: COORD, max: COORD) -> None:
@@ -55,14 +55,16 @@ class block_0x08(block_base):
 
         self.li_items = self.read_list(OFFSET_LIST_FOLDEFS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
-        
-        # Сохраняем сырые uint32 значения для корректной CarInDB-математики
-        self.origin_hlon = origin._hlon - 0x100000000 if origin._hlon & MOST_SIGNIFICANT_BIT else origin._hlon
-        self.origin_hlat = origin._hlat - 0x100000000 if origin._hlat & MOST_SIGNIFICANT_BIT else origin._hlat
+
+        # Сохраняем сырые signed int32 значения для корректной CarInDB-математики
+        self.origin_hlon = origin._hlongitude
+        self.origin_hlat = origin._hlatitude
         
         # Вычисляем размеры сетки
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
         self.qty_x = (max._hlongitude - origin._hlongitude) // self.item_side
+
+        pass
 
     def items_cnt(self) -> int:
         """Возвращает количество уникальных итемов за O(N) через хеш-сет."""
@@ -88,24 +90,21 @@ class block_0x08(block_base):
         finded_early = set()
         step = BLADDR.size
         base_ptr = self.li_items.ptr
-        total_cnt = self.li_items.cnt
         q_y = self.qty_y
         q_x = self.qty_x
         side = self.item_side
         raw_buffer = self._raw
 
         for x in range(q_x):
-            # Ваша оригинальная индексация по qty_x
-            x_offset = x * q_x
+            # оригинальная индексация по qty_x
+            x_offset = x * q_y
             
-            # Рассчитываем долготу (X) с учетом uint32 специфики
-            hex_lon = (self.origin_hlon + x * side) & 0xFFFFFFFF
-            hex_lon_next = (hex_lon + side) & 0xFFFFFFFF
+            # Рассчитываем долготу (X)
+            hex_lon = (self.origin_hlon + x * side)
+            hex_lon_next = (hex_lon + side)
 
             for y in range(q_y):
                 curr_item = y + x_offset
-                if curr_item >= total_cnt:
-                    break
 
                 offset = base_ptr + step * curr_item
                 bla_val = struct_UINT.unpack_from(raw_buffer, offset)[0]
@@ -118,9 +117,9 @@ class block_0x08(block_base):
                 
                 finded_early.add(bla_val)
 
-                # Рассчитываем широту (Y) с маской 0xFFFFFFFF для имитации Си-переполнения
-                hex_lat = (self.origin_hlat + y * side) & 0xFFFFFFFF
-                hex_lat_next = (hex_lat + side) & 0xFFFFFFFF
+                # Рассчитываем широту (Y)
+                hex_lat = (self.origin_hlat + y * side)
+                hex_lat_next = (hex_lat + side)
 
                 # Создаем тяжелые COORD только для валидных элементов (после всех continue)
                 coord_lb = COORD(hex_lon, hex_lat)
@@ -128,59 +127,131 @@ class block_0x08(block_base):
 
                 yield (bla_val, coord_lb, coord_rt)
 
-    def find_by_coord(self, srch: COORD) -> BLADDR | None:
-        """Поиск подблока карты, в который попадают координаты."""
-        side = self.item_side
-        
-        max_hlat = (self.origin_hlat + self.qty_y * side)
-        max_hlat = max_hlat - 0x100000000 if max_hlat & MOST_SIGNIFICANT_BIT else max_hlat   # & 0xFFFFFFFF
-        max_hlon = (self.origin_hlon + self.qty_x * side)
-        max_hlon = max_hlon - 0x100000000 if max_hlon & MOST_SIGNIFICANT_BIT else max_hlon
+    def _find_folder_by_coord(self, srch: COORD) -> Optional[Tuple[BLADDR, COORD, COORD]]:
+        """ Поиск BLADDR block_0x08 по координатам srch"""
+        # в "координатах" блока 0x08
+        item_side = self.item_side
+        x = (srch._hlongitude - self.origin_hlon) // item_side
+        y = (srch._hlatitude - self.origin_hlat) // item_side
 
-        # В геоинформационных системах (ГИС) общепринятый стандарт для ячеек регулярной сетки (растра или индекса)
-        #  — это полуоткрытые интервалы: [left, right) и [bottom, top). То есть левая/нижняя граница включается
-        #  в ячейку, а правая/верхняя — принадлежит уже следующей.
-        if (srch._hlatitude < self.origin_hlat or srch._hlatitude >= max_hlat
-                or srch._hlongitude < self.origin_hlon or srch._hlongitude >= max_hlon):
+        # ОПТИМИЗАЦИЯ: Делаем проверку границ ОДИН раз прямо здесь
+        if not (0 <= y < self.qty_y and 0 <= x < self.qty_x):
             return None
-
-        delta_x = (srch._hlongitude - self.origin_hlon) // side
-        delta_y = (srch._hlatitude - self.origin_hlat) // side
         
-        bladdr_folder_maps = self.get_xy_item(delta_x, delta_y)
-        if bladdr_folder_maps is None:
+        # Теперь мы точно знаем, что x и y валидны, и можем читать данные напрямую
+        item_num = y + x * self.qty_y
+        offset = self.li_items.ptr + item_num * BLADDR.size
+        folder_bladdr_val = struct_UINT.unpack_from(self._raw, offset)[0]
+        
+        if not folder_bladdr_val:
             return None
             
-        lb, rt = self.get_xy_area(delta_x, delta_y)
-        folder_maps: block_0x09 = self.vdo.get_block(bladdr_folder_maps, lb, rt)
-        return folder_maps.find_by_coord(srch)
+        # Рассчитываем координаты области без повторных проверок границ
+        hex_lon = self.origin_hlon + x * item_side
+        hex_lat = self.origin_hlat + y * item_side
+        lb = COORD(hex_lon, hex_lat)
+        rt = COORD(hex_lon + item_side, hex_lat + item_side)
+        
+        folder = self.vdo.get_bladdr(folder_bladdr_val)
+        return folder, lb, rt
 
-    def get_xy_area(self, x: int, y: int) -> Tuple[COORD, COORD]:
+    def _get_xy_area(self, x: int, y: int) -> Optional[Tuple[COORD, COORD]]:
         """Возвращает оригинальные объекты COORD lb, rt для ячейки x, y."""
+        # проверка на попадание в локальные координаты
+        if y >= self.qty_y:     # вышел вверх за границу
+            return None
+        if y < 0:     # вышел вниз за границу
+            return None
+        if x >= self.qty_x:     # вышел вправо за границу
+            return None
+        if x < 0:     # вышел влево за границу
+            return None
+        
         side = self.item_side
         hex_lon = (self.origin_hlon + x * side)
         hex_lat = (self.origin_hlat + y * side)
 
-        hex_lat = hex_lat - 0x100000000 if hex_lat & MOST_SIGNIFICANT_BIT else hex_lat   # & 0xFFFFFFFF
-        hex_lon = hex_lon - 0x100000000 if hex_lon & MOST_SIGNIFICANT_BIT else hex_lon
-        
-        return COORD(hex_lon, hex_lat), COORD((hex_lon + side) & 0xFFFFFFFF, (hex_lat + side) & 0xFFFFFFFF)
+        # В блоке 0х08 все ячейки 1х1
+        return COORD(hex_lon, hex_lat), COORD((hex_lon + side), (hex_lat + side))
 
-    def get_xy_item(self, x: int, y: int) -> BLADDR | None:
-        """Вернуть адрес папки по индексам сетки."""
-        item_num = x + y * self.qty_y
-        if item_num >= self.li_items.cnt:
+    def _get_xy_value(self, x: int, y: int) -> Optional[int]:
+        """Вернуть int адрес папки по индексам сетки."""
+        
+        # проверка на попадание в локальные координаты
+        if y >= self.qty_y:     # вышел вверх за границу
             return None
-            
+        if y < 0:     # вышел вниз за границу
+            return None
+        if x >= self.qty_x:     # вышел вправо за границу
+            return None
+        if x < 0:     # вышел влево за границу
+            return None
+
+        item_num = y + x * self.qty_y
         offset = self.li_items.ptr + item_num * BLADDR.size
         bladdr_val = struct_UINT.unpack_from(self._raw, offset)[0]
         
-        if not bladdr_val:
+        if not bladdr_val:      # if 0 === None bladdr
             return None
-            
-        res = self.vdo.get_bladdr(bladdr_val)
-        return None if res.isZero else res
 
-        
+        return bladdr_val
+    
+    def find_by_coord(self, srch: COORD) -> Optional[BLADDR]:
+        """Поиск подблока карты, в который попадают координаты."""
+        # Ищем в альманахе папку карт
+        b_09 = self._find_folder_by_coord(srch)
+
+        if b_09 is None:
+            return None
+
+        bl, c1, c2 = b_09
+        # загружаем папку карт - индекс maps
+        bl_folder: block_0x09 = self.vdo.get_block(bl, c1, c2)
+
+        return bl_folder.find_by_coord(srch)    # тут будет чистый map, только BLADDR
+
+ 
 # All block tests in block_0x07
 #05154A03 0008 00 00 [08:SCALE_ALMANAC]
+
+# -------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    # from vdo.datatypes import VDO_FILE
+    from QGIS_VDO.vdo.fixtures_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
+    from QGIS_VDO.vdo.consts import struct_UINT        # noqa
+
+    # block(0x55D7201);   // EE scale 7 0x16 arch=0 near SPb
+    # block(0x55D6903);   // EE scale 7 0x16 arch=1 near SPb
+
+    vdo = vdo30
+    vdo = vdo34ee
+    # vdo = vdobmv
+    # vdo = vdo34bnl
+    # vdo = vdoRu
+
+    # test get_items ---------------------------------------------------------------------
+    from QGIS_VDO.vdo.blocks import block_0x12, block_0x07
+
+    bl_toc: block_0x12 = vdo.get_block(0)
+    bl_scales: BLADDR = bl_toc.bladdr_scales
+
+    block_07: block_0x07 = vdo.get_block(bl_scales)
+    del bl_toc, bl_scales
+
+    scale = block_07.scales[2]        # 5, 10, 11 - 1x1, 2-8x8
+    # scale = block_07.scales[11]
+    lb, rt = scale.area     # (10.636742S 36.299691W, 86.000050N 60.337100E)
+
+    block_almanac: block_0x08 = vdo.get_block(scale.almanac_idx, lb, rt)  # noqa
+    srch_spb = COORD(bytes.fromhex('13F919BE13DA074C'))
+    srch_zagreb = COORD(15.9780, 45.8144)      # 45.8144° северной широты, 15.9780° восточной долготы. '0F399A2D0F2BBBD5' # noqa
+    srch_bucurest = COORD(26.1063, 44.4323)      #  44.4323° N, 26.1063°E . '1294304B0EB69259' # noqa
+    bl_09_spb = block_almanac._find_folder_by_coord(srch_spb)   # sc=5: 0x570e705; sc=2  5,5 (0x05118c01) 0x05119602
+    bl_09_zgr = block_almanac._find_folder_by_coord(srch_zagreb)   # sc=5: 0x570e705; sc=2  4,4  0x05118c01
+    bl_09_buc = block_almanac._find_folder_by_coord(srch_bucurest)   # sc=5 (0x0570e601): 0x570e705; sc=2 (0x05118c01) 5,4 0x5119402 # noqa
+
+    alm_item_cnt = block_almanac.items_cnt()
+    
+    # block_08 content
+    print(f"block_08: 0x{block_almanac} block_0x09 : x : y")

@@ -1251,6 +1251,30 @@
          </property>
         </widget>
        </widget>
+       <widget class="QLabel" name="l_lastSelectedCoords">
+        <property name="geometry">
+         <rect>
+          <x>40</x>
+          <y>14</y>
+          <width>401</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Current scale. Change on Topography tab.</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+        </property>
+       </widget>
       </widget>
      </widget>
     </item>

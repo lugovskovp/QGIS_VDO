@@ -3,12 +3,12 @@ FOLDER_MAPS = 0x09		# map folders 0x09.
 
 Индекс гео-блоков
 """
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, Optional, Dict, List
 
 from QGIS_VDO.vdo.datatypes import BLADDR, PTR
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.geotypes import COORD, MULCOORD   # MULCOORD берем из модуля констант
-from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT, MOST_SIGNIFICANT_BIT
+from QGIS_VDO.vdo.geotypes import COORD     # , MULCOORD   # MULCOORD берем из модуля констант
+from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT    # , MOST_SIGNIFICANT_BIT
 
 
 OFFSET_LIST_PTR = 0x08
@@ -27,10 +27,11 @@ class block_0x09(block_base):
         'li_items',
         'li_valid',
         'item_side',
-        'origin_hlon',
-        'origin_hlat',
+        'origin',
         'qty_y',
-        'qty_x'
+        'qty_x',
+        'items',
+        'quant',
     )
 
     def __init__(self, bl_addr: BLADDR, origin: COORD, max: COORD) -> None:
@@ -40,39 +41,56 @@ class block_0x09(block_base):
         self.li_valid = self.read_list(OFFSET_GEOBLOCKS)
         self.item_side = self.uint(OFFSET_FOLDER_SIZE)
 
-        # Кэшируем сырые uint32 значения
-        self.origin_hlon = origin._hlon - 0x100000000 if origin._hlon & MOST_SIGNIFICANT_BIT else origin._hlon
-        self.origin_hlat = origin._hlat - 0x100000000 if origin._hlat & MOST_SIGNIFICANT_BIT else origin._hlat
+        self.origin = origin
         
-        # Целочисленное деление с сохранением логики CarInDB
         self.qty_y = (max._hlatitude - origin._hlatitude) // self.item_side
         self.qty_x = (max._hlongitude - origin._hlongitude) // self.item_side
+
+        self.quant = (max.lat - origin.lat) / self.qty_y
+        self.items: Optional[Dict[int, List[int]]] = None
 
     def items_cnt(self) -> int:
         return self.li_valid.cnt
 
     def get_items(self) -> Iterator[Tuple[int, float, float, float, float]]:
-        """Генератор уникальных гео-блоков с поддержкой uint32 переполнений.
-        
-        Вместо объектов COORD возвращает плоский кортеж WGS-84 координат:
-        (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
-        Это снижает нагрузку на GC (Garbage Collector) до нуля.
-        """
+        """Генератор уникальных гео-блоков с поддержкой uint32 переполнений."""
+        # ИСПРАВЛЕНО: Корректная ленивая инициализация
+        if self.items is None:
+            self._fill_items()
+
+        quant = self.quant
+        origin_lon = self.origin.lon
+        origin_lat = self.origin.lat
+        # get_bladdr = self.vdo.get_bladdr  # ОПТИМИЗАЦИЯ: кэшируем метод в локальную переменную
+
+        # ИСПРАВЛЕНО: Итерация по .values() и корректное число переменных (5 вместо 6)
+        for bladdr_map_val, x, y, size_X, size_Y in self.items.values():
+            # bladdr: BLADDR = get_bladdr(bladdr_map_val)
+
+            # Расчет координат ГИС
+            lon_lb = origin_lon + x * quant
+            lat_lb = origin_lat + y * quant
+            lon_rt = lon_lb + size_X * quant
+            lat_rt = lat_lb + size_Y * quant
+
+            yield (bladdr_map_val, lon_lb, lat_lb, lon_rt, lat_rt)
+
+    def _fill_items(self) -> None:
+        """Заполняет кеш итемов с оптимизированным RLE анализом."""
         finded_early: set[int] = set()
+        _items = {}
         step = PTR.size
         base_ptr = self.li_items.ptr
         total_cnt = self.li_items.cnt
         q_y = self.qty_y
         q_x = self.qty_x
-        side = self.item_side
-        
-        # Кэшируем значения для быстрой float-математики WGS-84 без вызова свойств COORD
-        # MULCOORD берем из модуля констант
-
-        # Загружаем байты всего списка указателей в memoryview один раз
-        # Это позволяет читать ushort() без вызова накладных расходов методов BYTESTRUCT
         raw_buffer = self._raw
-        mul_coord = MULCOORD
+
+        # ОПТИМИЗАЦИЯ: Предварительно читаем матрицу в плоский массив одномерным проходом
+        # Это убирает повторные вызовы десериализации (сокращение сложности с O(N^2) до O(N))
+        grid = [0] * total_cnt
+        for idx in range(total_cnt):
+            grid[idx] = _STRUCT_SHORT.unpack_from(raw_buffer, base_ptr + idx * step)[0]
 
         for x in range(q_x):
             x_offset = x * q_y
@@ -82,81 +100,56 @@ class block_0x09(block_base):
                 if curr_item >= total_cnt:
                     break
 
-                offset = base_ptr + step * curr_item
-                # Прямая распаковка из буфера без вызова self.ushort()
-                ptr_val = _STRUCT_SHORT.unpack_from(raw_buffer, offset)[0]
+                ptr_val = grid[curr_item]
                 
                 if not ptr_val or ptr_val in finded_early:
                     continue
 
                 finded_early.add(ptr_val)
-
-                # Оптимизация RLE по оси X
+                
+                # Оптимизация RLE по оси X с использованием кэшированной grid
                 size_X = 0
                 for i in range(x, q_x):
                     next_item = y + i * q_y
-                    if next_item >= total_cnt:
-                        break
-                    if _STRUCT_SHORT.unpack_from(raw_buffer, base_ptr + step * next_item)[0] != ptr_val:
+                    if next_item >= total_cnt or grid[next_item] != ptr_val:
                         break
                     size_X += 1
                 
-                # Оптимизация RLE по оси Y
+                # Оптимизация RLE по оси Y с использованием кэшированной grid
                 size_Y = 0
                 for i in range(y, q_y):
                     next_item = x_offset + i
-                    if next_item >= total_cnt:
-                        break
-                    if _STRUCT_SHORT.unpack_from(raw_buffer, base_ptr + step * next_item)[0] != ptr_val:
+                    if next_item >= total_cnt or grid[next_item] != ptr_val:
                         break
                     size_Y += 1
 
                 bladdr_map_val = struct_UINT.unpack_from(raw_buffer, ptr_val)[0]
+                _items[ptr_val] = [bladdr_map_val, x, y, size_X, size_Y]
 
-                # --- Расчет координат ГИС с жесткой эмуляцией uint32 (CarInDB overflow) ---
-                hlon_lb = (self.origin_hlon + x * side) & 0xFFFFFFFF
-                hlat_lb = (self.origin_hlat + y * side) & 0xFFFFFFFF
-                hlon_rt = (hlon_lb + size_X * side) & 0xFFFFFFFF
-                hlat_rt = (hlat_lb + size_Y * side) & 0xFFFFFFFF
+        self.items = _items
 
-                # Переводим в WGS-84 float аналогично логике COORD._hlongitude / _hlatitude
-                lon_min = (((hlon_lb - 0x100000000 if hlon_lb & 0x80000000 else hlon_lb) / mul_coord) - 30)
-                lat_min = (hlat_lb - 0x100000000 if hlat_lb & 0x80000000 else hlat_lb) / mul_coord
-                lon_max = (((hlon_rt - 0x100000000 if hlon_rt & 0x80000000 else hlon_rt) / mul_coord) - 30)
-                lat_max = (hlat_rt - 0x100000000 if hlat_rt & 0x80000000 else hlat_rt) / mul_coord
-
-                yield (bladdr_map_val, lon_min, lat_min, lon_max, lat_max)
-
-    def get_xy_item(self, x: int, y: int) -> BLADDR | None:
+    def _get_xy_item(self, x: int, y: int) -> Optional[BLADDR]:
+        """Ptr по координатам блока"""
+        if x < 0 or x >= self.qty_x or y < 0 or y >= self.qty_y:
+            return None
+            
         item_num = y + x * self.qty_y
         if item_num >= self.li_items.cnt:
             return None
-            
+        
         offset = self.li_items.ptr + item_num * PTR.size
         ptr = _STRUCT_SHORT.unpack_from(self._raw, offset)[0]
         if not ptr:
             return None
-            
+        
         bladdr_val = struct_UINT.unpack_from(self._raw, ptr)[0]
         return self.vdo.get_bladdr(bladdr_val)
     
-    def find_by_coord(self, srch: COORD) -> BLADDR | None:
+    def find_by_coord(self, srch: COORD) -> Optional[BLADDR]:
         side = self.item_side
-        
-        # Эмуляция uint32 для вычисления границ
-        max_hlat = (self.origin_hlat + self.qty_y * side)
-        max_hlat = max_hlat - 0x100000000 if max_hlat & MOST_SIGNIFICANT_BIT else max_hlat   # & 0xFFFFFFFF
-        max_hlon = (self.origin_hlon + self.qty_x * side)
-        max_hlon = max_hlon - 0x100000000 if max_hlon & MOST_SIGNIFICANT_BIT else max_hlon
-        
-        if (srch._hlatitude < self.origin_hlat or srch._hlatitude > max_hlat
-                or srch._hlongitude < self.origin_hlon or srch._hlongitude > max_hlon):
-            return None
-
-        delta_x = (srch._hlongitude - self.origin_hlon) // side
-        delta_y = (srch._hlatitude - self.origin_hlat) // side
-        
-        return self.get_xy_item(delta_x, delta_y)
+        x = (srch._hlongitude - self.origin._hlongitude) // side
+        y = (srch._hlatitude - self.origin._hlatitude) // side
+        return self._get_xy_item(x, y)
 
 
 # -------------------------------------------------------------------------
@@ -164,7 +157,7 @@ class block_0x09(block_base):
 
 if __name__ == '__main__':      # pragma: no cover
     # from vdo.datatypes import VDO_FILE
-    from QGIS_VDO.vdo.test_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
+    from QGIS_VDO.vdo.fixtures_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
     from QGIS_VDO.vdo.consts import struct_UINT        # noqa
     from QGIS_VDO.vdo.blocks import block_0x12, block_0x07, block_0x08
 

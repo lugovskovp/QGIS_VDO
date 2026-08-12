@@ -97,7 +97,7 @@ class block_0x08(block_base):
 
         for x in range(q_x):
             # оригинальная индексация по qty_x
-            x_offset = x * q_x
+            x_offset = x * q_y
             
             # Рассчитываем долготу (X)
             hex_lon = (self.origin_hlon + x * side)
@@ -133,14 +133,26 @@ class block_0x08(block_base):
         item_side = self.item_side
         x = (srch._hlongitude - self.origin_hlon) // item_side
         y = (srch._hlatitude - self.origin_hlat) // item_side
-        
-        # поиск
-        folder_bladdr_val = self._get_xy_value(x, y)
-        if folder_bladdr_val is None:
-            return None
-        lb, rt = self._get_xy_area(x, y)     # xy уже проверен
-        folder = self.vdo.get_bladdr(folder_bladdr_val)
 
+        # ОПТИМИЗАЦИЯ: Делаем проверку границ ОДИН раз прямо здесь
+        if not (0 <= y < self.qty_y and 0 <= x < self.qty_x):
+            return None
+        
+        # Теперь мы точно знаем, что x и y валидны, и можем читать данные напрямую
+        item_num = y + x * self.qty_y
+        offset = self.li_items.ptr + item_num * BLADDR.size
+        folder_bladdr_val = struct_UINT.unpack_from(self._raw, offset)[0]
+        
+        if not folder_bladdr_val:
+            return None
+            
+        # Рассчитываем координаты области без повторных проверок границ
+        hex_lon = self.origin_hlon + x * item_side
+        hex_lat = self.origin_hlat + y * item_side
+        lb = COORD(hex_lon, hex_lat)
+        rt = COORD(hex_lon + item_side, hex_lat + item_side)
+        
+        folder = self.vdo.get_bladdr(folder_bladdr_val)
         return folder, lb, rt
 
     def _get_xy_area(self, x: int, y: int) -> Optional[Tuple[COORD, COORD]]:

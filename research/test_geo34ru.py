@@ -7,7 +7,7 @@ from vdo.consts import struct_UINT        # noqa
 from vdo.blocks import block_0x12       # noqa
 from vdo.enums import BlockType       # noqa
 
-from vdo.test_vdo import vdoRu as vdo
+from vdo.fixtures_vdo import vdoRu as vdo
 
 #--------------------------------------
 

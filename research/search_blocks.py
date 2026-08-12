@@ -6,7 +6,7 @@
 # import os
 # import struct
 
-from vdo.test_vdo import vdobmv as vdo
+from vdo.fixtures_vdo import vdobmv as vdo
 # from vdo.test_vdo import vdo30 as vdo
 
 from vdo.consts import (struct_4BYTES,

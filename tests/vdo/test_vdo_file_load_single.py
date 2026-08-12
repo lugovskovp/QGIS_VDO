@@ -4,6 +4,7 @@ import pytest   # type: ignore # noqa
 from unittest.mock import patch
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE
+from QGIS_VDO.vdo.geotypes import COORD
 
 from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
@@ -92,6 +93,14 @@ def test_empty_load_single_wrong_path():
     """загрузка заведомо отсутствующего файла"""
     with pytest.raises(FileNotFoundError):
         VDO_FILE().load_single_block("this_is_wrong_path")
+
+
+def test_empty_load_single_wrong_only_one_coord():
+    """загрузка тольео одной координаты"""
+    path = FIXTURES_DIR / '0x08_ru34_sc11_09567101.bin'
+
+    with pytest.raises(RuntimeError, match='должны быть ОБА класса COORD'):
+        VDO_FILE().load_single_block(path, 34, 2048, COORD(bytes.fromhex('13F919BE13DA074C')))
 
 
 def test_load_single_block_os_error_handling():

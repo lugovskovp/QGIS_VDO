@@ -6,7 +6,7 @@ from vdo.datatypes import BLADDR        # noqa
 from vdo.blocks import block_0x12       # noqa
 from vdo.enums import BlockType       # noqa
 
-from vdo.test_vdo import vdobmv as vdo
+from vdo.fixtures_vdo import vdobmv as vdo
 from vdo.consts import struct_UINT
 
 #--------------------------------------

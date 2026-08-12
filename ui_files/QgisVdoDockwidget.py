@@ -236,11 +236,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         # Восстановить из настроек ранее установленный scale
         checkScale = Settings.ChousedScale()
-        if self.scales[checkScale].isEmpty:
+        if self.scales[checkScale].is_empty:
             checkScale = DEFAULT_SCALE
-        if self.scales[checkScale].isEmpty:
+        if self.scales[checkScale].is_empty:
             for i in range(QTY_ALL_SCALES):
-                if not self.scales[i].isEmpty:
+                if not self.scales[i].is_empty:
                     checkScale = i
                     break
         # root group - vdo
@@ -255,9 +255,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             sc: SCALE = self.scales[id]
             rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
             # Установить enabled|disabled
-            rb.setEnabled(not sc.isEmpty)
+            rb.setEnabled(not sc.is_empty)
             # параллельно с rb создаём группы масштабов для отображения.
-            if not sc.isEmpty:
+            if not sc.is_empty:
                 gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
                 if not (root.findGroup(gr_name)):
                     root.insertGroup(-2, gr_name)
@@ -320,7 +320,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         lon = transformed_point.x()
         lat = transformed_point.y()
         srch_coord = COORD(lon, lat)
-        print(f"WGS 84 (EPSG:4326) -> Долгота (X): {lon:.6f}, Широта (Y): {lat:.6f}")
+        # print(f"WGS 84 (EPSG:4326) -> Долгота (X): {lon:.6f}, Широта (Y): {lat:.6f}")
+        self.l_lastSelectedCoords.setText(f"{srch_coord}")
 
         # Получаем номер блока с картой по srch_coord и текущему масштабу
         sc: SCALE = self.scales[self.currentIdScale]

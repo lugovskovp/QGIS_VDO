@@ -320,7 +320,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         lon = transformed_point.x()
         lat = transformed_point.y()
         srch_coord = COORD(lon, lat)
-        print(f"WGS 84 (EPSG:4326) -> Долгота (X): {lon:.6f}, Широта (Y): {lat:.6f}")
+        # print(f"WGS 84 (EPSG:4326) -> Долгота (X): {lon:.6f}, Широта (Y): {lat:.6f}")
+        self.l_lastSelectedCoords.setText(f"{srch_coord}")
 
         # Получаем номер блока с картой по srch_coord и текущему масштабу
         sc: SCALE = self.scales[self.currentIdScale]

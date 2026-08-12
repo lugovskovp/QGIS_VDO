@@ -29,6 +29,7 @@ else:
 from .enums import BlockType
 from .consts import struct_WORD, struct_UINT
 from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
+# from .block_base import block_base
 # from .geotypes import COORD     # cannot import name 'BYTESTRUCT' from partially initialized module '
 
 
@@ -285,6 +286,7 @@ class VDO_FILE:
         
         # Загружаем блок, принудительно считая offset с 0 адреса.
         # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"
+        # block: block_base
         if is_none:
             block = vdo.get_block(0)
         else:

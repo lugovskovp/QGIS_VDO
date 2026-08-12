@@ -68,6 +68,9 @@
     </property>
     <item>
      <widget class="QTabWidget" name="tabWidget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -87,7 +90,7 @@
        <enum>QTabWidget::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -102,6 +105,9 @@
        <bool>false</bool>
       </property>
       <widget class="QWidget" name="tab_info">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
          <horstretch>0</horstretch>
@@ -188,16 +194,16 @@
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_3">
                <property name="leftMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <property name="topMargin">
                 <number>5</number>
                </property>
                <property name="rightMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <property name="bottomMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <item>
                 <layout class="QGridLayout" name="gridLayout_filenfo" rowstretch="0,0,0,0,0" columnstretch="0,10">
@@ -336,16 +342,16 @@
               </property>
               <layout class="QGridLayout" name="gridLayout_2">
                <property name="leftMargin">
-                <number>0</number>
+                <number>3</number>
                </property>
                <property name="topMargin">
                 <number>5</number>
                </property>
                <property name="rightMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <property name="bottomMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <property name="spacing">
                 <number>0</number>
@@ -494,16 +500,16 @@
               </property>
               <layout class="QGridLayout" name="gridLayout_6">
                <property name="leftMargin">
-                <number>0</number>
+                <number>3</number>
                </property>
                <property name="topMargin">
                 <number>5</number>
                </property>
                <property name="rightMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <property name="bottomMargin">
-                <number>5</number>
+                <number>3</number>
                </property>
                <property name="spacing">
                 <number>0</number>
@@ -633,16 +639,16 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_9">
                  <property name="leftMargin">
-                  <number>5</number>
+                  <number>2</number>
                  </property>
                  <property name="topMargin">
-                  <number>7</number>
+                  <number>5</number>
                  </property>
                  <property name="rightMargin">
-                  <number>5</number>
+                  <number>2</number>
                  </property>
                  <property name="bottomMargin">
-                  <number>5</number>
+                  <number>2</number>
                  </property>
                  <item row="0" column="0">
                   <widget class="QTextBrowser" name="textBrowser_label">
@@ -673,16 +679,16 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_8">
                  <property name="leftMargin">
-                  <number>5</number>
+                  <number>2</number>
                  </property>
                  <property name="topMargin">
-                  <number>7</number>
+                  <number>5</number>
                  </property>
                  <property name="rightMargin">
-                  <number>5</number>
+                  <number>2</number>
                  </property>
                  <property name="bottomMargin">
-                  <number>5</number>
+                  <number>2</number>
                  </property>
                  <item row="0" column="0">
                   <widget class="QTextBrowser" name="textBrowser_descr">
@@ -722,16 +728,16 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout">
                  <property name="leftMargin">
-                  <number>5</number>
+                  <number>3</number>
                  </property>
                  <property name="topMargin">
-                  <number>7</number>
+                  <number>5</number>
                  </property>
                  <property name="rightMargin">
-                  <number>5</number>
+                  <number>3</number>
                  </property>
                  <property name="bottomMargin">
-                  <number>5</number>
+                  <number>3</number>
                  </property>
                  <item row="1" column="0">
                   <widget class="QTextBrowser" name="textBrowser_info">

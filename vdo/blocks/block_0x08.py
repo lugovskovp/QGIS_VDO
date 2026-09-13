@@ -51,6 +51,7 @@ class block_0x08(block_base):
     )
 
     def __init__(self, bl_addr: BLADDR, origin: COORD, max: COORD) -> None:
+        # origin - начало координат
         super().__init__(bl_addr)
 
         self.li_items = self.read_list(OFFSET_LIST_FOLDEFS)
@@ -105,6 +106,9 @@ class block_0x08(block_base):
 
             for y in range(q_y):
                 curr_item = y + x_offset
+                if curr_item >= self.li_items.cnt:
+                    # а если количество элементов меньше количества сетки - то упс
+                    continue
 
                 offset = base_ptr + step * curr_item
                 bla_val = struct_UINT.unpack_from(raw_buffer, offset)[0]

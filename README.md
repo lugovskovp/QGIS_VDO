@@ -60,8 +60,10 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - [30-й меридиан восточной долготы](https://ru.wikipedia.org/wiki/30-%D0%B9_%D0%BC%D0%B5%D1%80%D0%B8%D0%B4%D0%B8%D0%B0%D0%BD_%D0%B2%D0%BE%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%BE%D0%B9_%D0%B4%D0%BE%D0%BB%D0%B3%D0%BE%D1%82%D1%8B)
 - [NDF: an effective mobile GIS physical storage model](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/6754/67541W/NDF-an-effective-mobile-GIS-physical-storage-model/10.1117/12.764932.short)
 - Торрент лохматого 2007 года. Единственная найденная "ручная" карта РФ VDO/Siemens GPS Россия Беларусь (СНГ + Европа) [ISO](https://rutracker.org/forum/viewtopic.php?t=894615 "Рутрекер")
+[magnet](magnet:?xt=urn:btih:CAD7F6586D12E9C53C63C2E6476F1F11AFC35097&tr=http%3A%2F%2Fbt.t-ru.org%2Fann%3Fmagnet&dn=VDO%2FSiemens%20GPS%20%D0%A0%D0%BE%D1%81%D1%81%D0%B8%D1%8F%20%D0%91%D0%B5%D0%BB%D0%B0%D1%80%D1%83%D1%81%D1%8C%20(%D0%A1%D0%9D%D0%93%20%2B%20%D0%95%D0%B2%D1%80%D0%BE%D0%BF%D0%B0)
 
-- VDO Dayton non C-IQ Europa 2013/2014 (BMW, Renault, Opel, Rover) CD70 / DVD90 [ISO](https://rutracker.org/forum/viewtopic.php?t=4694537)
+- VDO Dayton non C-IQ Europa 2013/2014 (BMW, Renault, Opel, Rover) CD70 / DVD90 [ISO](https://rutracker.org/forum/viewtopic.php?t=4694537) 
+[magnet](magnet:?xt=urn:btih:26A749250789FB88C47480BD3DAD6B22EA5B3251&tr=http%3A%2F%2Fbt3.t-ru.org%2Fann%3Fmagnet&dn=VDO%20Dayton%20non%20C-IQ%20Europa%202013%2F2014%20(BMW%2C%20Renault%2C%20Opel%2C%20Rover)%20CD70%20%2F%20DVD90%20v.2013%2F2014%20%5B2013%5D)
 это диск из комплекта европа состоящего из 10 дисков и называеться он VDO Dayton non C-IQ Europa 2012-2013 (BMW, Renault, Opel, Rover)
 Страны покрытия:
 скрытый текст
@@ -78,5 +80,31 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 		CD 10 Major Roads of Europe
 
 - Карты для устройств VDO/Siemens Dayton non C-IQ CD 2012/2013 Alpen - Австрия, Швейцария, Германия, Франция, Италия [ISO](https://rutracker.org/forum/viewtopic.php?t=4185746)
+[magnet](magnet:?xt=urn:btih:1902104641BE11F0B725FAB5882D23D88784767A&tr=http%3A%2F%2Fbt4.t-ru.org%2Fann%3Fmagnet&dn=%D0%9A%D0%B0%D1%80%D1%82%D1%8B%20%D0%B4%D0%BB%D1%8F%20%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%20VDO%2FSiemens%20Dayton%20non%20C-IQ%20CD%202012%2F2013%20Alpen)
 
 - Обновление операционной системы для навигатора VDO Dayton MS5000-Os Update-MO5076 [ISO](https://rutracker.org/forum/viewtopic.php?t=1729907)
+
+
+Где искать раздачи?
+
+BMW-Club (Чешский или международный сегменты): На таких ресурсах файлы часто лежат в открытом доступе. Например, рабочий торрент-файл пакета карт из 11 CD находится в разделе мануалов на BMW Club CZ. [1] (https://www.bmw-club.cz/manual_download.php?id=220)
+
+Профильные российские автоклубы: Форумы bmwclub.ru, e36club.ru или e46club.ru (ищите через внутренний поиск темы «Карты для MK3» или «VDO Dayton non C-IQ»). Модераторы часто делятся архивными ссылками на Яндекс.Диск, Облако Mail.ru или Mega.
+
+Rutracker и зарубежные торрент-трекеры: Файлы обычно лежат в разделах «Навигация для штатных автомагнитол» или «Автомобильные навигационные системы».
+
+Точные фразы для поисковиковСкопируйте и вставьте в строку поиска Google, Яндекс или поисковую строку вашего любимого трекера один из этих запросов:
+- vdo dayton non c iq europa torrent
+- BMW VDO Dayton MK I MK II MK III CD System torrent
+- VDO Dayton Non C-IQ Navigation CDs download
+- Карты BMW MK3 non C-IQ скачать торрент 
+
+[1] (https://www.bmw-club.cz/manual_download.php?id=220)
+
+
+У всех есть гугль или яндекс. 
+Вбиваете BMW Update DVD Road MAP Europe High 2013 SL и выбираете источник, торенты в том числе.
+Если надо с камерами и оповещением, то поиск почти такой же - BMW CD/DVD UNIVERSAL RUSSIAN ROAD MAP LITE 2013 POISoN December
+
+"VDO Dayton non C-IQ" site:bmwclub.ru
+

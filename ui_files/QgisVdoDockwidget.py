@@ -32,7 +32,9 @@ from QGIS_VDO.ui_files import (AnimatedGroupBox,
                                _DrawPacketAreas,
                                getRendererByLayerName)
 
-CRS_PROJECTION = "EPSG:4326"   # EPSG:4326 grad    EPSG:3395 - meters
+CRS_PROJECTION = "EPSG:4326"   # классическая проекция EPSG:4326 grad    EPSG:3395 - meters
+# CRS_PROJECTION = "EPSG:8859"   # (WGS 84 / PDC Mercator definition). разрыв на -30 "EPSG:3832" то же, но метры
+
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'QgisVdoDockwidgetBase.ui'))
 
@@ -256,6 +258,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
             # Установить enabled|disabled
             rb.setEnabled(not sc.is_empty)
+            # TODO: а не излишне ли?
             # параллельно с rb создаём группы масштабов для отображения.
             if not sc.is_empty:
                 gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
@@ -387,9 +390,49 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             root_group = root.insertGroup(0, self.vdo.QGISvdoGroupName)
         return root_group
 
+    def _getScaleGroup(self, scaleId: int) -> QgsLayerTreeGroup | None:
+        """
+        Возвращает существующую группу scale,
+        найдя её в rootGroup, либо создав.
+        None при выходе за границы.
+        """
+        # Функция для поиска числа в строке (например, из "Scale 11" достанет 11)
+        # def get_num(text):
+        #     match = re.search(r'\d+', text)
+        #     return int(match.group()) if match else -1
+
+        # проверка номера - должен быть среди self.scales
+        if not (0 <= scaleId < len(self.scales)):
+            # номера слоёв 0..11
+            return None
+        #
+        # если пустая scale - создавать группу не надо
+        if self.scales[scaleId].is_empty:
+            return None
+        #
+        scaleGroup: QgsLayerTreeGroup
+        rootGroup = self._getRootGroup()
+        # поиск в существующих
+        scaleGroup = rootGroup.findGroup(SCALE_GROUP_NAME_PREFIX + str(scaleId))
+        if scaleGroup:
+            return scaleGroup
+        #
+        # а если такой не найдено - надо её создать
+        insert_index = 0
+        for i in range(scaleId + 1):       # QTY_ALL_SCALES а не надо ли  + 1?
+            # смотрим существующие группы
+            gr_name = SCALE_GROUP_NAME_PREFIX + str(i)
+            if rootGroup.findGroup(gr_name):
+                # если есть такая - инкрементируем индекс вставки
+                insert_index += 1
+        # вставляем
+        scaleGroup = rootGroup.insertGroup(insert_index, SCALE_GROUP_NAME_PREFIX + str(scaleId))
+        # TODO: скопироать из референса слои?
+        return scaleGroup
+
     def _getLayer(self, scaleId: int, layerName: str, layerType: str) -> QgsVectorLayer:
         """
-        Находит или создаёт слой с именем layerName в scale scaleId
+        Находит или создаёт слой с именем layerName в scale группе scaleId
         Args:
             scaleId: int - номер scale [0..11]
             layerName: str наименование слоя
@@ -397,12 +440,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         Returns:
             layer: QgsVectorLayer
         """
-        # группа /root_group/scale_X
-        gr_name = SCALE_GROUP_NAME_PREFIX + str(scaleId)
-        if not (scaleGroup := self._getRootGroup().findGroup(gr_name)):
-            # какого хера то?
-            raise ValueError(f"Нет группы {gr_name}")
-        del gr_name
+        # scaleGroup группа QgsLayerTreeGroup /root_group/scale_X
+        if not (scaleGroup := self._getScaleGroup(scaleId)):
+            # какого хера то? вызываться должно после определения имени корневой группы
+            raise ValueError(f"Нет группы '{SCALE_GROUP_NAME_PREFIX}_{scaleId}'")
+
         # В группе ищем слой
         for child in scaleGroup.children():
             # Проверяем, что дочерний элемент — это слой и его имя совпадает
@@ -416,9 +458,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # <<< Слой не найден. Создаём новый.
         # для начала самое время проверить валидность типа
-        if layerType not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
-                             'MultiLineString', 'MultiPolygon']:
-            raise ValueError(f"Тип геометрии слоя {layerType} вне валидных ['Point', 'LineString', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon']")  # noqa
+        # if layerType not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
+        #                      'MultiLineString', 'MultiPolygon']:
+        if layerType not in ['Point', 'LineString', 'Polygon']:
+            raise ValueError(f"Тип геометрии слоя {layerType} вне валидных ['Point', 'LineString', 'Polygon']")  # noqa
         # Настраиваем параметры нового слоя в памяти (Memory Layer)
         layer = QgsVectorLayer(f"{layerType}?crs={CRS_PROJECTION}", layerName, "memory")
 

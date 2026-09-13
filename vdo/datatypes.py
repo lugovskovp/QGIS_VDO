@@ -26,9 +26,9 @@ else:
     ReadableBuffer = bytes
 
 
-from .enums import BlockType
-from .consts import struct_WORD, struct_UINT
-from .consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
+from QGIS_VDO.vdo.enums import BlockType
+from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT
+from QGIS_VDO.vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
 # from .block_base import block_base
 # from .geotypes import COORD     # cannot import name 'BYTESTRUCT' from partially initialized module '
 

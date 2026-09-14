@@ -5,13 +5,18 @@
 
 from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle,
                        QgsSingleSymbolRenderer, QgsFillSymbol, QgsFeature,
-                       QgsFeatureRequest, QgsGeometry)
+                       QgsFeatureRequest, QgsGeometry, QgsApplication,
+                       QgsCoordinateReferenceSystem)
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtCore import Qt
 
 from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
                                  NAME_LAYER_ALMANACS,
                                  NAME_LAYER_MAPS)
+
+
+CRS_NAME = "WGS 84 / Custom Pacific Split -80"
+CRS_PROJECTION_STRING = "PROJ4:+proj=longlat +lon_0=100 +datum=WGS84 +no_defs"
 
 
 def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
@@ -242,3 +247,36 @@ def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
     # Применяем настроенный символ к рендереру слоя
     renderer = QgsSingleSymbolRenderer(symbol)
     return renderer
+
+
+def getCrsProjection() -> str:
+    """
+    Создаёт, регистрирует и возвращает СК CRS_PROJECTION
+    с разрывом на -80w
+    CRS_NAME = "WGS 84 / Custom Pacific Split -80"
+    CRS_PROJECTION_STRING = "PROJ4:+proj=longlat +lon_0=100 +datum=WGS84 +no_defs"
+    """
+    # Сначала пытаемся найти СК по имени в реестре пользовательских проекций
+    registry = QgsApplication.coordinateReferenceSystemRegistry()
+    # Перебираем уже существующие кастомные СК, чтобы не плодить дубликаты
+    for user_crs_info in registry.userCrsList():
+        if user_crs_info.name == CRS_NAME:
+            # Загружаем полноценный объект СК по её внутреннему ID (srsid)
+            existing_crs = QgsCoordinateReferenceSystem()
+            existing_crs.createFromSrsId(user_crs_info.id)
+            return existing_crs
+    
+    # Если СК не найдена, создаем объект СК на основе строки PROJ
+    temp_crs = QgsCoordinateReferenceSystem(CRS_PROJECTION_STRING)
+    if not temp_crs.isValid():
+        raise Exception(f"Ошибка: Невалидная строка PROJ:'{CRS_PROJECTION_STRING}'. Проверьте параметры проекции.")
+    # Сохраняем её в реестр QGIS как новую пользовательскую (USER) СК
+    # Метод addUserCrs возвращает назначенный внутренний srsid (например, 100005)
+    new_srsid = registry.addUserCrs(temp_crs, CRS_NAME)
+    if new_srsid != -1:
+        # Инициализируем и возвращаем уже официально зарегистрированную СК
+        registered_crs = QgsCoordinateReferenceSystem()
+        registered_crs.createFromSrsId(new_srsid)
+        return registered_crs
+    else:
+        raise Exception("Не удалось сохранить пользовательскую СК в базу данных QGIS.")

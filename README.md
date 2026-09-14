@@ -17,8 +17,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 # Версии ПО
- OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
- 1991 - 2005 SiemensVDO Automotive AG
+Операционная система автонавигатора OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
+1991 - 2005 SiemensVDO Automotive AG
  
 - QGIS 3.44.10 ltr
 - VDO Dayton CD Carindb v.30
@@ -34,6 +34,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
 - Отображение картографического слоя по масштабам
 - Работа с несколькими carindb
+- Отображение в пользовательской СК "WGS 84 / Custom Pacific Split -80" - линия разрыва в атлантике, 80W
 
 
 # История реверс-инжиниринга формата carindb

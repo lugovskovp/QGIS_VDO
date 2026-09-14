@@ -11,8 +11,7 @@ from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup, QMessageBox
 from qgis.PyQt.QtCore import QMetaType
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
-                       QgsLayerTreeGroup, QgsCoordinateTransform,
-                       QgsCoordinateReferenceSystem)
+                       QgsLayerTreeGroup, QgsCoordinateTransform)
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
@@ -31,9 +30,10 @@ from QGIS_VDO.ui_files import (AnimatedGroupBox,
                                _DrawArea,
                                _DrawPacketAreas,
                                getRendererByLayerName)
+from QGIS_VDO.ui_files.drawing import getCrsProjection
 
-CRS_PROJECTION = "EPSG:4326"   # классическая проекция EPSG:4326 grad    EPSG:3395 - meters
-# CRS_PROJECTION = "EPSG:8859"   # (WGS 84 / PDC Mercator definition). разрыв на -30 "EPSG:3832" то же, но метры
+
+# CRS_PROJECTION = "EPSG:4326"   # классическая проекция EPSG:4326 grad    EPSG:3395 - meters
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'QgisVdoDockwidgetBase.ui'))
@@ -64,7 +64,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
         # widgets-and-dialogs-with-auto-connect
         self.iface = iface
+        # отрисовать
         self.setupUi(self)
+
+        # Проверить наличие открытого/активного сохранённого проекта
+        if not self._isExistsOpenProject():
+            return
 
         # Восстановить из настроек видимость groupBoxes
         self._restoreGroupBoxVisibility()
@@ -185,7 +190,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
                     (coord_rt.lat, coord_rt.lon)]  # noqa
             _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
             pass
-        self.pb_LoadFolderMaps.setText(self.tr("Load {} fldrs".format(bl_almanac.items_cnt())))   # noqa
+        self.pb_LoadFolderMaps.setText(self.tr("Load {} layouts".format(bl_almanac.items_cnt())))   # noqa
         pass
 
     # <<<<<<<<<<<<< функции инициализации вкладок
@@ -313,8 +318,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # print(f"Координаты: X = {point.x():.4f}, Y = {point.y():.4f}")
         # Получаем текущую систему координат проекта
         project_crs = QgsProject.instance().crs()
-        # Задаем целевую систему координат (WGS 84)
-        target_crs = QgsCoordinateReferenceSystem(CRS_PROJECTION)   # "EPSG:4326"
+        # Задаем целевую систему координат (модифицированную WGS 84)
+        target_crs = getCrsProjection()
         # Создаем трансформатор координат
         transform = QgsCoordinateTransform(project_crs, target_crs, QgsProject.instance())  # noqa
         # Трансформируем точку клика
@@ -336,11 +341,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # в масштабе ищем имя блока или none
         bladdr_map: BLADDR = sc.find_by_coord(srch_coord)
         # запишем в поле le_bladdr
-        
         if bladdr_map is None:
             QMessageBox.warning(
-                self, 'Внимание', 'Ничего не найдено', QMessageBox.Ok
-            )
+                self, self.tr('Attention!'), self.tr('Finded nothing.'), QMessageBox.Ok)
         else:
             self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
             print(bladdr_map)
@@ -372,10 +375,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         project = QgsProject.instance()
         if not project.fileName():
-            # Сообщение - что надо, чтобы был открыт проект.
+            # Сообщение - надо, чтобы был открыт проект.
             self.iface.messageBar().pushMessage(
-                    self.tr('Open/create any qgis project and reopen Carindb.'),   # noqa
-                    Qgis.Warning, 3)
+                self.tr('Open/create any QGIS project and reopen Carindb.'), Qgis.Warning, 3)
             return False
         return True
 
@@ -430,13 +432,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # TODO: скопироать из референса слои?
         return scaleGroup
 
-    def _getLayer(self, scaleId: int, layerName: str, layerType: str) -> QgsVectorLayer:
+    def _getLayer(self, scaleId: int, layerName: str, geometry_type: str) -> QgsVectorLayer:
         """
         Находит или создаёт слой с именем layerName в scale группе scaleId
         Args:
             scaleId: int - номер scale [0..11]
             layerName: str наименование слоя
-            layerType: str Тип геометрии [Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon]  # noqa
+            geometry_type: str Тип геометрии [Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon]  # noqa
         Returns:
             layer: QgsVectorLayer
         """
@@ -458,12 +460,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # <<< Слой не найден. Создаём новый.
         # для начала самое время проверить валидность типа
-        # if layerType not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
+        # if geometry_type not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
         #                      'MultiLineString', 'MultiPolygon']:
-        if layerType not in ['Point', 'LineString', 'Polygon']:
-            raise ValueError(f"Тип геометрии слоя {layerType} вне валидных ['Point', 'LineString', 'Polygon']")  # noqa
+        if geometry_type not in ['Point', 'LineString', 'Polygon']:
+            raise ValueError(f"Тип геометрии слоя {geometry_type} вне валидных ['Point', 'LineString', 'Polygon']")  # noqa
         # Настраиваем параметры нового слоя в памяти (Memory Layer)
-        layer = QgsVectorLayer(f"{layerType}?crs={CRS_PROJECTION}", layerName, "memory")
+        uri = f"{geometry_type}?crs={getCrsProjection().authid()}"
+        layer = QgsVectorLayer(uri, layerName, "memory")
 
         # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
         provider = layer.dataProvider()
@@ -511,10 +514,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Настраиваем параметры нового слоя в памяти (Memory Layer)
         # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
         # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
-        geometry_type = f"Polygon?crs={CRS_PROJECTION}"
-        layer = QgsVectorLayer(geometry_type, layer_name, "memory")
-        del geometry_type
-
+        uri = f"Polygon?crs={getCrsProjection().authid()}"
+        layer = QgsVectorLayer(uri, layer_name, "memory")
+        del uri
         # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
         provider = layer.dataProvider()
         # provider.addAttributes([

@@ -249,7 +249,7 @@ def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
     return renderer
 
 
-def getCrsProjection() -> str:
+def getCrsProjection() -> QgsCoordinateReferenceSystem:
     """
     Создаёт, регистрирует и возвращает СК CRS_PROJECTION
     с разрывом на -80w

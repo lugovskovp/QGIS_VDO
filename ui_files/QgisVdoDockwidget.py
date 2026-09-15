@@ -9,8 +9,7 @@ from typing import cast
 
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup, QMessageBox
-from qgis.PyQt.QtCore import QMetaType
-from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
+from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLayerTreeLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform)
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
@@ -22,15 +21,14 @@ from QGIS_VDO.vdo.blocks import (block_0x12,
                                  block_0x08)
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
-                                 NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_MAPS)
+                                 NAME_LAYER_ALMANACS
+                                 )
 
 from QGIS_VDO.ui_files import (AnimatedGroupBox,
                                ClickCoordinatesTool,
-                               _DrawArea,
-                               _DrawPacketAreas,
-                               getRendererByLayerName)
-from QGIS_VDO.ui_files.drawing import getCrsProjection
+                               _DrawRectangleArea,
+                               _DrawPacketAreas)
+from QGIS_VDO.ui_files.drawing import getCrsProjection, getLayer
 
 
 # CRS_PROJECTION = "EPSG:4326"   # классическая проекция EPSG:4326 grad    EPSG:3395 - meters
@@ -102,7 +100,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
     def DrawTocAreas(self):
         """
-        Отображает на карте area_A, area_b
+        Отображает на карте area_A, area_B
         Скрывает и сворачивает остальные toc группы
         """
         # Проверить наличие открытого/активного сохранённого проекта
@@ -112,7 +110,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         if project is None:
             return
         # получаем корневой ТОС area layer в группе
-        layer = self._getRootAreaLayer()
+        layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
 
         # hide all another vdo root groups but root_group_name
         self.iface.setActiveLayer(layer)
@@ -150,9 +148,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Areas from TOC block
         bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
         area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
-        _DrawArea(area, "Area_B", layer)   # Area_A is bigger
+        _DrawRectangleArea(area, "Area_B", layer)   # Area_A is bigger
         area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
-        _DrawArea(area, "Area_A", layer)
+        _DrawRectangleArea(area, "Area_A", layer)
         
         # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
         # Получаем доступ к карте (холсту)
@@ -179,7 +177,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             return
 
         # Получить слой для альманаха
-        layer = self._getLayer(idScale, NAME_LAYER_ALMANACS, 'Polygon')
+        layer = self._getScaleLayer(idScale, NAME_LAYER_ALMANACS)
         
         # Получить альманах и отрисовать содержимое - folder maps
         sc: SCALE = self.scales[idScale]
@@ -188,7 +186,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # при отрисовке поле name уникальное - второй раз не отрисовывается
             area = [(coord_lb.lat, coord_lb.lon),
                     (coord_rt.lat, coord_rt.lon)]  # noqa
-            _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
+            _DrawRectangleArea(area, f"0x{bladdr_fldr_val:X}", layer, "layout")  # noqa
             pass
         self.pb_LoadFolderMaps.setText(self.tr("Load {} layouts".format(bl_almanac.items_cnt())))   # noqa
         pass
@@ -432,13 +430,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # TODO: скопироать из референса слои?
         return scaleGroup
 
-    def _getLayer(self, scaleId: int, layerName: str, geometry_type: str) -> QgsVectorLayer:
+    def _getScaleLayer(self, scaleId: int, layerName: str) -> QgsVectorLayer:
         """
         Находит или создаёт слой с именем layerName в scale группе scaleId
         Args:
             scaleId: int - номер scale [0..11]
             layerName: str наименование слоя
-            geometry_type: str Тип геометрии [Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon]  # noqa
         Returns:
             layer: QgsVectorLayer
         """
@@ -447,106 +444,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # какого хера то? вызываться должно после определения имени корневой группы
             raise ValueError(f"Нет группы '{SCALE_GROUP_NAME_PREFIX}_{scaleId}'")
 
-        # В группе ищем слой
-        for child in scaleGroup.children():
-            # Проверяем, что дочерний элемент — это слой и его имя совпадает
-            if isinstance(child, QgsLayerTreeLayer) and child.name() == layerName:
-                layer = child.layer()
-                # Убеждаемся, что это векторный слой
-                if isinstance(layer, QgsVectorLayer):
-                    return layer
-                else:
-                    raise ValueError(f"Что не так с {layer.name()}")
-
-        # <<< Слой не найден. Создаём новый.
-        # для начала самое время проверить валидность типа
-        # if geometry_type not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
-        #                      'MultiLineString', 'MultiPolygon']:
-        if geometry_type not in ['Point', 'LineString', 'Polygon']:
-            raise ValueError(f"Тип геометрии слоя {geometry_type} вне валидных ['Point', 'LineString', 'Polygon']")  # noqa
-        # Настраиваем параметры нового слоя в памяти (Memory Layer)
-        uri = f"{geometry_type}?crs={getCrsProjection().authid()}"
-        layer = QgsVectorLayer(uri, layerName, "memory")
-
-        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
-        provider = layer.dataProvider()
-        provider.addAttributes([
-            # QgsField("id", QMetaType.Type.Int),            # noqa 
-            QgsField("name", QMetaType.Type.QString)      # noqa
-            # QgsField("value", QMetaType.Type.QString)      # noqa Double
-        ])
-        # Обновляем поля в слое после их добавления в провайдер
-        layer.updateFields()
-
-        # получаем рендерер - свойства отображения слоя
-        renderer = getRendererByLayerName(layerName)
-        layer.setRenderer(renderer)
-        del renderer
-        # Обновляем отображение слоя
-        layer.triggerRepaint()
-        # Проверяем валидность и добавляем слой в нашу верхнюю группу
-        if layer.isValid():
-            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
-            QgsProject.instance().addMapLayer(layer, False) # noqa
-            # Вставляем слой на последнее место внутри нашей новой группы
-            scaleGroup.insertLayer(0, layer)
-            # print("Новый слой успешно создан в памяти и добавлен наверх!")
+        if layerName in [NAME_LAYER_ALMANACS]:
+            layer = getLayer(scaleGroup, NAME_LAYER_ALMANACS)
             return layer
         else:
-            print("Не удалось создать новый слой.")
-            pass
-
-    def _getRootAreaLayer(self) -> QgsVectorLayer:
-        """
-        возвращает слой NAME_LAYER_GLOBAL_BOUNDS в корневой рабочей группе
-        """
-        layer_name = NAME_LAYER_GLOBAL_BOUNDS
-        root_group = self._getRootGroup()
-        #  существует ли уже слой с таким именем в прямых потомках root группы
-        for child in root_group.children():
-            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
-            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
-                # Получаем сам объект слоя, он нужен для работы
-                layer = child.layer()
-                return layer
-
-        # нет, слой с таким именем не найден - создаём его в root
-        # Настраиваем параметры нового слоя в памяти (Memory Layer)
-        # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
-        # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
-        uri = f"Polygon?crs={getCrsProjection().authid()}"
-        layer = QgsVectorLayer(uri, layer_name, "memory")
-        del uri
-        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
-        provider = layer.dataProvider()
-        # provider.addAttributes([
-        #     # QgsField("id", QMetaType.Type.Int),            # noqa 
-        #     QgsField("name", QMetaType.Type.QString)      # noqa
-        #     # QgsField("value", QMetaType.Type.QString)      # noqa Double
-        # ])
-        provider.addAttributes([QgsField("name", QMetaType.Type.QString)])
-        # Обновляем поля в слое после их добавления в провайдер
-        layer.updateFields()
-
-        # получаем рендерер - свойства отображения слоя
-        renderer = getRendererByLayerName(NAME_LAYER_GLOBAL_BOUNDS)
-        layer.setRenderer(renderer)
-        del renderer
-        # Обновляем отображение слоя
-        layer.triggerRepaint()
-        # Проверяем валидность и добавляем слой в нашу верхнюю группу
-        if layer.isValid():
-            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
-            QgsProject.instance().addMapLayer(layer, False) # noqa
-            
-            # Вставляем слой на последнее место внутри нашей новой группы
-            root_group.insertLayer(-1, layer)
-            # print("Новый слой успешно создан в памяти и добавлен наверх!")
-            return layer
-        else:
-            print("Не удалось создать новый слой.")
-            pass
-
+            # какого хера то? вызываться должно после определения имени корневой группы
+            raise ValueError(f"Нет варианта имени слоя {layerName}")
+    
     def _restoreGroupBoxVisibility(self) -> None:
         """
         Восстанавливает ранее сохранённые настройки
@@ -643,7 +547,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # сохраняем номер масштаба в settings
         Settings.setChousedScale(self.currentIdScale)
         # Получить слой для folder maps
-        self.layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')  # noqa
+        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)  # noqa
         # отрисовать area альманаха
         self.DrawAlmanacArea(self.currentIdScale)
         # tabBlock set l_currScaleId

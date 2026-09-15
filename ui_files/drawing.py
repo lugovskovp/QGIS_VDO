@@ -3,32 +3,46 @@
 """
 
 
-from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle,
-                       QgsSingleSymbolRenderer, QgsFillSymbol, QgsFeature,
+from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProject,
+                       QgsSingleSymbolRenderer, QgsFillSymbol, QgsLineSymbol, QgsMarkerSymbol, QgsFeature,
                        QgsFeatureRequest, QgsGeometry, QgsApplication,
-                       QgsCoordinateReferenceSystem)
-from qgis.PyQt.QtGui import QColor
-from qgis.PyQt.QtCore import Qt
+                       QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
+                       QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
+                       QgsVectorSimplifyMethod)
 
-from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
-                                 NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_MAPS)
+from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
+                                 NAME_LAYER_POI,
+                                 NAME_LAYER_SHAPES,
+                                 NAME_LAYER_LINES,
+                                 CRS_NAME, CRS_PROJECTION_STRING,
+                                 LAYERS_PROPERTY)
 
 
-CRS_NAME = "WGS 84 / Custom Pacific Split -80"
-CRS_PROJECTION_STRING = "PROJ4:+proj=longlat +lon_0=100 +datum=WGS84 +no_defs"
+ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]
 
+GEOMETRY_SYMBOLS = {
+    'Polygon': QgsFillSymbol,
+    'LineString': QgsLineSymbol,
+    'Point': QgsMarkerSymbol
+}
 
-def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
+ 
+def _DrawRectangleArea(area, area_name: str, layer: QgsVectorLayer, variant: str | None = None) -> None:
     """
     Рисует прямоугольник в слое layer, в котором должен быть атрибут name.
     Args:
-        area: aaraay of tylpes val coordf
+        area: araay of tuples val coord
             [(lon, lat), (lon, lat)]
         area_name: str имя добавляемой area
+        variant: отображение, layout или map
         layer: QgsVectorLayer Qgis.GeometryType.Polygon:
     """
     field_name_index = layer.fields().indexOf('name')
+    if variant:
+        field_variant_index = layer.fields().indexOf('variant')
+        if field_variant_index == -1:
+            return
+    
     # если в слое нет атрибута name - возврат
     if field_name_index == -1:
         return
@@ -80,6 +94,8 @@ def _DrawArea(area, area_name: str, layer: QgsVectorLayer) -> None:
     
     # Если в слое есть атрибуты, можно задать дефолтные значения (опционально)
     feature.setAttribute(field_name_index, area_name)
+    if variant:
+        feature.setAttribute(field_variant_index, variant)
    
     # Начинаем редактирование слоя и добавляем объект
     layer.startEditing()
@@ -110,9 +126,12 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
         return
 
     field_name_index = layer.fields().indexOf('name')
+    field_variant_index = layer.fields().indexOf('variant')
     if field_name_index == -1:
-        print("Ошибка: В слое отсутствует обязательное поле 'name'")
+        raise AttributeError("Ошибка: В слое отсутствует обязательное поле 'name'")
         return
+    if field_variant_index == -1:
+        raise AttributeError("Ошибка: В слое отсутствует обязательное поле 'variant'")
 
     # Оптимизированный сбор существующих имен в слое (чтобы избежать дубликатов)
     # Собираем уникальные имена из пришедшего пакета, чтобы отфильтровать их одним запросом  # noqa
@@ -160,6 +179,7 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
         feature = QgsFeature(layer.fields())
         feature.setGeometry(geom)
         feature.setAttribute(field_name_index, area_name)
+        feature.setAttribute(field_variant_index, 'map')
         
         features_to_add.append(feature)
 
@@ -191,62 +211,149 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
         print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
 
 
-def getRendererByLayerName(layerName: str) -> QgsSingleSymbolRenderer:
+def _findLayer_in_Group(group: QgsLayerTreeGroup, LayerName: str) -> QgsVectorLayer | None:
     """
-    свойства отображения слоя по наименованию слоя
-    фактически просто вынесенные отдельно библиотекой
+    Ищет LayerName в группе group
+    Args:
+        group:
+        LayerName: имя слоя
     """
-    #
-    if layerName == NAME_LAYER_GLOBAL_BOUNDS:
-        # renderer для слоя глобальных границ - лесной зелёный
-        # Настраиваем стиль (Символогию) Создаем дефолтный символ для полигона
-        symbol = QgsFillSymbol.createSimple({'name': 'square'})
-        
-        # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
-        # 128 в конце означает 50% прозрачности (0 - полностью прозрачный, 255 - сплошной)  # noqa
-        fill_color = QColor(34, 139, 34, 10)   # Лесной зеленый с 10% прозрачностью
-        symbol.setColor(fill_color)
-        
-        # НАСТРОЙКА ГРАНИЦЫ
-        symbol.symbolLayer(0).setStrokeColor(QColor(0, 40, 0, 255))  # Черный цвет границы (сплошной) # noqa
-        symbol.symbolLayer(0).setStrokeWidth(0.6)                   # Толщина границы в миллиметрах  # noqa
-        # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
-        
-        # НАСТРОЙКА ОБЩЕЙ ПРОЗРАЧНОСТИ СЛОЯ (Альтернативный вариант от 0.0 до 1.0)
-        # symbol.setOpacity(0.7) # 70% непрозрачности для всего символа целиком
+    # В группе ищем слой
+    for child in group.children():
+        # Проверяем, что дочерний элемент — это слой и его имя совпадает
+        if isinstance(child, QgsLayerTreeLayer) and child.name() == LayerName:
+            layer = child.layer()
+            # Убеждаемся, что это векторный слой
+            if isinstance(layer, QgsVectorLayer):
+                return layer
+            else:
+                raise ValueError(f"Что не так с {layer.name()}")
+    return None
 
-    elif layerName == NAME_LAYER_ALMANACS:
-        # слой альманах карт - персиковый
-        # Настраиваем стиль (Символогию) Создаем дефолтный символ для полигона
-        symbol = QgsFillSymbol.createSimple({'name': 'square'})
-        # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
-        fill_color = QColor(255, 229, 180, 10)   # Персиковый с 10% прозрачностью
-        symbol.setColor(fill_color)
-        # НАСТРОЙКА ГРАНИЦЫ
-        symbol.symbolLayer(0).setStrokeColor(QColor(255, 129, 80, 255))  # Персиковый цвет границы (сплошной) # noqa
-        symbol.symbolLayer(0).setStrokeWidth(0.2)                   # Толщина границы в миллиметрах  # noqa
-        # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
-        symbol.symbolLayer(0).setStrokeStyle(Qt.DashLine)
 
-    elif layerName == NAME_LAYER_MAPS:
-        # слой карт - желтый
-        # Настраиваем стиль (Символогию) Создаем дефолтный символ для полигона
-        symbol = QgsFillSymbol.createSimple({'name': 'square'})
-        # НАСТРОЙКА ЦВЕТА ЗАЛИВКИ (RGBA: Красный, Зеленый, Синий, Альфа/Прозрачность от 0 до 255) # noqa
-        fill_color = QColor(255, 229, 180, 80)   # Персиковый с 10% прозрачностью
-        symbol.setColor(fill_color)
-        # НАСТРОЙКА ГРАНИЦЫ
-        symbol.symbolLayer(0).setStrokeColor(QColor(255, 229, 0, 255))  # Персиковый цвет границы (сплошной) # noqa
-        symbol.symbolLayer(0).setStrokeWidth(0.4)                   # Толщина границы в миллиметрах  # noqa
-        # Доступные стили границы: Qt.SolidLine, Qt.DashLine, Qt.DotLine и т.д.
-        symbol.symbolLayer(0).setStrokeStyle(Qt.DotLine)
+def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer:
+    """
+    Возвращает или создаёт QgsVectorLayer
+    Args:
+        parentGroup  :QgsLayerTreeGroup: в какой группе
+        layerName: str имя слоя, константное название
+    Returns:
+        layer: QgsVectorLayer
+    """
+    # Поиск layer в указанной группе.
+    if layer := _findLayer_in_Group(parentGroup, layerName):
+        return layer
 
+    # поиск наименования слоя в наборе свойств слоёв
+    registry = {obj['name']: obj for obj in LAYERS_PROPERTY}
+    target = registry.get(layerName)
+    if not target:
+        raise AttributeError(f"Ошибка, нет варианта имени слоя {layerName}")
+        
+    # Создаём новый слой.
+    geometry = target.get('geometry')
+    uri = f"{geometry}?crs={getCrsProjection().authid()}&index=yes"
+    layer = QgsVectorLayer(uri, layerName, "memory")
+
+    # Добавляем атрибутивные поля
+    attrs = []
+    for atribute, t in target.get('atributes'):
+        attrs.append(QgsField(atribute, t))     # QgsField("id", QMetaType.Type.Int)
+    if len(attrs) > 0:
+        provider = layer.dataProvider()
+        provider.addAttributes(attrs)
+        layer.updateFields()    # Обновляем поля в слое после их добавления в провайдер
+    del attrs
+
+    # символика
+    symbol_class = GEOMETRY_SYMBOLS.get(geometry)
+    if not symbol_class:
+        raise ValueError(f"Неизвестный тип геометрии: {geometry}")
+    
+    # Стили и принудительный порядок (layout всегда поверх map)
+    stiles_list = target.get('styles')
+    if len(stiles_list) == 0:
+        raise AttributeError("Непорядок, хоть один то style должен быть")
+    elif len(stiles_list) == 1:
+        # если только один символ в слое
+        style = stiles_list[0].get('style')
+        symbol = symbol_class().createSimple(style)
+        renderer = QgsSingleSymbolRenderer(symbol)
     else:
-        raise ValueError(layerName, "неизвестный слой, _getRendererByName")
+        categories = []
+        for index, style_item in enumerate(target.get('styles')):
+            style = style_item.get('style')
+            symbol = symbol_class().createSimple(style)
+            symbol.symbolLayer(0).setRenderingPass(index)       # 0 - Снизу
+            name = style_item.get('name')
+            categories.append(QgsRendererCategory(name, symbol, name.capitalize()))
+        del style, name
+        renderer = QgsCategorizedSymbolRenderer("variant", categories)
+        renderer.setOrderByEnabled(True)    # Включаем сортировку по пассам рендеринга
 
-    # Применяем настроенный символ к рендереру слоя
-    renderer = QgsSingleSymbolRenderer(symbol)
-    return renderer
+    layer.setRenderer(renderer)
+
+    # Оптимизация отрисовки на больших масштабах
+    simplify_method = QgsVectorSimplifyMethod()     # объект настроек упрощения
+    simplify_method.setSimplifyHints(QgsVectorSimplifyMethod.GeometrySimplification)    # noqa упрощение геометрии при отрисовке
+    simplify_method.setSimplifyAlgorithm(QgsVectorSimplifyMethod.Distance)  # noqa алгоритм (Distance — на основе расстояния между узлам
+    simplify_method.setTolerance(1.5)   # noqa порог упрощения в пикселях экрана (детали меньше 1.5 пикселей будут сглажены)
+    layer.setSimplifyMethod(simplify_method)
+
+    # Проверяем валидность и добавляем слой в нашу верхнюю группу
+    if layer.isValid():
+        # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
+        QgsProject.instance().addMapLayer(layer, False) # noqa
+        place = target.get('place')
+        if place:
+            # индекс есть в объекте
+            parentGroup.insertLayer(int(place), layer)
+        else:
+            # Вставляем слой на правильное место внутри нашей новой группы
+            add_layer_in_right_order(parentGroup, layer, layerName)
+        # скрываем по умолчанию категории слоя
+        layer_node = QgsProject.instance().layerTreeRoot().findLayer(layer)
+        layer_node.setExpanded(False)
+        return layer
+    else:
+        raise ValueError("Не удалось создать новый слой.")
+
+
+def add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLayer, layer_key: str):
+    """
+    Добавляет слой в QGIS на строго определенную позицию.
+    layer_key: 'poi', 'lines', 'shapes' или 'almanac'
+    """
+    if layer_key not in ORDER_PRIORITY:
+        raise ValueError(f"Неизвестный тип слоя: {layer_key}")
+
+    # Вычисляем правильный индекс для вставки
+    # Ищем, сколько слоев с БОЛЕЕ ВЫСОКИМ приоритетом уже есть на панели
+    target_index = 0
+    current_nodes = group.children()    # Все элементы на панели сверху вниз
+    
+    # Определяем ранг текущего добавляемого слоя (0 для poi, 1 для lines и т.д.)
+    new_layer_rank = ORDER_PRIORITY.index(layer_key)
+    
+    for node in current_nodes:
+        # Проверяем только векторные слои
+        if hasattr(node, 'layer') and node.layer():
+            existing_layer_name = node.layer().name().lower()
+            
+            # Определяем ранг уже существующего на панели слоя
+            existing_rank = None
+            for rank, key in enumerate(ORDER_PRIORITY):
+                if key in existing_layer_name:    # Проверка на частичное вхождение или точное имя
+                    existing_rank = rank
+                    break
+            
+            # Если ранг существующего слоя выше или равен нашему,
+            # мы должны пропустить его и встать ПОД ним (увеличиваем индекс вставки)
+            if existing_rank is not None and existing_rank <= new_layer_rank:
+                target_index += 1
+                
+    # Вставляем слой на вычисленную позицию
+    group.insertLayer(target_index, new_layer)
 
 
 def getCrsProjection() -> QgsCoordinateReferenceSystem:

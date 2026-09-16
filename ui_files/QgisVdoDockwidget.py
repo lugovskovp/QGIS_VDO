@@ -8,9 +8,11 @@ import re
 from typing import cast
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup, QMessageBox
+from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
+                                 QPushButton, QMessageBox)
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLayerTreeLayer,
-                       QgsLayerTreeGroup, QgsCoordinateTransform)
+                       QgsLayerTreeGroup, QgsCoordinateTransform
+                       )
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
@@ -21,7 +23,8 @@ from QGIS_VDO.vdo.blocks import (block_0x12,
                                  block_0x08)
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
-                                 NAME_LAYER_ALMANACS
+                                 NAME_LAYER_ALMANACS,
+                                 NAME_LAYER_SHAPES
                                  )
 
 from QGIS_VDO.ui_files import (AnimatedGroupBox,
@@ -290,11 +293,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         Инициализация вкладки Block
         """
         # Привязываем вызов activate_coords_tool к кнопке
+        self.pb_getCoordinates: QPushButton
+        self.pb_loadBlock: QPushButton
         self.pb_getCoordinates.setCheckable(True)
-        self.pb_getCoordinates.clicked.connect(self.activate_coords_tool)
+        self.pb_getCoordinates.clicked.connect(self.tabBlock_activate_coords_tool)
+        self.pb_loadBlock.clicked.connect(self.tabBlock_load_block)
 
-    def activate_coords_tool(self, checked):
-
+    def tabBlock_activate_coords_tool(self, checked):
         # Делаем кнопку активной визуально
         # self.pb_getCoordinates.setChecked(True)
         if checked:
@@ -310,6 +315,17 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             current_tool = self.iface.mapCanvas().mapTool()
             if hasattr(self, 'tool') and current_tool == self.tool:
                 self.iface.mapCanvas().unsetMapTool(self.tool)
+
+    def tabBlock_load_block(self):
+
+        bladdr = self.le_bladdr.text()
+        if not bladdr:
+            return
+        
+        # i = int(bladdr, 16)
+        layer = getLayer(self._getScaleGroup(self.currentIdScale), NAME_LAYER_SHAPES)
+        print(layer)
+        pass
 
     def on_coords_received(self, point):
         # Вывод координат в консоль
@@ -568,7 +584,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
     def closeEvent(self, event):
         # self.closingPlugin.emit()
         # event.accept()
-        self.activate_coords_tool(False)
+        self.tabBlock_activate_coords_tool(False)
         pass
 
     def pbActionEvent(self, event):

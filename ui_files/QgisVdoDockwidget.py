@@ -30,7 +30,9 @@ from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
 from QGIS_VDO.ui_files import (AnimatedGroupBox,
                                ClickCoordinatesTool,
                                _DrawRectangleArea,
-                               _DrawPacketAreas)
+                               _DrawPacketAreas,
+                               DrawPacketShapes
+                               )
 from QGIS_VDO.ui_files.drawing import getCrsProjection, getLayer
 
 
@@ -320,11 +322,39 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         bladdr = self.le_bladdr.text()
         if not bladdr:
+            # пустое поле адреса блока
             return
         
-        # i = int(bladdr, 16)
-        layer = getLayer(self._getScaleGroup(self.currentIdScale), NAME_LAYER_SHAPES)
-        print(layer)
+        bladdr = self.vdo.get_bladdr(int(bladdr, 16))
+        block = self.vdo.get_block(bladdr)
+        if block.type not in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+            # 1-0x06, 2-0x01, 3-0x02, 4-0x03
+            # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
+            return
+        del bladdr
+
+        BLOCKTYPEX_SCALEID = {
+            "14" : 5,
+            "15" : 6,
+            "16" : 7,
+            "1C" : 9,
+            "1D" : 10,
+            "1E" : 11
+        }
+        
+        # определяем масштаб
+        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
+        # слой по соответствию типа block, а не текущий
+        layer = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+        del targetScale
+        # получаем полигоны слоя
+        shapes = [shp for shp in block.getObjects(isGetLines=False)]
+        # отрисовываем слой NAME_LAYER_SHAPES
+        DrawPacketShapes(shapes, layer)
+        for obj in block.getObjects(isGetLines=False):
+            print(obj)
+
+        # print(layer)
         pass
 
     def on_coords_received(self, point):

@@ -65,7 +65,7 @@ LAYERS_PROPERTY = [
     {
         'name': NAME_LAYER_ALMANACS,
         'geometry': 'Polygon',
-        'atributes': [('name', QMetaType.Type.QString), ('variant', QMetaType.Type.QString)],
+        'attributes': [('name', QMetaType.Type.QString), ('variant', QMetaType.Type.QString)],
         'styles': [
             {
                 'name': 'map',
@@ -92,7 +92,7 @@ LAYERS_PROPERTY = [
     {
         'name': NAME_LAYER_GLOBAL_BOUNDS,
         'geometry': 'Polygon',
-        'atributes': [('name', QMetaType.Type.QString)],
+        'attributes': [('name', QMetaType.Type.QString)],
         'place': -1,
         'styles': [
             {
@@ -110,14 +110,12 @@ LAYERS_PROPERTY = [
     {
         'name': NAME_LAYER_SHAPES,
         'geometry': 'Polygon',
-        'atributes': [('name', QMetaType.Type.QString),
-                      ('variant', QMetaType.Type.QString),
-                      ('id', QMetaType.Type.QString),
-                      ('block', QMetaType.Type.QString),
-                      ('lat', QMetaType.Type.QString),
-                      ('lon', QMetaType.Type.QString),
-                      #('cat', QMetaType.Type.QString)],     # digit cat.id
-                      ],
+        'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
+                       ('name', QMetaType.Type.QString),
+                       ('id', QMetaType.Type.Int),
+                       ('block', QMetaType.Type.QString),
+                       ('coord', QMetaType.Type.QString),
+                       ],
         'styles': [
             {
                 'name': 'SPORTS_COMPLEX',
@@ -197,6 +195,40 @@ LAYERS_PROPERTY = [
                     'outline_width': '0.4',
                     'style': 'solid',
                     'outline_style': 'solid'
+                },
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 10,
+                    'color': "#966100",         # Желтая "#ffdd00"
+                    'bold': False,
+                    'italic': True,
+                    # 'buffer_enabled': True,     # Включаем обводку
+                    # 'buffer_color': "#966100",  #  обводка
+                    # 'buffer_size': 1.1,
+                    # 'label_min_size': 15.0,  # Скрывать подпись, если полигон на экране меньше 15 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'WATER',
+                'style': {
+                    'color': '100,150,255,100',         # Полупрозрачная синяя заливка
+                    'outline_color': '0,50,200,255',    # Яркая синяя граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid',
+                },
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    'color': '#1f78b4',         # Красивый синий
+                    'bold': True,
+                    'italic': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': '#ffffff',  # Белая обводка
+                    'buffer_size': 1.2,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    "remove_duplicates": True,
                 }
             },
             {
@@ -227,6 +259,17 @@ LAYERS_PROPERTY = [
                     'outline_width': '0.1',
                     'style': 'solid',
                     'outline_style': 'solid'
+                },
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 14,
+                    'color': "#ffffff",         # Белая
+                    'bold': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': "#020000",  # Черная обводка
+                    'buffer_size': 1.1,
+                    'label_min_size': 15.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
                 }
             },
             {
@@ -259,21 +302,14 @@ LAYERS_PROPERTY = [
                     'outline_style': 'no'
                 }
             },
-            {
-                'name': 'WATER',
-                'style': {
-                    'color': '100,150,255,100',         # Полупрозрачная синяя заливка
-                    'outline_color': '0,50,200,255',    # Яркая синяя граница
-                    'outline_width': '0.1',
-                    'style': 'solid',
-                    'outline_style': 'solid'
-                }
-            },
         ]
     },
 ]
 
 """
+03 - 05 - 08 - 01
+01 - 05 - 08
+
 EMPTY = 0x00              # Пустая область / базовый фон суши
 *WATER = 0x01              # Внутренние воды (озера, водохранилища, заливы)
 *SEA_OCEAN = 0x02          # Моря и океаны

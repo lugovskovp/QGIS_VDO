@@ -200,14 +200,21 @@ class block_0x08(block_base):
 
         return bladdr_val
     
-    def find_by_coord(self, srch: COORD) -> Optional[BLADDR]:
-        """Поиск подблока карты, в который попадают координаты."""
+    def find_by_coord(self, srch: COORD, isFindMap: bool = True) -> Optional[BLADDR]:
+        """
+        Поиск подблока карты, в который попадают координаты.
+        isFindMap True - map (False - return layout)
+        """
         # Ищем в альманахе папку карт
         b_09 = self._find_folder_by_coord(srch)
 
         if b_09 is None:
             return None
 
+        # возвращаем папку карт - layout
+        if not isFindMap:
+            return b_09
+        
         bl, c1, c2 = b_09
         # загружаем папку карт - индекс maps
         bl_folder: block_0x09 = self.vdo.get_block(bl, c1, c2)

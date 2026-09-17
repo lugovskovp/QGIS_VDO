@@ -241,7 +241,7 @@ def test_scale_coordinate_boundaries(sc_bmw, bin_lon_lat, expected_in_bounds, mo
     monkeypatch.setattr(type(sc_bmw), "almanac_idx", current_almanac_idx)
 
     # 5. Вызов тестируемого метода
-    result = sc_bmw.find_by_coord(srch_point)
+    result = sc_bmw.find_by_coord(srch_point, True)
 
     # 6. Проверка результатов и вызовов моков
     if expected_in_bounds:
@@ -249,7 +249,7 @@ def test_scale_coordinate_boundaries(sc_bmw, bin_lon_lat, expected_in_bounds, mo
         # Проверяем, что vdo.get_block был вызван с реальным индексом и границами
         mock_vdo.get_block.assert_called_once_with(current_almanac_idx, lb, rt)
         # Проверяем, что поиск внутри альманаха был вызван для нашей точки
-        mock_alm.find_by_coord.assert_called_once_with(srch_point)
+        mock_alm.find_by_coord.assert_called_once_with(srch_point, True)
     else:
         assert result is None
         # Если точка снаружи, запросов к vdo и альманаху быть не должно

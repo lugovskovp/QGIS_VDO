@@ -134,6 +134,7 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
     # Получаем индексы полей безопасным способом (вернет -1, если поля нет)
     fields = layer.fields()
     field_idx_variant = fields.indexOf('variant')
+    # field_idx_render_order = fields.indexOf('render_order')
     field_idx_name = fields.indexOf('name')
     field_idx_id = fields.indexOf('id')
     field_idx_block = fields.indexOf('block')
@@ -484,7 +485,7 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     if place is not None:
         parentGroup.insertLayer(int(place), layer)
     else:
-        add_layer_in_right_order(parentGroup, layer, layerName)
+        _add_layer_in_right_order(parentGroup, layer, layerName)
 
     # Сворачиваем дерево стилей/категорий слоя для аккуратности внутри parentGroup
     layer_node = parentGroup.findLayer(layer.id())
@@ -494,7 +495,7 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     return layer
 
 
-def add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLayer, layer_key: str):
+def _add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLayer, layer_key: str):
     """
     Добавляет слой в QGIS на строго определенную позицию.
     layer_key: 'poi', 'lines', 'shapes' или 'almanac'

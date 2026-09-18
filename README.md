@@ -1,12 +1,6 @@
 <!-- Pytest Coverage Comment:Begin -->
 <!-- Pytest Coverage Comment:End -->
 
-# 📊 Отчет о покрытии тестами
-
-Актуальный статус тестов и детальную интерактивную таблицу по каждому файлу плагина смотрите здесь:
-👉 [**Открыть детальный отчет о покрытии**](https://github.com)
-
-
 # About
 Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for view/explore a digital road map database for the CARiN- and VDODayton navigation compatible systems
 
@@ -24,7 +18,6 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - VDO Dayton CD Carindb v.30
 - VDO Dayton CD Carindb v.34
 
-
 - pip install bitarray
 
 
@@ -37,10 +30,10 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - Отображение в пользовательской СК "WGS 84 / Custom Pacific Split -80" - линия разрыва в атлантике, 80W
 
 ## CI ограничения разработки
-- физически невозможен коммит при синтаксических ошибках - flake8
-- физически невозможен коммит при непрохождении любого из автотестов (на 2026-09-18 их 444)
-- запрет коммита напрямую в main
-- при доработке функций блоков крайне желательно поддерживать ранее достигнутый уровень покрытия тестами
+- ci запрет: коммит при синтаксических ошибках - flake8
+- ci запрет: коммит при непрохождении любого из автотестов (на 2026-09-18 их 444)
+- ci запрет: коммит напрямую в main branch
+- при доработке функций блоков **крайне желательно** поддерживать ранее достигнутый уровень покрытия тестами
 
 
 # История реверс-инжиниринга формата carindb

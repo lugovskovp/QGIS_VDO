@@ -61,9 +61,8 @@ class block_0x09(block_base):
         quant = self.quant
         origin_lon = self.origin.lon
         origin_lat = self.origin.lat
-        # get_bladdr = self.vdo.get_bladdr  # ОПТИМИЗАЦИЯ: кэшируем метод в локальную переменную
 
-        # ИСПРАВЛЕНО: Итерация по .values() и корректное число переменных (5 вместо 6)
+        #  Итерация по .values() и корректное число переменных (5 вместо 6)
         for bladdr_map_val, x, y, size_X, size_Y in self.items.values():
             # bladdr: BLADDR = get_bladdr(bladdr_map_val)
 
@@ -151,7 +150,17 @@ class block_0x09(block_base):
         y = (srch._hlatitude - self.origin._hlatitude) // side
         return self._get_xy_item(x, y)
 
-
+    def get_valid_blocks(self) -> Iterator[BLADDR]:
+        """
+        Итератор валидных блоков.
+        """
+        raw_buffer = self._raw
+        step = BLADDR.size
+        vdo = self.vdo
+        base_ptr = self.li_valid.ptr
+        for idx in range(self.li_valid.cnt):
+            bla = struct_UINT.unpack_from(raw_buffer, base_ptr + idx * step)[0]
+            yield vdo.get_bladdr(bla)
 # -------------------------------------------------------------------------
 
 

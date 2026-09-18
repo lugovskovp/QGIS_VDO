@@ -9,8 +9,9 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProjec
                        QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
                        QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
                        QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
-                       QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes)
-
+                       QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
+                       QgsStyle, QgsSimpleFillSymbolLayer)
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QColor, QFont
 
 from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
@@ -18,7 +19,9 @@ from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
                                  NAME_LAYER_SHAPES,
                                  NAME_LAYER_LINES,
                                  CRS_NAME, CRS_PROJECTION_STRING,
-                                 LAYERS_PROPERTY)
+                                 LAYERS_PROPERTY,
+                                 PEN_STYLES,
+                                 FILL_STYLES)
 
 
 ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]
@@ -398,18 +401,17 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     
     if len(stiles_list) == 1:
         # Один символ на весь слой
-        style = stiles_list[0].get('style')
-        symbol = symbol_class().createSimple(style)
+        symbol = _create_complex_symbol(geometry, stiles_list[0])
         renderer = QgsSingleSymbolRenderer(symbol)
     else:
         # Категоризированный рендерер
         categories = []
         for index, style_item in enumerate(stiles_list):
-            style = style_item.get('style')
-            symbol = symbol_class().createSimple(style)
+            symbol = _create_complex_symbol(geometry, style_item)
             
             # Настройка z-level отрисовки геометрий внутри слоя
-            symbol.symbolLayer(0).setRenderingPass(index)
+            for l_idx in range(symbol.symbolLayerCount()):
+                symbol.symbolLayer(l_idx).setRenderingPass(index)
             
             name = style_item.get('name')
             label = name.capitalize() if name else f"Category {index}"
@@ -442,14 +444,17 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
             settings = QgsPalLayerSettings()
             settings.setFormat(text_format)
             settings.fieldName = 'name'
-            settings.placement = QgsPalLayerSettings.Horizontal
+
+            # Специфичное размещение подписей для линий и полигонов
+            if 'Line' in geometry:
+                settings.placement = QgsPalLayerSettings.Line
+            else:
+                settings.placement = QgsPalLayerSettings.Horizontal
             
             # Минимальный размер для отображения подписи
             min_size = label_config.get('label_min_size')
             if min_size is not None:
-                # settings.minimumSize = float(min_size)
                 settings.minFeatureSize = float(min_size)
-                # settings.minimumSizeUnit = Qgis.RenderUnit.Millimeters
 
             # Блок подавления дубликатов подписей (совместим с QGIS 3.44)
             if label_config.get('remove_duplicates'):
@@ -532,6 +537,82 @@ def _add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLaye
     group.insertLayer(target_index, new_layer)
 
 
+def _create_complex_symbol(geometry_type: str, style_item: dict) -> object:
+    """
+    Фабрика символов. Поддерживает как стандартные QGIS-строки стилей,
+    так и кастомные списки подслоев (сложные символы типа RAILWAY или BORDER).
+    """
+    symbol_class = GEOMETRY_SYMBOLS.get(geometry_type)
+    symbol = symbol_class()
+    
+    # Извлекаем структуру слоев. Если это один слой, заворачиваем в список.
+    # Извлекаем конфигурацию слоев напрямую из ключа 'style'
+    style_content = style_item.get('style')
+    
+    if isinstance(style_content, list):
+        # Если внутри 'style' уже лежит список подслоев: [ {...}, {...} ]
+        layers_config = style_content
+    elif isinstance(style_content, dict):
+        # Если там один словарь: {...}, заворачиваем его в список для итерации
+        layers_config = [style_content]
+    else:
+        # Защита на случай, если style пустой или не задан
+        layers_config = []
+    
+    for idx, lyr_cfg in enumerate(layers_config):
+        if not lyr_cfg:
+            continue
+            
+        if 'Line' in geometry_type:
+            sl = QgsSimpleLineSymbolLayer()
+            sl.setColor(_hex_rgba_to_qcolor(lyr_cfg.get('color', '#000000')))
+            sl.setWidth(float(lyr_cfg.get('width', 0.3)))
+            
+            # Поддержка кастомного шага пунктира (Custom Dash)
+            if 'custom_dash' in lyr_cfg:
+                sl.setPenStyle(Qt.CustomDashLine)
+                sl.setCustomDashVector(lyr_cfg['custom_dash'])
+                if 'dash_offset' in lyr_cfg:
+                    sl.setCustomDashPatternOffset(float(lyr_cfg['dash_offset']))
+            else:
+                sl.setPenStyle(QgsStyle.penStyleFromString(lyr_cfg.get('pen_style', 'solid')))
+                
+        elif 'Polygon' in geometry_type:
+            sl = QgsSimpleFillSymbolLayer()
+            sl.setFillColor(_hex_rgba_to_qcolor(lyr_cfg.get('fill_color', '#ffffff')))
+            sl.setStrokeColor(_hex_rgba_to_qcolor(lyr_cfg.get('outline_color', '#000000')))
+            sl.setStrokeWidth(float(lyr_cfg.get('outline_width', 0.2)))
+            
+            # Конвертация стиля обводки полигона
+            p_style = lyr_cfg.get('outline_style', 'solid')
+            sl.setStrokeStyle(PEN_STYLES.get(p_style, Qt.SolidLine))
+            
+            # Конвертация стиля заливки полигона
+            f_style = lyr_cfg.get('fill_style', 'solid')
+            sl.setBrushStyle(FILL_STYLES.get(f_style, Qt.SolidPattern))
+
+        # Собираем многослойный пирог
+        if idx == 0:
+            symbol.changeSymbolLayer(0, sl)
+        else:
+            symbol.appendSymbolLayer(sl)
+            
+    return symbol
+
+
+def _hex_rgba_to_qcolor(hex_str):
+    # Удаляем решётку, если она есть
+    hex_clean = hex_str.lstrip('#')
+    
+    if len(hex_clean) == 8:
+        # Переносим последние 2 символа (AA) в начало -> AARRGGBB
+        hex_arrgbb = hex_clean[6:] + hex_clean[:6]
+        return QColor(f"#{hex_arrgbb}")
+    
+    # Если строка без прозрачности (6 символов), возвращаем как есть
+    return QColor(hex_str)
+
+
 def _build_text_format(style_dict: dict) -> QgsTextFormat:
     """Вспомогательная функция для сборки QgsTextFormat из чистого Python dict."""
     fmt = QgsTextFormat()
@@ -555,15 +636,14 @@ def _build_text_format(style_dict: dict) -> QgsTextFormat:
         fmt.setSizeUnit(QgsUnitTypes.RenderMetersInMapUnits)
 
     # Цвет текста
-    if 'color' in style_dict:
-        fmt.setColor(QColor(style_dict['color']))
+    fmt.setColor(_hex_rgba_to_qcolor(style_dict.get('color', '#000000')))
 
-    # Настройки буфера (обводки)
+    # Настройки буфера (обводка вокруг букв) для читаемости
     if style_dict.get('buffer_enabled'):
         buf = QgsTextBufferSettings()
         buf.setEnabled(True)
         buf.setSize(style_dict.get('buffer_size', 1.0))
-        buf.setColor(QColor(style_dict.get('buffer_color', 'white')))
+        buf.setColor(_hex_rgba_to_qcolor(style_dict.get('buffer_color', 'white')))
         fmt.setBuffer(buf)
 
     return fmt

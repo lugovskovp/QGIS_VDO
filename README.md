@@ -9,6 +9,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 > [!IMPORTANT]  
 > Плагин в процессе разработки, релизов не было, смысла скачивать - пока что нет.
 
+[![image](https://github.com/user-attachments/assets/7869eaa4-c747-43bc-b7ad-f6657638ce1f)](https://github.com/user-attachments/assets/7869eaa4-c747-43bc-b7ad-f6657638ce1f)
 
 # Версии ПО
 Операционная система автонавигатора OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.

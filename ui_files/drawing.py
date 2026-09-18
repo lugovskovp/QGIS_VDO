@@ -446,8 +446,9 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
             # Минимальный размер для отображения подписи
             min_size = label_config.get('label_min_size')
             if min_size is not None:
-                settings.minimumSize = float(min_size)
-                settings.minimumSizeUnit = Qgis.RenderUnit.Millimeters
+                # settings.minimumSize = float(min_size)
+                settings.minFeatureSize = float(min_size)
+                # settings.minimumSizeUnit = Qgis.RenderUnit.Millimeters
 
             # Блок подавления дубликатов подписей (совместим с QGIS 3.44)
             if label_config.get('remove_duplicates'):

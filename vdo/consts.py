@@ -190,7 +190,7 @@ LAYERS_PROPERTY = [
             {
                 'name': 'ISLAND',
                 'style': {
-                    'color': '255, 229, 180, 200',
+                    'color': '255, 229, 180, 255',
                     'outline_color': '255,229,0,255',
                     'outline_width': '0.4',
                     'style': 'solid',
@@ -205,8 +205,8 @@ LAYERS_PROPERTY = [
                     # 'buffer_enabled': True,     # Включаем обводку
                     # 'buffer_color': "#966100",  #  обводка
                     # 'buffer_size': 1.1,
-                    # 'label_min_size': 15.0,  # Скрывать подпись, если полигон на экране меньше 15 мм,
-                    # "remove_duplicates": True,
+                    'label_min_size': 3.0,  # Скрывать подпись, если полигон на экране меньше 15 мм,
+                    "remove_duplicates": True,
                 }
             },
             {
@@ -226,7 +226,7 @@ LAYERS_PROPERTY = [
                     'italic': True,
                     'buffer_enabled': True,     # Включаем обводку
                     'buffer_color': '#ffffff',  # Белая обводка
-                    'buffer_size': 1.2,
+                    'buffer_size': 0.5,
                     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
                     "remove_duplicates": True,
                 }
@@ -262,13 +262,14 @@ LAYERS_PROPERTY = [
                 },
                 'label_style': {
                     'font_family': 'Arial',
-                    'font_size': 14,
+                    'font_size': 1000,
+                    'size_in_meters' : True,
                     'color': "#ffffff",         # Белая
                     'bold': True,
                     'buffer_enabled': True,     # Включаем обводку
                     'buffer_color': "#020000",  # Черная обводка
-                    'buffer_size': 1.1,
-                    'label_min_size': 15.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    'buffer_size': 0.5,
+                    'label_min_size': 0.5,  # Скрывать подпись, если полигон на экране меньше 5 мм,
                     # "remove_duplicates": True,
                 }
             },
@@ -299,8 +300,8 @@ LAYERS_PROPERTY = [
                     'outline_color': '0,50,200,255',    # Яркая синяя граница
                     'outline_width': '0.1',
                     'style': 'solid',
-                    'outline_style': 'no'
-                }
+                    'outline_style': 'no',
+                },
             },
         ]
     },

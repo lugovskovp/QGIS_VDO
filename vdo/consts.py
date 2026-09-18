@@ -68,6 +68,7 @@ FILL_STYLES = {
     'vertical': Qt.VerPattern
 }
 
+
 DEFAULT_SCALE = 4
 
 # coordinate system
@@ -331,28 +332,14 @@ LAYERS_PROPERTY = [
                        ('name', QMetaType.Type.QString),
                        ('id', QMetaType.Type.Int),
                        ('block', QMetaType.Type.QString),
-                       ('coord', QMetaType.Type.QString),
+                       #    ('coord', QMetaType.Type.QString),
                        ],
         'styles': [
             {
-                'name': 'RAILWAY',
-                'style': [
-                    {"color": "#ffffff", "width": 0.8, "pen_style": "solid"},   # Подложка
-                    {"color": "#000000", "width": 0.5, "pen_style": "dash"}     # Пунктир сверху
-                ],
-            },
-            {
-                'name': 'BORDER',
-                'style': [
-                    {"color": "#ff0000", "width": 0.6, "custom_dash": [4.0, 4.0]},
-                    {"color": "#00a000", "width": 0.6, "custom_dash": [4.0, 4.0], "dash_offset": 4.0}
-                ],
-            },
-            {
                 'name': 'ROAD_HIGHWAY',
                 'style': [
-                    {"color": "#e15a1f", "width": 1.0, "pen_style": "solid"},
-                    {"color": "#eade33", "width": 0.7, "pen_style": "solid"}
+                    {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
+                    {"color": "#fff888", "width": 0.9, "pen_style": "solid"}
                 ],
                 'label_style': {
                     'font_family': 'Arial',
@@ -367,27 +354,134 @@ LAYERS_PROPERTY = [
                     # "remove_duplicates": True,
                 }
             },
+            {
+                'name': 'ROAD_PRIME',
+                'style': [
+                    {"color": "#e15a1f", "width": 0.8, "pen_style": "solid"},
+                ],
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    # 'size_in_meters' : True,
+                    'color': "#222222",         #
+                    'bold': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': "#ffffff",  # Белая обводка
+                    'buffer_size': 1.0,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'ROAD_MINOR',
+                'style': [
+                    {"color": "#e15a1f", "width": 0.5, "pen_style": "solid"},
+                ],
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    # 'size_in_meters' : True,
+                    'color': "#222222",         #
+                    'bold': True,
+                    'buffer_enabled': True,
+                    'buffer_color': "#ffffff",
+                    'buffer_size': 1.0,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'ROAD_LOCAL',   # Внутриквартальные
+                'style': [
+                    {"color": "#fff888", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_UNPAVED',     # Грунтовки
+                'style': [
+                    {"color": "#9c7c5d", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_SLIP',    # Съезды
+                'style': [
+                    {"color": "#fcd05b", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_ROUNDABOUT',    # Кольца
+                'style': [
+                    {"color": "#f49c14", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+
+            {
+                'name': 'RAILWAY',
+                'style': [
+                    {"color": "#ffffff", "width": 0.8, "pen_style": "solid"},   # Подложка
+                    {"color": "#000000", "width": 0.5, "pen_style": "dot"}     # Пунктир сверху
+                ],
+            },
+            {
+                'name': 'BORDER',
+                'style': [
+                    {"color": "#ff0707", "width": 0.9, "custom_dash": [4.0, 4.0]},
+                    {"color": "#00c300", "width": 0.6, "custom_dash": [4.0, 4.0], "dash_offset": 4.0},
+                    # {"color": "#ff8282", "width": 0.8, "pen_style": "solid"},
+                    # {"color": "#00c300", "width": 0.6, "pen_style": "dot"},
+                ],
+            },
+            {
+                'name': 'CANAL',    #
+                'style': [
+                    {"color": "#1d70b8", "width": 0.6, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'RIVER_STREAM',    #
+                'style': [
+                    {"color": "#a5d5f5", "width": 0.3, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'RIVER_MAJOR',    #
+                'style': [
+                    {"color": "#005ea5", "width": 0.8, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'PEDESTRIAN_ZONE',    #
+                'style': [
+                    {"color": "#808080", "width": 0.3, "pen_style": "dot"},
+                ],
+            },
+            {
+                'name': 'FERRY_CONNECTION',    #
+                'style': [
+                    {"color": "#a500a2", "width": 0.4, "pen_style": "dot"},
+                ],
+            },
         ],
     },
 ]
 
-STYLE_MAP = {
-    0x61: ("CANAL", "#1d70b8", 0.6, "solid"),
-    0x62: ("RIVER_STREAM", "#a5d5f5", 0.3, "solid"),
-    0x65: ("RIVER_MAJOR", "#005ea5", 0.8, "solid"),
-    # 0x66: ("RAILWAY", "#555555", 0.5, "dash"),
-    # 0x67: ("BORDER", "#850085", 0.4, "dash dot"),
-    0x70: ("PEDESTRIAN_ZONE", "#808080", 0.3, "dot"),
-    0x71: ("FERRY_CONNECTION", "#1d70b8", 0.4, "dot"),
+# STYLE_MAP = {
+#     0x61: ("CANAL", "#1d70b8", 0.6, "solid"),
+#     0x62: ("RIVER_STREAM", "#a5d5f5", 0.3, "solid"),
+#     0x65: ("RIVER_MAJOR", "#005ea5", 0.8, "solid"),
+#     # 0x66: ("RAILWAY", "#555555", 0.5, "dash"),
+#     # 0x67: ("BORDER", "#850085", 0.4, "dash dot"),
+#     0x70: ("PEDESTRIAN_ZONE", "#808080", 0.3, "dot"),
+#     0x71: ("FERRY_CONNECTION", "#1d70b8", 0.4, "dot"),
     
-    # 0x68: ("ROAD_HIGHWAY", "#e15a1f", 1.0, "solid"),
-    0x69: ("ROAD_PRIME", "#f49c14", 0.8, "solid"),
-    0x6A: ("ROAD_MINOR", "#fcd05b", 0.6, "solid"),
-    0x6B: ("ROAD_LOCAL: Внутриквартальные", "#ffffff", 0.5, "solid"),
-    0x6C: ("ROAD_UNPAVED: Грунтовки", "#9c7c5d", 0.4, "dash"),
-    0x6D: ("ROAD_SLIP: Съезды", "#fcd05b", 0.5, "solid"),
-    0x6E: ("ROAD_ROUNDABOUT: Кольца", "#f49c14", 0.6, "solid"),
-}
+#     # 0x68: ("ROAD_HIGHWAY", "#e15a1f", 1.0, "solid"),
+#     # 0x69: ("ROAD_PRIME", "#f49c14", 0.8, "solid"),
+#     # 0x6A: ("ROAD_MINOR", "#fcd05b", 0.6, "solid"),
+#     # 0x6B: ("ROAD_LOCAL: Внутриквартальные", "#ffffff", 0.5, "solid"),
+#     # 0x6C: ("ROAD_UNPAVED: Грунтовки", "#9c7c5d", 0.4, "dash"),
+#     # 0x6D: ("ROAD_SLIP: Съезды", "#fcd05b", 0.5, "solid"),
+#     # 0x6E: ("ROAD_ROUNDABOUT: Кольца", "#f49c14", 0.6, "solid"),
+# }
 
 """
 03 - 05 - 08 - 01

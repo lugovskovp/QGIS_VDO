@@ -211,14 +211,13 @@ class block_0x08(block_base):
         if b_09 is None:
             return None
 
-        # возвращаем папку карт - layout
-        if not isFindMap:
-            return b_09
-        
         bl, c1, c2 = b_09
         # загружаем папку карт - индекс maps
         bl_folder: block_0x09 = self.vdo.get_block(bl, c1, c2)
-
+        
+        if not isFindMap:
+            # возвращаем папку карт - layout
+            return bl_folder
         return bl_folder.find_by_coord(srch)    # тут будет чистый map, только BLADDR
 
  

@@ -12,11 +12,15 @@ from QGIS_VDO.vdo.blocks import (block_0x08,
                                  block_0x09)
 
 
-# Легковесный поток для итерации по картам - класс фонового потока для подсчета/загрузки карт  # noqa
+#   # noqa
 class FolderMapProcessingWorker(QThread):
+    """
+    Легковесный поток для итерации по картам
+    класс фонового потока для подсчета/загрузки контуров карт на tabTopo
+    """
     # Сигнал передает: (индекс текущего шага в int, имя обрабатываемого файла в str)
     progress_signal = pyqtSignal(int, str)
-    #
+    # сигнал счётчика
     count_signal = pyqtSignal(int)
     # Safe drawing areas packet signal
     safe_drawing_map_signal = pyqtSignal(list)

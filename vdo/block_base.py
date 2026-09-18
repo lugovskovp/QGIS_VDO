@@ -203,8 +203,11 @@ class block_base(BYTESTRUCT):
             return ''
 
     def write_raw(self, name: str = "_base_block.bin") -> None:
-        with open(name, "wb") as f:
-            f.write(self._raw)
+        try:
+            with open(name, "wb") as f:
+                f.write(self._raw)
+        except PermissionError:
+            print(f"Ошибка прав доступа записи _base_block.bin {str(self)}")
 
 
 # --------------------------------------------------------

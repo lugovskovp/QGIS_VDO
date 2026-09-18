@@ -267,7 +267,8 @@ class GEO_SHAPE(BYTESTRUCT):
         'ptr_tstr',
         'name',
         'cat',
-        'vrtx'
+        'vrtx',
+        'block'
     )
     
     size: int = 0x14  # 20 байт
@@ -335,7 +336,8 @@ class GEO_LINE(BYTESTRUCT):
         'cnt_vrtx',
         'name',
         'cat',
-        'vrtx'
+        'vrtx',
+        'block'
     )
     
     size: int = 0x10  # 16 байт

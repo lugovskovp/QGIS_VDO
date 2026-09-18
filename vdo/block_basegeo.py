@@ -16,6 +16,7 @@ from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR, LIST, BYTESTRUCT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
 from QGIS_VDO.vdo.geotypes import (MAP_AREA,
+                                   COORD,
                                    GEO_CATEGORY,
                                    GEO_SHAPE,
                                    GEO_LINE,
@@ -35,15 +36,17 @@ OFFSET_LI_POI = 0x18            # poi`s`
 OFFSET_LI_TSTR = 0x1c           # ptrs read_tstr - индексы строк en_GEO_OBJ
 
 OFFSET_PACKED_DATA = 0x34  # ТИПЫ БЛОКОВ archived type_1_vdo_pack
-                            # bmw ee bnl:  00 16 15 1c 14 1d 1e # noqa: E116
+                            # bmw ee bnl:  00 14 15 16 1c 1d 1e # noqa: 00 +sc4-11
                             # в них незапакованы первые 0х34 # noqa: E116
 
-
 TSTR_ITEM_SIZE = 4
+OFFSET_MAP_AREA = 0x20  # прямоугольник карты COORD * 2 = bott left, top right
+OFFSET_SCALE = 0x32   # значение левого битового сдвига коорд вертексов - чтобы получились координаты # noqa:
 
 
 class block_basegeo(block_base):
     """
+    Блоки геоосновы, собственно карты: типы  00? 14 15 16 1c 1d 1e # noqa: 00 +sc4-11
         BL_HEADER   block;          // block.data - list of geo_types
     struct{
         toc:
@@ -64,7 +67,7 @@ class block_basegeo(block_base):
     # shapes = []
     # lines = []
     # cats = []
-    categ = {}
+    # categ = {}
         
     def __init__(self, addr: BLADDR) -> None:   # noqa
         class toc:
@@ -74,13 +77,23 @@ class block_basegeo(block_base):
             li_vrtx: LIST
             li_poi: LIST
             li_tstr: LIST
+        
         super().__init__(addr)
-        OFFSET_MAP_AREA = 0x20  # прямоугольник карты COORD * 2 = bott left, top right
-        OFFSET_SCALE = 0x32   # значение левого битового сдвига коорд вертексов - чтобы получились координаты # noqa:
+        # территория карты
         self.map = MAP_AREA(self.read(OFFSET_MAP_AREA, MAP_AREA.size))
+        # на сколько сдвинуть единицу координат влево, чтобы получить порядок значений COORD
         self.shift_scale = self.ushort(OFFSET_SCALE)
+        # таблица содержвния
+        self.li_cat = self.read_list(OFFSET_LI_GEOCATEGORY)  # категории
+        self.li_shp = self.read_list(OFFSET_LI_GEOSHAPE)     # полигоны
+        self.li_lin = self.read_list(OFFSET_LI_GEOLINE)      # полилинии
+        self.li_vrtx = self.read_list(OFFSET_LI_VERTEX)      # x, y точек
+        self.li_poi = self.read_list(OFFSET_LI_POI)          # хз, но это не POI
+        self.li_tstr = self.read_list(OFFSET_LI_TSTR)        # наименования на разных языках
+
         self.toc = toc()        # new TOC
         self.setup_toc()        # toc - table of contents
+        self.categ = {}
         # а вот дальше - распаковка, если необходимо
         if not self.is_unpacked:
             # нет, запаковано...
@@ -108,6 +121,8 @@ class block_basegeo(block_base):
             begin_word += f" {buffer.max_bits_in_vertex_delta:02X} {buffer.word_d:02X}"
             print(f" begin word :: {begin_word}")
             del begin_word
+            # т.к. запаковано, то _raw - в bytearray, он далее будет пополняться на ходу
+            self._raw = bytearray(self._raw)
 
             # <<<<<<<<<< GEO_CATEGORY
             '''
@@ -291,9 +306,6 @@ class block_basegeo(block_base):
                 - strs from 0268
                 - Max PTR bites: 10
                 - начальный адрес строк 0268 001001101000
-
-
-
                 """
 
             # если нет POI, то сейчас в буфере лидирующие нули
@@ -333,7 +345,7 @@ bitarray('
                         buffer._pop(4)      # strange = buffer._pop(4)
                         pass
                 self._raw = bytes(mutable)
-                del INNER_OFFSET_POI, mutable, ptr, item_offset, num, strange
+                del INNER_OFFSET_POI, mutable, ptr, item_offset, num
 
             # <<<<<<<<<< TSTRs
             """
@@ -472,19 +484,25 @@ bitarray('
         self.write_raw()
         if not self.is_unpacked:
             print(f"Save tail into tail_{self.head.bladdr}.bin")
-            with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
-                f.write(self.bit_tail.buffer.tobytes())
+            try:
+                with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
+                    f.write(self.bit_tail.buffer.tobytes())
+            except PermissionError:
+                print(f"Permission error Save tail into tail_{self.head.bladdr}.bin")
             print(f"Save unpacked into raw_{self.head.bladdr}.bin")
-            with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
-                f.write(self._raw)
+            try:
+                with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
+                    f.write(self._raw)
+            except PermissionError:
+                print(f"Permission error Save unpacked into raw_{self.head.bladdr}.bin")
         # и, наконец, всё содержимое
         self.arr_shapes = []
         # self.lines = []
         # self.cats = []
-        self.setup_objects()
-        #self.setup_all_objects()
+        # self.setup_objects()
+        # self.setup_all_objects()
         pass
-
+    
     @property
     def data_size(self) -> int:
         """
@@ -500,13 +518,13 @@ bitarray('
 
     def max_x(self):
         """ максимально возможное значение x """
-        delta = self.map.rigth_top._hlat - self.map.left_bottom._hlat
+        delta = self.map.right_top._hlat - self.map.left_bottom._hlat
         delta = delta >> self.shift_scale
         return delta
 
     def max_y(self):
         """ максимально возможное значение x """
-        delta = self.map.rigth_top._hlon - self.map.left_bottom._hlon
+        delta = self.map.right_top._hlon - self.map.left_bottom._hlon
         delta = delta >> self.shift_scale
         return delta
         
@@ -534,7 +552,7 @@ bitarray('
         """
         debug function for printing main information
         """
-        print(f"\n{self.vdo.path}\n{self.head.bladdr}  {self.head.bltype}: 0x{self.head.bltype.value:02x}")
+        print(f"\n{self.vdo.file_path}\n{self.head.bladdr}  {self.head.bltype}: 0x{self.head.bltype.value:02x}")
         end = f"\tnext ptr: {(self.toc.li_cat.cnt + 1) * 4 + self.toc.li_cat.ptr:04X}" if self.toc.li_cat.cnt else ""  # noqa
         print(f"cat {self.toc.li_cat} {end}")
         end = f"\tnext ptr: {(self.toc.li_shp.cnt + 1) * 0x14 + self.toc.li_shp.ptr:04X}" if self.toc.li_shp.cnt else ""  # noqa
@@ -570,7 +588,7 @@ bitarray('
 
     def setup_objects(self) -> None:
         """
-
+        4del it
         """
         # every cat
         pc = self.toc.li_cat.ptr
@@ -605,7 +623,7 @@ bitarray('
             res = GEO_CATEGORY(buff)
         return res
 
-    def read_shape(self, offset: int, category: en_GEO_CATEGORY) -> GEO_SHAPE:
+    def read_shape(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_SHAPE:
         """
         Geo read_shape - closed, filled poligon
             2h - ptr2str/0;
@@ -628,13 +646,13 @@ bitarray('
             offset = res.ptr_vrtx
             for _ in range(res.cnt_vrtx):
                 # read vertexes
-                res.vrtx.append(self.read_vrtx(offset))
+                res.vrtx.append(self.read_vrtx(offset, isCalcCoord))
                 offset += VERTEX.size
         return res
         # else:
         #     return None
 
-    def read_line(self, offset: int, category: en_GEO_CATEGORY) -> GEO_LINE:
+    def read_line(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_LINE:
         """
         # noqa
         Geo segment of line - poligon
@@ -659,20 +677,22 @@ bitarray('
             offset = res.ptr_vrtx
             for _ in range(res.cnt_vrtx):
                 # read vertexes
-                res.vrtx.append(self.read_vrtx(offset))
+                res.vrtx.append(self.read_vrtx(offset, isCalcCoord))
                 offset += VERTEX.size
         return res
 
-    def read_vrtx(self, offset: int) -> VERTEX:
+    def read_vrtx(self, offset: int, isCalcCoord: bool = False) -> [VERTEX | COORD]:
         """
-
+        Вернуть координаты в map box карты, или же wgs84 координаты
         """
-        res = None
-        if True or self.is_unpacked:
-            buff = self.read(offset, VERTEX.size)
-            res = VERTEX(buff)
-            # TODO - а может при создании вертекса сюда же еще и реальные координаты?
-        return res
+        res = VERTEX(self.read(offset, VERTEX.size))
+        if not isCalcCoord:
+            return res
+        # а вот если возвращать надо координаты
+        hlo = (res.x << self.shift_scale) + self.map.left_bottom._hlon
+        hla = (res.y << self.shift_scale) + self.map.left_bottom._hlat
+        coord = COORD(hlo, hla)
+        return coord
 
     def read_tstr(self, offset: int) -> TSTR:
         """
@@ -691,6 +711,42 @@ bitarray('
 
     # -------------------------------------------
     # -------------------------------------------
+    def getObjects(self, isGetLines: bool = True, isGetShapes: bool = True) -> Iterator[GEO_LINE | GEO_CATEGORY]:
+        """
+        Iterator geo objects
+        Args:
+            isGetLines: bool default = True
+        Yeld:
+            next object
+        """
+        # перебираем категории
+        offset_cat = self.li_cat.ptr
+        for _ in range(self.li_cat.cnt):
+            cat = self.read_category(offset_cat)
+            offset_cat += GEO_CATEGORY.size
+            if cat.draw == en_DRAW_TYPE.SHAPE:
+                if not isGetShapes:
+                    # если не надо полигонов
+                    continue
+                obj_size = GEO_SHAPE.size
+                obj_func = self.read_shape
+            else:   # if cat.draw == en_DRAW_TYPE.POLILINE
+                if not isGetLines:
+                    # если не надо полилиний
+                    continue
+                obj_size = GEO_LINE.size
+                obj_func = self.read_line
+
+            # вернуть объекты категории
+            offset = cat.ptr
+            for _ in range(cat.cnt):
+                obj = obj_func(offset, cat.category, isCalcCoord=True)
+                # в пределах блока id уникально
+                obj.block = f"{self.head.bladdr.hex} {obj.id}"        # fe '03d02c 04' or blocknumber?
+                offset += obj_size
+                # вертексы - в координаты
+                yield obj
+
     def get_all_categories(self) -> Iterator[GEO_CATEGORY]:
         """
         Yeld:

@@ -137,8 +137,11 @@ class SCALE(BYTESTRUCT):
 
     # --- Бизнес-логика ---
 
-    def find_by_coord(self, srch_point: "COORD") -> Optional["BLADDR"]:
-        """Поиск idx блока, в который попадают координаты, или None."""
+    def find_by_coord(self, srch_point: "COORD", isFindMap: bool = True) -> Optional["BLADDR"]:
+        """
+        Поиск idx блока, в который попадают координаты, или None.
+        isFindMap - map (False - return layout)
+        """
         if not self.almanac_idx:
             return None
         
@@ -152,7 +155,7 @@ class SCALE(BYTESTRUCT):
             
         # Запрашиваем блок через vdo
         alm: "block_0x08" = self.vdo.get_block(self.almanac_idx, lb, rt)
-        return alm.find_by_coord(srch_point)
+        return alm.find_by_coord(srch_point, isFindMap)
 
 
 class TERR_DIV(BYTESTRUCT):

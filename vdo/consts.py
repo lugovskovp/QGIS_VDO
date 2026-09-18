@@ -48,7 +48,7 @@ LOOKUP_CHAR_BYTES = {'000': b'a',
 NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"
 NAME_LAYER_ALMANACS = 'Almanac'
 NAME_LAYER_POI = 'POIs'
-NAME_LAYER_SHAPES = 'Shapes'
+NAME_LAYER_SHAPES = 'Contours'
 NAME_LAYER_LINES = 'Lines'
 
 DEFAULT_SCALE = 4
@@ -65,7 +65,7 @@ LAYERS_PROPERTY = [
     {
         'name': NAME_LAYER_ALMANACS,
         'geometry': 'Polygon',
-        'atributes': [('name', QMetaType.Type.QString), ('variant', QMetaType.Type.QString)],
+        'attributes': [('name', QMetaType.Type.QString), ('variant', QMetaType.Type.QString)],
         'styles': [
             {
                 'name': 'map',
@@ -92,13 +92,13 @@ LAYERS_PROPERTY = [
     {
         'name': NAME_LAYER_GLOBAL_BOUNDS,
         'geometry': 'Polygon',
-        'atributes': [('name', QMetaType.Type.QString)],
+        'attributes': [('name', QMetaType.Type.QString)],
         'place': -1,
         'styles': [
             {
                 'name': 'bounds',
                 'style': {
-                    'color': '120,220,120,80',     # green '100,150,255,100', # Полупрозрачная синяя заливка
+                    'color': '120,220,120,80',     # green
                     'outline_color': '0,50,200,255',    # Яркая синяя граница
                     'outline_width': '0.4',
                     'style': 'solid',
@@ -107,4 +107,225 @@ LAYERS_PROPERTY = [
             },
         ]
     },
+    {
+        'name': NAME_LAYER_SHAPES,
+        'geometry': 'Polygon',
+        'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
+                       # ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
+                       ('name', QMetaType.Type.QString),
+                       ('id', QMetaType.Type.Int),
+                       ('block', QMetaType.Type.QString),
+                       ('coord', QMetaType.Type.QString),
+                       ],
+        'styles': [
+            {
+                'name': 'SPORTS_COMPLEX',
+                'style': {
+                    'color': '35, 255, 53, 200',
+                    'outline_color': '35,255,35,255',
+                    'outline_width': '0.4',
+                    'style': 'cross',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'MILITARY_AREA',
+                'style': {
+                    'color': '255, 35, 53, 200',
+                    'outline_color': '255,35,35,255',
+                    'outline_width': '0.4',
+                    'style': 'cross',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'UNIVERSITY_CAMPUS',
+                'style': {
+                    'color': '53, 35, 255, 200',
+                    'outline_color': '53,35,255,255',
+                    'outline_width': '0.4',
+                    'style': 'cross',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'HOSPITAL_GROUND',
+                'style': {
+                    'color': '229, 110, 120, 200',
+                    'outline_color': '255,190,190,255',
+                    'outline_width': '0.4',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'CEMETERY',
+                'style': {
+                    'color': '110, 229, 120, 100',
+                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                    'outline_width': '0.4',
+                    'style': 'cross',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'GOLF_COURSE',
+                'style': {
+                    'color': '110, 229, 120, 100',
+                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                    'outline_width': '0.4',
+                    'style': 'b_diagonal',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'AMUSEMENT_PARK',
+                'style': {
+                    'color': '110, 229, 120, 100',
+                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                    'outline_width': '0.4',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'ISLAND',
+                'style': {
+                    'color': '255, 229, 180, 255',
+                    'outline_color': '255,229,0,255',
+                    'outline_width': '0.4',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                },
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 10,
+                    'color': "#966100",         # Желтая "#ffdd00"
+                    'bold': False,
+                    'italic': True,
+                    # 'buffer_enabled': True,     # Включаем обводку
+                    # 'buffer_color': "#966100",  #  обводка
+                    # 'buffer_size': 1.1,
+                    'label_min_size': 3.0,  # Скрывать подпись, если полигон на экране меньше 15 мм,
+                    "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'WATER',
+                'style': {
+                    'color': '100,150,255,100',         # Полупрозрачная синяя заливка
+                    'outline_color': '0,50,200,255',    # Яркая синяя граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid',
+                },
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    'color': '#1f78b4',         # Красивый синий
+                    'bold': True,
+                    'italic': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': '#ffffff',  # Белая обводка
+                    'buffer_size': 0.5,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'AIRPORT_GROUND',
+                'style': {
+                    'color': '190,190,190,100',         # Полупрозрачная темно серая заливка
+                    'outline_color': '150,150,150,255',      # серая граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'INDUSTRIAL',
+                'style': {
+                    'color': '90,90,90,100',         # Полупрозрачная темно серая заливка
+                    'outline_color': '50,50,50,255',      # серая граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'CITY',
+                'style': {
+                    'color': '150,150,150,100',         # Полупрозрачная серая заливка
+                    'outline_color': '200,200,200,255',      # светлая серая граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                },
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 1000,
+                    'size_in_meters' : True,
+                    'color': "#ffffff",         # Белая
+                    'bold': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': "#020000",  # Черная обводка
+                    'buffer_size': 0.5,
+                    'label_min_size': 0.5,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'NATIONAL_PARK',
+                'style': {
+                    'color': '35,200,35,100',         # Полупрозрачная зелёная заливка
+                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'FOREST',
+                'style': {
+                    'color': '65,177,65,100',         # Полупрозрачная зелёная заливка
+                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'solid'
+                }
+            },
+            {
+                'name': 'SEA_OCEAN',
+                'style': {
+                    'color': '100,150,255,100',         # Полупрозрачная синяя заливка
+                    'outline_color': '0,50,200,255',    # Яркая синяя граница
+                    'outline_width': '0.1',
+                    'style': 'solid',
+                    'outline_style': 'no',
+                },
+            },
+        ]
+    },
 ]
+
+"""
+03 - 05 - 08 - 01
+01 - 05 - 08
+
+EMPTY = 0x00              # Пустая область / базовый фон суши
+*WATER = 0x01              # Внутренние воды (озера, водохранилища, заливы)
+*SEA_OCEAN = 0x02          # Моря и океаны
+*FOREST = 0x03             # Леса, лесные массивы, густая растительность
+*NATIONAL_PARK = 0x04      # Заповедники, национальные парки и заказники
+*CITY = 0x05               # Полигон общей жилой застройки города / населенного пункта
+*INDUSTRIAL = 0x06         # Промышленные зоны, заводы, склады, порты
+*AIRPORT_GROUND = 0x07     # Территория аэропортов (взлетные полосы, терминалы)
+*ISLAND = 0x08             # Остров (инвертированный полигон суши внутри воды)
+*AMUSEMENT_PARK = 0x09     # Парки развлечений, аттракционы, зоопарки
+*GOLF_COURSE = 0x0A        # Поля для гольфа
+*CEMETERY = 0x0B           # Кладбища
+*HOSPITAL_GROUND = 0x0C    # Территория больниц и медицинских комплексов
+*UNIVERSITY_CAMPUS = 0x0D  # Студенческие городки, кампусы вузов
+*MILITARY_AREA = 0x0E      # Закрытые военные объекты и полигоны
+*SPORTS_COMPLEX = 0x0F     # Спортивные комплексы, открытые стадионы
+"""

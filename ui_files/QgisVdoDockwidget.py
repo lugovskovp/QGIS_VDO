@@ -25,14 +25,16 @@ from QGIS_VDO.vdo.blocks import (block_0x12,
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
                                  NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_SHAPES
+                                 NAME_LAYER_SHAPES,
+                                 NAME_LAYER_LINES
                                  )
 
 from QGIS_VDO.ui_files import (AnimatedGroupBox,
                                ClickCoordinatesTool,
                                _DrawRectangleArea,
                                _DrawPacketAreas,
-                               DrawPacketShapes
+                               DrawPacketShapes,
+                               DrawPacketLines
                                )
 from QGIS_VDO.ui_files.drawing import getCrsProjection, getLayer
 
@@ -360,16 +362,21 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # определяем масштаб
         targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
         # слой по соответствию типа block, а не текущий
-        layer = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
-        del targetScale
+        layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+
         # получаем полигоны слоя
         shapes = [shp for shp in block.getObjects(isGetLines=False)]
         # отрисовываем слой NAME_LAYER_SHAPES
-        DrawPacketShapes(shapes, layer)
+        DrawPacketShapes(shapes, layer_shape)
+
+        layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
+        lines = [lin for lin in block.getObjects(isGetShapes=False)]
+        DrawPacketLines(lines, layer_lines)
+
         for obj in block.getObjects(isGetLines=False):
             print(obj)
 
-        # print(layer)
+        # print(layer_shape)
         pass
 
     def tabBlock_load_packed_blocks(self, bl_foldef_for_load: block_0x09):
@@ -380,12 +387,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         set_block = [bl for bl in bl_foldef_for_load.get_valid_blocks()]
         block = self.vdo.get_block(set_block[0])
         targetScale = None
-        if block.type in BLOCKTYPEX_SCALEID:
+        if f"{block.type:X}" in BLOCKTYPEX_SCALEID:
             targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
         if targetScale is None:
             return
         # слой по соответствию типа block, а не текущий
         layer = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+        layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
 
         for bla in set_block:
             block = self.vdo.get_block(bla)
@@ -393,6 +401,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             shapes = [shp for shp in block.getObjects(isGetLines=False)]
             # отрисовываем слой NAME_LAYER_SHAPES
             DrawPacketShapes(shapes, layer)
+
+            lines = [shp for shp in block.getObjects(isGetShapes=False)]
+            # отрисовываем слой NAME_LAYER_LINES
+            DrawPacketLines(lines, layer_lines)
 
         pass
 

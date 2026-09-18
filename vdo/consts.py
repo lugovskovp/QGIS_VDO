@@ -3,7 +3,7 @@
 """
 
 import struct
-from qgis.PyQt.QtCore import QMetaType
+from qgis.PyQt.QtCore import Qt, QMetaType
 
 # constants values
 BITS_IN_ASCII = 7
@@ -49,7 +49,25 @@ NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"
 NAME_LAYER_ALMANACS = 'Almanac'
 NAME_LAYER_POI = 'POIs'
 NAME_LAYER_SHAPES = 'Contours'
-NAME_LAYER_LINES = 'Lines'
+NAME_LAYER_LINES = 'Ways'
+
+# Словари для безопасной конвертации строк в enum-ы Qt
+PEN_STYLES = {
+    'solid': Qt.SolidLine,
+    'dash': Qt.DashLine,
+    'dot': Qt.DotLine,
+    'dash dot': Qt.DashDotLine,
+    'no': Qt.NoPen
+}
+
+FILL_STYLES = {
+    'solid': Qt.SolidPattern,
+    'no': Qt.NoBrush,
+    'dense1': Qt.Dense1Pattern,
+    'horizontal': Qt.HorPattern,
+    'vertical': Qt.VerPattern
+}
+
 
 DEFAULT_SCALE = 4
 
@@ -70,20 +88,20 @@ LAYERS_PROPERTY = [
             {
                 'name': 'map',
                 'style': {
-                    'color': '255, 229, 180, 100',
-                    'outline_color': '255,229,0,255',
+                    'fill_color': '#FFE5B464',
+                    'outline_color': '#FFE500FF',
                     'outline_width': '0.4',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'dot'
                 }
             },
             {
                 'name': 'layout',
                 'style': {
-                    'color': '255, 229, 180, 10',  #
-                    'outline_color': '255, 129, 80, 255',  #
+                    'fill_color': '#FFE5B40A',  #
+                    'outline_color': '#FF8150FF',  #
                     'outline_width': '0.6',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'dash'
                 }
             }
@@ -98,10 +116,10 @@ LAYERS_PROPERTY = [
             {
                 'name': 'bounds',
                 'style': {
-                    'color': '120,220,120,80',     # green
-                    'outline_color': '0,50,200,255',    # Яркая синяя граница
+                    'fill_color': '#78DC7850',     # green
+                    'outline_color': '#0032C8FF',    # Яркая синяя граница
                     'outline_width': '0.4',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'dot'
                 }
             },
@@ -120,87 +138,87 @@ LAYERS_PROPERTY = [
         'styles': [
             {
                 'name': 'SPORTS_COMPLEX',
-                'style': {
-                    'color': '35, 255, 53, 200',
-                    'outline_color': '35,255,35,255',
+                'style': [{
+                    'fill_color': '#23FF35C8',
+                    'outline_color': '#23FF23FF',
                     'outline_width': '0.4',
-                    'style': 'cross',
+                    'fill_style': 'cross',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'MILITARY_AREA',
-                'style': {
-                    'color': '255, 35, 53, 200',
-                    'outline_color': '255,35,35,255',
+                'style': [{
+                    'fill_color': '#FF2335C8',
+                    'outline_color': '#FF2323FF',
                     'outline_width': '0.4',
-                    'style': 'cross',
+                    'fill_style': 'cross',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'UNIVERSITY_CAMPUS',
-                'style': {
-                    'color': '53, 35, 255, 200',
-                    'outline_color': '53,35,255,255',
+                'style': [{
+                    'fill_color': '#3523FFC8',
+                    'outline_color': '#3523FFFF',
                     'outline_width': '0.4',
-                    'style': 'cross',
+                    'fill_style': 'cross',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'HOSPITAL_GROUND',
-                'style': {
-                    'color': '229, 110, 120, 200',
-                    'outline_color': '255,190,190,255',
+                'style': [{
+                    'fill_color': '#E56E78C8',
+                    'outline_color': '#FFBEBEFF',
                     'outline_width': '0.4',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'CEMETERY',
-                'style': {
-                    'color': '110, 229, 120, 100',
-                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                'style': [{
+                    'fill_color': '#6EE57864',
+                    'outline_color': '#003200FF',      # Яркая зелёная граница
                     'outline_width': '0.4',
-                    'style': 'cross',
+                    'fill_style': 'cross',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'GOLF_COURSE',
-                'style': {
-                    'color': '110, 229, 120, 100',
-                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                'style': [{
+                    'fill_color': '#6EE57864',
+                    'outline_color': '#003200FF',      # Яркая зелёная граница
                     'outline_width': '0.4',
-                    'style': 'b_diagonal',
+                    'fill_style': 'b_diagonal',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'AMUSEMENT_PARK',
-                'style': {
-                    'color': '110, 229, 120, 100',
-                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                'style': [{
+                    'fill_color': '#6EE57864',
+                    'outline_color': '#003200FF ',      # Яркая зелёная граница
                     'outline_width': '0.4',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'ISLAND',
-                'style': {
-                    'color': '255, 229, 180, 255',
-                    'outline_color': '255,229,0,255',
+                'style': [{
+                    'fill_color': '#FFE5B4FF',
+                    'outline_color': '#FFE500FF',
                     'outline_width': '0.4',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                },
+                }],
                 'label_style': {
                     'font_family': 'Arial',
                     'font_size': 10,
-                    'color': "#966100",         # Желтая "#ffdd00"
+                    'color': '#966100',         # Желтая "#ffdd00"
                     'bold': False,
                     'italic': True,
                     # 'buffer_enabled': True,     # Включаем обводку
@@ -212,13 +230,13 @@ LAYERS_PROPERTY = [
             },
             {
                 'name': 'WATER',
-                'style': {
-                    'color': '100,150,255,100',         # Полупрозрачная синяя заливка
-                    'outline_color': '0,50,200,255',    # Яркая синяя граница
+                'style': [{
+                    'fill_color': '#6496FF64',         # Полупрозрачная синяя заливка
+                    'outline_color': '#0032C8FF',    # Яркая синяя граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid',
-                },
+                }],
                 'label_style': {
                     'font_family': 'Arial',
                     'font_size': 8,
@@ -234,33 +252,33 @@ LAYERS_PROPERTY = [
             },
             {
                 'name': 'AIRPORT_GROUND',
-                'style': {
-                    'color': '190,190,190,100',         # Полупрозрачная темно серая заливка
-                    'outline_color': '150,150,150,255',      # серая граница
+                'style': [{
+                    'fill_color': '#BEBEBE64',         # Полупрозрачная темно серая заливка
+                    'outline_color': "#B70000FF",      # серая граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'INDUSTRIAL',
-                'style': {
-                    'color': '90,90,90,100',         # Полупрозрачная темно серая заливка
-                    'outline_color': '50,50,50,255',      # серая граница
+                'style': [{
+                    'fill_color': '#5A5A5A64',         # Полупрозрачная темно серая заливка
+                    'outline_color': '#323232FF',      # серая граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'CITY',
-                'style': {
-                    'color': '150,150,150,100',         # Полупрозрачная серая заливка
-                    'outline_color': '200,200,200,255',      # светлая серая граница
+                'style': [{
+                    'fill_color': '#96969664',         # Полупрозрачная серая заливка
+                    'outline_color': '#C8C8C8FF',      # светлая серая граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                },
+                }],
                 'label_style': {
                     'font_family': 'Arial',
                     'font_size': 1000,
@@ -276,37 +294,194 @@ LAYERS_PROPERTY = [
             },
             {
                 'name': 'NATIONAL_PARK',
-                'style': {
-                    'color': '35,200,35,100',         # Полупрозрачная зелёная заливка
-                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                'style': [{
+                    'fill_color': '#23C82364',         # Полупрозрачная зелёная заливка
+                    'outline_color': "#005F00FF",      # Яркая зелёная граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'FOREST',
-                'style': {
-                    'color': '65,177,65,100',         # Полупрозрачная зелёная заливка
-                    'outline_color': '0,50,0,255',      # Яркая зелёная граница
+                'style': [{
+                    'fill_color': "#00820063",         # Полупрозрачная зелёная заливка
+                    'outline_color': "#005F00FF",      # Яркая зелёная граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'solid'
-                }
+                }]
             },
             {
                 'name': 'SEA_OCEAN',
-                'style': {
-                    'color': '100,150,255,100',         # Полупрозрачная синяя заливка
-                    'outline_color': '0,50,200,255',    # Яркая синяя граница
+                'style': [{
+                    'fill_color': '#6496FF64',         # Полупрозрачная синяя заливка
+                    'outline_color': '#0032C8FF',    # Яркая синяя граница
                     'outline_width': '0.1',
-                    'style': 'solid',
+                    'fill_style': 'solid',
                     'outline_style': 'no',
-                },
+                }],
             },
         ]
     },
+    {
+        'name': NAME_LAYER_LINES,
+        'geometry': 'LineString',
+        'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
+                       ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
+                       ('name', QMetaType.Type.QString),
+                       ('id', QMetaType.Type.Int),
+                       ('block', QMetaType.Type.QString),
+                       #    ('coord', QMetaType.Type.QString),
+                       ],
+        'styles': [
+            {
+                'name': 'ROAD_HIGHWAY',
+                'style': [
+                    {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
+                    {"color": "#fff888", "width": 0.9, "pen_style": "solid"}
+                ],
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    # 'size_in_meters' : True,
+                    'color': "#222222",         #
+                    'bold': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': "#ffffff",  # Белая обводка
+                    'buffer_size': 1.0,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'ROAD_PRIME',
+                'style': [
+                    {"color": "#e15a1f", "width": 0.8, "pen_style": "solid"},
+                ],
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    # 'size_in_meters' : True,
+                    'color': "#222222",         #
+                    'bold': True,
+                    'buffer_enabled': True,     # Включаем обводку
+                    'buffer_color': "#ffffff",  # Белая обводка
+                    'buffer_size': 1.0,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'ROAD_MINOR',
+                'style': [
+                    {"color": "#e15a1f", "width": 0.5, "pen_style": "solid"},
+                ],
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 8,
+                    # 'size_in_meters' : True,
+                    'color': "#222222",         #
+                    'bold': True,
+                    'buffer_enabled': True,
+                    'buffer_color': "#ffffff",
+                    'buffer_size': 1.0,
+                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    # "remove_duplicates": True,
+                }
+            },
+            {
+                'name': 'ROAD_LOCAL',   # Внутриквартальные
+                'style': [
+                    {"color": "#fff888", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_UNPAVED',     # Грунтовки
+                'style': [
+                    {"color": "#9c7c5d", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_SLIP',    # Съезды
+                'style': [
+                    {"color": "#fcd05b", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_ROUNDABOUT',    # Кольца
+                'style': [
+                    {"color": "#f49c14", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+
+            {
+                'name': 'RAILWAY',
+                'style': [
+                    {"color": "#ffffff", "width": 0.8, "pen_style": "solid"},   # Подложка
+                    {"color": "#000000", "width": 0.5, "pen_style": "dot"}     # Пунктир сверху
+                ],
+            },
+            {
+                'name': 'BORDER',
+                'style': [
+                    {"color": "#ff0707", "width": 0.9, "custom_dash": [4.0, 4.0]},
+                    {"color": "#00c300", "width": 0.6, "custom_dash": [4.0, 4.0], "dash_offset": 4.0},
+                    # {"color": "#ff8282", "width": 0.8, "pen_style": "solid"},
+                    # {"color": "#00c300", "width": 0.6, "pen_style": "dot"},
+                ],
+            },
+            {
+                'name': 'CANAL',    #
+                'style': [
+                    {"color": "#1d70b8", "width": 0.6, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'RIVER_STREAM',    #
+                'style': [
+                    {"color": "#a5d5f5", "width": 0.3, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'RIVER_MAJOR',    #
+                'style': [
+                    {"color": "#005ea5", "width": 0.8, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'PEDESTRIAN_ZONE',    #
+                'style': [
+                    {"color": "#808080", "width": 0.3, "pen_style": "dot"},
+                ],
+            },
+            {
+                'name': 'FERRY_CONNECTION',    #
+                'style': [
+                    {"color": "#a500a2", "width": 0.4, "pen_style": "dot"},
+                ],
+            },
+        ],
+    },
 ]
+
+# STYLE_MAP = {
+#     0x61: ("CANAL", "#1d70b8", 0.6, "solid"),
+#     0x62: ("RIVER_STREAM", "#a5d5f5", 0.3, "solid"),
+#     0x65: ("RIVER_MAJOR", "#005ea5", 0.8, "solid"),
+#     # 0x66: ("RAILWAY", "#555555", 0.5, "dash"),
+#     # 0x67: ("BORDER", "#850085", 0.4, "dash dot"),
+#     0x70: ("PEDESTRIAN_ZONE", "#808080", 0.3, "dot"),
+#     0x71: ("FERRY_CONNECTION", "#1d70b8", 0.4, "dot"),
+    
+#     # 0x68: ("ROAD_HIGHWAY", "#e15a1f", 1.0, "solid"),
+#     # 0x69: ("ROAD_PRIME", "#f49c14", 0.8, "solid"),
+#     # 0x6A: ("ROAD_MINOR", "#fcd05b", 0.6, "solid"),
+#     # 0x6B: ("ROAD_LOCAL: Внутриквартальные", "#ffffff", 0.5, "solid"),
+#     # 0x6C: ("ROAD_UNPAVED: Грунтовки", "#9c7c5d", 0.4, "dash"),
+#     # 0x6D: ("ROAD_SLIP: Съезды", "#fcd05b", 0.5, "solid"),
+#     # 0x6E: ("ROAD_ROUNDABOUT: Кольца", "#f49c14", 0.6, "solid"),
+# }
 
 """
 03 - 05 - 08 - 01

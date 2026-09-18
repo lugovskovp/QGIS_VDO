@@ -9,7 +9,7 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProjec
                        QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
                        QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
                        QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
-                       QgsPalLayerSettings, QgsRuleBasedLabeling)
+                       QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes)
 
 from qgis.PyQt.QtGui import QColor, QFont
 
@@ -548,6 +548,9 @@ def _build_text_format(style_dict: dict) -> QgsTextFormat:
     
     fmt.setFont(font)
     fmt.setSize(size)
+    # Если в словаре указано, что нужны метры, меняем единицы:
+    if style_dict.get('size_in_meters'):
+        fmt.setSizeUnit(QgsUnitTypes.RenderMetersInMapUnits)
 
     # Цвет текста
     if 'color' in style_dict:

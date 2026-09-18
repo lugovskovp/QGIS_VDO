@@ -10,7 +10,7 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProjec
                        QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
                        QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
                        QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
-                       QgsStyle, QgsSimpleFillSymbolLayer)
+                       QgsSimpleFillSymbolLayer)
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QColor, QFont
 
@@ -21,7 +21,8 @@ from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
                                  CRS_NAME, CRS_PROJECTION_STRING,
                                  LAYERS_PROPERTY,
                                  PEN_STYLES,
-                                 FILL_STYLES)
+                                 FILL_STYLES
+                                 )
 
 
 ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]
@@ -116,6 +117,114 @@ def _DrawRectangleArea(area, area_name: str, layer: QgsVectorLayer, variant: str
         print("Не удалось добавить объект на слой.")
 
     pass
+
+
+def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
+    """
+    Пакетно добавляет полилинии в слой layer.
+    Args:
+        shapes_packet: [GEO_LINES]
+        layer: QgsVectorLayer
+    """
+    # Базовые проверки слоя
+    if not layer or layer.geometryType() != Qgis.GeometryType.Line:
+        return
+
+    # Извлекаем уникальные блоки из пакета (исключая None/пустые строки)
+    packet_blocks = {item.block for item in lines_packet if getattr(item, 'block', None)}
+    if not packet_blocks:
+        return
+
+    # Получаем индексы полей безопасным способом (вернет -1, если поля нет)
+    fields = layer.fields()
+    field_idx_variant = fields.indexOf('variant')
+    field_idx_render_order = fields.indexOf('render_order')
+    field_idx_name = fields.indexOf('name')
+    field_idx_id = fields.indexOf('id')
+    field_idx_block = fields.indexOf('block')
+    # field_idx_coord = fields.indexOf('coord')
+
+    # Оптимизированный сбор существующих блоков в слое
+    if field_idx_block != -1:
+        # Экранируем одинарные кавычки для SQL
+        safe_block_str = ", ".join(f"'{str(block).replace("'", "''")}'" for block in packet_blocks)
+        exist_expression = f"\"block\" in ({safe_block_str})"
+        
+        # Запрашиваем только поле block для максимальной скорости
+        request = QgsFeatureRequest().setFilterExpression(exist_expression).setSubsetOfAttributes([field_idx_block])
+        existing_blocks = {f.attribute('block') for f in layer.getFeatures(request)}
+    else:
+        existing_blocks = set()
+
+    # Подготовка списка новых объектов
+    features_to_add = []
+
+    for item in lines_packet:
+        # Если полигон с таким block уже есть на слое — пропускаем его
+        if item.block in existing_blocks:
+            continue
+
+        # Проверка на наличие точек, чтобы избежать IndexError на замыкании
+        if not getattr(item, 'vrtx', None) or len(item.vrtx) < 2:
+            continue
+
+        points_set = [QgsPointXY(coo.lon, coo.lat) for coo in item.vrtx]
+
+        #  Создаем геометрию полигона
+        polygon_geom = QgsGeometry.fromPolylineXY(points_set)
+
+        # Создаем объект QgsFeature
+        feature = QgsFeature(fields)
+        feature.setGeometry(polygon_geom)
+
+        # Безопасная установка атрибутов (только если поля существуют в слое)
+        if field_idx_variant != -1:
+            feature.setAttribute(field_idx_variant, item.cat.name)
+        if field_idx_name != -1:
+            feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+        if field_idx_id != -1:
+            feature.setAttribute(field_idx_id, item.id)
+        if field_idx_block != -1:
+            feature.setAttribute(field_idx_block, item.block)
+        if field_idx_block != -1:
+            feature.setAttribute(field_idx_block, item.block)
+        if field_idx_render_order != -1:
+            feature.setAttribute(field_idx_render_order, str(item.cat.value))
+        
+        features_to_add.append(feature)
+
+    # Если добавлять нечего — выходим
+    if not features_to_add:
+        return
+
+    # Единая транзакция для всего пакета объектов
+    was_editable = layer.isEditable()
+    if not was_editable:
+        if not layer.startEditing():
+            print("Не удалось перевести слой в режим редактирования.")
+            return
+        
+    layer.blockSignals(True)
+    success = False
+    try:
+        success = layer.addFeatures(features_to_add)
+    except Exception as e:
+        print(f"Ошибка при вызове addFeatures: {e}")
+    finally:
+        layer.blockSignals(False)
+
+    # Фиксация изменений
+    if success:
+        if not was_editable:
+            layer.commitChanges()  # Сохраняем, только если сами открывали транзакцию
+        layer.triggerRepaint()
+    else:
+        if not was_editable:
+            layer.rollBack()
+        print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
+
+    pass
+
 
 
 def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # noqa
@@ -570,12 +679,14 @@ def _create_complex_symbol(geometry_type: str, style_item: dict) -> object:
             
             # Поддержка кастомного шага пунктира (Custom Dash)
             if 'custom_dash' in lyr_cfg:
+                sl.setUseCustomDashPattern(True)
                 sl.setPenStyle(Qt.CustomDashLine)
                 sl.setCustomDashVector(lyr_cfg['custom_dash'])
                 if 'dash_offset' in lyr_cfg:
-                    sl.setCustomDashPatternOffset(float(lyr_cfg['dash_offset']))
+                    sl.setDashPatternOffset(float(lyr_cfg['dash_offset']))
             else:
-                sl.setPenStyle(QgsStyle.penStyleFromString(lyr_cfg.get('pen_style', 'solid')))
+                p_style = lyr_cfg.get('pen_style', 'solid')
+                sl.setPenStyle(PEN_STYLES.get(p_style, Qt.SolidLine))
                 
         elif 'Polygon' in geometry_type:
             sl = QgsSimpleFillSymbolLayer()

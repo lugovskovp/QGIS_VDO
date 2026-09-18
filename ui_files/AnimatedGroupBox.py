@@ -22,7 +22,8 @@ class AnimatedGroupBox(QGroupBox):
     def setTitle(self, title: str):
         """Автоматически вызывается uic при загрузке .ui файла."""
         self._custom_title = title
-        arrow = "▲" if self.isExpanded else "▼"
+        arrow = "▽" if self.isExpanded else "▶"     # "▲" "▼" ▶   ◀  (►, ◄)  ▲ (▲, ▼, ▶, ◀) (△, ▽, ▷, ◁) ►
+
         super().setTitle(f"{arrow} {self._custom_title}")
 
     def title(self) -> str:

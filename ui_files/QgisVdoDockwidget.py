@@ -8,11 +8,11 @@ import re
 from typing import cast
 
 from qgis.PyQt import QtWidgets, uic
-from qgis.PyQt.QtWidgets import QRadioButton, QButtonGroup, QMessageBox
-from qgis.PyQt.QtCore import QMetaType
-from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsField, QgsLayerTreeLayer,
-                       QgsLayerTreeGroup, QgsCoordinateTransform,
-                       QgsCoordinateReferenceSystem)
+from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
+                                 QPushButton, QMessageBox, QCheckBox)
+from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLayerTreeLayer,
+                       QgsLayerTreeGroup, QgsCoordinateTransform
+                       )
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
@@ -20,20 +20,24 @@ from QGIS_VDO.vdo import VDO_FILE, COORD, BLADDR
 from QGIS_VDO.vdo.blocks import (block_0x12,
                                  block_0x13,
                                  block_0x07,
-                                 block_0x08)
+                                 block_0x08,
+                                 block_0x09)
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
 from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
                                  NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_MAPS)
+                                 NAME_LAYER_SHAPES
+                                 )
 
 from QGIS_VDO.ui_files import (AnimatedGroupBox,
                                ClickCoordinatesTool,
-                               _DrawArea,
+                               _DrawRectangleArea,
                                _DrawPacketAreas,
-                               getRendererByLayerName)
+                               DrawPacketShapes
+                               )
+from QGIS_VDO.ui_files.drawing import getCrsProjection, getLayer
 
-CRS_PROJECTION = "EPSG:4326"   # классическая проекция EPSG:4326 grad    EPSG:3395 - meters
-# CRS_PROJECTION = "EPSG:8859"   # (WGS 84 / PDC Mercator definition). разрыв на -30 "EPSG:3832" то же, но метры
+
+# CRS_PROJECTION = "EPSG:4326"   # классическая проекция EPSG:4326 grad    EPSG:3395 - meters
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'QgisVdoDockwidgetBase.ui'))
@@ -46,6 +50,14 @@ listGBC = ['groupBox_0veral', 'groupBox_area_A', 'groupBox_area_B',
 RB_SCALE_OBJNAME_PREFIX = 'rb_scale_'
 SCALE_GROUP_NAME_PREFIX = 'Scale '
 QTY_ALL_SCALES = 12
+BLOCKTYPEX_SCALEID = {
+    "14" : 5,
+    "15" : 6,
+    "16" : 7,
+    "1C" : 9,
+    "1D" : 10,
+    "1E" : 11
+}
 
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
@@ -64,7 +76,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # http://doc.qt.io/qt-5/designer-using-a-ui-file.html
         # widgets-and-dialogs-with-auto-connect
         self.iface = iface
+        # отрисовать
         self.setupUi(self)
+
+        # Проверить наличие открытого/активного сохранённого проекта
+        if not self._isExistsOpenProject():
+            return
 
         # Восстановить из настроек видимость groupBoxes
         self._restoreGroupBoxVisibility()
@@ -97,7 +114,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
     def DrawTocAreas(self):
         """
-        Отображает на карте area_A, area_b
+        Отображает на карте area_A, area_B
         Скрывает и сворачивает остальные toc группы
         """
         # Проверить наличие открытого/активного сохранённого проекта
@@ -107,7 +124,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         if project is None:
             return
         # получаем корневой ТОС area layer в группе
-        layer = self._getRootAreaLayer()
+        layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
 
         # hide all another vdo root groups but root_group_name
         self.iface.setActiveLayer(layer)
@@ -145,9 +162,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Areas from TOC block
         bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
         area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
-        _DrawArea(area, "Area_B", layer)   # Area_A is bigger
+        _DrawRectangleArea(area, "Area_B", layer)   # Area_A is bigger
         area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
-        _DrawArea(area, "Area_A", layer)
+        _DrawRectangleArea(area, "Area_A", layer)
         
         # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
         # Получаем доступ к карте (холсту)
@@ -174,7 +191,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             return
 
         # Получить слой для альманаха
-        layer = self._getLayer(idScale, NAME_LAYER_ALMANACS, 'Polygon')
+        layer = self._getScaleLayer(idScale, NAME_LAYER_ALMANACS)
         
         # Получить альманах и отрисовать содержимое - folder maps
         sc: SCALE = self.scales[idScale]
@@ -183,9 +200,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # при отрисовке поле name уникальное - второй раз не отрисовывается
             area = [(coord_lb.lat, coord_lb.lon),
                     (coord_rt.lat, coord_rt.lon)]  # noqa
-            _DrawArea(area, f"0x{bladdr_fldr_val:X}", layer)  # noqa
+            _DrawRectangleArea(area, f"0x{bladdr_fldr_val:X}", layer, "layout")  # noqa
             pass
-        self.pb_LoadFolderMaps.setText(self.tr("Load {} fldrs".format(bl_almanac.items_cnt())))   # noqa
+        self.pb_LoadFolderMaps.setText(self.tr("Load {} layouts".format(bl_almanac.items_cnt())))   # noqa
         pass
 
     # <<<<<<<<<<<<< функции инициализации вкладок
@@ -287,12 +304,26 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         Инициализация вкладки Block
         """
         # Привязываем вызов activate_coords_tool к кнопке
+        self.pb_getCoordinates: QPushButton
+        self.pb_loadBlock: QPushButton
         self.pb_getCoordinates.setCheckable(True)
-        self.pb_getCoordinates.clicked.connect(self.activate_coords_tool)
+        self.pb_getCoordinates.clicked.connect(self.tabBlock_activate_coords_tool)
+        self.pb_loadBlock.clicked.connect(self.tabBlock_load_block)
+        self.cb_LoadFolder : QCheckBox
+        self.cb_LoadFolder.stateChanged.connect(self.tabBlock_cb_LoadFolder_changed)
 
-    def activate_coords_tool(self, checked):
+    def tabBlock_cb_LoadFolder_changed(self) -> None:
+        """Вызывается при изменении чекбокса cb_LoadFolder."""
+        self.pb_loadBlock.setEnabled(not self.cb_LoadFolder.isChecked())
+        if self.cb_LoadFolder.isChecked():
+            self.pb_getCoordinates.setText(self.tr("Get and load FOLDER"))
+        else:
+            self.pb_getCoordinates.setText(self.tr("Get block"))
 
+    def tabBlock_activate_coords_tool(self, checked):
         # Делаем кнопку активной визуально
+        self.pb_loadBlock.setEnabled(False)
+        self.cb_LoadFolder.setEnabled(False)
         # self.pb_getCoordinates.setChecked(True)
         if checked:
             # Создаем и устанавливаем инструмент
@@ -305,16 +336,73 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         else:
             # Выключаем инструмент, если кнопка была отжата пользователем
             current_tool = self.iface.mapCanvas().mapTool()
+            # Делаем кнопку активной визуально
+            self.pb_loadBlock.setEnabled(True)
+            self.cb_LoadFolder.setEnabled(True)
             if hasattr(self, 'tool') and current_tool == self.tool:
                 self.iface.mapCanvas().unsetMapTool(self.tool)
+
+    def tabBlock_load_block(self):
+        #
+        bladdr = self.le_bladdr.text()
+        if not bladdr:
+            # пустое поле адреса блока
+            return
+        
+        bladdr = self.vdo.get_bladdr(int(bladdr, 16))
+        block = self.vdo.get_block(bladdr)
+        if block.type not in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+            # 1-0x06, 2-0x01, 3-0x02, 4-0x03
+            # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
+            return
+        del bladdr
+        
+        # определяем масштаб
+        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
+        # слой по соответствию типа block, а не текущий
+        layer = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+        del targetScale
+        # получаем полигоны слоя
+        shapes = [shp for shp in block.getObjects(isGetLines=False)]
+        # отрисовываем слой NAME_LAYER_SHAPES
+        DrawPacketShapes(shapes, layer)
+        for obj in block.getObjects(isGetLines=False):
+            print(obj)
+
+        # print(layer)
+        pass
+
+    def tabBlock_load_packed_blocks(self, bl_foldef_for_load: block_0x09):
+        """
+        Пакетная загрузка блоков карт фолдера
+        """
+        # folder - block type 09
+        set_block = [bl for bl in bl_foldef_for_load.get_valid_blocks()]
+        block = self.vdo.get_block(set_block[0])
+        targetScale = None
+        if block.type in BLOCKTYPEX_SCALEID:
+            targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
+        if targetScale is None:
+            return
+        # слой по соответствию типа block, а не текущий
+        layer = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+
+        for bla in set_block:
+            block = self.vdo.get_block(bla)
+            # получаем полигоны слоя
+            shapes = [shp for shp in block.getObjects(isGetLines=False)]
+            # отрисовываем слой NAME_LAYER_SHAPES
+            DrawPacketShapes(shapes, layer)
+
+        pass
 
     def on_coords_received(self, point):
         # Вывод координат в консоль
         # print(f"Координаты: X = {point.x():.4f}, Y = {point.y():.4f}")
         # Получаем текущую систему координат проекта
         project_crs = QgsProject.instance().crs()
-        # Задаем целевую систему координат (WGS 84)
-        target_crs = QgsCoordinateReferenceSystem(CRS_PROJECTION)   # "EPSG:4326"
+        # Задаем целевую систему координат (модифицированную WGS 84)
+        target_crs = getCrsProjection()
         # Создаем трансформатор координат
         transform = QgsCoordinateTransform(project_crs, target_crs, QgsProject.instance())  # noqa
         # Трансформируем точку клика
@@ -333,17 +421,23 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # не попал в квадрат lb-rt scale
             print(f"No way: {srch_coord} not in {sc.area}")
             return
+
+        # ищем блок или фолдер
+        isFindBlock = not self.cb_LoadFolder.isChecked()
+
         # в масштабе ищем имя блока или none
-        bladdr_map: BLADDR = sc.find_by_coord(srch_coord)
+        bladdr_map: BLADDR = sc.find_by_coord(srch_coord, isFindBlock)
         # запишем в поле le_bladdr
-        
         if bladdr_map is None:
             QMessageBox.warning(
-                self, 'Внимание', 'Ничего не найдено', QMessageBox.Ok
-            )
+                self, self.tr('Attention!'), self.tr('Finded nothing.'), QMessageBox.Ok)
         else:
-            self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
-            print(bladdr_map)
+            # грузим фолдер
+            if not isFindBlock:
+                self.tabBlock_load_packed_blocks(bladdr_map)
+                self.le_bladdr.setText(f"0x{bladdr_map.head.bladdr.value:X}")
+            else:
+                self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
         pass
 
     def on_tool_deactivated(self):
@@ -352,6 +446,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Возвращаем кнопку в исходное состояние при выключении инструмен
         self.pb_getCoordinates.setChecked(False)
         self.pb_getCoordinates.blockSignals(False)
+        # Делаем кнопку активной визуально
+        self.pb_loadBlock.setEnabled(not self.cb_LoadFolder.isChecked())
+        self.cb_LoadFolder.setEnabled(True)
 
     # >>> initTabBlock
 
@@ -372,10 +469,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         project = QgsProject.instance()
         if not project.fileName():
-            # Сообщение - что надо, чтобы был открыт проект.
+            # Сообщение - надо, чтобы был открыт проект.
             self.iface.messageBar().pushMessage(
-                    self.tr('Open/create any qgis project and reopen Carindb.'),   # noqa
-                    Qgis.Warning, 3)
+                self.tr('Open/create any QGIS project and reopen Carindb.'), Qgis.Warning, 3)
             return False
         return True
 
@@ -430,13 +526,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # TODO: скопироать из референса слои?
         return scaleGroup
 
-    def _getLayer(self, scaleId: int, layerName: str, layerType: str) -> QgsVectorLayer:
+    def _getScaleLayer(self, scaleId: int, layerName: str) -> QgsVectorLayer:
         """
         Находит или создаёт слой с именем layerName в scale группе scaleId
         Args:
             scaleId: int - номер scale [0..11]
             layerName: str наименование слоя
-            layerType: str Тип геометрии [Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon]  # noqa
         Returns:
             layer: QgsVectorLayer
         """
@@ -445,106 +540,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # какого хера то? вызываться должно после определения имени корневой группы
             raise ValueError(f"Нет группы '{SCALE_GROUP_NAME_PREFIX}_{scaleId}'")
 
-        # В группе ищем слой
-        for child in scaleGroup.children():
-            # Проверяем, что дочерний элемент — это слой и его имя совпадает
-            if isinstance(child, QgsLayerTreeLayer) and child.name() == layerName:
-                layer = child.layer()
-                # Убеждаемся, что это векторный слой
-                if isinstance(layer, QgsVectorLayer):
-                    return layer
-                else:
-                    raise ValueError(f"Что не так с {layer.name()}")
-
-        # <<< Слой не найден. Создаём новый.
-        # для начала самое время проверить валидность типа
-        # if layerType not in ['Point', 'LineString', 'Polygon', 'MultiPoint',
-        #                      'MultiLineString', 'MultiPolygon']:
-        if layerType not in ['Point', 'LineString', 'Polygon']:
-            raise ValueError(f"Тип геометрии слоя {layerType} вне валидных ['Point', 'LineString', 'Polygon']")  # noqa
-        # Настраиваем параметры нового слоя в памяти (Memory Layer)
-        layer = QgsVectorLayer(f"{layerType}?crs={CRS_PROJECTION}", layerName, "memory")
-
-        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
-        provider = layer.dataProvider()
-        provider.addAttributes([
-            # QgsField("id", QMetaType.Type.Int),            # noqa 
-            QgsField("name", QMetaType.Type.QString)      # noqa
-            # QgsField("value", QMetaType.Type.QString)      # noqa Double
-        ])
-        # Обновляем поля в слое после их добавления в провайдер
-        layer.updateFields()
-
-        # получаем рендерер - свойства отображения слоя
-        renderer = getRendererByLayerName(layerName)
-        layer.setRenderer(renderer)
-        del renderer
-        # Обновляем отображение слоя
-        layer.triggerRepaint()
-        # Проверяем валидность и добавляем слой в нашу верхнюю группу
-        if layer.isValid():
-            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
-            QgsProject.instance().addMapLayer(layer, False) # noqa
-            # Вставляем слой на последнее место внутри нашей новой группы
-            scaleGroup.insertLayer(0, layer)
-            # print("Новый слой успешно создан в памяти и добавлен наверх!")
+        if layerName in [NAME_LAYER_ALMANACS]:
+            layer = getLayer(scaleGroup, NAME_LAYER_ALMANACS)
             return layer
         else:
-            print("Не удалось создать новый слой.")
-            pass
-
-    def _getRootAreaLayer(self) -> QgsVectorLayer:
-        """
-        возвращает слой NAME_LAYER_GLOBAL_BOUNDS в корневой рабочей группе
-        """
-        layer_name = NAME_LAYER_GLOBAL_BOUNDS
-        root_group = self._getRootGroup()
-        #  существует ли уже слой с таким именем в прямых потомках root группы
-        for child in root_group.children():
-            # Проверяем, что это узел слоя (а не подгруппа) и имя совпадает
-            if child.nodeType() == child.NodeLayer and child.name() == layer_name:
-                # Получаем сам объект слоя, он нужен для работы
-                layer = child.layer()
-                return layer
-
-        # нет, слой с таким именем не найден - создаём его в root
-        # Настраиваем параметры нового слоя в памяти (Memory Layer)
-        # Формат: "ТипГеометрии?crs=EPSG:Код"  EPSG:4326 grad    EPSG:3395 - meters
-        # Доступные типы: Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon  # noqa
-        geometry_type = f"Polygon?crs={CRS_PROJECTION}"
-        layer = QgsVectorLayer(geometry_type, layer_name, "memory")
-        del geometry_type
-
-        # Добавляем атрибутивные поля (колонки) в таблицу нового слоя
-        provider = layer.dataProvider()
-        # provider.addAttributes([
-        #     # QgsField("id", QMetaType.Type.Int),            # noqa 
-        #     QgsField("name", QMetaType.Type.QString)      # noqa
-        #     # QgsField("value", QMetaType.Type.QString)      # noqa Double
-        # ])
-        provider.addAttributes([QgsField("name", QMetaType.Type.QString)])
-        # Обновляем поля в слое после их добавления в провайдер
-        layer.updateFields()
-
-        # получаем рендерер - свойства отображения слоя
-        renderer = getRendererByLayerName(NAME_LAYER_GLOBAL_BOUNDS)
-        layer.setRenderer(renderer)
-        del renderer
-        # Обновляем отображение слоя
-        layer.triggerRepaint()
-        # Проверяем валидность и добавляем слой в нашу верхнюю группу
-        if layer.isValid():
-            # Регистрируем в проекте без автоматического отображения в панели (False)  # noqa
-            QgsProject.instance().addMapLayer(layer, False) # noqa
-            
-            # Вставляем слой на последнее место внутри нашей новой группы
-            root_group.insertLayer(-1, layer)
-            # print("Новый слой успешно создан в памяти и добавлен наверх!")
-            return layer
-        else:
-            print("Не удалось создать новый слой.")
-            pass
-
+            # какого хера то? вызываться должно после определения имени корневой группы
+            raise ValueError(f"Нет варианта имени слоя {layerName}")
+    
     def _restoreGroupBoxVisibility(self) -> None:
         """
         Восстанавливает ранее сохранённые настройки
@@ -558,7 +560,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
     # <<<<<<<<<< работа с эвентами
 
-    #
+    # ------ фоновая загрузка контуров на tabTopo <<<<<<<<<<<<
+
     def start_loading_folders(self):
         """
         Load folders with maps on tabTopo
@@ -618,7 +621,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             self.progressBarFolderMaps.setMaximum(100)
         else:
             self.progressBarFolderMaps.setMaximum(total_count)
-
+    
     def on_finished_loading_folders(self):
         """
         Finish Loading folders with maps on tabTopo
@@ -633,6 +636,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
                 # Все остальные кнопки делаем снова активными
                 button.setEnabled(True)
 
+    # >>>>>>>>>>>>------ фоновая загрузка контуров на tabTopo
+
     def on_rb_scale_changed(self, button) -> None:
         """
         Triggered when any radio button in the group scale is clicked/changed
@@ -641,7 +646,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # сохраняем номер масштаба в settings
         Settings.setChousedScale(self.currentIdScale)
         # Получить слой для folder maps
-        self.layer_maps = self._getLayer(self.currentIdScale, NAME_LAYER_MAPS, 'Polygon')  # noqa
+        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)  # noqa
         # отрисовать area альманаха
         self.DrawAlmanacArea(self.currentIdScale)
         # tabBlock set l_currScaleId
@@ -662,7 +667,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
     def closeEvent(self, event):
         # self.closingPlugin.emit()
         # event.accept()
-        self.activate_coords_tool(False)
+        self.tabBlock_activate_coords_tool(False)
         pass
 
     def pbActionEvent(self, event):

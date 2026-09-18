@@ -50,10 +50,10 @@ class bitstream():
         # [ ] 00: d - ?   пока только 00 встречался. повесить raise
 
         # debug raises
-        if word_a not in [5, 0xc, 0xd, 0xe, 0xf, 0x11, 0x10]:
-            raise ValueError(word_a, f"0x{self.word_a} .word_a")
+        if word_a not in [5, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x13, 0x14, 0x15]:
+            raise ValueError(word_a, f"0x{word_a:X} .word_a")  # 19/0x13 ?
         if word_c not in [8, 9, 0x0a]:
-            raise ValueError(word_c, f"0x{self.word_c} .word_c")
+            raise ValueError(word_c, f"0x{word_c:X} .word_c")
         if self.word_d not in [0]:
             raise ValueError(self.word_d, f"0x{self.word_d} .word_d")
 

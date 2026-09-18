@@ -244,4 +244,13 @@ def test_block_0x09_get_items_flat_tuple_output(ee_09_block):
     assert pytest.approx(lat_max) == 59.1984
 
 
+def test_block_0x09__get_valid_blocks(ee_09_block):
+    """Тест получения всех валидных итемов"""
+    block: block_0x09 = ee_09_block
+    
+    results = [k for k in block.get_valid_blocks()]
+    assert len(results) == 19
+    assert str(results[13]) == '055d69 03'
+
+
 # -------------------------

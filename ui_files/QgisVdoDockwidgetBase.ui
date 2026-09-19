@@ -1288,7 +1288,7 @@
          <string>Load full folder, all maps</string>
         </property>
        </widget>
-       <widget class="QProgressBar" name="progressBarLoadFolder">
+       <widget class="QProgressBar" name="progressBarLoadMapFromFolder">
         <property name="geometry">
          <rect>
           <x>40</x>

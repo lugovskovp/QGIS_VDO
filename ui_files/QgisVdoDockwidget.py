@@ -14,7 +14,7 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLa
                        QgsLayerTreeGroup, QgsCoordinateTransform
                        )
 
-from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
+from QGIS_VDO.vdo_threading import FolderMapProcessingWorker, PaintMapsProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.vdo import VDO_FILE, COORD, BLADDR
 from QGIS_VDO.vdo.blocks import (block_0x12,
@@ -379,33 +379,27 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # print(layer_shape)
         pass
 
-    def tabBlock_load_packed_blocks(self, bl_foldef_for_load: block_0x09):
+    def paint_topo_objects(self, list_shp: list, list_lines: list):
         """
         Пакетная загрузка блоков карт фолдера
+        list_shp    :list[GEO_SHAPES]
+        list_lines  :list[GEO_LINES]
         """
-        # folder - block type 09
-        set_block = [bl for bl in bl_foldef_for_load.get_valid_blocks()]
-        block = self.vdo.get_block(set_block[0])
-        targetScale = None
-        if f"{block.type:X}" in BLOCKTYPEX_SCALEID:
-            targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
-        if targetScale is None:
-            return
-        # слой по соответствию типа block, а не текущий
-        layer = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
-        layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
+        # ВАЖНО: Отключаем автоперерисовку холста QGIS на время добавления пачки,
+        # чтобы QGIS не пытался перерисовывать карту на каждый чих.
+        canvas = self.iface.mapCanvas()
+        canvas.setRenderFlag(False)
 
-        for bla in set_block:
-            block = self.vdo.get_block(bla)
-            # получаем полигоны слоя
-            shapes = [shp for shp in block.getObjects(isGetLines=False)]
-            # отрисовываем слой NAME_LAYER_SHAPES
-            DrawPacketShapes(shapes, layer)
+        try:
+            DrawPacketShapes(list_shp, self.curr_layer_shape)
+            DrawPacketLines(list_lines, self.curr_layer_lines)
+        finally:
+            # Включаем отрисовку обратно
+            canvas.setRenderFlag(True)
+            canvas.refresh()  # Перерисовываем один раз за всю пачку
 
-            lines = [shp for shp in block.getObjects(isGetShapes=False)]
-            # отрисовываем слой NAME_LAYER_LINES
-            DrawPacketLines(lines, layer_lines)
-
+        # Сигнализируем потоку, что мы готовы к следующей порции данных
+        self.thread.resume_processing()
         pass
 
     def tabBlock_on_coords_received(self, point):
@@ -446,8 +440,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         else:
             # грузим фолдер
             if not isFindBlock:
-                self.tabBlock_load_packed_blocks(bladdr_map)
+                # thread:
                 self.le_bladdr.setText(f"0x{bladdr_map.head.bladdr.value:X}")
+                self.start_loading_maps_in_folder(bladdr_map)       # threading
             else:
                 self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
                 # и сразу загружаем блок
@@ -596,8 +591,6 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         self.progressBarFolderMaps.setValue(0)
 
-        # $ TODO Проверка, что карты уже отрисованы
-
         # Получить альманах
         sc: SCALE = self.scales[self.currentIdScale]
         almanac_block: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
@@ -606,17 +599,17 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.iface.setActiveLayer(self.layer_maps)
 
         # Инициализируем поток, передав ему параметры папки
-        self.thread = FolderMapProcessingWorker(almanac_block)   # noqa
+        self.thread = FolderMapProcessingWorker(self.progressBarFolderMaps, almanac_block)   # noqa
 
         # СВЯЗЫВАЕМ СИГНАЛЫ С РЕАЛЬНОЙ ЛОГИКОЙ ДОК-ВИДЖЕТА
         self.thread.count_signal.connect(self._set_progress_max)
         self.thread.progress_signal.connect(self._update_gui_with_result)
-        self.thread.safe_drawing_map_signal.connect(self._safe_drawing_map)
-        self.thread.finished.connect(self.on_finished_loading_folders)
+        self.thread.safe_drawing_map_signal.connect(self._safe_drawing_contour_map)
+        self.thread.finished.connect(self.on_finished_loading_contours)
         self.thread.start()
 
     # РЕАЛЬНАЯ ЛОГИКА ОБРАБОТКИ КАЖДОЙ ПАПКИ КАРТ
-    def _safe_drawing_map(self, areas_packet: list) -> None:
+    def _safe_drawing_contour_map(self, areas_packet: list) -> None:
         """
         Потокобезопасная отрисовка контуров карт
         """
@@ -624,19 +617,24 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         _DrawPacketAreas(areas_packet, self.layer_maps)
         # _DrawArea([point_lb, point_rt], f"0x{bl_map_val:X}", self.layer_maps)  # noqa
 
-    def _update_gui_with_result(self, percent, block_folder_value):
-        # Обновляем прогресс-бар
-        self.progressBarFolderMaps.setValue(percent)
+    def _update_gui_with_result(self, progress_bar, percent, block_folder_value):
+        """
+        универсальная обработка сигнала: Обновляем прогресс-бар
+        """
+        progress_bar.setValue(percent)
         # Например: добавление в QListWidget, отрисовка слоя, парсинг метаданных и т.д.   # noqa
-        print(f"Док-виджет обрабатывает карту: {block_folder_value}")
+        print(f"_update_gui_with_result: Док-виджет обрабатывает карту: {block_folder_value}")
 
-    def _set_progress_max(self, total_count):
+    def _set_progress_max(self, progress_bar, total_count):
+        """
+        универсальная обработка сигнала:
+        """
         if total_count == 0:
-            self.progressBarFolderMaps.setMaximum(100)
+            progress_bar.setMaximum(100)
         else:
-            self.progressBarFolderMaps.setMaximum(total_count)
+            progress_bar.setMaximum(total_count)
     
-    def on_finished_loading_folders(self):
+    def on_finished_loading_contours(self):
         """
         Finish Loading folders with maps on tabTopo
         """
@@ -651,6 +649,60 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
                 button.setEnabled(True)
 
     # >>>>>>>>>>>>------ фоновая загрузка контуров на tabTopo
+
+    # # ------ фоновая загрузка топоосновы карт на tabBlock <<<<<<<<<<<<
+
+    def start_loading_maps_in_folder(self, folder_block: block_0x09):
+        """
+        Load folders with maps on tabTopo by pb_getCoordinates
+        """
+        self.progressBarLoadMapFromFolder.setValue(0)
+
+        # инициализируем слои для добавления
+        block = self.vdo.get_block(next(folder_block.get_valid_blocks()))
+        if block.type not in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+            # 1-0x06, 2-0x01, 3-0x02, 4-0x03
+            # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
+            return
+
+        # Список для хранения кнопок от повторного нажатия
+        self.temp_disable = []
+        bt = [self.cb_LoadFolder, self.pb_getCoordinates, self.pb_loadBlock, self.le_bladdr]
+        for button in bt:
+            if button.isEnabled():
+                self.temp_disable.append(button)
+                # выключаем её на время загрузки
+                button.setEnabled(False)
+
+        # определяем масштаб
+        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
+        # слой по соответствию типа block, а не текущий
+        self.curr_layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+        self.curr_layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
+
+        # Делаем слой активным в интерфейсе
+        self.iface.setActiveLayer(self.curr_layer_shape)
+
+        # Инициализируем поток, передав ему параметры папки
+        self.thread = PaintMapsProcessingWorker(self.progressBarLoadMapFromFolder, folder_block)   # noqa
+
+        # СВЯЗЫВАЕМ СИГНАЛЫ С РЕАЛЬНОЙ ЛОГИКОЙ ДОК-ВИДЖЕТА
+        self.thread.count_signal.connect(self._set_progress_max)
+        self.thread.progress_signal.connect(self._update_gui_with_result)
+        self.thread.safe_drawing_maps_signal.connect(self.paint_topo_objects)
+        self.thread.finished.connect(self.on_finished_loading_folders)
+        self.thread.start()
+
+    def on_finished_loading_folders(self):
+        """
+        Finish Loading maps from folder on tabBlock
+        """
+        # Восстанавливаем состояние кнопок
+        for button in self.temp_disable:
+            # Все кнопки делаем снова активными
+            button.setEnabled(True)
+
+    # >>>>>>>>>>>>------ фоновая загрузка топоосновы карт на tabBlock
 
     def on_rb_scale_changed(self, button) -> None:
         """

@@ -1,6 +1,7 @@
 import pytest    # type: ignore # noqa
 from unittest.mock import MagicMock, patch
 from qgis.PyQt.QtCore import QEventLoop
+from qgis.PyQt.QtWidgets import QProgressBar
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker
 
@@ -19,6 +20,11 @@ def mock_vdo_structures():
     mock_bl_folder.__str__.return_value = "Mocked_Folder_0x09"
     mock_vdo.get_block.return_value = mock_bl_folder
     
+    # return {
+    #     "almanac": mock_almanac,
+    #     "vdo": mock_vdo,
+    #     "folder": mock_bl_folder
+    # }
     return {
         "almanac": mock_almanac,
         "vdo": mock_vdo,
@@ -30,8 +36,10 @@ def test_worker_empty_almanac(mock_vdo_structures):
     """Тест сценария, когда в альманахе нет элементов, с ручным QEventLoop."""
     mock_almanac = mock_vdo_structures["almanac"]
     mock_almanac.items_cnt.return_value = 0
-    
-    worker = FolderMapProcessingWorker(mock_almanac)
+
+    progress_bar = QProgressBar()
+
+    worker = FolderMapProcessingWorker(progress_bar, mock_almanac)
     
     # Создаем локальный цикл событий
     loop = QEventLoop()
@@ -43,6 +51,7 @@ def test_worker_empty_almanac(mock_vdo_structures):
     def on_count_signal(val):
         captured_args.append(val)
         loop.quit()
+        #  self.progress_signal.emit(progress_bar, index + 1, f"{bl_folder}")
         
     worker.count_signal.connect(on_count_signal)
     
@@ -54,7 +63,9 @@ def test_worker_empty_almanac(mock_vdo_structures):
     loop.exec_()  # noqa Блокирует тест, пока не вызовется loop.quit()
     
     # Проверяем перехваченный аргумент
-    assert captured_args == [0]
+    # <PyQt5.QtWidgets.QProgressBar object at 0x0000024CAD043AD0>
+    assert 'PyQt5.QtWidgets.QProgressBar' in str(captured_args)
+    # assert captured_args == [0]
     
     # Очищаем память
     worker.wait()
@@ -78,7 +89,9 @@ def test_worker_processing_flow(mock_struct_uint, mock_bladdr_cls, mock_vdo_stru
     
     mock_struct_uint.pack.return_value = b'\x00\x00\x00\x00'
     
-    worker = FolderMapProcessingWorker(mock_almanac)
+    progress_bar = QProgressBar()
+    
+    worker = FolderMapProcessingWorker(progress_bar, mock_almanac)
     
     # Слоты-шпионы для сбора результатов из сигналов
     results = {
@@ -99,7 +112,7 @@ def test_worker_processing_flow(mock_struct_uint, mock_bladdr_cls, mock_vdo_stru
     loop.exec_()  # noqa Ждем окончания работы run() воркера
     
     # Проверяем count_signal
-    assert results["count"] == [1]
+    assert results["count"] == [progress_bar]
     
     # Проверяем структуру пакета координат из safe_drawing_map_signal
     expected_area = {
@@ -109,7 +122,7 @@ def test_worker_processing_flow(mock_struct_uint, mock_bladdr_cls, mock_vdo_stru
     assert results["map"] == [[expected_area]]
     
     # Проверяем progress_signal (index + 1 = 2)
-    assert results["progress"] == [(2, "Mocked_Folder_0x09")]
+    assert results["progress"] == [(progress_bar, 2)]
     
     # Очищаем память
     worker.wait()

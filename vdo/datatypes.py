@@ -570,6 +570,8 @@ class BYTESTRUCT:
 
         # Строгое декодирование. Падает при нарушении структуры данных.
         return bytes(sub_view).decode("cp1250")
+    #  UnicodeDecodeError       (note: full exception trace is shown but execution is paused at: run)
+    # 'charmap' codec can't decode byte 0x81 in position 1: character maps to <undefined>  , errors="ignore"
 
     def uchar(self, near_offset: int = 0) -> int:
         """Быстрое чтение 1 байта (unsigned char) напрямую из Си-буфера."""

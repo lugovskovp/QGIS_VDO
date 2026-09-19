@@ -1,6 +1,6 @@
 """
 Основной dockedWidget
-feat: DrawAlmanacArea еще и maps при создании рисует
+feat: tabTopo_DrawAlmanacArea еще и maps при создании рисует
 """
 
 import os
@@ -114,7 +114,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         pass    # def __init__(self, parent_plugin, iface, parent=None):
 
-    def DrawTocAreas(self):
+    def tabInfo_DrawTocAreas(self):
         """
         Отображает на карте area_A, area_B
         Скрывает и сворачивает остальные toc группы
@@ -183,7 +183,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         canvas.refresh()
         pass
 
-    def DrawAlmanacArea(self, idScale: int) -> None:
+    def tabTopo_DrawAlmanacArea(self, idScale: int) -> None:
         """
         Добавляет слой Almanac, если не было его ранее
         отрисовывает валидные альманахи
@@ -331,8 +331,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # Создаем и устанавливаем инструмент
             self.tool = ClickCoordinatesTool(
                 self.iface.mapCanvas(),
-                self.on_coords_received,
-                self.on_tool_deactivated
+                self.tabBlock_on_coords_received,
+                self.tabBlock_on_tool_deactivated
             )
             self.iface.mapCanvas().setMapTool(self.tool)
         else:
@@ -408,7 +408,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         pass
 
-    def on_coords_received(self, point):
+    def tabBlock_on_coords_received(self, point):
         # Вывод координат в консоль
         # print(f"Координаты: X = {point.x():.4f}, Y = {point.y():.4f}")
         # Получаем текущую систему координат проекта
@@ -450,9 +450,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
                 self.le_bladdr.setText(f"0x{bladdr_map.head.bladdr.value:X}")
             else:
                 self.le_bladdr.setText(f"0x{bladdr_map.value:X}")
+                # и сразу загружаем блок
+                self.tabBlock_load_block()
         pass
 
-    def on_tool_deactivated(self):
+    def tabBlock_on_tool_deactivated(self):
         # Блокируем сигналы, чтобы повторно не вызывать toggle_coords_tool
         self.pb_getCoordinates.blockSignals(True)
         # Возвращаем кнопку в исходное состояние при выключении инструмен
@@ -660,7 +662,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Получить слой для folder maps
         self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)  # noqa
         # отрисовать area альманаха
-        self.DrawAlmanacArea(self.currentIdScale)
+        self.tabTopo_DrawAlmanacArea(self.currentIdScale)
         # tabBlock set l_currScaleId
         self.l_currScaleId.setText(f"{self.currentIdScale}")
 

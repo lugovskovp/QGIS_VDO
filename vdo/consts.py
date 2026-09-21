@@ -3,7 +3,10 @@
 """
 
 import struct
+
+from qgis.core import Qgis
 from qgis.PyQt.QtCore import Qt, QMetaType
+
 
 # constants values
 BITS_IN_ASCII = 7
@@ -334,6 +337,23 @@ LAYERS_PROPERTY = [
                        ('block', QMetaType.Type.QString),
                        #    ('coord', QMetaType.Type.QString),
                        ],
+        'labels' : [        # rule based labels
+            {'description' : 'Roads E', 'color': "#ffffff", 'background': "#00c300", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^E'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 10, 'bold': True, },
+            {'description' : 'Roads 0-9', 'color': "#000000", 'background': "#ffdc32", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^[0-9]'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'Roads M', 'color': "#ffffff", 'background': "#ff0707", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^M'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 10, 'bold': True, },
+            {'description' : 'Roads P', 'color': "#000000", 'background': "#ffdc32", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^P'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'Roads A', 'color': "#ffffff", 'background': "#3232ff", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^A'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+        ],
         'styles': [
             {
                 'name': 'ROAD_HIGHWAY',
@@ -341,54 +361,54 @@ LAYERS_PROPERTY = [
                     {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
                     {"color": "#fff888", "width": 0.9, "pen_style": "solid"}
                 ],
-                'label_style': {
-                    'font_family': 'Arial',
-                    'font_size': 8,
-                    # 'size_in_meters' : True,
-                    'color': "#222222",         #
-                    'bold': True,
-                    'buffer_enabled': True,     # Включаем обводку
-                    'buffer_color': "#ffffff",  # Белая обводка
-                    'buffer_size': 1.0,
-                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
-                    # "remove_duplicates": True,
-                }
+                # 'label_style': {
+                #     'font_family': 'Arial',
+                #     'font_size': 8,
+                #     # 'size_in_meters' : True,
+                #     'color': "#222222",         #
+                #     'bold': True,
+                #     'buffer_enabled': True,     # Включаем обводку
+                #     'buffer_color': "#ffffff",  # Белая обводка
+                #     'buffer_size': 1.0,
+                #     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                #     # "remove_duplicates": True,
+                # }
             },
             {
                 'name': 'ROAD_PRIME',
                 'style': [
                     {"color": "#e15a1f", "width": 0.8, "pen_style": "solid"},
                 ],
-                'label_style': {
-                    'font_family': 'Arial',
-                    'font_size': 8,
-                    # 'size_in_meters' : True,
-                    'color': "#222222",         #
-                    'bold': True,
-                    'buffer_enabled': True,     # Включаем обводку
-                    'buffer_color': "#ffffff",  # Белая обводка
-                    'buffer_size': 1.0,
-                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
-                    # "remove_duplicates": True,
-                }
+                # 'label_style': {
+                #     'font_family': 'Arial',
+                #     'font_size': 8,
+                #     # 'size_in_meters' : True,
+                #     'color': "#222222",         #
+                #     'bold': True,
+                #     'buffer_enabled': True,     # Включаем обводку
+                #     'buffer_color': "#ffffff",  # Белая обводка
+                #     'buffer_size': 1.0,
+                #     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                #     # "remove_duplicates": True,
+                # }
             },
             {
                 'name': 'ROAD_MINOR',
                 'style': [
                     {"color": "#e15a1f", "width": 0.5, "pen_style": "solid"},
                 ],
-                'label_style': {
-                    'font_family': 'Arial',
-                    'font_size': 8,
-                    # 'size_in_meters' : True,
-                    'color': "#222222",         #
-                    'bold': True,
-                    'buffer_enabled': True,
-                    'buffer_color': "#ffffff",
-                    'buffer_size': 1.0,
-                    'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
-                    # "remove_duplicates": True,
-                }
+                # 'label_style': {
+                #     'font_family': 'Arial',
+                #     'font_size': 8,
+                #     # 'size_in_meters' : True,
+                #     'color': "#222222",         #
+                #     'bold': True,
+                #     'buffer_enabled': True,
+                #     'buffer_color': "#ffffff",
+                #     'buffer_size': 1.0,
+                #     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                #     # "remove_duplicates": True,
+                # }
             },
             {
                 'name': 'ROAD_LOCAL',   # Внутриквартальные
@@ -427,8 +447,6 @@ LAYERS_PROPERTY = [
                 'style': [
                     {"color": "#ff0707", "width": 0.9, "custom_dash": [4.0, 4.0]},
                     {"color": "#00c300", "width": 0.6, "custom_dash": [4.0, 4.0], "dash_offset": 4.0},
-                    # {"color": "#ff8282", "width": 0.8, "pen_style": "solid"},
-                    # {"color": "#00c300", "width": 0.6, "pen_style": "dot"},
                 ],
             },
             {
@@ -446,7 +464,9 @@ LAYERS_PROPERTY = [
             {
                 'name': 'RIVER_MAJOR',    #
                 'style': [
-                    {"color": "#005ea5", "width": 0.8, "pen_style": "solid"},
+                    {"color": "#005ea5", "width": 0.8, "pen_style": "solid",
+                     'min_size': 5.0,  # Скрывать, если на экране меньше 5 мм,  TODO:
+                     },
                 ],
             },
             {

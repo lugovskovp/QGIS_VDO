@@ -5,6 +5,7 @@
 Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for view/explore a digital road map database for the CARiN- and VDODayton navigation compatible systems
 
 Плагин для просмотра в QGIS данных файлов навигационных систем VDO Dayton CD, устанавливавшихся на Citroen, Pegout, BMW, Mercedes, Fiat ect с начала 2000 годов.
+Формат карт для CARiN называется CDF (CARiN Database Format).
 
 > [!IMPORTANT]  
 > Плагин в процессе разработки, релизов не было, смысла скачивать - пока что нет.

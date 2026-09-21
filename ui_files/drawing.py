@@ -10,7 +10,7 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProjec
                        QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
                        QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
                        QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
-                       QgsSimpleFillSymbolLayer)
+                       QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings)
 from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QColor, QFont
 
@@ -533,11 +533,66 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
 
     # =========================================================================
     # ДИНАМИЧЕСКИЕ ПОДПИСИ НА ОСНОВЕ ПРАВИЛ
+    root_rule = None
+    # ДИНАМИЧЕСКИЕ ПОДПИСИ всего слоя (если для нескольких стилей)
+    layer_stiles = target.get('labels')
+    if layer_stiles:
+        #
+        root_rule = QgsRuleBasedLabeling.Rule(QgsPalLayerSettings())
+
+        for stile_item in layer_stiles:
+            if not stile_item:
+                continue
+            text_format = _build_text_format(stile_item)
+            # Базовые настройки подписи для конкретного правила
+            settings = QgsPalLayerSettings()
+            settings.setFormat(text_format)
+            settings.fieldName = 'name'
+
+            # Специфичное размещение подписей для линий и полигонов
+            if pl := stile_item.get('placement'):
+                settings.placement = pl
+                pass
+            else:
+                # default placement - by layer type
+                if 'Line' in geometry:
+                    settings.placement = QgsPalLayerSettings.Line
+                else:
+                    settings.placement = QgsPalLayerSettings.Horizontal
+            
+            # Минимальный размер для отображения подписи
+            min_size = stile_item.get('label_min_size')
+            if min_size is not None:
+                settings.minFeatureSize = float(min_size)
+
+            # Блок подавления дубликатов подписей (совместим с QGIS 3.44)
+            if stile_item.get('remove_duplicates'):
+                settings.mergeLines = True
+                settings.removeDuplicateLabels = True
+                
+            # Создаем дочернее правило
+            rule = QgsRuleBasedLabeling.Rule(settings)
+            rule.setActive(True)
+
+            # filter name
+            rule.setFilterExpression(stile_item.get('condition'))
+            rule.setDescription(stile_item.get('description'))
+            
+            root_rule.appendChild(rule)
+
+        # Применяем дерево правил к слою
+        rules_labeling = QgsRuleBasedLabeling(root_rule)
+        layer.setLabeling(rules_labeling)
+        layer.setLabelsEnabled(True)
+        pass
+
+    # ДИНАМИЧЕСКИЕ ПОДПИСИ текущего стиля
     has_labels = any('label_style' in style_item for style_item in stiles_list)
 
     if has_labels:
         # Создаем корневой контейнер для правил подписей
-        root_rule = QgsRuleBasedLabeling.Rule(QgsPalLayerSettings())
+        if root_rule is None:
+            root_rule = QgsRuleBasedLabeling.Rule(QgsPalLayerSettings())
 
         for style_item in stiles_list:
             label_config = style_item.get('label_style')
@@ -573,7 +628,8 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
             # Создаем дочернее правило
             rule = QgsRuleBasedLabeling.Rule(settings)
             rule.setActive(True)
-            
+
+            # filter name
             rule.setFilterExpression(f"\"variant\" = '{name}'")
             rule.setDescription(f"Labels for {name}")
             
@@ -747,7 +803,27 @@ def _build_text_format(style_dict: dict) -> QgsTextFormat:
         fmt.setSizeUnit(QgsUnitTypes.RenderMetersInMapUnits)
 
     # Цвет текста
-    fmt.setColor(_hex_rgba_to_qcolor(style_dict.get('color', '#000000')))
+    curr_color = _hex_rgba_to_qcolor(style_dict.get('color', '#000000'))
+    fmt.setColor(curr_color)
+
+    # Цвет фона
+    if bck := style_dict.get('background'):
+        # Создаем настройки фона и включаем его
+        background = QgsTextBackgroundSettings()
+        background.setEnabled(True)
+        # Устанавливаем тип фигуры (например, прямоугольник)
+        background.setType(QgsTextBackgroundSettings.ShapeRectangle)
+        # Можно использовать название цвета, HEX-код или RGB:
+        # background.setFillColor(QColor("red"))          # Вариант А: имя цвета
+        background.setFillColor(QColor(bck))     # Вариант Б: HEX-код
+        # background.setFillColor(QColor(255, 0, 0))     # Вариант В: RGB
+
+        # (Опционально) Устанавливаем цвет и толщину рамки вокруг фона
+        # background.setStrokeColor(curr_color)
+        # background.setStrokeWidth(0.5)
+
+        # 3. Применяем настроенный фон к формату текста
+        fmt.setBackground(background)
 
     # Настройки буфера (обводка вокруг букв) для читаемости
     if style_dict.get('buffer_enabled'):

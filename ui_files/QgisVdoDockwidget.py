@@ -534,7 +534,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             self.iface.messageBar().pushMessage(
                     self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
                     Qgis.Warning, 3)
-            return
+            return root_group
 
         # Areas from TOC block
         bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))

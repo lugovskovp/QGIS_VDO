@@ -132,7 +132,7 @@ LAYERS_PROPERTY = [
         'name': NAME_LAYER_SHAPES,
         'geometry': 'Polygon',
         'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
-                       # ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
+                       ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
                        ('name', QMetaType.Type.QString),
                        ('id', QMetaType.Type.Int),
                        ('block', QMetaType.Type.QString),

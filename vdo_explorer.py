@@ -382,7 +382,7 @@ class VDOExplorerPlugin:
                 self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)  # noqa
             # если widget есть, то показать
             self.dockwidget.show()
-            self.dockwidget.tabInfo_DrawTocAreas()
+            # self.dockwidget.tabInfo_DrawTocAreas()   # noqa надо менять - не отрисовка, а что-то иное. Переключение на активный слой?
             return
         else:
             # self.vdo.path is None: Сообщение - что надо, чтобы был открыт file.

@@ -246,7 +246,7 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
     # Получаем индексы полей безопасным способом (вернет -1, если поля нет)
     fields = layer.fields()
     field_idx_variant = fields.indexOf('variant')
-    # field_idx_render_order = fields.indexOf('render_order')
+    field_idx_render_order = fields.indexOf('render_order')
     field_idx_name = fields.indexOf('name')
     field_idx_id = fields.indexOf('id')
     field_idx_block = fields.indexOf('block')
@@ -266,6 +266,11 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
 
     # Подготовка списка новых объектов
     features_to_add = []
+
+    # сортировка отрисовки - но номеру в перечислении стилей слоя
+    registry = {obj['name']: obj for obj in LAYERS_PROPERTY}
+    styles = [idx['name'] for idx in registry[NAME_LAYER_SHAPES]['styles']]
+    render_orders = {value : index for index, value in enumerate(styles)}
 
     for item in shapes_packet:
         # Если полигон с таким block уже есть на слое — пропускаем его
@@ -299,6 +304,8 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
             feature.setAttribute(field_idx_block, item.block)
         if field_idx_coord != -1:
             feature.setAttribute(field_idx_coord, str(item.coord))
+        if field_idx_render_order != -1:
+            feature.setAttribute(field_idx_render_order, render_orders.get(item.cat.name, 0))
         
         features_to_add.append(feature)
 
@@ -489,9 +496,13 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
 
     # Добавляем атрибутивные поля
     attrs = []
+    use_render_order = False
     # Строгое чтение корректного ключа 'attributes'
     for attribute, t in target.get('attributes', []):
-        attrs.append(QgsField(attribute, t))     # QgsField("id", QMetaType.Type.Int)
+        attrs.append(QgsField(attribute, t))
+        # использовать ли сортировку по значениям поля 'render_order'
+        if not use_render_order and attribute == 'render_order':
+            use_render_order = True   # QgsField('render_order', QMetaType.Type.Int)
 
     if attrs:
         provider = layer.dataProvider()
@@ -519,15 +530,24 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
             symbol = _create_complex_symbol(geometry, style_item)
             
             # Настройка z-level отрисовки геометрий внутри слоя
-            for l_idx in range(symbol.symbolLayerCount()):
-                symbol.symbolLayer(l_idx).setRenderingPass(index)
+            # for l_idx in range(symbol.symbolLayerCount()):
+            #     symbol.symbolLayer(l_idx).setRenderingPass(index)
             
             name = style_item.get('name')
             label = name.capitalize() if name else f"Category {index}"
             categories.append(QgsRendererCategory(name, symbol, label))
 
         renderer = QgsCategorizedSymbolRenderer("variant", categories)
-        renderer.setOrderByEnabled(True)    # Включаем сортировку по пассам рендеринга
+        # renderer.setOrderByEnabled(True)    # Включаем сортировку по пассам рендеринга
+    
+    # сортировка по значениям поля 'render_order'
+    if use_render_order:
+        # Объекты с большими числами  ascending=True будут отрисованы ПОЗЖЕ (то есть лягут НАВЕРХУ).
+        order_by = QgsFeatureRequest.OrderBy([
+            QgsFeatureRequest.OrderByClause('render_order', ascending=False)
+        ])
+        renderer.setOrderBy(order_by)
+        renderer.setOrderByEnabled(True)
 
     layer.setRenderer(renderer)
 

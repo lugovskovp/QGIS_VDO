@@ -382,11 +382,10 @@ class VDOExplorerPlugin:
                 self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)  # noqa
             # если widget есть, то показать
             self.dockwidget.show()
-            self.dockwidget.DrawTocAreas()
+            self.dockwidget.tabInfo_DrawTocAreas()
             return
         else:
-            # self.vdo.path is None:
-            # Сообщение - что надо, чтобы был открыт file.
+            # self.vdo.path is None: Сообщение - что надо, чтобы был открыт file.
             self.iface.messageBar().pushMessage(
                         self.tr('Open any Carindb file.'),   # noqa
                         Qgis.Warning, 3)

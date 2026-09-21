@@ -656,10 +656,10 @@ bitarray('
         """
         # noqa
         Geo segment of line - poligon
-            2h - PTR         p_str_name - ptr2str/0;
-            2h - PTR         p_vertexes_obj; ptr2vertexes
-            4h - DWORD       id
-            2h - PTR   ptr_linesign, p_line_sign; // Or start pstr -=== POI
+            2h - PTR         p_str_name - ptr2str/0::: near to /0 string;
+            2h - PTR         p_vertexes_obj; ptr2vertexes::: near to first vertex
+            4h - DWORD       id::: id
+            2h - PTR   p_line_sign; // Or start pstr -=== POI 14регион?началоТСТР?
             2h - WORD  or_b_or_c;
             2h - PTR   p_p_str_name; // ptr to GEO_OBJ_STR
             4h - WORD   or_38_or_0_b_country;
@@ -668,12 +668,19 @@ bitarray('
         if self.is_unpacked:
             buff = self.read(offset, GEO_LINE.size * 2)
             res = GEO_LINE(buff, category)
-            # TODO  '02F4 0158 0000673A  02A0 00 00 02 CE 00 00' - добавить cnt poi
+            # TODO:  '02F4 0158 0000673A  02A0 00 00 02 CE 00 00' - добавить cnt poi
         
             res.name = self.read_str(res.p_str_name)
             # res.tstr_regi = self.read_tstr(res.tstr_regi)  # 2 POI, НЕ регион... self.POI_regi
-            res.tstr_name = self.read_tstr(res.tstr_name)
+            # с TSTR неясно: иногда не ссылка в район TSTR, а небольшое, например, 4, значение
+            p_line_sign = res.tstr_name
+            if p_line_sign >= self.li_tstr.ptr:     # issue #83
+                res.tstr_name = self.read_tstr(p_line_sign)
+            else:
+                res.tstr_name = f"0x{p_line_sign:02X}"
 
+            
+# 039F0201 0015 00 00 [15:MAP__06k80]
             offset = res.ptr_vrtx
             for _ in range(res.cnt_vrtx):
                 # read vertexes

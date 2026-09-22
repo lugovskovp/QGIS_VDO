@@ -11,7 +11,7 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProjec
                        QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
                        QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
                        QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings)
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont
 
 from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
@@ -140,9 +140,13 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
     field_idx_variant = fields.indexOf('variant')
     field_idx_render_order = fields.indexOf('render_order')
     field_idx_name = fields.indexOf('name')
+    field_idx_name2 = fields.indexOf('name2')
     field_idx_id = fields.indexOf('id')
     field_idx_block = fields.indexOf('block')
-    # field_idx_coord = fields.indexOf('coord')
+    field_idx_c_p_line_sign = fields.indexOf('c_p_line_sign')
+    field_idx_c_b_or_c = fields.indexOf('c_b_or_c')
+    field_idx_c_pp_str_name = fields.indexOf('c_pp_str_name')
+    field_idx_c_38_or_0b_country = fields.indexOf('c_38_or_0b_country')
 
     # Оптимизированный сбор существующих блоков в слое
     if field_idx_block != -1:
@@ -182,6 +186,8 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_variant, item.cat.name)
         if field_idx_name != -1:
             feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+        if field_idx_name2 != -1:
+            feature.setAttribute(field_idx_name2, item.name2 if item.name2 else "")
         if field_idx_id != -1:
             feature.setAttribute(field_idx_id, item.id)
         if field_idx_block != -1:
@@ -190,7 +196,16 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_block, item.block)
         if field_idx_render_order != -1:
             feature.setAttribute(field_idx_render_order, str(item.cat.value))
-        
+
+        if field_idx_c_p_line_sign != -1:
+            feature.setAttribute(field_idx_c_p_line_sign, f"{item.c_p_line_sign:04X}")
+        if field_idx_c_b_or_c != -1:
+            feature.setAttribute(field_idx_c_b_or_c, f"{item.c_b_or_c:04X}")
+        if field_idx_c_pp_str_name != -1:
+            feature.setAttribute(field_idx_c_pp_str_name, f"{item.c_pp_str_name:04X}")   # readed
+        if field_idx_c_38_or_0b_country != -1:
+            feature.setAttribute(field_idx_c_38_or_0b_country, f"{item.c_38_or_0b_country:04X}")
+
         features_to_add.append(feature)
 
     # Если добавлять нечего — выходим
@@ -297,7 +312,8 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
         if field_idx_variant != -1:
             feature.setAttribute(field_idx_variant, item.cat.name)
         if field_idx_name != -1:
-            feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+            # feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+            feature.setAttribute(field_idx_name, item.name.upper() if item.name else "")
         if field_idx_id != -1:
             feature.setAttribute(field_idx_id, item.id)
         if field_idx_block != -1:
@@ -314,38 +330,31 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
         return
 
     # Единая транзакция для всего пакета объектов
-    was_editable = layer.isEditable()
-    if not was_editable:
-        if not layer.startEditing():
-            print("Не удалось перевести слой в режим редактирования.")
-            return
-        
-    layer.blockSignals(True)
-    success = False
+    # 1. Перед началом транзакции временно замораживаем холст,
+    # чтобы фоновые потоки рендеринга не пытались читать слой во время записи
+    from qgis.utils import iface
+    canvas = iface.mapCanvas() if iface else None
+    if canvas:
+        canvas.setMapUpdateInterval(0)   # Отключаем промежуточные обновления
+        canvas.freeze(True)   # Полностью замораживаем отрисовку холста
+
     try:
+        was_editable = layer.isEditable()
+        if not was_editable:
+            layer.startEditing()
+        
         success = layer.addFeatures(features_to_add)
-    except Exception as e:
-        print(f"Ошибка при вызове addFeatures: {e}")
-    finally:
-        layer.blockSignals(False)
-
-    # Фиксация изменений
-    if success:
-        if not was_editable:
-            layer.commitChanges()  # Сохраняем, только если сами открывали транзакцию
-
-        # layer.emitDataChanged()    # Сообщаем подсистеме PAL, что данные подписей изменились
-        layer.triggerRepaint()
-        # from qgis.utils import iface
-        # if iface and iface.mapCanvas():
-        #     iface.mapCanvas().refreshAllLayers()  # Полностью сбрасывает кэш PAL и геометрий
-        # else:
-        #     layer.triggerRepaint()
-    else:
-        if not was_editable:
+        
+        if success and not was_editable:
+            layer.commitChanges()
+        elif not success and not was_editable:
             layer.rollBack()
-        print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
-
+    finally:
+        # 2. Размораживаем холст обратно в блоке finally, чтобы он гарантированно включился
+        if canvas:
+            canvas.freeze(False)
+            canvas.setMapUpdateInterval(250)   # Возвращаем стандартный интервал (250 мс)
+            canvas.refresh()
     pass
 
 
@@ -554,6 +563,7 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     # =========================================================================
     # ДИНАМИЧЕСКИЕ ПОДПИСИ НА ОСНОВЕ ПРАВИЛ
     root_rule = None
+
     # ДИНАМИЧЕСКИЕ ПОДПИСИ всего слоя (если для нескольких стилей)
     layer_stiles = target.get('labels')
     if layer_stiles:
@@ -842,7 +852,15 @@ def _build_text_format(style_dict: dict) -> QgsTextFormat:
         # background.setStrokeColor(curr_color)
         # background.setStrokeWidth(0.5)
 
-        # 3. Применяем настроенный фон к формату текста
+        # Если табличка - визуально добавить сверху и по сторонам
+        label_space = style_dict.get('label_space', False)
+        if label_space:
+            # QgsTextBackgroundSettings.SizeType.SizeBuffer (Отступы)
+            # или QgsTextBackgroundSettings.SizeType.SizeFixed (Фиксированный)
+            background.setSizeType(QgsTextBackgroundSettings.SizeType.SizeBuffer)
+            background.setSize(QSizeF(0.4, 0.2))     # X = 0.4 мм, Y = 0.2 мм
+
+        # Применяем настроенный фон к формату текста
         fmt.setBackground(background)
 
     # Настройки буфера (обводка вокруг букв) для читаемости

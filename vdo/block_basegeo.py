@@ -673,11 +673,13 @@ bitarray('
             res.name = self.read_str(res.p_str_name)
             # res.tstr_regi = self.read_tstr(res.tstr_regi)  # 2 POI, НЕ регион... self.POI_regi
             # с TSTR неясно: иногда не ссылка в район TSTR, а небольшое, например, 4, значение
-            p_line_sign = res.tstr_name
+            p_line_sign = res.c_pp_str_name
             if p_line_sign >= self.li_tstr.ptr:     # issue #83
-                res.tstr_name = self.read_tstr(p_line_sign)
+                tstr_res : TSTR = self.read_tstr(p_line_sign)
+                #
+                res.name2 = str(tstr_res)
             else:
-                res.tstr_name = f"0x{p_line_sign:02X}"
+                res.name2 = f"0x{p_line_sign:02X}"
 
             
 # 039F0201 0015 00 00 [15:MAP__06k80]

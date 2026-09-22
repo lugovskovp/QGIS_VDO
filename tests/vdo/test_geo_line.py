@@ -39,10 +39,10 @@ def test_geo_line_initialization(geo_line_buffer_factory):
     assert line.p_str_name == 0x1111
     assert line.ptr_vrtx == 160
     assert line.id == 99999
-    assert line.POI_regi == 0x2222
-    assert line.or_b_or_c == 128
-    assert line.tstr_name == 0x3333
-    assert line.or_38_or_0_b_country == 7
+    assert line.c_p_line_sign == 0x2222
+    assert line.c_b_or_c == 128
+    assert line.c_pp_str_name == 0x3333
+    assert line.c_38_or_0b_country == 7
     assert line.cnt_vrtx == 10
     assert line.cat == en_GEO_CATEGORY.RAILWAY
     assert len(line._raw) == 16  # Ровно 0x10 байт сохранено в родителе
@@ -72,7 +72,7 @@ def test_geo_line_slots_optimization(geo_line_buffer_factory):
 def test_geo_line_slots_contract():
     """Проверяем, что состав слотов полностью соответствует спецификации класса."""
     expected_slots = {
-        'p_str_name', 'ptr_vrtx', 'id', 'POI_regi', 'or_b_or_c',
-        'tstr_name', 'or_38_or_0_b_country', 'cnt_vrtx', 'name', 'cat', 'vrtx', 'block',
+        'p_str_name', 'ptr_vrtx', 'id', 'c_p_line_sign', 'c_b_or_c',
+        'c_pp_str_name', 'c_38_or_0b_country', 'cnt_vrtx', 'name', 'cat', 'vrtx', 'block', 'name2',
     }
     assert set(GEO_LINE.__slots__) == expected_slots

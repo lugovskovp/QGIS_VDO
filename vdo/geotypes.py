@@ -329,17 +329,19 @@ class GEO_LINE(BYTESTRUCT):
         'p_str_name',
         'ptr_vrtx',
         'id',
-        'POI_regi',
-        'or_b_or_c',
-        'tstr_name',
-        'or_38_or_0_b_country',
+        'c_p_line_sign',    # 'POI_regi',
+        'c_b_or_c',         # 'or_b_or_c',
+        'c_pp_str_name',    # 'tstr_name',
+        'c_38_or_0b_country',    # 'or_38_or_0_b_country',
         'cnt_vrtx',
         'name',
+        'name2',
         'cat',
         'vrtx',
         'block'
+        
     )
-    
+
     size: int = 0x10  # 16 байт
 
     def __init__(self, buffer: bytearray | bytes | memoryview, category: en_GEO_CATEGORY) -> None:
@@ -352,10 +354,10 @@ class GEO_LINE(BYTESTRUCT):
         (p_str_name,
          ptr_vrtx,
          id,
-         POI_regi,
-         or_b_or_c,
-         tstr_name,
-         or_38_or_0_b_country,
+         c_p_line_sign,
+         c_b_or_c,
+         c_pp_str_name,
+         c_38_or_0b_country,
          next_ptr_vrtx) = GEO_LINE_struct.unpack_from(mem_buf, 0)
          
         # Передаем базовому классу первые 16 байт (size)
@@ -364,12 +366,13 @@ class GEO_LINE(BYTESTRUCT):
         self.p_str_name = p_str_name           # begin zero-ended string
         self.ptr_vrtx = ptr_vrtx               # begin vertexes
         self.id = id
-        self.POI_regi = POI_regi               # ptstr - but strange, unkn
-        self.or_b_or_c = or_b_or_c             # estimated length or travel time
-        self.tstr_name = tstr_name             # ptr to GEO_OBJ_STR
-        self.or_38_or_0_b_country = or_38_or_0_b_country
+        self.c_p_line_sign = c_p_line_sign               # ptstr - but strange, unkn
+        self.c_b_or_c = c_b_or_c             # estimated length or travel time
+        self.c_pp_str_name = c_pp_str_name             # ptr to GEO_OBJ_STR
+        self.c_38_or_0b_country = c_38_or_0b_country
         self.cnt_vrtx = int((next_ptr_vrtx - ptr_vrtx) / VRTX_OBJ_SIZE)
         self.name = "Proto line. Need read from parent"
+        self.name2 = ""
         self.cat = category
         self.vrtx = []
 

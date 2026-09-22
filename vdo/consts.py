@@ -335,7 +335,11 @@ LAYERS_PROPERTY = [
                        ('name', QMetaType.Type.QString),
                        ('id', QMetaType.Type.Int),
                        ('block', QMetaType.Type.QString),
-                       #    ('coord', QMetaType.Type.QString),
+                       # непонятные WORD
+                       ('c_p_line_sign', QMetaType.Type.QString),   # noqa TSTR? in 30 - все показывают на первый tstr.
+                       ('c_b_or_c', QMetaType.Type.QString),    # noqa  hex? in 30 - все = 0
+                       ('c_pp_str_name', QMetaType.Type.QString),   # noqa to TSTR, который на имя
+                       ('c_38_or_0b_country', QMetaType.Type.QString),   # noqa  hex?- WORD неясной природы
                        ],
         'labels' : [        # rule based labels
             {'description' : 'Roads E', 'color': "#ffffff", 'background': "#00c300", 'label_min_size': 10.0,

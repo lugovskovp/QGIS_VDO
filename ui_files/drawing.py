@@ -297,7 +297,8 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
         if field_idx_variant != -1:
             feature.setAttribute(field_idx_variant, item.cat.name)
         if field_idx_name != -1:
-            feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+            # feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+            feature.setAttribute(field_idx_name, item.name.upper() if item.name else "")
         if field_idx_id != -1:
             feature.setAttribute(field_idx_id, item.id)
         if field_idx_block != -1:
@@ -314,38 +315,31 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
         return
 
     # Единая транзакция для всего пакета объектов
-    was_editable = layer.isEditable()
-    if not was_editable:
-        if not layer.startEditing():
-            print("Не удалось перевести слой в режим редактирования.")
-            return
-        
-    layer.blockSignals(True)
-    success = False
+    # 1. Перед началом транзакции временно замораживаем холст,
+    # чтобы фоновые потоки рендеринга не пытались читать слой во время записи
+    from qgis.utils import iface
+    canvas = iface.mapCanvas() if iface else None
+    if canvas:
+        canvas.setMapUpdateInterval(0)   # Отключаем промежуточные обновления
+        canvas.freeze(True)   # Полностью замораживаем отрисовку холста
+
     try:
+        was_editable = layer.isEditable()
+        if not was_editable:
+            layer.startEditing()
+        
         success = layer.addFeatures(features_to_add)
-    except Exception as e:
-        print(f"Ошибка при вызове addFeatures: {e}")
-    finally:
-        layer.blockSignals(False)
-
-    # Фиксация изменений
-    if success:
-        if not was_editable:
-            layer.commitChanges()  # Сохраняем, только если сами открывали транзакцию
-
-        # layer.emitDataChanged()    # Сообщаем подсистеме PAL, что данные подписей изменились
-        layer.triggerRepaint()
-        # from qgis.utils import iface
-        # if iface and iface.mapCanvas():
-        #     iface.mapCanvas().refreshAllLayers()  # Полностью сбрасывает кэш PAL и геометрий
-        # else:
-        #     layer.triggerRepaint()
-    else:
-        if not was_editable:
+        
+        if success and not was_editable:
+            layer.commitChanges()
+        elif not success and not was_editable:
             layer.rollBack()
-        print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
-
+    finally:
+        # 2. Размораживаем холст обратно в блоке finally, чтобы он гарантированно включился
+        if canvas:
+            canvas.freeze(False)
+            canvas.setMapUpdateInterval(250)   # Возвращаем стандартный интервал (250 мс)
+            canvas.refresh()
     pass
 
 

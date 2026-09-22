@@ -242,7 +242,7 @@ LAYERS_PROPERTY = [
                 }],
                 'label_style': {
                     'font_family': 'Arial',
-                    'font_size': 9,
+                    'font_size': 10,
                     'color': '#1f78b4',         # Красивый синий
                     'bold': True,
                     'italic': True,

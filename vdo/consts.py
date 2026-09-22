@@ -242,7 +242,7 @@ LAYERS_PROPERTY = [
                 }],
                 'label_style': {
                     'font_family': 'Arial',
-                    'font_size': 8,
+                    'font_size': 9,
                     'color': '#1f78b4',         # Красивый синий
                     'bold': True,
                     'italic': True,
@@ -359,7 +359,7 @@ LAYERS_PROPERTY = [
                 'name': 'ROAD_HIGHWAY',
                 'style': [
                     {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
-                    {"color": "#fff888", "width": 0.9, "pen_style": "solid"}
+                    {"color": "#fff888", "width": 0.6, "pen_style": "solid"}
                 ],
                 # 'label_style': {
                 #     'font_family': 'Arial',

@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock  # , patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE
 from QGIS_VDO.vdo.geotypes import COORD
@@ -167,9 +167,6 @@ def ru_08_block_fixture(request):
     real_ee_vdo = VDO_FILE(FIXTURES_DIR / 'carindb34_0h_6800h.bin')
 
     block.vdo = real_ee_vdo
-
-    # # Изолируем внешнюю зависимость vdo
-    # block.vdo = MagicMock()
     
     return block, bmetric
 
@@ -253,7 +250,7 @@ def test_block_0x08_get_items_doubles(ru_08_block_fixture, point_fixture):
             _ = [f for f in block.get_items()]
 
 
-def test_block_0x8__get_xy_value(ru_08_block_fixture):
+def test_block_0x08__get_xy_value(ru_08_block_fixture):
     """Тестируем точечную выборку гео-блока по ячейке сетки (X, Y)"""
     block, metric = ru_08_block_fixture
 
@@ -264,7 +261,7 @@ def test_block_0x8__get_xy_value(ru_08_block_fixture):
     assert res_bladdr_value == metric["get_xy_item_bl"]
 
 
-def test_block_0x8__get_xy_value_out_of_bound(ru_08_block_fixture):
+def test_block_0x08__get_xy_value_out_of_bound(ru_08_block_fixture):
     """Тест выхода за границы индексов списка li_items"""
     block, metric = ru_08_block_fixture
 
@@ -277,7 +274,7 @@ def test_block_0x8__get_xy_value_out_of_bound(ru_08_block_fixture):
     assert block._get_xy_value(-133, 0) is None
 
 
-def test_block_0x8__get_xy_area_out_of_bound(ru_08_block_fixture):
+def test_block_0x08__get_xy_area_out_of_bound(ru_08_block_fixture):
     """Тест выхода за границы индексов списка li_items"""
     block, metric = ru_08_block_fixture
 
@@ -290,7 +287,7 @@ def test_block_0x8__get_xy_area_out_of_bound(ru_08_block_fixture):
     assert block._get_xy_area(-133, 0) is None
 
 
-def test_get_xy_area_math(ru_08_block_fixture):
+def test_block_0x08_get_xy_area_math(ru_08_block_fixture):
     """Отдельный изолированный тест математики метода get_xy_area."""
     block, bmetric = ru_08_block_fixture
     
@@ -311,7 +308,7 @@ def test_get_xy_area_math(ru_08_block_fixture):
     assert (rt._hlatitude - lb._hlatitude) == block.item_side
 
 
-def test_block_0x8__get_xy_value_first_empty(ru_08_block_fixture):
+def test_block_0x08__get_xy_value_first_empty(ru_08_block_fixture):
     """Тест обработки пустой ячейки (нулевой указатель)"""
     block, metric = ru_08_block_fixture
 
@@ -395,3 +392,54 @@ def test_find_by_coord_extraction_and_forwarding():
     
     # Проверяем, что метод вернул именно то значение, которое отдал bl_folder
     assert actual_result == expected_result
+
+
+def test_block_0x08_get_items_types__continue(ru_08_block_fixture):
+    """Тестируем типы get_items."""
+    block, _ = ru_08_block_fixture
+
+    # Берем тип объекта block.li_items и патчим его свойство 'cnt'
+    with patch.object(type(block.li_items), 'cnt', new_callable=PropertyMock) as mock_cnt:
+        mock_cnt.return_value = 2  # Значение, которое вернет property
+
+        for bk, c1, c2 in block.get_items():
+
+            assert isinstance(bk, int)
+            assert isinstance(c1, COORD)
+            assert isinstance(c2, COORD)
+
+
+def test_find_by_coord_folder():
+    """Тест распаковки b_09, загрузки block_0x09 и вызова его find_by_coord."""
+    
+    # 1. Создаем пустой объект класса block_0x08 в обход реального __init__
+    block = MagicMock(spec=block_0x08)
+    block.vdo = MagicMock()
+    
+    # Ссылаем метод на реальный исполняемый код вашего класса
+    block.find_by_coord = block_0x08.find_by_coord.__get__(block, block_0x08)
+
+    # 2. Готовим входные данные и мокаем предыдущий шаг
+    srch_coord = MagicMock()  # Фейковый объект COORD для поиска
+    
+    # Имитируем, что _find_folder_by_coord уже успешно вернул кортеж (bl, c1, c2)
+    mock_bl, mock_c1, mock_c2 = "fake_bl", "fake_c1", "fake_c2"
+    block._find_folder_by_coord = MagicMock(return_value=(mock_bl, mock_c1, mock_c2))
+
+    # 3. Настраиваем поведение загружаемого блока block_0x09
+    expected_result = 0xABCDE  # Финальный BLADDR, который мы ожидаем получить
+    mock_bl_folder = MagicMock()
+    mock_bl_folder.find_by_coord = MagicMock(return_value=expected_result)
+    
+    # Инструктируем vdo.get_block вернуть наш настроенный mock_bl_folder
+    block.vdo.get_block = MagicMock(return_value=mock_bl_folder)
+
+    # 4. Выполнение целевого участка кода
+    actual_result = block.find_by_coord(srch_coord, False)      # isFindMap = false
+
+    # 5. Проверки (Assertions)
+    # Проверяем, что менеджер vdo.get_block вызван с правильными bl, c1, c2 из кортежа
+    block.vdo.get_block.assert_called_once_with(mock_bl, mock_c1, mock_c2)
+
+    # Проверяем, что метод вернул именно bl_folder
+    assert actual_result == mock_bl_folder

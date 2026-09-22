@@ -11,7 +11,7 @@ from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProjec
                        QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
                        QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
                        QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings)
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont
 
 from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
@@ -548,6 +548,7 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     # =========================================================================
     # ДИНАМИЧЕСКИЕ ПОДПИСИ НА ОСНОВЕ ПРАВИЛ
     root_rule = None
+
     # ДИНАМИЧЕСКИЕ ПОДПИСИ всего слоя (если для нескольких стилей)
     layer_stiles = target.get('labels')
     if layer_stiles:
@@ -836,7 +837,15 @@ def _build_text_format(style_dict: dict) -> QgsTextFormat:
         # background.setStrokeColor(curr_color)
         # background.setStrokeWidth(0.5)
 
-        # 3. Применяем настроенный фон к формату текста
+        # Если табличка - визуально добавить сверху и по сторонам
+        label_space = style_dict.get('label_space', False)
+        if label_space:
+            # QgsTextBackgroundSettings.SizeType.SizeBuffer (Отступы)
+            # или QgsTextBackgroundSettings.SizeType.SizeFixed (Фиксированный)
+            background.setSizeType(QgsTextBackgroundSettings.SizeType.SizeBuffer)
+            background.setSize(QSizeF(0.4, 0.2))     # X = 0.4 мм, Y = 0.2 мм
+
+        # Применяем настроенный фон к формату текста
         fmt.setBackground(background)
 
     # Настройки буфера (обводка вокруг букв) для читаемости

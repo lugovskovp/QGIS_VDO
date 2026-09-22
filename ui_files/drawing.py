@@ -142,7 +142,10 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
     field_idx_name = fields.indexOf('name')
     field_idx_id = fields.indexOf('id')
     field_idx_block = fields.indexOf('block')
-    # field_idx_coord = fields.indexOf('coord')
+    field_idx_c_p_line_sign = fields.indexOf('c_p_line_sign')
+    field_idx_c_b_or_c = fields.indexOf('c_b_or_c')
+    field_idx_c_pp_str_name = fields.indexOf('c_pp_str_name')
+    field_idx_c_38_or_0b_country = fields.indexOf('c_38_or_0b_country')
 
     # Оптимизированный сбор существующих блоков в слое
     if field_idx_block != -1:
@@ -190,7 +193,16 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_block, item.block)
         if field_idx_render_order != -1:
             feature.setAttribute(field_idx_render_order, str(item.cat.value))
-        
+
+        if field_idx_c_p_line_sign != -1:
+            feature.setAttribute(field_idx_c_p_line_sign, item.c_p_line_sign)
+        if field_idx_c_b_or_c != -1:
+            feature.setAttribute(field_idx_c_b_or_c, item.c_b_or_c)
+        if field_idx_c_pp_str_name != -1:
+            feature.setAttribute(field_idx_c_pp_str_name, item.c_pp_str_name)
+        if field_idx_c_38_or_0b_country != -1:
+            feature.setAttribute(field_idx_c_38_or_0b_country, item.c_38_or_0b_country)
+
         features_to_add.append(feature)
 
     # Если добавлять нечего — выходим

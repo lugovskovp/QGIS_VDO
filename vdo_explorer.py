@@ -383,6 +383,7 @@ class VDOExplorerPlugin:
             # если widget есть, то показать
             self.dockwidget.show()
             # self.dockwidget.tabInfo_DrawTocAreas()   # noqa надо менять - не отрисовка, а что-то иное. Переключение на активный слой?
+            self.dockwidget.progressBarLoadMapFromFolder.setValue(0)
             return
         else:
             # self.vdo.path is None: Сообщение - что надо, чтобы был открыт file.

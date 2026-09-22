@@ -326,6 +326,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             self.pb_getCoordinates.setText(self.tr("Get block"))
 
     def tabBlock_activate_coords_tool(self, checked):
+        # сбросить показания прогресс бара
+        self.progressBarLoadMapFromFolder.setValue(0)
         # Делаем кнопку активной визуально
         self.pb_loadBlock.setEnabled(False)
         self.cb_LoadFolder.setEnabled(False)
@@ -354,13 +356,12 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # пустое поле адреса блока
             return
         
-        bladdr = self.vdo.get_bladdr(int(bladdr, 16))
-        block = self.vdo.get_block(bladdr)
+        # bladdr = self.vdo.get_bladdr(int(bladdr, 16))
+        block = self.vdo.get_block(self.vdo.get_bladdr(int(bladdr, 16)))
         if block.type not in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
             # 1-0x06, 2-0x01, 3-0x02, 4-0x03
             # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
             return
-        del bladdr
         
         # определяем масштаб
         targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
@@ -376,7 +377,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         lines = [lin for lin in block.getObjects(isGetShapes=False)]
         DrawPacketLines(lines, layer_lines)
 
-        for obj in block.getObjects(isGetLines=False):
+        # debug
+        objs = shapes + lines
+        for obj in objs:
             print(obj)
 
         # print(layer_shape)
@@ -722,7 +725,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         Load folders with maps on tabTopo by pb_getCoordinates
         """
-        self.progressBarLoadMapFromFolder.setValue(0)
+        # self.progressBarLoadMapFromFolder.setValue(0)
 
         # инициализируем слои для добавления
         block = self.vdo.get_block(next(folder_block.get_valid_blocks()))

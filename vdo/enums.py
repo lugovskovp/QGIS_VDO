@@ -140,44 +140,44 @@ class en_POI_CAT(enum.Enum):    	# //{en_PLACE_CATEGORY	 0xA 0xC blocks
     Business          = 0x3D  # // Olsztyn, Poland https://en.wikipedia.org/wiki/Michelin_Polska
 
 
-'''
+    '''
 
- OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
- 1991 - 2005 SiemensVDO Automotive AG
- 
- 
-    rt3595.img - CT_db_EN.CD 
-    Road : Town : Curr. loc Archive « » Town halls, town centre Universities, colleges 
-    Hospitals Hotels Restaurants Vinyards Business centres, industrial sites Shopping, Supermarkets Tradesmen Cult/·
-    ure, museums, theatres Tourism, historic monuments Shows and exhibitions Casinos and nightlife Cinemas Sports centres Golf cours/Z
-    es Skating rinks, bowling alleys Winter sports resorts Parks and gardens Theme parks Airports, Ports Stations, bus stations Auto.«
-    matic checks Vehicle rental Rest areas, car parks Service stations, garages 
+    OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
+    1991 - 2005 SiemensVDO Automotive AG
+    
+    
+        rt3595.img - CT_db_EN.CD 
+        Road : Town : Curr. loc Archive « » Town halls, town centre Universities, colleges 
+        Hospitals Hotels Restaurants Vinyards Business centres, industrial sites Shopping, Supermarkets Tradesmen Cult/·
+        ure, museums, theatres Tourism, historic monuments Shows and exhibitions Casinos and nightlife Cinemas Sports centres Golf cours/Z
+        es Skating rinks, bowling alleys Winter sports resorts Parks and gardens Theme parks Airports, Ports Stations, bus stations Auto.«
+        matic checks Vehicle rental Rest areas, car parks Service stations, garages 
 
-    TOWN HALLS, TOWN CENTRE UNIVERSITIES, COLLEGES HOSPITALS HOTELS RESTAURANTS VINYARDS BUSINESS CENTRES, INDUSTRIAL SITES 
-    SHOPPING, SUPERMARKETS TRADESMEN CULTURE, MUSEUMS AND THEATRES TOURISM, HISTOR"ň
-    IC MONUMENTS SHOWS AND EXHIBITIONS CASINOS AND NIGHTLIFE CINEMAS SPORTS CENTRES GOLF COURSES SKATING RINKS, BOWLING ALLEYS WINTE".
-    R SPORTS RESORTS PARKS AND GARDENS THEME PARKS AIRPORTS, PORTS STATIONS, BUS STATIONS AUTOMATIC CHECKS VEHICLE RENTAL REST AREAS"
-    , CAR PARKS SERVICE STATIONS, GARAGES 
+        TOWN HALLS, TOWN CENTRE UNIVERSITIES, COLLEGES HOSPITALS HOTELS RESTAURANTS VINYARDS BUSINESS CENTRES, INDUSTRIAL SITES 
+        SHOPPING, SUPERMARKETS TRADESMEN CULTURE, MUSEUMS AND THEATRES TOURISM, HISTOR"ň
+        IC MONUMENTS SHOWS AND EXHIBITIONS CASINOS AND NIGHTLIFE CINEMAS SPORTS CENTRES GOLF COURSES SKATING RINKS, BOWLING ALLEYS WINTE".
+        R SPORTS RESORTS PARKS AND GARDENS THEME PARKS AIRPORTS, PORTS STATIONS, BUS STATIONS AUTOMATIC CHECKS VEHICLE RENTAL REST AREAS"
+        , CAR PARKS SERVICE STATIONS, GARAGES 
 
-    DTdb7_EN.CD 
-    Hotels, Restaurants and Shops Culture, tourism and shows Sports and open air centres Transports and automobile 
-    Airports, Ports Stations, bus stations Automatic checks Vehicle rental Lay-bys, car parks 
-    Service stations, garages Hotels Restaurants Vinyards Business centres Shopping, Supermarkets Tradesmen Town halls, town centre 
-    Universities, colleges Hospitals Sports centres Golf courses Skating rinks, bowling alleys Winter sports resorts Parks, gardens  
-    Theme parks Tourism, historic monuments Culture, museums, theatres Shows and exhibitions Casinos and nightlife Cinemas 
+        DTdb7_EN.CD 
+        Hotels, Restaurants and Shops Culture, tourism and shows Sports and open air centres Transports and automobile 
+        Airports, Ports Stations, bus stations Automatic checks Vehicle rental Lay-bys, car parks 
+        Service stations, garages Hotels Restaurants Vinyards Business centres Shopping, Supermarkets Tradesmen Town halls, town centre 
+        Universities, colleges Hospitals Sports centres Golf courses Skating rinks, bowling alleys Winter sports resorts Parks, gardens  
+        Theme parks Tourism, historic monuments Culture, museums, theatres Shows and exhibitions Casinos and nightlife Cinemas 
 
-    own halls, town centre Universities, colleges Tourism, historic monuments Shows and exhibitions 
-    Casinos and nightlife Cinemas Sports centres Golf courses Skating rinks, bowling alleys Winter sports resorts 
-    Parks and gardens Theme parks Hospitals Airports, Ports Stations, bus stations Automatic checks Vehicle rental Lay-bys, car parks 
-    Service stations, garages Hotels Restaurants Vinyards Business centres Supermarkets Shopping Culture, museums and theatres 
+        own halls, town centre Universities, colleges Tourism, historic monuments Shows and exhibitions 
+        Casinos and nightlife Cinemas Sports centres Golf courses Skating rinks, bowling alleys Winter sports resorts 
+        Parks and gardens Theme parks Hospitals Airports, Ports Stations, bus stations Automatic checks Vehicle rental Lay-bys, car parks 
+        Service stations, garages Hotels Restaurants Vinyards Business centres Supermarkets Shopping Culture, museums and theatres 
 
-    Universities, colleges Town halls, town centre Hospitals Airports, Ports Vehicle rental 
-    Service stations, garages Automatic checks Lay-bys, car parks Stations, bus stations Business centres HЇtels  
-    Restaurants  Shopping, Supermarkets Tradesmen Vinyards Skating rinks, bowling alleys Theme parks Golf courses 
-    Parks and gardens Sports centres Winter sports resorts Casinos and nightlife Cinemas Culture, museums and theatres 
-    Shows and exhibitions Tourism, historic monuments
+        Universities, colleges Town halls, town centre Hospitals Airports, Ports Vehicle rental 
+        Service stations, garages Automatic checks Lay-bys, car parks Stations, bus stations Business centres HЇtels  
+        Restaurants  Shopping, Supermarkets Tradesmen Vinyards Skating rinks, bowling alleys Theme parks Golf courses 
+        Parks and gardens Sports centres Winter sports resorts Casinos and nightlife Cinemas Culture, museums and theatres 
+        Shows and exhibitions Tourism, historic monuments
 
-'''
+    '''
 
 
 @enum.unique
@@ -234,19 +234,19 @@ class en_TeleAtlasRegion(enum.Enum):             # TeleAtlasHexRegion
 @enum.unique
 class en_GEO_CATEGORY(enum.Enum):    	#//{en_GEO_OBJ_TYPE	// 03->05->06->08->01->00 blocks MAPS
     """
-Rак искать недостающие коды самостоятельно в сети:
-Если в процессе парсинга вы наткнетесь на неизвестный байт (например, 0x12 или 0x6F), используйте следующие 
-поисковые маркеры в Google, GitHub или специализированных GIS-форумах (вроде GPSPower, Digital-Eliteboard или 
-OpenStreetMap Wiki):
-::Поиск по спецификациям GDF: Ищите комбинации вида "GDF 4.0" Feature Class codes list или 
-"ISO 14825" attribute tables. В официальных PDF-документах ISO (иногда их выкладывают университеты) 
-есть полные таблицы маппинга.
-::Поиск по исходникам старых конвертеров: На GitHub ищите репозитории по ключевым 
-словам "MultiNet" parser, "GDF" converter, или "SDAL" decoding (SDAL — конкурирующий открытый формат от Navteq, 
-но логика типов объектов там пересекается).
-::OSM Mapping Tables: В википедии OpenStreetMap есть официальные страницы перевода (маппинга) проприетарных карт 
-в OSM: ищите "Tele Atlas MultiNet to OSM" table. Там энтузиасты часто публикуют точные таблицы соответствия 
-внутренних ID классов Tele Atlas тегам OSM (landuse=forest, highway=motorway).
+        Rак искать недостающие коды самостоятельно в сети:
+        Если в процессе парсинга вы наткнетесь на неизвестный байт (например, 0x12 или 0x6F), используйте следующие 
+        поисковые маркеры в Google, GitHub или специализированных GIS-форумах (вроде GPSPower, Digital-Eliteboard или 
+        OpenStreetMap Wiki):
+        ::Поиск по спецификациям GDF: Ищите комбинации вида "GDF 4.0" Feature Class codes list или 
+        "ISO 14825" attribute tables. В официальных PDF-документах ISO (иногда их выкладывают университеты) 
+        есть полные таблицы маппинга.
+        ::Поиск по исходникам старых конвертеров: На GitHub ищите репозитории по ключевым 
+        словам "MultiNet" parser, "GDF" converter, или "SDAL" decoding (SDAL — конкурирующий открытый формат от Navteq, 
+        но логика типов объектов там пересекается).
+        ::OSM Mapping Tables: В википедии OpenStreetMap есть официальные страницы перевода (маппинга) проприетарных карт 
+        в OSM: ищите "Tele Atlas MultiNet to OSM" table. Там энтузиасты часто публикуют точные таблицы соответствия 
+        внутренних ID классов Tele Atlas тегам OSM (landuse=forest, highway=motorway).
     """
     """
     Площадные (полигональные) объекты — 'Background layers' (Диапазон 0x00 - 0x3F).

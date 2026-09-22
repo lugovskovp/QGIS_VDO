@@ -333,6 +333,7 @@ LAYERS_PROPERTY = [
         'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
                        ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
                        ('name', QMetaType.Type.QString),
+                       ('name2', QMetaType.Type.QString),
                        ('id', QMetaType.Type.Int),
                        ('block', QMetaType.Type.QString),
                        # непонятные WORD

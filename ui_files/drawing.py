@@ -140,6 +140,7 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
     field_idx_variant = fields.indexOf('variant')
     field_idx_render_order = fields.indexOf('render_order')
     field_idx_name = fields.indexOf('name')
+    field_idx_name2 = fields.indexOf('name2')
     field_idx_id = fields.indexOf('id')
     field_idx_block = fields.indexOf('block')
     field_idx_c_p_line_sign = fields.indexOf('c_p_line_sign')
@@ -185,6 +186,8 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_variant, item.cat.name)
         if field_idx_name != -1:
             feature.setAttribute(field_idx_name, item.name.capitalize() if item.name else "")
+        if field_idx_name2 != -1:
+            feature.setAttribute(field_idx_name2, item.name2 if item.name2 else "")
         if field_idx_id != -1:
             feature.setAttribute(field_idx_id, item.id)
         if field_idx_block != -1:
@@ -195,13 +198,13 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_render_order, str(item.cat.value))
 
         if field_idx_c_p_line_sign != -1:
-            feature.setAttribute(field_idx_c_p_line_sign, item.c_p_line_sign)
+            feature.setAttribute(field_idx_c_p_line_sign, f"{item.c_p_line_sign:04X}")
         if field_idx_c_b_or_c != -1:
-            feature.setAttribute(field_idx_c_b_or_c, item.c_b_or_c)
+            feature.setAttribute(field_idx_c_b_or_c, f"{item.c_b_or_c:04X}")
         if field_idx_c_pp_str_name != -1:
-            feature.setAttribute(field_idx_c_pp_str_name, item.c_pp_str_name)
+            feature.setAttribute(field_idx_c_pp_str_name, f"{item.c_pp_str_name:04X}")   # readed
         if field_idx_c_38_or_0b_country != -1:
-            feature.setAttribute(field_idx_c_38_or_0b_country, item.c_38_or_0b_country)
+            feature.setAttribute(field_idx_c_38_or_0b_country, f"{item.c_38_or_0b_country:04X}")
 
         features_to_add.append(feature)
 

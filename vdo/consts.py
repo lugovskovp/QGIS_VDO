@@ -353,6 +353,23 @@ LAYERS_PROPERTY = [
             {'description' : 'Roads A', 'color': "#ffffff", 'background': "#3232ff", 'label_min_size': 10.0,
              'condition' : "variant ~ '^ROAD_' and name ~ '^A'", 'placement' : Qgis.LabelPlacement.Horizontal,
              'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+
+            {'description' : 'ROAD_LOCAL', 'color': "#9c7c5d", 'label_min_size': 10.0,
+             'condition' : "variant = 'ROAD_LOCAL'",
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'ROAD_UNPAVED', 'color': "#9c7c5d", 'label_min_size': 10.0,
+             'condition' : "variant = 'ROAD_UNPAVED'",
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'CANAL', 'color': "#4400FF", 'label_min_size': 10.0,
+             'condition' : "variant = 'CANAL'",
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'RIVER_STREAM', 'color': "#4400FF", 'label_min_size': 10.0,
+             'condition' : "variant = 'RIVER_STREAM'",
+             'font_family': 'Arial', 'font_size': 7, 'bold': True, },
+            {'description' : 'RIVER_MAJOR', 'color': "#4400FF", 'label_min_size': 10.0,
+             'condition' : "variant = 'RIVER_MAJOR'", 'placement' : Qgis.LabelPlacement.Curved,
+             'font_family': 'Arial', 'font_size': 9, 'bold': True, },
+
         ],
         'styles': [
             {
@@ -361,54 +378,18 @@ LAYERS_PROPERTY = [
                     {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
                     {"color": "#fff888", "width": 0.6, "pen_style": "solid"}
                 ],
-                # 'label_style': {
-                #     'font_family': 'Arial',
-                #     'font_size': 8,
-                #     # 'size_in_meters' : True,
-                #     'color': "#222222",         #
-                #     'bold': True,
-                #     'buffer_enabled': True,     # Включаем обводку
-                #     'buffer_color': "#ffffff",  # Белая обводка
-                #     'buffer_size': 1.0,
-                #     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
-                #     # "remove_duplicates": True,
-                # }
             },
             {
                 'name': 'ROAD_PRIME',
                 'style': [
                     {"color": "#e15a1f", "width": 0.8, "pen_style": "solid"},
                 ],
-                # 'label_style': {
-                #     'font_family': 'Arial',
-                #     'font_size': 8,
-                #     # 'size_in_meters' : True,
-                #     'color': "#222222",         #
-                #     'bold': True,
-                #     'buffer_enabled': True,     # Включаем обводку
-                #     'buffer_color': "#ffffff",  # Белая обводка
-                #     'buffer_size': 1.0,
-                #     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
-                #     # "remove_duplicates": True,
-                # }
             },
             {
                 'name': 'ROAD_MINOR',
                 'style': [
                     {"color": "#e15a1f", "width": 0.5, "pen_style": "solid"},
                 ],
-                # 'label_style': {
-                #     'font_family': 'Arial',
-                #     'font_size': 8,
-                #     # 'size_in_meters' : True,
-                #     'color': "#222222",         #
-                #     'bold': True,
-                #     'buffer_enabled': True,
-                #     'buffer_color': "#ffffff",
-                #     'buffer_size': 1.0,
-                #     'label_min_size': 5.0,  # Скрывать подпись, если полигон на экране меньше 5 мм,
-                #     # "remove_duplicates": True,
-                # }
             },
             {
                 'name': 'ROAD_LOCAL',   # Внутриквартальные
@@ -476,7 +457,7 @@ LAYERS_PROPERTY = [
                 ],
             },
             {
-                'name': 'FERRY_CONNECTION',    #
+                'name': 'FERRY_CONNECTION',    # паром?
                 'style': [
                     {"color": "#a500a2", "width": 0.4, "pen_style": "dot"},
                 ],

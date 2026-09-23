@@ -17,25 +17,31 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLa
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker, PaintMapsProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.vdo import VDO_FILE, COORD, BLADDR
-from QGIS_VDO.vdo.blocks import (block_0x12,
-                                 block_0x13,
-                                 block_0x07,
-                                 block_0x08,
-                                 block_0x09)
+from QGIS_VDO.vdo.blocks import (
+    block_0x12,
+    block_0x13,
+    block_0x07,
+    block_0x08,
+    block_0x09,
+)
 from QGIS_VDO.vdo.blocks.block_0x07 import SCALE
-from QGIS_VDO.vdo.consts import (NAME_LAYER_GLOBAL_BOUNDS,
-                                 NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_SHAPES,
-                                 NAME_LAYER_LINES
-                                 )
 
-from QGIS_VDO.ui_files import (AnimatedGroupBox,
-                               ClickCoordinatesTool,
-                               _DrawRectangleArea,
-                               _DrawPacketAreas,
-                               DrawPacketShapes,
-                               DrawPacketLines
-                               )
+from QGIS_VDO.vdo import (
+    NAME_LAYER_GLOBAL_BOUNDS,
+    NAME_LAYER_ALMANACS,
+    NAME_LAYER_SHAPES,
+    NAME_LAYER_LINES,
+    NAME_LAYER_POI,
+)
+
+from QGIS_VDO.ui_files import (
+    AnimatedGroupBox,
+    ClickCoordinatesTool,
+    _DrawRectangleArea,
+    _DrawPacketAreas,
+    DrawPacketShapes,
+    DrawPacketLines,
+)
 from QGIS_VDO.ui_files.drawing import getCrsProjection, getLayer
 
 
@@ -366,7 +372,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # определяем масштаб
         targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
         # слой по соответствию типа block, а не текущий
-        layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+        scale_group = self._getScaleGroup(targetScale)
+        layer_poi = getLayer(scale_group, NAME_LAYER_POI)
+        del layer_poi
+        
+        layer_shape = getLayer(scale_group, NAME_LAYER_SHAPES)
 
         # получаем полигоны слоя
         shapes = [shp for shp in block.getObjects(isGetLines=False)]

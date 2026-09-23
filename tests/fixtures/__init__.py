@@ -14,4 +14,4 @@ BIN_FILES = [
 @pytest.fixture(params=BIN_FILES, ids=lambda f: f.split('_')[0])
 def bin_file_path(request):
     """Поочередно возвращает Path к каждому из трех bin-файлов"""
-    return FIXTURES_DIR / request.param
+    return FIXTURES_DIR / request.param     # pragma: no cover

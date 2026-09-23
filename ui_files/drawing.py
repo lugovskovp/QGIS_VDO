@@ -3,26 +3,29 @@
 """
 
 
-from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProject,
-                       QgsSingleSymbolRenderer, QgsFillSymbol, QgsLineSymbol, QgsMarkerSymbol, QgsFeature,
-                       QgsFeatureRequest, QgsGeometry, QgsApplication,
-                       QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
-                       QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
-                       QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
-                       QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
-                       QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings)
+from qgis.core import (
+    Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProject,
+    QgsSingleSymbolRenderer, QgsFillSymbol, QgsLineSymbol, QgsMarkerSymbol, QgsFeature,
+    QgsFeatureRequest, QgsGeometry, QgsApplication,
+    QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
+    QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
+    QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
+    QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
+    QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings
+)
 from qgis.PyQt.QtCore import Qt, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont
 
-from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_POI,
-                                 NAME_LAYER_SHAPES,
-                                 NAME_LAYER_LINES,
-                                 CRS_NAME, CRS_PROJECTION_STRING,
-                                 LAYERS_PROPERTY,
-                                 PEN_STYLES,
-                                 FILL_STYLES
-                                 )
+from QGIS_VDO.vdo import (
+    NAME_LAYER_ALMANACS,
+    NAME_LAYER_POI,
+    NAME_LAYER_SHAPES,
+    NAME_LAYER_LINES,
+    CRS_NAME, CRS_PROJECTION_STRING,
+    LAYERS_PROPERTY,
+    PEN_STYLES,
+    FILL_STYLES
+)
 
 
 ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]

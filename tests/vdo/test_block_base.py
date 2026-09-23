@@ -107,7 +107,7 @@ def test_block_base_offset_next_behavior(real_base_block):
         assert isinstance(offset, int)
         assert offset > 0
     else:
-        assert real_base_block.vdo.file_path is None
+        assert real_base_block.vdo.file_path is None    # pragma: no cover
 
 
 def test_block_base_read_last_block(real_base_block):
@@ -197,7 +197,7 @@ def test_block_base_init_corrupted_zlib(real_vdo_fixture):
             
             # Блок должен перехватить ошибку zlib и выставить флаг в False
             assert block.is_unpacked is False
-        except (ValueError, TypeError):
+        except (ValueError, TypeError):     # pragma: no cover
             # Если BLADDR не захотел собираться из-за фейковых байт,
             # создаем его через легальный буфер, а подмену включаем только на block_base
             pass

@@ -429,6 +429,189 @@ LAYERS_PROPERTY = [
             # ('id', QMetaType.Type.Int),
             # ('block', QMetaType.Type.QString),
         ],
+        'styles': [
+            {
+                'name': 'Car_repair',
+                'style' : {'svg_path': 'shopping/shopping_car_repair.svg', 'size': '8'},  #
+            },
+            {
+                'name': 'Gas_station',
+                'style' : {'svg_path': 'gpsicons/gas.svg', 'size': '6'},  # noqa'transport/transport_fuel.svg'
+            },
+            {
+                'name': 'CarRent',
+                'style' : {'svg_path': 'transport/transport_rental_car.svg', 'size': '8'},
+            },
+            {
+                'name': 'Parking',
+                'style' : {'svg_path': 'gpsicons/parking.svg', 'size': '8'},  # noqa transport/transport_parking.svg
+            },
+            {
+                'name': 'ParkAndRide',
+                'style' : {'svg_path': 'transport/transport_parking_bicycle.svg', 'size': '8'},
+            },
+            {
+                'name': 'RestingPlace',
+                'style' : {'svg_path': 'gpsicons/teepee.svg', 'size': '8'},
+            },
+            {
+                'name': 'Intresting',
+                'style' : {'svg_path': 'tourist/tourist_view_point.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Hotel',
+                'style' : {'svg_path': 'services/tourism=hotel.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Restaurant',
+                'style' : {'svg_path': 'gpsicons/food.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Bank',
+                'style' : {'svg_path': 'money/money_bank2.svg', 'color': 'green', 'size': '8'},
+            },
+            {
+                'name': 'Culture',
+                'style' : {'svg_path': 'tourist/tourist_fountain.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Library',
+                'style' : {'svg_path': 'shopping/shopping_book.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Court',
+                'style' : {'svg_path': 'sport/sport_tennis.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'UNKN_BMW',
+                'style' : {'svg_path': 'shopping/shopping_motorcycle.svg', 'color': 'red', 'size': '8'},
+            },
+            {
+                'name': 'Embassy',
+                'style' : {'svg_path': 'gpsicons/parachute.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'BankomatATM',
+                'style' : {'svg_path': 'gpsicons/dollar.svg', 'color': 'green', 'size': '8'},
+            },
+            {
+                'name': 'Tourist_info',
+                'style' : {'svg_path': 'gpsicons/question.svg', 'color': 'blue', 'size': '8'},  # noqa tourist/tourisum_fountain.svg
+            },
+            {
+                'name': 'Museum',
+                'style' : {'svg_path': 'landmark/tourism=museum.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Theater',
+                'style' : {'svg_path': 'tourist/tourist_theatre.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Sport',
+                'style' : {'svg_path': 'sport/sport_soccer.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Church',
+                'style' : {'svg_path': 'religion/place_of_worship_christian.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Architecture',
+                'style' : {'svg_path': 'tourist/tourist_museum.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Fun_park',
+                'style' : {'svg_path': 'tourist/tourist_waterwheel.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Nature_park',
+                'style' : {'svg_path': 'tourist/tourist_zoo.svg', 'size': '8', 'color': 'orange', },
+            },
+            {
+                'name': 'UN_United_Nations',
+                'style' : {'svg_path': 'wind_roses/WindRose_01.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Hospital',
+                'style' : {'svg_path': 'health/health_hospital_emergency2.svg', 'color': 'red', 'size': '8'},
+            },
+            {
+                'name': 'Police',
+                'style' : {'svg_path': 'amenity/amenity_police.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Goverment',
+                'style' : {'svg_path': 'amenity/amenity_court.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Post',
+                'style' : {'svg_path': 'amenity/amenity_post_office.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Clinic',
+                'style' : {'svg_path': 'emergency/amenity=hospital.svg', 'color': 'red', 'size': '8'},
+            },
+            {
+                'name': 'Aphoteca',
+                'style' : {'svg_path': 'health/health_pharmacy.svg', 'color': 'red', 'size': '8'},
+            },
+            {
+                'name': 'Shop',
+                'style' : {'svg_path': 'services/shop=supermarket.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'City',
+                'style' : {'svg_path': 'gpsicons/city_large.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Cinema',
+                'style' : {'svg_path': 'entertainment/amenity=cinema.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'GolfClub',
+                'style' : {'svg_path': 'gpsicons/golf.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'RailStation',
+                'style' : {'svg_path': 'transport/transport_train_station2.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Border_point',
+                'style' : {'svg_path': 'transport/barrier_enterance.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Seaport',
+                'style' : {'svg_path': 'transport/amenity=ferry_terminal.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'BusStation',
+                'style' : {'svg_path': 'transport/transport_bus_stop2.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Pier',
+                'style' : {'svg_path': 'transport/transport_marina.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Shcool',
+                'style' : {'svg_path': 'symbol/education_university.svg', 'color': 'blue', 'size': '8'},
+            },
+            {
+                'name': 'Winery',
+                'style' : {'svg_path': 'food/food_bar.svg', 'color': 'orange', 'size': '8'},
+            },
+            {
+                'name': 'Airport',
+                'style' : {'svg_path': 'transport/transport_aerodrome.svg', 'color': 'blue', 'size': '10'},   # noqa 'gpsicons/plane.svg'
+            },
+            {
+                'name': 'MotorbikeService',
+                'style' : {'svg_path': 'transport/transport_rental_bicycle.svg', 'size': '8'},
+            },
+            {
+                'name': 'Business',
+                'style' : {'svg_path': 'amenity/amenity_telephone.svg', 'color': 'green', 'size': '8'},
+            },
+            # {'name': 'unknown', },   # c:\OSGeo4W\apps\qgis-ltr\svg\gpsicons\question.svg
+        ],
     },
 ]
 

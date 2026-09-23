@@ -206,7 +206,7 @@ class block_base(BYTESTRUCT):
         try:
             with open(name, "wb") as f:
                 f.write(self._raw)
-        except PermissionError:
+        except PermissionError:         # pragma: no cover
             print(f"Ошибка прав доступа записи _base_block.bin {str(self)}")
 
 

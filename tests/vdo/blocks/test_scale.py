@@ -131,7 +131,7 @@ def sc_fixture(request):
         if metrics["segsize"] == 0x200:
             path = FIXTURES_DIR / 'DB34_0h_3A01h.bin'
         else:
-            path = FIXTURES_DIR / 'carindb34_0h_6800h.bin'
+            path = FIXTURES_DIR / 'carindb34_0h_6800h.bin'      # # pragma: no cover
     else:
         path = FIXTURES_DIR / 'carindb30_0h_9000h.bin'
 

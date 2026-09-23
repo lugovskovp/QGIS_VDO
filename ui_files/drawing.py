@@ -2,27 +2,31 @@
 Функции отображения на карте qgis
 """
 
+import os
 
-from qgis.core import (Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProject,
-                       QgsSingleSymbolRenderer, QgsFillSymbol, QgsLineSymbol, QgsMarkerSymbol, QgsFeature,
-                       QgsFeatureRequest, QgsGeometry, QgsApplication,
-                       QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
-                       QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
-                       QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
-                       QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
-                       QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings)
+from qgis.core import (
+    Qgis, QgsVectorLayer, QgsPointXY, QgsRectangle, QgsProject,
+    QgsSingleSymbolRenderer, QgsFillSymbol, QgsLineSymbol, QgsMarkerSymbol, QgsFeature,
+    QgsFeatureRequest, QgsGeometry, QgsApplication,
+    QgsCoordinateReferenceSystem, QgsCategorizedSymbolRenderer,
+    QgsLayerTreeLayer, QgsLayerTreeGroup, QgsField, QgsRendererCategory,
+    QgsVectorSimplifyMethod, QgsTextBufferSettings, QgsTextFormat,
+    QgsPalLayerSettings, QgsRuleBasedLabeling, QgsUnitTypes, QgsSimpleLineSymbolLayer,
+    QgsSimpleFillSymbolLayer, QgsTextBackgroundSettings, QgsSvgMarkerSymbolLayer
+)
 from qgis.PyQt.QtCore import Qt, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont
 
-from QGIS_VDO.vdo.consts import (NAME_LAYER_ALMANACS,
-                                 NAME_LAYER_POI,
-                                 NAME_LAYER_SHAPES,
-                                 NAME_LAYER_LINES,
-                                 CRS_NAME, CRS_PROJECTION_STRING,
-                                 LAYERS_PROPERTY,
-                                 PEN_STYLES,
-                                 FILL_STYLES
-                                 )
+from QGIS_VDO.vdo import (
+    NAME_LAYER_ALMANACS,
+    NAME_LAYER_POI,
+    NAME_LAYER_SHAPES,
+    NAME_LAYER_LINES,
+    CRS_NAME, CRS_PROJECTION_STRING,
+    LAYERS_PROPERTY,
+    PEN_STYLES,
+    FILL_STYLES
+)
 
 
 ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]
@@ -788,12 +792,44 @@ def _create_complex_symbol(geometry_type: str, style_item: dict) -> object:
             f_style = lyr_cfg.get('fill_style', 'solid')
             sl.setBrushStyle(FILL_STYLES.get(f_style, Qt.SolidPattern))
 
+        elif 'Point' in geometry_type:
+            svg_path = lyr_cfg.get('svg_path')
+            if svg_path is None:
+                continue
+            full_svg_path = None
+            for base_dir in QgsApplication.svgPaths():
+                potential_path = os.path.join(base_dir, svg_path)
+                if os.path.exists(potential_path):
+                    full_svg_path = potential_path
+                    break
+            
+            # svg_path = 'gpsicons/plane.svg'
+            size = int(lyr_cfg.get('size', 6))
+            sl = QgsSvgMarkerSymbolLayer(full_svg_path, size)   # 'gpsicons/plane.svg'
+
+            fill_color = lyr_cfg.get('color', None)
+            if fill_color:
+                # (Опционально) Настройка цветов, если иконка должна быть цветной
+                sl.setFillColor(QColor(fill_color))      # Цвет заливки
+                # sl.setStrokeColor(QColor('white'))   # Цвет контура
+                # sl.setStrokeWidth(0.4)               # Толщина контура
+
+            pass
+
+        else:
+            raise AttributeError(f"WTF? geometry type == '{geometry_type}'???")
+        
         # Собираем многослойный пирог
         if idx == 0:
             symbol.changeSymbolLayer(0, sl)
         else:
             symbol.appendSymbolLayer(sl)
-            
+    # TODO а вот тут добавить бы значение по-умолчанию для элементов, где variant в список не попал
+    # if 'Point' in geometry_type:
+    #     svg_path = "some_path"
+    #     svg_layer = QgsSvgMarkerSymbolLayer(svg_path, size=15)
+    #     symbol.appendSymbolLayer(svg_layer)
+    # а не, не тут
     return symbol
 
 

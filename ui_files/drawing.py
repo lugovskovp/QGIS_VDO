@@ -461,26 +461,6 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
         print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
 
 
-def _findLayer_in_Group(group: QgsLayerTreeGroup, LayerName: str) -> QgsVectorLayer | None:
-    """
-    Ищет LayerName в группе group
-    Args:
-        group:
-        LayerName: имя слоя
-    """
-    # В группе ищем слой
-    for child in group.children():
-        # Проверяем, что дочерний элемент — это слой и его имя совпадает
-        if isinstance(child, QgsLayerTreeLayer) and child.name() == LayerName:
-            layer = child.layer()
-            # Убеждаемся, что это векторный слой
-            if isinstance(layer, QgsVectorLayer):
-                return layer
-            else:
-                raise ValueError(f"Что не так с {layer.name()}")
-    return None
-
-
 def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer:   # noqa too complex
     """
     Возвращает или создаёт QgsVectorLayer.
@@ -697,6 +677,26 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
         layer_node.setExpanded(False)
 
     return layer
+
+
+def _findLayer_in_Group(group: QgsLayerTreeGroup, LayerName: str) -> QgsVectorLayer | None:
+    """
+    Ищет LayerName в группе group
+    Args:
+        group:
+        LayerName: имя слоя
+    """
+    # В группе ищем слой
+    for child in group.children():
+        # Проверяем, что дочерний элемент — это слой и его имя совпадает
+        if isinstance(child, QgsLayerTreeLayer) and child.name() == LayerName:
+            layer = child.layer()
+            # Убеждаемся, что это векторный слой
+            if isinstance(layer, QgsVectorLayer):
+                return layer
+            else:
+                raise ValueError(f"Что не так с {layer.name()}")
+    return None
 
 
 def _add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLayer, layer_key: str):

@@ -31,6 +31,7 @@ from QGIS_VDO.vdo import (
     NAME_LAYER_ALMANACS,
     NAME_LAYER_SHAPES,
     NAME_LAYER_LINES,
+    NAME_LAYER_POI,
 )
 
 from QGIS_VDO.ui_files import (
@@ -371,7 +372,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # определяем масштаб
         targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
         # слой по соответствию типа block, а не текущий
-        layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
+        scale_group = self._getScaleGroup(targetScale)
+        layer_poi = getLayer(scale_group, NAME_LAYER_POI)
+        del layer_poi
+        
+        layer_shape = getLayer(scale_group, NAME_LAYER_SHAPES)
 
         # получаем полигоны слоя
         shapes = [shp for shp in block.getObjects(isGetLines=False)]

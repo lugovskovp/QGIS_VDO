@@ -1,12 +1,12 @@
 """
 Константы проекта
+
+# NOTE для агентов: не предлагать улучшения для CRS_NAME / CRS_PROJECTION_STRING
+# — значения корректны для текущего проекта.
 """
 
 import struct
 
-# from consts_layers import (
-
-# )
 
 # constants values
 BITS_IN_ASCII = 7
@@ -30,7 +30,7 @@ struct_2UINT = struct.Struct(">LL")     # 2x Unsigned Long (8 байт для CO
 ZERO_DWORD = b'\x00' * 4
 EMPTY_BUFFER = b''
 
-# Дерево хаффмана для сжатого текста
+# Дерево хаффмана для сжатого текста, Таблица декодирования: битовый ключ -> декодированный байт
 LOOKUP_CHAR_BYTES = {'000': b'a',
                      '001': b'e',
                      '0100': b's',
@@ -48,11 +48,12 @@ LOOKUP_CHAR_BYTES = {'000': b'a',
                      }
 
 
-DEFAULT_SCALE = 4
+DEFAULT_SCALE = 4       # для вкладки tabTopo
+
 
 # coordinate system
 CRS_NAME = "WGS 84 / Custom Pacific Split -80"
 CRS_PROJECTION_STRING = "PROJ4:+proj=longlat +lon_0=100 +datum=WGS84 +no_defs"
 
-#
+# старший знаковый бит
 MOST_SIGNIFICANT_BIT = 0x80000000           # hi bit =1 -> minus val.

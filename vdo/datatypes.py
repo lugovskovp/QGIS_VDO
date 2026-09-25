@@ -1,14 +1,29 @@
 """
+Модуль определяет базовые типы данных и структуры для работы с файловым форматом VDO (картографические данные CarIND).
+Это ядро парсера бинарного формата навигационных баз данных.
 
 классы:
-VDO_FILE
-BYTESTRUCT
+VDO_FILE    # Главный интерфейс для работы с VDO-файлами, реализует паттерн синглтон для пустого файла
+BYTESTRUCT  # Базовый класс для всех структурных типов с zero-copy memory management
 BL_ADDR  DWORD, Структура адреса блока
 PTR      WORD near - указатель
 LIST
 FAR_LIST
 CH_IDX
 BLSTART
+
+Архитектурные паттерны
+    Паттерн	Где используется
+    Синглтон	VDO_FILE для пустой заглушки
+    Zero-copy	BYTESTRUCT + memoryview
+    __slots__	Все классы — экономия памяти
+    Динамический импорт	setup_known_types() + get_block()
+    Композиция	FAR_LIST = BLADDR + LIST, CH_IDX = BLADDR + LIST, BLSTART = BLADDR
+Сильные стороны
+    Производительность: memoryview + __slots__ + struct.unpack_from — минимум аллокаций
+    Безопасность типов: Строгая проверка isinstance() в конструкторах
+    Масштабируемость: Динамическая загрузка блоков из blocks/ без хардкода
+    Изоляция контекста: Каждый структурный тип привязан к VDO_FILE через vdo
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
@@ -89,7 +104,15 @@ KNOWN_BLOCKS = setup_known_types()
 
 # ----
 class VDO_FILE:
-    """ класс работы с файлом формата carindb """
+    """
+    Роль: Главный интерфейс для работы с VDO-файлами, реализует паттерн синглтон для пустого файла
+
+    __slots__ — экономия памяти, жёстко фиксированные атрибуты
+    __new__ + __init__ — разделение логики: невалидный файл возвращает синглтон-заглушку
+    Метод get_block() — динамическая загрузка классов блоков через importlib из папки blocks/
+    load_single_block() — загрузка одного блока из отдельного файла (обходит синглтон-систему)
+    Встроенная валидация по маркеру формата (первые 4 байта == 1)
+    """
     
     # Запрещаем создание __dict__, жестко фиксируем свойства экземпляра
     __slots__ = (
@@ -495,10 +518,15 @@ class VDO_FILE:
 
     
 # ================================================
-
-
 class BYTESTRUCT:
-    """Base for other data structures with high-performance zero-copy memory management."""
+    """
+    Роль: Базовый класс для всех структурных типов с zero-copy memory management
+
+    memoryview — нулевое копирование буфера
+    __slots__ = ("_raw",) — только один слот
+    Методы: read(), read_str() (cp1250, 0-terminated), uchar(), ushort(), uint()
+    hex — отладочный дамп памяти по 16 байт
+    """
 
     # Выделяем память строго под один слот
     __slots__ = ("_raw",)
@@ -588,6 +616,10 @@ class BYTESTRUCT:
 
 class BLADDR(BYTESTRUCT):
     """
+    Роль: 4-байтовый адрес блока (3 байта номер + 1 байт размер в сегментах)
+    Свойства: blocknumber, segcnt, sizeofblock, offset, isZero
+    Сравнение: __eq__, __lt__, __le__ с проверкой совместимости segsize
+
     b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks
     """
     # Фиксируем слоты. Базовый '_raw' уже унаследован, здесь пишем только новые поля
@@ -595,7 +627,7 @@ class BLADDR(BYTESTRUCT):
     
     size: int = UINT_BYTES_CNT
 
-    def __init__(self, buffer: ReadableBuffer, vdo: getattr = None) -> None:
+    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None) -> None:
         # Передаем буфер строго фиксированной длины в базовый класс
         super().__init__(buffer, size=UINT_BYTES_CNT)
         
@@ -678,7 +710,11 @@ class BLADDR(BYTESTRUCT):
 
 # ----
 class PTR(BYTESTRUCT):
-    ''' Указатель(near) 01 02 -> near offset 0x102 '''
+    '''
+    Роль: 2-байтовый near-указатель (offset в пределах сегмента)
+
+    Указатель(near) 01 02 -> near offset 0x102
+    '''
     # Класс не вводит новых переменных, но чтобы не создавался __dict__,
     # нужно явно объявить пустые __slots__
     __slots__ = ()
@@ -712,8 +748,12 @@ class PTR(BYTESTRUCT):
     
 # ----
 class LIST(BYTESTRUCT):
-    ''' ptr: указатель(near) на начало массива; cnt: количество элементов
-    b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304 '''
+    '''
+    Роль: Пара ptr:cnt (указатель + счётчик элементов списка)
+    
+    ptr: указатель(near) на начало массива; cnt: количество элементов
+    b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304
+    '''
     # Сохраняем оптимизацию памяти базового класса, запрещая создание __dict__
     __slots__ = ()
 
@@ -741,7 +781,7 @@ class LIST(BYTESTRUCT):
 # ----
 class FAR_LIST(BYTESTRUCT):
     """
-    Композитная структура: BLADDR (4 байта) + LIST (4 байта).
+    Роль: Композит BLADDR + LIST (8 байт) — полный адрес блока + смещение внутри блока
     Общий размер: 8 байт.
     """
     # Жестко фиксируем поля в памяти. __dict__ больше не создается!
@@ -799,6 +839,8 @@ class FAR_LIST(BYTESTRUCT):
 # ==========
 class CH_IDX(BYTESTRUCT):
     '''
+    Роль: Индексный блок для поиска по буквам (страны, города, улицы, POI)
+    Структура: BLADDR(4) + char(1) + is_out(1) + LIST(4) + align(2) = 12 байт
     CH_IDX   3*DWORD, указатель на список букв или (страны, города, улицы, poi)
         0  DWORD bl_postaddr адрес блока
         4  byte  ch    собственно буква
@@ -865,7 +907,12 @@ class CH_IDX(BYTESTRUCT):
 
 # ==========
 class BLSTART(BYTESTRUCT):
-    """ Первый DWORD любого блока
+    """
+    Роль: Заголовок любого блока VDO
+    Структура: BLADDR(4) + bl_type(2) + arch_type(1) + unarch_size(1) = 8 байт
+    Свойства: bltype (enum), arch_type (0=не сжато, 1=bytype, 2=zlib), sizeofblock
+
+    Первый DWORD любого блока
         offset  type  sense         value
         00   dword   BLADDR          00000001 always
         04   word    bl_type         0012
@@ -881,7 +928,7 @@ class BLSTART(BYTESTRUCT):
         if len(buffer) < self.size:
             raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
         if vdo is not None and not isinstance(vdo, VDO_FILE):
-            raise TypeError(f"Тип vdo {len(buffer)} не VDO_FILE и не None")
+            raise TypeError(f"Тип vdo '{type(vdo)}' не VDO_FILE и не None")
             
         super().__init__(buffer, size=self.size)
         

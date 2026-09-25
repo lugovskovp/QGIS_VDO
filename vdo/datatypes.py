@@ -125,6 +125,8 @@ class VDO_FILE:
         "dbrev",
         "segsize",
         "file_size",
+        "_file_handle",
+        "_file_closed",
     )
     
     # Переменная класса для хранения синглтона (не входит в __slots__)
@@ -154,14 +156,24 @@ class VDO_FILE:
             if cls._singleton_instance is None:
                 cls._singleton_instance = super().__new__(cls)
                 cls._singleton_instance._initialized = False
+                cls._singleton_instance._file_handle = None
+                cls._singleton_instance._file_closed = True
             return cls._singleton_instance
 
         # Если файл валидный -> создаем новый объект
         obj = super().__new__(cls)
         obj._initialized = False
+        obj._file_handle = None
+        obj._file_closed = True
         return obj
 
     def __init__(self, file_path: Optional[str] = None):
+        # Инициализируем атрибуты ДО проверки _initialized,
+        # чтобы read() и close() могли безопасно вызываться даже при повторных init
+        self._file_handle = None
+        self._file_closed = True
+        self.is_empty = True  # дефолт: синглтон/пустой
+
         # Защита от повторной инициализации синглтона
         if getattr(self, "_initialized", False):
             return
@@ -187,6 +199,8 @@ class VDO_FILE:
         self.is_single = False
         self.filename = os.path.basename(path_str)
         self.file_size = os.path.getsize(self.file_path)
+        self._file_handle = None
+        self._file_closed = True
         
         # Безопасное чтение метаданных напрямую через распаковку bytes
         dbrev_bytes = self.read(OFFSET_DB_REVISION, 2)
@@ -209,15 +223,41 @@ class VDO_FILE:
         return f"{folder_name}_0x{self.file_size:04X}"
 
     def read(self, offset: int, size: int) -> bytes:
-        """Чтение блока байт заданной длины по указанному смещению."""
+        """Чтение блока байт заданной длины по указанному смещению.
+        
+        Использует кэшированный файловый дескриптор для избежания
+        повторных open/close при множественных чтениях.
+        """
         if self.is_empty or size <= 0 or (offset + size) > self.file_size:
             return EMPTY_BUFFER
+        
         try:
-            with open(self.file_path, "rb") as f:
-                f.seek(offset)
-                return f.read(size)
+            # Lazy open: открываем файл при первом чтении
+            if self._file_handle is None or self._file_closed:
+                self._file_handle = open(self.file_path, "rb")
+                self._file_closed = False
+            
+            self._file_handle.seek(offset)
+            return self._file_handle.read(size)
         except (OSError, FileNotFoundError):    # pragma: no cover
+            self._file_closed = True
+            if self._file_handle:
+                self._file_handle.close()
+                self._file_handle = None
             return EMPTY_BUFFER
+
+    def close(self) -> None:
+        """Явно закрыть кэшированный файловый дескриптор."""
+        fh = getattr(self, "_file_handle", None)
+        fc = getattr(self, "_file_closed", True)
+        if fh and not fc:
+            self._file_handle.close()
+            self._file_handle = None
+            self._file_closed = True
+
+    def __del__(self) -> None:
+        """Гарантируем закрытие дескриптора при сборке мусора."""
+        self.close()
 
     def get_bladdr(self, bladdr: Union[int, 'BLADDR']) -> 'BLADDR':
         """Возвращает экземпляр BLADDR, привязанный к текущему vdo context."""
@@ -354,6 +394,8 @@ class VDO_FILE:
             new_obj.file_size = os.path.getsize(path_to_single)
             new_obj.dbrev = dbrev
             new_obj.segsize = segsize
+            new_obj._file_handle = None
+            new_obj._file_closed = True
             
             # 3. Вызываем внутренний метод генерации имени группы QGIS
             # Используем ИМЕННО new_obj.filename, так как у исходного синглтона имя пустое

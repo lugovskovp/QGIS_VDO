@@ -25,7 +25,7 @@ from QGIS_VDO.vdo.geotypes import (MAP_AREA,
 from QGIS_VDO.vdo.consts import (struct_UINT,
                                  struct_WORD)
 
-from .bitstream import bitstream  # , bit_stream
+from .bitstream import bitstream, bit_stream
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -95,9 +95,10 @@ class block_basegeo(block_base):
         # ---------------------------------------------------
         # распаковать, если cari
         if not self.is_unpacked:
-            # _raw = bit_stream(self).unpack()
+            _raw = bit_stream(self).unpack()
             # # self.is_unpacked = True
-            # hex_r = _raw.hex()
+            # hex_r =
+            _raw.hex()
             pass
         # ---------------------------------------------------
         self.toc = toc()        # new TOC   TODO: 4del

@@ -61,6 +61,7 @@ class bit_stream():
 
         # self.max_bits_num_vrtx = len(f"{(parent.li_vrtx.cnt - 1):b}")
         self.max_bits_in_ptr = archive.max_PTR_bits()    # max possible bits in near offset
+        self.max_bits_in_vrtxnum = len(f"{(archive.li_vrtx.cnt - 1):b}")  # noqa упакованы НОМЕРА вертексов, а не offs на них
 
         # запакованное тело
         arc = archive._raw[OFFSET_PACKED_DATA + 4:]
@@ -87,6 +88,23 @@ class bit_stream():
         if unkn_zero not in [0]:
             raise ValueError(unkn_zero, f"0x{unkn_zero} .unkn_zero")
         pass
+        # 0x70F0E03 in bmv vdo
+        #     C:/DIY/VDO/db_src/bmw34-2010/DB/DB_0
+        # 070f0e 03  BlockType.MAP__05k200: 0x14
+        # cat 0034:0002 cnt:2 	next ptr: 0040
+        # shp 0040:0007 cnt:7 	next ptr: 00E0
+        # lin 0000:0000 cnt:0
+        # poi 0000:0000 cnt:0
+        # vrt 00E0:0135 cnt:309 	next ptr: 05B4
+        # tst 05B4:0007 cnt:7 	next ptr: 05D0
+        # strs from 05D0
+        # Map_hex: 396D900017FA5000  3AED9000197A5000   00010009
+        # 72.410501N 143.426737E  76.940351N 147.956586E
+        # Максимальные Х и У: C000 x C000
+        # 2
+        # Max PTR bites: 11
+        #     Max VERTEX bites: 9
+        # begin word :: 05 00 0A 00
 
     def unpack(self) -> bytearray:
         """основная функция, возвращает распакованный _raw"""
@@ -95,15 +113,44 @@ class bit_stream():
             # +1 - всегда есть завершающий итем, нулевой
             for _ in range(self.li_cat.cnt + 1):      # noqa
                 res = self.__unpack_next_category()
+                print(res.hex())
                 self.res += res
+        # 0x70F0E03 in bmv vdo
+        # 0800 0040
+        # 0100 0090
+        # 0000 00cc
+        print('----')
 
         # <<<<<<<<<< 2 GEO_SHAPE
         if self.li_shp.cnt:     # если есть shapes - замкнутые полигоны - распаковываем
             # Для каждого шейпа (полигона) из toc.list_shape:
             for _ in range(self.li_shp.cnt + 1):      # +1 - всегда есть завершающий итем, нулевой
                 res = self.__unpack_next_shape()
-                # h = res.hex()
+                print(res.hex())
                 self.res += res
+        # 0x70F0E03 in bmv vdo
+        # 05d0 00e0 4000fe16 38e36d50185e9801 00000000
+        # 05e1 0134 400115b9 3b5f766518d56e99 00000000
+        # 05ef 026c 400249cb 3814139d18ebac33 00000000
+        # 05ef 0384 400249cb 3814139d18ebac33 00000000
+        # 05f9 03a8 400cd65c 3f57971718395941 00000000
+        # 05f9 03c0 400cd65c 3f57971718395941 00000000
+        # 05f9 03d0 400cd65c 3f57971718395941 00000000
+        # 0000 05b4 00000000 0000000000000000 00000000
+                #     #----------------
+                #     bs = buffer.result     # _for_print
+                #     pp = f"{struct_WORD.unpack(bs[0:2])[0]:04X} {struct_WORD.unpack(bs[2:4])[0]:04X}"
+                #     pp += f" {struct_UINT.unpack(bs[4:8])[0]:08x}"
+                #     pp += f"  {struct_UINT.unpack(bs[8:12])[0]:08X} {struct_UINT.unpack(bs[12:16])[0]:08X}"
+                #     pp += f"  {struct_WORD.unpack(bs[16:18])[0]:04X} {struct_WORD.unpack(bs[18:20])[0]:04X}"
+                #     print(pp)
+                #     #---------------
+
+        # <<<<<<<<<< GEO_LINE
+        if self.li_lin.cnt:
+            # для каждой полилинии
+
+            pass
 
         # и, наконец
         return self.res
@@ -144,77 +191,44 @@ class bit_stream():
         # /0/ WORD - ptr2string <--- word, ptr to zero-ended string
         ptr2string = self._unpack_short(self.max_bits_in_ptr)
 
-        return ptr2string
-        # if 0 - zero tail ptr2table str -- вот кстати вопрос - на точно ли так надо ваще????
-        # flag_calc_ptr2tstr = self.unpack(BITS_IN_WORD, self.max_PTR_bits, 0) != '0000'
-        do_next_increment = self._unpack_ptr() != '0000'
-        #
-        """
-        begin word = 0500:0900   self.ptr()
-        WORD - ptr2string
-        tst 08B0:0004 cnt:4     next ptr: 8c0  strs from 08c0  100011000000  max_PTR_bits=12
-        '100011000000 0000000000 101000000000000011'
-        """
-
         # /1/ word, ptr 2 first vertex
-        # запакованы не offs, а номера вертексов vertnum,
-        # v_off = self._unpack_vertex_offset()
-        self._unpack_vertex_offset()
+        # запакованы не offs, а номера вертексов vertnum, надо в 4 раза меньше бит,
+        # чтобы сохранить т.к. ptr vrtx кратен 4 -> self.max_PTR_bits - 2 (по факту нет, но порядок да)
+        # num_vrtx = self._pop(self.max_bits_in_vrtxnum)
+        num_vrtx = ba2int(self._pop(self.max_bits_in_vrtxnum))   # номер 0-го vrtx для распаковываемого объекта
+        # offset = from li_vrtx.ptr + vrtx_num * size
+        vrtx_offset = self.li_vrtx.ptr + VERTEX.size * num_vrtx
+        # однако надо 2 bytes, а не int
+        ptr2firstVertex = struct_WORD.pack(vrtx_offset)
 
         # /2/  dword, id
         #id - если следующий бит = 1, ЕСТЬ 32бит ID, иначе bits_to_unpack_then_zero
-        if self.next_bit_true():
-            self._unpack_uint()
-        else:
-            self._unpack_uint(self.max_bits_id_shape_if_0)
+        qty = BITS_IN_UINT if self._pop(1)[0] else self.max_bits_id_shape_if_0
+        # int_id = ba2int(self._pop(qty))
+        # id = struct_4BYTES.pack(int_id)
+        id = self._unpack_uint(qty)
 
         # /3/  dword dword - coord, here '08 c0 00 a0 40 01 8d 00'
         # координаты - они есть, всегда. Просто лежат без упаковки  '0010010001110101000001011000010011100010'
-        self._unpack_uint()        # _lon
-        self._unpack_uint()        # _lat
-        """
-        ptr2string, ptr2firstVertex, id, coord
-        begin word = 0500:0900   self.ptr(), calc_vrtx_offs, 2*uint
-        #map = '3C6D9000 137A5000  3F6D9000 167A5000   00 01 00 0A  '
-        # '08c0 00a0 40018d00  3e8b4ff4 14629e01'
-        # '08d3 0298 40023ff0  3fd40fe0 143eb269'
-        # '08e5 0344 40042b13  3e757994 13e8ef5a'
-        # '08f6 0770 4012e8aa  3b0ebb42 12266183'
-        #
+        # lon = self._unpack_uint(BITS_IN_UINT)        # _lon
+        # lat = self._unpack_uint(BITS_IN_UINT)        # _lat
+        coord = self._unpack_uint(BITS_IN_UINT) + self._unpack_uint(BITS_IN_UINT)
 
-        8d3 (prev str + 13), vrtx_n = 7e
-        '100011010011 0001111110 101000000000000100'
-        """
-
-        # /4/  word align
-        self.result += b'\x00' * 2
-        
+        # >>>>>>>>>> - а ВСЁ, более ничего запакованного нет.
         # /5/ word - ptr2table
-        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr  # noqa
-        
+        # можно рассчитать - если ПРЕДЫДУЩИЙ элемент был с id == 0, то инкремента нет
+        # WORD ptr_to_table_to_strings, unarc by calculate CURR_PTR_PTSTR +4 - next ptstr
         # if this_will_increment:
         #     self.offset_tstr += TSTR.size
         # self.result += struct_WORD.pack(self.offset_tstr)
 
-        return do_next_increment
+        # >>>>>>>>>> - а ВСЁ, более ничего запакованного нет. Поэтому остальное добиваем нулями
+        # /4/  ZeroWord align
+        # /5/ WORD ptr_to_table_to_strings
 
-        res = b''
+        zeroTail = b'\x00' * 4    # 2 * word bytes
 
-        # ------------------------------ <debug
-        # print("\n p_str  p_vrtx  id  coord_lon  cood_lat  align  p_tstr")
-        # ------------------------------ debug>
-        
-        #     #----------------
-        #     bs = buffer.result     # _for_print
-        #     pp = f"{struct_WORD.unpack(bs[0:2])[0]:04X} {struct_WORD.unpack(bs[2:4])[0]:04X}"
-        #     pp += f" {struct_UINT.unpack(bs[4:8])[0]:08x}"
-        #     pp += f"  {struct_UINT.unpack(bs[8:12])[0]:08X} {struct_UINT.unpack(bs[12:16])[0]:08X}"
-        #     pp += f"  {struct_WORD.unpack(bs[16:18])[0]:04X} {struct_WORD.unpack(bs[18:20])[0]:04X}"
-        #     print(pp)
-        #     #---------------
-        #     self._raw += buffer.result
-        #     buffer.clear_result()
-
+        res = ptr2string + ptr2firstVertex + id + coord + zeroTail
         return res
 
     #
@@ -263,7 +277,7 @@ class bit_stream():
             Value Error При bit_compressed более чем 16 бита
         """
         if bit_compressed > BITS_IN_WORD:
-            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_WORD}, _unpack_ptr2word")
+            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_WORD}, _unpack_short")
         
         res: bitarray = self._pop(bit_compressed)
         # добавить справа нолей на к-во сдвига
@@ -276,7 +290,31 @@ class bit_stream():
         # br = res.tobytes()
         return res.tobytes()
     
+    def _unpack_uint(self, bit_compressed: int, left_shift: int = 0) -> bytes:
+        """
+        Unpack four bytes from bit_compressed bits
 
+        Args:
+            bit_compressed:  Количество бит для интерпретации, как word
+            left_shift:      сдвиг влево после распаковки
+        Returns:
+            bytes
+        Raises:
+        Value Error При bit_compressed более чем 32 бита
+        """
+        if bit_compressed > BITS_IN_UINT:
+            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_UINT}, _unpack_uint")
+        
+        res: bitarray = self._pop(bit_compressed)
+        # добавить справа нолей на к-во сдвига
+        res.extend(bitarray([0]) * left_shift)  # самый быстрый путь добавить справа
+        # оставить только 32 правых бит
+        res = res[-BITS_IN_UINT:]
+        # выровнять до word
+        from_left = BITS_IN_UINT - len(res)
+        res = (bitarray([0]) * from_left) + res
+        # br = res.tobytes()
+        return res.tobytes()
 
 
 

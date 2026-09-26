@@ -25,7 +25,7 @@ from QGIS_VDO.vdo.geotypes import (MAP_AREA,
 from QGIS_VDO.vdo.consts import (struct_UINT,
                                  struct_WORD)
 
-from .bitstream import bitstream
+from .bitstream import bitstream  # , bit_stream
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -46,7 +46,7 @@ OFFSET_SCALE = 0x32   # значение левого битового сдви�
 
 class block_basegeo(block_base):
     """
-    Блоки геоосновы, собственно карты: типы  00? 14 15 16 1c 1d 1e # noqa: 00 +sc4-11
+    Блоки геоосновы, собственно карты: типы  00? 14 15 16 1c 1d 1e # noqa: 00 +sc5-11
         BL_HEADER   block;          // block.data - list of geo_types
     struct{
         toc:
@@ -77,23 +77,33 @@ class block_basegeo(block_base):
             li_vrtx: LIST
             li_poi: LIST
             li_tstr: LIST
-        
+
+        # инициализировать - и распаковать, если zlib
         super().__init__(addr)
-        # территория карты
+        # территория покрытия карты
         self.map = MAP_AREA(self.read(OFFSET_MAP_AREA, MAP_AREA.size))
-        # на сколько сдвинуть единицу координат влево, чтобы получить порядок значений COORD
+        # на сколько сдвинуть единицу координат в карте влево, чтобы получить порядок значений COORD
         self.shift_scale = self.ushort(OFFSET_SCALE)
-        # таблица содержвния
+        # таблица содержания
         self.li_cat = self.read_list(OFFSET_LI_GEOCATEGORY)  # категории
         self.li_shp = self.read_list(OFFSET_LI_GEOSHAPE)     # полигоны
         self.li_lin = self.read_list(OFFSET_LI_GEOLINE)      # полилинии
         self.li_vrtx = self.read_list(OFFSET_LI_VERTEX)      # x, y точек
-        self.li_poi = self.read_list(OFFSET_LI_POI)          # хз, но это не POI
+        self.li_poi = self.read_list(OFFSET_LI_POI)          # хз, что это, но это не POI
         self.li_tstr = self.read_list(OFFSET_LI_TSTR)        # наименования на разных языках
 
-        self.toc = toc()        # new TOC
-        self.setup_toc()        # toc - table of contents
-        self.categ = {}
+        # ---------------------------------------------------
+        # распаковать, если cari
+        if not self.is_unpacked:
+            # _raw = bit_stream(self).unpack()
+            # # self.is_unpacked = True
+            # hex_r = _raw.hex()
+            pass
+        # ---------------------------------------------------
+        self.toc = toc()        # new TOC   TODO: 4del
+        self.___setup_toc()        # toc - table of contents   TODO: 4del
+        self.categ = {}         # TODO: 4del
+
         # а вот дальше - распаковка, если необходимо
         if not self.is_unpacked:
             # нет, запаковано...
@@ -480,7 +490,7 @@ bitarray('
             self._raw += b'\x00' * (self.head.sizeofblock - len(self._raw))
         # =====================================================
         
-        # записать распакованное
+        # DEBUG: записать распакованное
         self.write_raw()
         if not self.is_unpacked:
             print(f"Save tail into tail_{self.head.bladdr}.bin")
@@ -496,11 +506,8 @@ bitarray('
             except PermissionError:
                 print(f"Permission error Save unpacked into raw_{self.head.bladdr}.bin")
         # и, наконец, всё содержимое
-        self.arr_shapes = []
-        # self.lines = []
-        # self.cats = []
-        # self.setup_objects()
-        # self.setup_all_objects()
+        # self.arr_shapes = []
+
         pass
     
     @property
@@ -530,22 +537,19 @@ bitarray('
         
     def max_PTR_bits(self):
         '''
-         # noqa
-        Max число значащих бит в near offs в блоке из 
-        seg_cnt сегментов размером по seg_size
-        Максимальная длинна указателя в битах 
-        (по размеру блока, на 1 меньше - word wrap)
+        Max число значащих бит в near offs в блоке из seg_cnt сегментов размером по seg_size
+        Максимальная длинна указателя в битах (по размеру блока, на 1 меньше - word wrap)
 
-         преобразовывать строчную букву в прописную путём вычитания 32 из её кода, а прописную — в строчную путём добавления 32
+        преобразовывать строчную букву в прописную путём вычитания 32 из её кода,
+        а прописную — в строчную путём добавления 32
         '''
-        #max_addr = self._const_segsize  * seg_cnt - 1
-        # # Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
-        self_size = self.head.sizeofblock
-        max_addr = self_size - 1    # self.size = self._const_segsize * self.unarc_segcn
-        max_adr_bin = "{:b}".format(max_addr)
-        max_ptr_bits = len(max_adr_bin)  # bin(0xfff)="0b111111111111", w|o '0b' len=12
+        # Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
+        max_addr = self.head.sizeofblock - 1    # self.size = self._const_segsize * self.unarc_segcn
+        # max_adr_bin = "{:b}".format(max_addr)
+        max_ptr_bits = len("{:b}".format(max_addr))  # bin(0xfff)="0b111111111111", w|o '0b' len=12
         if max_ptr_bits > 16:
             max_ptr_bits = 16   # ptr is WORD, max 16 bit - FFFF
+            raise ValueError(f"max_ptr_bits > 16: {max_ptr_bits}")      # DEBUG - а такое вообще хоть бывает???
         return max_ptr_bits
 
     def show_main_info(self) -> None:
@@ -573,7 +577,7 @@ bitarray('
         print(f"\nMax PTR bites: {self.max_PTR_bits()}")
         pass
 
-    def setup_toc(self) -> None:
+    def ___setup_toc(self) -> None:
         """
         Returns:
             None
@@ -586,7 +590,7 @@ bitarray('
         self.toc.li_tstr = self.read_list(OFFSET_LI_TSTR)
         self.toc.START_TXT = self.toc.li_tstr.ptr + TSTR.size * self.toc.li_tstr.cnt
 
-    def setup_objects(self) -> None:
+    def ___setup_objects(self) -> None:
         """
         4del it
         """
@@ -617,15 +621,20 @@ bitarray('
         """
         Создание категории, буффер * 2, т.к. кол-во рассчетное
         """
-        res = None
-        if self.is_unpacked or True:
-            buff = self.read(offset, GEO_CATEGORY.size * 2)
-            res = GEO_CATEGORY(buff)
+        buff = self.read(offset, GEO_CATEGORY.size * 2)
+        res = GEO_CATEGORY(buff)
         return res
 
-    def read_shape(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_SHAPE:
+    def read_shape(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_SHAPE | None:
         """
         Geo read_shape - closed, filled poligon
+        Args:
+            offset: int from block begin
+            category: en_GEO_CATEGORY   категория полилинии (вода, лес, город и т.д.)
+            isCalcCoord: bool - True - vrtx реальные Lon Lat
+        Returns:
+             GEO_SHAPE
+
             2h - ptr2str/0;
             2h - ptr2vertexes (first=first vert)
             4h - id [0000 7685]
@@ -633,24 +642,25 @@ bitarray('
             2h = 00 00 - aligment (??? or POI?)
             2h - ptr2 list strPtr
         """
-        res = None
-        buff = self.read(offset, GEO_SHAPE.size * 2)
         # if hlat == 0 -> tail of read_category
         # '00 00 0a ac 00 00 00 00 00 00 00 00 00 00 00 00 00 00 12 18'
         # hlat = struct_UINT.unpack(buff[8:12])[0]
         # if hlat:
         #     res = GEO_SHAPE(buff, read_category)
+
+        # TODO: а количество наименований на других языках так же как vrtx рассчитывается?
+        
+        buff = self.read(offset, GEO_SHAPE.size * 2)
         res = GEO_SHAPE(buff, category)
-        if self.is_unpacked:
-            res.name = self.read_str(res.p_str_name)
-            offset = res.ptr_vrtx
-            for _ in range(res.cnt_vrtx):
-                # read vertexes
-                res.vrtx.append(self.read_vrtx(offset, isCalcCoord))
-                offset += VERTEX.size
+
+        # и заполнить значениями, на которые ссылается
+        res.name = self.read_str(res.p_str_name)        # наименование
+        offset = res.ptr_vrtx
+        for _ in range(res.cnt_vrtx):       # вертексы
+            # read vertexes
+            res.vrtx.append(self.read_vrtx(offset, isCalcCoord))  # с реальными координатами
+            offset += VERTEX.size
         return res
-        # else:
-        #     return None
 
     def read_line(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_LINE:
         """

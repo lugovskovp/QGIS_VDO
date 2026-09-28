@@ -95,10 +95,10 @@ class block_basegeo(block_base):
         # ---------------------------------------------------
         # распаковать, если cari
         if not self.is_unpacked:
-            _raw = bit_stream(self).unpack()
-            # # self.is_unpacked = True
+            self._raw = memoryview(bit_stream(self).unpack())
+            self.is_unpacked = True
             # hex_r =
-            _raw.hex()
+            # _raw.hex()
             pass
         # ---------------------------------------------------
         self.toc = toc()        # new TOC   TODO: 4del
@@ -223,7 +223,7 @@ class block_basegeo(block_base):
             # а вот дальше запакованы вертексы, и, вероятно, delta-coding
             if self.toc.li_vrtx.cnt:
                 # первые2 значения - рассматриваем, как xy начальных точек.
-                prev_x = int(buffer._unpack_word(), 16)                       # x
+                prev_x = int(buffer._unpack_word(), 16)       # x
                 prev_y = int(buffer._unpack_word(), 16)       # y
                 self._raw += buffer.result
                 buffer.clear_result()
@@ -803,3 +803,36 @@ bitarray('
         offset_str = self.ushort(offset)
         result = self.read_str(offset_str)
         return result
+
+
+if __name__ == 'main':
+
+    pass
+
+    """
+        # noqa
+        071515 04  BlockType.MAP__10k400: 0x1d
+        Max PTR bits: 12
+    самый хвост
+        0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000
+
+        8c0 15 00   delta 13/19
+        1 100011000000 1 00010101 1 00000     1100011000000100010101100000
+        1 100011010011 00   8D3  delta 12/18 
+        1 100011100101 00   8E5  delta 11/17
+        1 100011110110 00   8F6  delta e/14     'more laptevykh' ? 'tauyskaya guba' 'okhotskoe more'
+        8B0 <<1        8B4<<1        8B8<<1    8BC<<1      8c0
+        10001011000 10001011010 10001011100 10001011110 100011000000
+        12-1 len(align word), 4 stucks
+
+        4 штуки
+        1 - флаг загружать, или 0 использовать прошлые
+        ptr = max_ptr_bits
+        lang = 8 bit
+        last_byte = 5 bit
+
+        затем идут адреса, в которые надо перенести сгенерированные
+        эти адреса выровнены по границе word, поэтому достаточно max_ptr_bits-1 
+        (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
+        самое последнее - адрес, на котором окончится tstr и начнётся массив строк
+    """

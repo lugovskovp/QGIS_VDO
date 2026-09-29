@@ -518,7 +518,7 @@ bitarray('
         """
         return len(self._raw)
 
-    @property
+    # @property
     def max_bounds(self):
         x_b = self.max_x()
         y_b = self.max_y()
@@ -574,7 +574,7 @@ bitarray('
         print(f"   strs from {self.toc.START_TXT:04X}")
         print(f"Map_hex: {self.map.hex}")
         print(f"{self.map}")
-        print(f"Максимальные Х и У: {self.max_bounds} \n")
+        print(f"Максимальные Х и У: {self.max_bounds()} \n")
         print(f"\nMax PTR bites: {self.max_PTR_bits()}")
         pass
 

@@ -49,13 +49,15 @@ class bit_stream():
 
     def __init__(self, archive: block_base):
         # оставляем незапакованное начало
-        self.res = bytearray(archive._raw[:OFFSET_PACKED_DATA])     # результат
+        self.res = bytearray(archive._raw[:OFFSET_PACKED_DATA])
 
         # забираем данные block_basegeo для распаковки
         self.head = archive.head
         self.map = archive.map
+
         # на сколько сдвинуть единицу координат в карте влево, чтобы получить порядок значений COORD
         self.shift_scale = archive.shift_scale
+
         # таблица содержания
         self.li_cat = archive.li_cat  # категории
         self.li_shp = archive.li_shp     # полигоны
@@ -64,18 +66,15 @@ class bit_stream():
         self.li_poi = archive.li_poi          # хз, что это, но это не POI
         self.li_tstr = archive.li_tstr        # наименования на разных языках
 
-        # self.max_bits_num_vrtx = len(f"{(parent.li_vrtx.cnt - 1):b}")
-        self.max_bits_in_ptr = archive.max_PTR_bits()    # max possible bits in near offset
-        self.max_bits_in_vrtxnum = len(f"{(archive.li_vrtx.cnt - 1):b}")  # noqa упакованы НОМЕРА вертексов, а не offs на них
+        # Максимальная длинна указателя в битах (по размеру распакованного блока, если на 1 меньше - word wrap align)
+        # self._const_segsize * self.unarc_segcn Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
+        max_bits_in_ptr = len("{:b}".format(archive.head.sizeofblock - 1))  # noqa bin(0xfff)="0b111111111111", w|o '0b' len=12
+        if max_bits_in_ptr > 16:
+            raise ValueError(f"max_ptr_bits > 16: {max_bits_in_ptr}")      # такое вообще хоть бывает???
+        self.max_bits_in_ptr = max_bits_in_ptr    # max possible bits in near offset
 
-        # запакованное тело
-        arc = archive._raw[OFFSET_PACKED_DATA + 4:]
-        CUT_ZERO_BYTES_CNT = 8
-        # с конца убрать нулевые байты, оставив менее 4х
-        while arc[-CUT_ZERO_BYTES_CNT:] == b'\x00' * CUT_ZERO_BYTES_CNT:
-            arc = arc[:-int(CUT_ZERO_BYTES_CNT / 2)]
-
-        self.buffer = bitarray(buffer=arc, endian='big').copy()    # copy - else read only memory # noqa
+        # упакованы НОМЕРА вертексов, а не offs на них
+        self.max_bits_in_vrtxnum = len(f"{(archive.li_vrtx.cnt - 1):b}")
 
         # константы распаковки
         (
@@ -85,7 +84,18 @@ class bit_stream():
             unkn_zero
         ) = archive._raw[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4]
 
-        # debug raises
+        # запакованное тело
+        arc = archive._raw[OFFSET_PACKED_DATA + 4:]
+        CUT_ZERO_BYTES_CNT = 8
+        # с конца убрать нулевые байты, оставив менее 4х
+        while arc[-CUT_ZERO_BYTES_CNT:] == b'\x00' * CUT_ZERO_BYTES_CNT:
+            arc = arc[:-int(CUT_ZERO_BYTES_CNT / 2)]
+
+        # в буффер - запакованную часть блока, далее self.unpack полностью распакует
+        self.buffer = bitarray(buffer=arc, endian='big').copy()    # copy - else read only memory # noqa
+
+        # -----------------------------------------
+        # debug raises - временно для отладки, потом вообще закомментировать эти проверки
         if self.max_bits_id_line_if_0 not in [5, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x13, 0x14, 0x15]:
             raise ValueError(self.max_bits_id_line_if_0, f"0x{self.max_bits_id_line_if_0:X} .max_bits_id_line_if_0")  # noqa 19/0x13 ?
         if self.max_bits_in_vertex_delta not in [8, 9, 0x0a, 0xb, 0xc]:
@@ -257,7 +267,7 @@ class bit_stream():
             #     self._raw = bytes(mutable)
             #     del INNER_OFFSET_POI, mutable, ptr, item_offset, num
 
-            # <<<<<<<<<< TSTRs
+            # <<<<<<<<<< TSTRs  - # далее в архиве запакованы собственно TSTR
             """
             # noqa
             071515 04  BlockType.MAP__10k400: 0x1d
@@ -285,7 +295,7 @@ class bit_stream():
             (фактически важен только самый первый, в него выгрузить сгенерированный bytearray)
             самое последнее - адрес, на котором окончится tstr и начнётся массив строк
         """
-        # далее запакованы собственно TSTR
+        # далее в архиве запакованы собственно TSTR
         short_ptr = b'\x00\x00'
         byte_lang = b'\x00'
         byte_type = b'\x00'
@@ -295,47 +305,38 @@ class bit_stream():
             if ba2int(self._pop(1)):
                 # read ptr
                 short_ptr = self._unpack_short(self.max_bits_in_ptr)
-            else:
-                # use prev value tstr_ptr
-                pass
+            # else:       # use prev value tstr_ptr
             # language
             if ba2int(self._pop(1)):
                 # read lang
                 byte_lang = self._unpack_byte(8)
-            else:
-                #use prev
-                pass
+            # else:   # use prev language
             # type
             if ba2int(self._pop(1)):
                 # read type
                 byte_type = self._unpack_byte(5)
-            else:
-                #use prev
-                pass
-
-            #
-
+            # else:   # use prev type
+                
+            # "собираем" word + byte + byte: ptr + lang + type
             tstr = short_ptr + byte_lang + byte_type
-            # part_two = bytes((byte_lang, byte_type))
-            # tstr1 = bytes(short_ptr, byte_lang, byte_type)
             # a_hex = tstr.hex()
             self.res += tstr
 
         # И вот теперь пришло время для ТЕКСТОВ texts
         self.res += unpacked_bin_strings
 
-        # и, наконец
-        self.tail = self.buffer
         # bitarray('
         # 101101101010110111001011011110101110000010111000101011100100101110011010111010000000000000000000000000000000000000')
 
-        # локально константами
+        # если осталось что- либо нераспакованное - его в tail
+        self.tail = self.buffer
 
-        # чтобы при частичной распаковке нормально работал сетап - добиваем нулями
+        # чтобы после распаковки нормально работал блок - добиваем размер нулями
         self.res += b'\x00' * (self.head.sizeofblock - len(self.res))
 
         return self.res
 
+    # ------------ ФУНКЦИИ РАСПАКОВКИ ОБЪЕКТОВ -----------
     def __unpack_next_category(self) -> bytes:
         """
         BYTE  en_GEO_CATEGORY <--- 7 bits
@@ -420,11 +421,10 @@ class bit_stream():
     def __unpack_half_vertex(self, prev: int) -> int:
         """
         Декодирует одну из координат (short x или y) vertex
-        В зависимости от первых 2-х префиксных бит:
+        В зависимости от первых 2-х префиксных бит (self.max_bits_in_vertex_delta == 9):
          - '11' - read 16 bit, считать все 16 бит, как значение.
          - '10' - read 9 бит, вычесть значение из предыдущего
-         - '01'
-         - '00'
+         - '01', '00' - read 8 bit, or с 1 или 0 - и сложить с предыдущим
         Args:
             prev: short int - Предыдущее значение.
         Returns:
@@ -475,7 +475,11 @@ class bit_stream():
 
     def __unpack_strings(self) -> bytes:
         """
-        Распаковывает все строки
+        Оригинальная реализация Хаффмана.
+        :LOOKUP_CHAR_BYTES: Базовая константная таблица соответствия на 14 char,
+        :preambula: адаптивная по блокам таблица часто встречающихся до 3-х char - хранит 6 сочетаний
+        :ascii: Если символ ни там, ни там - win1250, причем, если ascii до ' ' - то = ascii + 0xe0
+        Функция распаковывает ВСЕ строки за один вызов
         Returns:
             bin_str: бинарное представление строковой части zero-ended строк
         """
@@ -511,7 +515,7 @@ class bit_stream():
 
         #   ^^^  и вот только теперь пошли буквы, закодированные ....эммм.
         # .. как бы хафманом, но с нюансами
-        res = b''
+        bin_str = b''
         for _ in range(strings_length):
             prefix = self._pop(2)
             if prefix == CONST_BA_11:           # prefix.to01() == '11':
@@ -521,9 +525,9 @@ class bit_stream():
                     pre_chars = preambula[ba.to01()]
                     # но если из преамбулы возвращается А
                     if pre_chars == b'A':
-                        res += bytes((ba2int(ba),))      # просто добавить байт
+                        bin_str += bytes((ba2int(ba),))      # просто добавить байт
                     else:
-                        res += pre_chars
+                        bin_str += pre_chars
                 elif ba2int(ba) < 32:       # похоже загрузить ascii до ' '
                     """
                     ISO 8859-2 xor win1250?
@@ -531,39 +535,39 @@ class bit_stream():
                     # а это 1250
                     code = 0xe0 + ba2int(ba)  # угу, эмпирическое волшебное число 0xE0
                     # ascii = code.to_bytes(1, byteorder='big')
-                    res += bytes((code,))   # res += code.to_bytes(1, byteorder='big')
+                    bin_str += bytes((code,))   # bin_str += code.to_bytes(1, byteorder='big')
                 else:
                     # или ascii код буквы
                     # ascii = ba2int(ba)
-                    res += bytes((ba2int(ba),))   # res += ba2int(ba).to_bytes(1, byteorder='big')
+                    bin_str += bytes((ba2int(ba),))   # bin_str += ba2int(ba).to_bytes(1, byteorder='big')
                 continue        # всё, данные итерации загружены
             elif prefix == CONST_BA_00:         # prefix.to01() == '00':
                 prefix += self._pop(1)
             elif prefix == CONST_BA_01:         # prefix.to01() == '01':
                 prefix += self._pop(2)
-            else:       # elif prefix.to01() == '10':
+            else:                               # elif prefix.to01() == '10':
                 prefix += self._pop(3)
             # вытаскиваем, что получилось, из дерева и добавляем к результату
-            res += LOOKUP_CHAR_BYTES[prefix.to01()]
+            bin_str += LOOKUP_CHAR_BYTES[prefix.to01()]
         # всё, упакованные буквы окончились
 
-        # подрезать хвосты - по длинне могло подрасти из-за использования преамбулы
-        res = res[:strings_length]
+        # подрезать хвосты - итераций было по числу символов,
+        # но по длинне могло подрасти из-за использования преамбулы
+        bin_str = bin_str[:strings_length]
 
-        # <<<<<<<<< Убрать незначащие нули, необходимые для обеспечения
+        # <<<<<<<<< Убрать незначащие нули в буфере, в архиве они необходимы для обеспечения
         # пространства использования преамбульных сокращений,
         try:
-            # Находим индекс первой единицы
-            first_one_idx = self.buffer.index(1)
-            # Отрезаем всё, что было до неё
-            self.buffer = self.buffer[first_one_idx:]
+            first_one_idx = self.buffer.index(1)        # Находим индекс первой единицы
+            self.buffer = self.buffer[first_one_idx:]   # Отрезаем всё, что было до неё
         except ValueError:
-            # Исключение сработает, если в массиве вообще нет единиц
+            # Исключение сработает, если в массиве вообще больше нет единиц
             raise "Прикольно, вот не уверен, что такое вообще может быть"
 
-        return res
+        return bin_str
 
     # ----------------------------
+    # ------------ ФУНКЦИИ РАСПАКОВКИ ПРИМИТИВОВ - byte, short, uint -----------
 
     def _pop(self, qty_bits: int) -> bitarray:
         '''POP qty_bits from begin (left) buffer qty bites'''
@@ -649,7 +653,7 @@ class bit_stream():
         # br = res.tobytes()
         return res.tobytes()
 
-
+    # ------------ под удаление, похоже.
     def _unpack(self, bit_goal: int, bit_compressed: int, left_shift: int=0, bool_save: bool=True) -> bitarray:  # noqa:
         """
         Args:

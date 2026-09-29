@@ -518,7 +518,6 @@ bitarray('
         """
         return len(self._raw)
 
-    # @property
     def max_bounds(self):
         x_b = self.max_x()
         y_b = self.max_y()

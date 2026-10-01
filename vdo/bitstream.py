@@ -228,8 +228,8 @@ class bitstream():
                 raise NotImplementedError(f"тип блока {self.head.bltype}")
 
             # подбор значения bit_in_ptr2poi
-            watchdog = 1
-            if watchdog < 0xFFFF and self.flag_unpack_lin5:
+            watchdog = self.li_lin.cnt
+            if watchdog and self.flag_unpack_lin5:
                 # нет дорог - нет характеристик
                 start_tstr = self.touch(self.max_bits_in_ptr - 1)
                 ptr = self.max_bits_in_ptr
@@ -255,11 +255,11 @@ class bitstream():
                         pass   # вот тут shift == bit_in_ptr2poi
                         bit_in_ptr2poi = shift + 1   # +1 чтобы потом флаговый pop не
                 # а если все дороги - без характеристик?
-                watchdog += 1
+                watchdog -= 1
 
             # DEBUG
             if self.head.bltype.value == 0x14 and bit_in_ptr2poi not in [4, 5, 16]:     # пока только для sc5 14h типа
-                raise ValueError("bit_in_ptr2poi not in [4, 5, 16]")
+                raise ValueError(f"bit_in_ptr2poi: {bit_in_ptr2poi} not in [4, 5, 16], {self.head.bladdr}")
             
             # 8 - offset ptr_linesign in GEO_LINE
             INNER_OFFSET_POI = 8

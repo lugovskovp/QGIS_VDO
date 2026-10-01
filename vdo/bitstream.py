@@ -118,9 +118,11 @@ class bit_stream():
                 category = self.__unpack_next_category()
                 print(category.hex())
                 self.res += category
-                curr_cat = category[0]
-                if 0x67 < curr_cat < 0x6f:
+                # category[0] - en_GEO_CATEGORY
+                if 0x67 < category[0] < 0x6f:
+                    # если хоть раз встретилась дорога, взводим флаг
                     self.flag_unpack_lin5 = True
+  
         # <<<<<<<<<< 2 GEO_SHAPE
         if self.li_shp.cnt:     # если есть shapes - замкнутые полигоны - распаковываем
             # Для каждого шейпа (полигона) из toc.list_shape:
@@ -188,7 +190,7 @@ class bit_stream():
             #  WARN! после DB 0715AC01 001E 01 02 [1E:MAP__11k_11] остается
             #  0111000010010000001... 0x38481 - artic ocean
             #  0715AB01 001E 01 02 [1E:MAP__11k_11] - 0111000010010000001000000000
-            # 0111000010110000001 01110000101000000001 01110000101100000001
+            # 0111000010110000001 01110000101000000001 01110000101100000001(sc5 antalia)
             ten_zero_idx = self.buffer.find(bitarray('0000000000000000'))     # Находим индекс единицы
             self.tail_cutted_after_str = None
             if ten_zero_idx:
@@ -212,7 +214,7 @@ class bit_stream():
             # :: prt2poi <-- 5 (пять ???) бит
             # для проверки - ptr_linesign указывают на TSTRS с типом 0 - полигон (похоже принадлежность?)
             if self.head.bltype.value == 0x14:     # пока только для 14 типа 5 бит
-                bit_in_ptr2poi = 3  # 5
+                bit_in_ptr2poi = 4  # 5
             else:
                 raise NotImplementedError(f"тип блока {self.head.bltype}")
             # 8 - offset ptr_linesign in GEO_LINE
@@ -224,8 +226,7 @@ class bit_stream():
                 # записываем в уже распакованные линии
                 self.res[offset:offset + 2] = ptr_linesign
                 # на примере норгов 0x709DF0A и грузии, 0x70AE205
-                flag = self._pop(1)
-                if flag == bitarray([1]):
+                if self.flag_unpack_lin5:
                     ptr2poi = self._unpack_short(bit_in_ptr2poi)
                     # записываем в уже распакованные линии
                     self.res[offset + 2:offset + 4] = ptr2poi
@@ -233,11 +234,9 @@ class bit_stream():
 
         # <<<<<<<<<< TSTRs  - # далее в архиве запакованы собственно TSTR
         if self.li_tstr.cnt:
-            # tstrs = self.__unpack_all_tstrs()
-            # a_hex = tstrs.hex()
             self.res += self.__unpack_all_tstrs()
 
-        # И после tstrs теперь пришло время для ТЕКСТОВ texts
+        # После tstrs теперь пришло время для добавления в результат ранее распакованых ТЕКСТОВ texts
         self.res += unpacked_bin_strings
 
         # <<<<<<<<<<<<<<<<<<<<  основное тело сформировани.
@@ -276,29 +275,20 @@ class bit_stream():
 
                 ptr2tstr = self._unpack_short(self.max_bits_in_ptr - 1, 1)   # word aligned
                 self.res[offset:offset + 2] = ptr2tstr
-
-                # flag = self._pop(1)
-                # if flag == bitarray([1]):
-                #     ptr2tstr = self._unpack_short(self.max_bits_in_ptr - 1, 1)   # word aligned
-                #     # записываем в уже распакованные линии
-                #     self.res[offset:offset + 2] = ptr2tstr
-                # else:
-                #     pass
-
                 offset += GEO_LINE.size
         
         # <<<<<<<<<<<<<<<<<<<< если осталось что- либо нераспакованное - его в tail
         if ba2int(self.buffer) > 0:
             self.tail = self.buffer
             # 14h, lin.cnt = 3; 00100000000101000000010000000000000000000000000000000000000000000
-            # 14h, lin_cnt =25;
-            # 14h, lin_cnt =68;
-            # 14h, lin_cnt =47;
+            # 14h, lin_cnt =25; 0010000000010100000000000000000000000000000100000000000000000000000000000000000000000000
+            # noqa 14h, lin_cnt =47; 0100111111001100011111100111001111110100000111111010010011111101010000100000000 1011000100000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000
+            # noqa 14h, lin_cnt =23; 0010000000000000000010000000010110001000000000000000000001000000000000000000000000000000000000000000000000000
             # 14h, lin_cnt = 3; 00100000000000000000000000000000000000000000000000000000000000000
         else:
             self.tail = None
 
-        # чтобы после распаковки нормально работал блок - добиваем размер нулями
+        # чтобы после распаковки нормально работал блок - добиваем размер нулями 10110001
         self.res += b'\x00' * (self.head.sizeofblock - len(self.res))
 
         return self.res

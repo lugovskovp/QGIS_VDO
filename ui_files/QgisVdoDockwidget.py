@@ -390,7 +390,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # debug
         objs = shapes + lines
         for obj in objs:
-            print(obj)
+            pass   # print(obj)
 
         # print(layer_shape)
         pass
@@ -675,6 +675,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         almanac_block: block_0x08 = self.vdo.get_block(sc.almanac_idx, sc.area[0], sc.area[1])   # noqa
         
         # Делаем слой активным в интерфейсе
+        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)
         self.iface.setActiveLayer(self.layer_maps)
 
         # Инициализируем поток, передав ему параметры папки

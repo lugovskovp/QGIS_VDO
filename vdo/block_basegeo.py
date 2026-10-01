@@ -25,7 +25,7 @@ from QGIS_VDO.vdo.geotypes import (MAP_AREA,
 from QGIS_VDO.vdo.consts import (struct_UINT,
                                  struct_WORD)
 
-from .bitstream import bitstream, bit_stream
+from QGIS_VDO.vdo.bitstream import bitstream, bit_stream
 
 
 OFFSET_LI_GEOCATEGORY = 0x08    # geodata types (categories)
@@ -95,11 +95,19 @@ class block_basegeo(block_base):
         # ---------------------------------------------------
         # распаковать, если cari
         if not self.is_unpacked:
-            self._raw = memoryview(bit_stream(self).unpack())
+            unpacker = bit_stream(self)
+            self._raw = memoryview(unpacker.unpack())
             self.is_unpacked = True
-            # hex_r =
+            # tail = ba2int()
+            if unpacker.tail is not None:
+                # что-то нераспакованное осталось
+                pass
+            if unpacker.tail_cutted_after_str is not None:
+                # что-то нераспакованное осталось
+                pass
             # _raw.hex()
             pass
+        #0x070A240f - lzw
         # ---------------------------------------------------
         self.toc = toc()        # new TOC   TODO: 4del
         self.___setup_toc()        # toc - table of contents   TODO: 4del
@@ -804,8 +812,12 @@ bitarray('
         return result
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
+    from QGIS_VDO.vdo.fixtures_vdo import vdobmv as vdo
+
+    bla = vdo.get_bladdr(0x070A240f)
+    lzw_14 = vdo.get_block(bla)
     pass
 
     """

@@ -106,7 +106,7 @@ class bitstream():
 
         # -----------------------------------------
         # debug raises - временно для отладки, потом вообще закомментировать эти проверки
-        if self.max_bits_id_line_if_0 not in [5, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15]:
+        if self.max_bits_id_line_if_0 not in [5, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15]:
             raise ValueError(self.max_bits_id_line_if_0, f"0x{self.max_bits_id_line_if_0:X} .max_bits_id_line_if_0")  # noqa 19/0x13 ?
         if self.max_bits_in_vertex_delta not in [8, 9, 0x0a, 0xb, 0xc]:
             raise ValueError(self.max_bits_in_vertex_delta, f"0x{self.max_bits_in_vertex_delta:X} .max_bits_in_vertex_delta")  # noqa

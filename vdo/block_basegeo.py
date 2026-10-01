@@ -292,30 +292,27 @@ class block_basegeo(block_base):
             2h - PTR   p_p_str_name; // ptr to GEO_OBJ_STR
             4h - WORD   or_38_or_0_b_country;
         """
-        res = None
-        if self.is_unpacked:
-            buff = self.read(offset, GEO_LINE.size * 2)
-            res = GEO_LINE(buff, category)
-            # TODO:  '02F4 0158 0000673A  02A0 00 00 02 CE 00 00' - добавить cnt poi
-        
-            res.name = self.read_str(res.p_str_name)
-            # res.tstr_regi = self.read_tstr(res.tstr_regi)  # 2 POI, НЕ регион... self.POI_regi
-            # с TSTR неясно: иногда не ссылка в район TSTR, а небольшое, например, 4, значение
-            p_line_sign = res.c_pp_str_name
-            if p_line_sign >= self.li_tstr.ptr:     # issue #83
-                tstr_res : TSTR = self.read_tstr(p_line_sign)
-                #
-                res.name2 = str(tstr_res)
-            else:
-                res.name2 = f"0x{p_line_sign:02X}"
+        buff = self.read(offset, GEO_LINE.size * 2)
+        res = GEO_LINE(buff, category)
+        # TODO:  '02F4 0158 0000673A  02A0 00 00 02 CE 00 00' - добавить cnt poi
+    
+        res.name = self.read_str(res.p_str_name)
+        # res.tstr_regi = self.read_tstr(res.tstr_regi)  # 2 POI, НЕ регион... self.POI_regi
+        # с TSTR неясно: иногда не ссылка в район TSTR, а небольшое, например, 4, значение
+        p_line_sign = res.c_pp_str_name
+        if p_line_sign >= self.li_tstr.ptr:     # issue #83
+            tstr_res : TSTR = self.read_tstr(p_line_sign)
+            #
+            res.name2 = str(tstr_res)
+        else:
+            res.name2 = f"0x{p_line_sign:02X}"
 
-            
-# 039F0201 0015 00 00 [15:MAP__06k80]
-            offset = res.ptr_vrtx
-            for _ in range(res.cnt_vrtx):
-                # read vertexes
-                res.vrtx.append(self.read_vrtx(offset, isCalcCoord))
-                offset += VERTEX.size
+        # 039F0201 0015 00 00 [15:MAP__06k80]
+        offset = res.ptr_vrtx
+        for _ in range(res.cnt_vrtx):
+            # read vertexes
+            res.vrtx.append(self.read_vrtx(offset, isCalcCoord))
+            offset += VERTEX.size
         return res
 
     def read_vrtx(self, offset: int, isCalcCoord: bool = False) -> [VERTEX | COORD]:
@@ -333,17 +330,15 @@ class block_basegeo(block_base):
 
     def read_tstr(self, offset: int) -> TSTR:
         """
-
+        Инициализирует TSTR значениями по смещению offset
         """
-        res = None
-        if True or self.is_unpacked:
+        if offset < self.toc.START_TXT:
             buff = self.read(offset, TSTR.size)
-            if offset < self.toc.START_TXT:
-                res = TSTR(buff)
-                res.name = self.read_str(res.p_str)
-                #print(res.name)
-            else:
-                res = self.read_str(offset)
+            res = TSTR(buff)
+            res.name = self.read_str(res.p_str)
+            #print(res.name)
+        else:
+            res = self.read_str(offset)
         return res
     
     # -------------------------------------------

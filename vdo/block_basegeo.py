@@ -7,11 +7,13 @@ from typing import Iterator
 
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR, LIST
-from QGIS_VDO.vdo.enums import en_DRAW_TYPE     # en_GEO_CATEGORY,
+from QGIS_VDO.vdo.enums import en_DRAW_TYPE, en_GEO_CATEGORY
 from QGIS_VDO.vdo.geotypes import (MAP_AREA,
+                                   COORD,
                                    GEO_CATEGORY,
                                    GEO_SHAPE,
                                    GEO_LINE,
+                                   VERTEX,
                                    TSTR)
 # from QGIS_VDO.vdo.consts import (struct_UINT,
 #                                  struct_WORD)
@@ -233,6 +235,117 @@ class block_basegeo(block_base):
             self.categ[curr_cat] = geos
         return
 
+    def read_category(self, offset: int) -> GEO_CATEGORY:
+        """
+        Создание категории, буффер * 2, т.к. кол-во рассчетное
+        """
+        buff = self.read(offset, GEO_CATEGORY.size * 2)
+        res = GEO_CATEGORY(buff)
+        return res
+
+    def read_shape(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_SHAPE | None:
+        """
+        Geo read_shape - closed, filled poligon
+        Args:
+            offset: int from block begin
+            category: en_GEO_CATEGORY   категория полилинии (вода, лес, город и т.д.)
+            isCalcCoord: bool - True - vrtx реальные Lon Lat
+        Returns:
+             GEO_SHAPE
+
+            2h - ptr2str/0;
+            2h - ptr2vertexes (first=first vert)
+            4h - id [0000 7685]
+            8h - LON_LAT
+            2h = 00 00 - aligment (??? or POI?)
+            2h - ptr2 list strPtr
+        """
+        # if hlat == 0 -> tail of read_category
+        # '00 00 0a ac 00 00 00 00 00 00 00 00 00 00 00 00 00 00 12 18'
+        # hlat = struct_UINT.unpack(buff[8:12])[0]
+        # if hlat:
+        #     res = GEO_SHAPE(buff, read_category)
+
+        # TODO: а количество наименований на других языках так же как vrtx рассчитывается?
+        
+        buff = self.read(offset, GEO_SHAPE.size * 2)
+        res = GEO_SHAPE(buff, category)
+
+        # и заполнить значениями, на которые ссылается
+        res.name = self.read_str(res.p_str_name)        # наименование
+        offset = res.ptr_vrtx
+        for _ in range(res.cnt_vrtx):       # вертексы
+            # read vertexes
+            res.vrtx.append(self.read_vrtx(offset, isCalcCoord))  # с реальными координатами
+            offset += VERTEX.size
+        return res
+
+    def read_line(self, offset: int, category: en_GEO_CATEGORY, isCalcCoord: bool = False) -> GEO_LINE:
+        """
+        # noqa
+        Geo segment of line - poligon
+            2h - PTR         p_str_name - ptr2str/0::: near to /0 string;
+            2h - PTR         p_vertexes_obj; ptr2vertexes::: near to first vertex
+            4h - DWORD       id::: id
+            2h - PTR   p_line_sign; // Or start pstr -=== POI 14регион?началоТСТР?
+            2h - WORD  or_b_or_c;
+            2h - PTR   p_p_str_name; // ptr to GEO_OBJ_STR
+            4h - WORD   or_38_or_0_b_country;
+        """
+        res = None
+        if self.is_unpacked:
+            buff = self.read(offset, GEO_LINE.size * 2)
+            res = GEO_LINE(buff, category)
+            # TODO:  '02F4 0158 0000673A  02A0 00 00 02 CE 00 00' - добавить cnt poi
+        
+            res.name = self.read_str(res.p_str_name)
+            # res.tstr_regi = self.read_tstr(res.tstr_regi)  # 2 POI, НЕ регион... self.POI_regi
+            # с TSTR неясно: иногда не ссылка в район TSTR, а небольшое, например, 4, значение
+            p_line_sign = res.c_pp_str_name
+            if p_line_sign >= self.li_tstr.ptr:     # issue #83
+                tstr_res : TSTR = self.read_tstr(p_line_sign)
+                #
+                res.name2 = str(tstr_res)
+            else:
+                res.name2 = f"0x{p_line_sign:02X}"
+
+            
+# 039F0201 0015 00 00 [15:MAP__06k80]
+            offset = res.ptr_vrtx
+            for _ in range(res.cnt_vrtx):
+                # read vertexes
+                res.vrtx.append(self.read_vrtx(offset, isCalcCoord))
+                offset += VERTEX.size
+        return res
+
+    def read_vrtx(self, offset: int, isCalcCoord: bool = False) -> [VERTEX | COORD]:
+        """
+        Вернуть координаты в map box карты, или же wgs84 координаты
+        """
+        res = VERTEX(self.read(offset, VERTEX.size))
+        if not isCalcCoord:
+            return res
+        # а вот если возвращать надо координаты
+        hlo = (res.x << self.shift_scale) + self.map.left_bottom._hlon
+        hla = (res.y << self.shift_scale) + self.map.left_bottom._hlat
+        coord = COORD(hlo, hla)
+        return coord
+
+    def read_tstr(self, offset: int) -> TSTR:
+        """
+
+        """
+        res = None
+        if True or self.is_unpacked:
+            buff = self.read(offset, TSTR.size)
+            if offset < self.toc.START_TXT:
+                res = TSTR(buff)
+                res.name = self.read_str(res.p_str)
+                #print(res.name)
+            else:
+                res = self.read_str(offset)
+        return res
+    
     # -------------------------------------------
     # -------------------------------------------
     def getObjects(self, isGetLines: bool = True, isGetShapes: bool = True) -> Iterator[GEO_LINE | GEO_CATEGORY]:

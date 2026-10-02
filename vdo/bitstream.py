@@ -83,6 +83,8 @@ class bitstream():
         # распаковывать ли lin{5} - характеристика дороги, предположительно макс скорость
         self.flag_unpack_lin5 = False
 
+        self.tail_cutted_after_str = None
+
         # упакованы НОМЕРА вертексов, а не offs на них
         self.max_bits_in_vrtxnum = len(f"{(archive.li_vrtx.cnt - 1):b}")
 
@@ -121,7 +123,7 @@ class bitstream():
             # +1 - всегда есть завершающий итем, нулевой
             for _ in range(self.li_cat.cnt + 1):      # noqa
                 category = self.__unpack_next_category()
-                print(category.hex())
+                # print(category.hex())
                 self.res += category
                 # category[0] - en_GEO_CATEGORY
                 if 0x67 < category[0] < 0x6f:
@@ -133,7 +135,7 @@ class bitstream():
             # Для каждого шейпа (полигона) из toc.list_shape:
             for _ in range(self.li_shp.cnt + 1):      # +1 - всегда есть завершающий итем, нулевой
                 shape = self.__unpack_next_shape()
-                print(shape.hex())
+                # print(shape.hex())
                 self.res += shape
 
         # <<<<<<<<<< 3 GEO_LINE
@@ -180,13 +182,16 @@ class bitstream():
             заканчивается множественными 0-ми
             подробно - см. bitstream.unpack_all_str
         """
+        # bmw 070D9E01: cannot access local variable 'unpacked_bin_strings'
+        # lin есть, shp, tstr, poi нет.
+        unpacked_bin_strings = b''
         if self.li_tstr.cnt:
             # нет tstr - нет и строк для распаковки
             unpacked_bin_strings = self.__unpack_all_strings()
             # debug
             unic = unpacked_bin_strings.replace(b"\x00", b".")
             unic = unic.decode('cp1250')
-            print(f"\n{unpacked_bin_strings}\n\n{unic}\n")
+            # print(f"\n{unpacked_bin_strings}\n\n{unic}\n")
 
             # <<<<<<<<< Убрать незначащие нули в буфере, в архиве они необходимы для обеспечения
             # TODO: причем остается и только если только shp... self.cuted_after_str
@@ -198,7 +203,7 @@ class bitstream():
             # 0111000010110000001 01110000101000000001 01110000101100000001(sc5 antalia)
 
             ten_zero_idx = self.buffer.find(bitarray('0000000000000000'))     # Находим индекс единицы
-            self.tail_cutted_after_str = None
+            
             if ten_zero_idx:
                 self.tail_cutted_after_str = self.buffer[:ten_zero_idx]
                 self.buffer = self.buffer[ten_zero_idx:]   # Отрезаем всё, что было до
@@ -224,7 +229,7 @@ class bitstream():
                     raise "Прикольно, такое вообще не может быть"
         
         # <<<<<<<<<< LIN{45} ссылки на TSTRs из каждого lin (ptr_linesign , ptr2poi)
-        if self.li_lin.cnt:
+        if self.li_lin.cnt and self.li_tstr.cnt:
             # line = p_str_name + ptr2firstObjVertex + id + ptr_linesign + ptr2poi + ptr2tstr + shrtEnd
             # см lzw: 0x070A240f(italia), 0x70AC609(azov) in bmw. type = 14h, scale=5
             # ptr для каждого lin, включая последний нулевой, "уложены" подряд
@@ -317,6 +322,9 @@ class bitstream():
                 #     self.res[offset + 2:offset + 4] = ptr2poi
 
                 offset += GEO_LINE.size
+        else:
+            #
+            pass
 
         # <<<<<<<<<< TSTRs  - # далее в архиве запакованы собственно TSTR
         if self.li_tstr.cnt:
@@ -343,7 +351,7 @@ class bitstream():
                 offset += GEO_SHAPE.size
 
         # <<<<<<<<<< ссылки на TSTRs из каждого lin (ptr2tstr)
-        if self.li_lin.cnt:
+        if self.li_lin.cnt and self.li_tstr.cnt:
             # line = p_str_name + ptr2firstObjVertex + id + ptr_linesign + ptr2poi + ptr2tstr + shrtEnd
             # нв примере lzw - 0x070A240f in bmw. type = 14h, scale=5
             # ptr для каждого lin, включая последний нулевой, "уложены" подряд, но предваряются 1 (если есть)
@@ -364,15 +372,44 @@ class bitstream():
                 ptr2tstr = self._unpack_short(self.max_bits_in_ptr - 1, 1)   # word aligned
                 self.res[offset:offset + 2] = ptr2tstr
                 offset += GEO_LINE.size
-        
+
+        # <<<<<<<<<< fill_GEO_LINE:shrtEnd
+        if self.li_lin.cnt:
+            # line = p_str_name + ptr2firstObjVertex + id + ptr_linesign + ptr2poi + ptr2tstr + shrtEnd
+            # sc5 - byte en_TeleAtlasRegion
+            # shrtEnd предваряются 1 или 0
+            # :: flag 1: shrtEnd = next 16 bit, 0 - prev val
+            # убираем все 0
+            try:
+                first_one_idx = self.buffer.index(1)        # Находим индекс первой единицы
+                self.buffer = self.buffer[first_one_idx:]   # Отрезаем всё, что было до неё
+            except ValueError:
+                # Исключение сработает, если в массиве вообще больше нет единиц
+                raise "Прикольно, такое вообще не может быть"
+
+            offset = self.li_lin.ptr + 14
+            # shrtEnd = b'\x00\x00'       # хотя там раньше эксепт подвешен
+            for _ in range(self.li_lin.cnt + 1):
+                flag = self.pop(1)
+                if flag == bitarray([1]):
+                    shrtEnd = self._unpack_short(BITS_IN_WORD)
+                # else:                    # shrtEnd тот же
+                self.res[offset:offset + 2] = shrtEnd
+                offset += GEO_LINE.size
+
         # <<<<<<<<<<<<<<<<<<<< если осталось что- либо нераспакованное - его в tail
         if self.buffer and ba2int(self.buffer) > 0:
             self.tail = self.buffer
-            # 14h, lin.cnt = 3; 00100000000101000000010000000000000000000000000000000000000000000
-            # 14h, lin_cnt =25; 0010000000010100000000000000000000000000000100000000000000000000000000000000000000000000
-            # noqa 14h, lin_cnt =47; 0100111111001100011111100111001111110100000111111010010011111101010000100000000 1011000100000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000
-            # noqa 14h, lin_cnt =23; 0010000000000000000010000000010110001000000000000000000001000000000000000000000000000000000000000000000000000
-            # 14h, lin_cnt = 3; 00100000000000000000000000000000000000000000000000000000000000000
+            #
+            print(f"{self.head.bladdr}:li_cnt: {self.li_lin.cnt}\ttail: {self.tail.to01()}")
+            # 070D9E01 0014 01 02 [14:MAP__05k200]?
+            # 070AF701 0014 01 02 [14:MAP__05k200]
+            # 070E8001 0014 01 02 [14:MAP__05k200]
+            # 070EC301 0014 01 02 [14:MAP__05k200]
+            # TODO sc5 случаи, когда линии есть, а текста - нет
+            # 070d9e01:li_cnt: 2	tail: 000000000000000101001000010100100001010010000000000010000000010000000010001000
+            # tstr = 0/ распаковка не вытанцевала
+            pass
         else:
             self.tail = None
 

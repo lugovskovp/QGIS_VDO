@@ -119,11 +119,12 @@ class block_basegeo(block_base):
                 print(f"Permission error Save unpacked into raw_{self.head.bladdr}.bin")
 
         #0x070A240f - lzw
+        
         # ---------------------------------------------------
         self.toc = toc()        # new TOC   TODO: 4del
         self.___setup_toc()        # toc - table of contents   TODO: 4del
-        self.categ = {}         # TODO: 4del
- 
+        return  # self.categ = {}         # TODO: 4del
+
         # и, наконец, всё содержимое
         # self.arr_shapes = []
 
@@ -422,6 +423,11 @@ if __name__ == '__main__':
     from QGIS_VDO.vdo.fixtures_vdo import vdobmv as vdo
 
     bla = vdo.get_bladdr(0x070A240f)
+
+    bla = vdo.get_bladdr(0x070D9E01)
+    # 070D9E01 0014 01 02 [14:MAP__05k200]
+    # cannot access local variable 'unpacked_bin_strings' where it is not associated with a value
+    # noqa tail: 000000000000000000000000001000000000000000000000000000000000101001000010100100001010010000000000010000000010000000010001000000000000000000000000000000000000000000000
     lzw_14 = vdo.get_block(bla)
     pass
 

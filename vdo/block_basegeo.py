@@ -94,9 +94,11 @@ class block_basegeo(block_base):
             # tail = ba2int()
             if unpacker.tail is not None:
                 # что-то нераспакованное осталось
+                print(f"0x{unpacker.head.bladdr.value:X}:tail: {unpacker.tail.to01()}")
                 pass
             if unpacker.tail_cutted_after_str is not None:
                 # что-то нераспакованное осталось
+                print(f"0x{unpacker.head.bladdr.value:X}:cute: {unpacker.tail_cutted_after_str.to01()}")
                 pass
             # _raw.hex()
             pass

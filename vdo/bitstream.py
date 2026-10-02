@@ -104,9 +104,9 @@ class bitstream():
         # в буффер - запакованную часть блока, далее self.unpack полностью распакует
         self.buffer = bitarray(buffer=arc, endian='big').copy()    # copy - else read only memory # noqa
 
-        # -----------------------------------------
+        # ----------------------------------------- 070CF805 0014 01 07 [14:MAP__05k200] id_line_if_0 = 0???
         # debug raises - временно для отладки, потом вообще закомментировать эти проверки
-        if self.max_bits_id_line_if_0 not in [5, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15]:
+        if self.max_bits_id_line_if_0 not in [0, 5, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15]:
             raise ValueError(self.max_bits_id_line_if_0, f"0x{self.max_bits_id_line_if_0:X} .max_bits_id_line_if_0")  # noqa 19/0x13 ?
         if self.max_bits_in_vertex_delta not in [8, 9, 0x0a, 0xb, 0xc]:
             raise ValueError(self.max_bits_in_vertex_delta, f"0x{self.max_bits_in_vertex_delta:X} .max_bits_in_vertex_delta")  # noqa
@@ -196,6 +196,7 @@ class bitstream():
             #  0111000010010000001... 0x38481 - artic ocean
             #  0715AB01 001E 01 02 [1E:MAP__11k_11] - 0111000010010000001000000000
             # 0111000010110000001 01110000101000000001 01110000101100000001(sc5 antalia)
+
             ten_zero_idx = self.buffer.find(bitarray('0000000000000000'))     # Находим индекс единицы
             self.tail_cutted_after_str = None
             if ten_zero_idx:
@@ -203,12 +204,24 @@ class bitstream():
                 self.buffer = self.buffer[ten_zero_idx:]   # Отрезаем всё, что было до
             
             # Отрезаем все 0, что было для пространства использования преамбульных сокращений,
-            try:
-                first_one_idx = self.buffer.index(1)        # Находим индекс первой единицы
-                self.buffer = self.buffer[first_one_idx:]   # Отрезаем всё, что было до неё
-            except ValueError:
-                # Исключение сработает, если в массиве вообще больше нет единиц
-                raise "Прикольно, такое вообще не может быть"
+            #
+            if self.li_lin.cnt:
+                # если есть линии, то (гипотеза sc5) после 000...00 будет tr_linesign на начало TSTRS
+                # ba = f"{self.li_tstr.ptr:0{self.max_bits_in_ptr}b}"
+                ba_tofind = bitarray(f"{self.li_tstr.ptr:0{self.max_bits_in_ptr}b}")
+                first_one_idx = self.buffer.find(ba_tofind)        # Находим индекс
+                if first_one_idx > 0:
+                    self.buffer = self.buffer[first_one_idx:]   # Отрезаем всё, что было до неё
+                else:
+                    # Исключение сработает, если в массиве вообще больше нет TSTR
+                    raise ValueError(f"Ууууу, значит, не всегда TSTR в остатке есть: {self.head.bladdr}")
+            else:
+                try:
+                    first_one_idx = self.buffer.index(1)        # Находим индекс первой единицы
+                    self.buffer = self.buffer[first_one_idx:]   # Отрезаем всё, что было до неё
+                except ValueError:
+                    # Исключение сработает, если в массиве вообще больше нет единиц
+                    raise "Прикольно, такое вообще не может быть"
         
         # <<<<<<<<<< LIN{45} ссылки на TSTRs из каждого lin (ptr_linesign , ptr2poi)
         if self.li_lin.cnt:

@@ -703,7 +703,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         progress_bar.setValue(percent)
         # Например: добавление в QListWidget, отрисовка слоя, парсинг метаданных и т.д.   # noqa
-        print(f"_update_gui_with_result: Док-виджет обрабатывает карту: {block_folder_value}")
+        # print(f"_update_gui_with_result: Док-виджет обрабатывает карту: {block_folder_value}")
 
     def _set_progress_max(self, progress_bar, total_count):
         """

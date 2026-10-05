@@ -110,11 +110,15 @@ class bitstream():
         # debug raises - временно для отладки, потом вообще закомментировать эти проверки
         if self.max_bits_id_line_if_0 not in [0, 5, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15]:
             raise ValueError(self.max_bits_id_line_if_0, f"0x{self.max_bits_id_line_if_0:X} .max_bits_id_line_if_0")  # noqa 19/0x13 ?
-        if self.max_bits_in_vertex_delta not in [8, 9, 0x0a, 0xb, 0xc]:
+        if self.max_bits_in_vertex_delta not in [0, 8, 9, 0x0a, 0xb, 0xc]:
             raise ValueError(self.max_bits_in_vertex_delta, f"0x{self.max_bits_in_vertex_delta:X} .max_bits_in_vertex_delta")  # noqa
-        if unkn_zero not in [0]:
+            # bmw 07157901 001E 01 02 [1E:MAP__11k_11] = 0!! bits
+        if unkn_zero not in [0]:        # unk_0 = 60 in _0x1d_0x07151504
             raise ValueError(unkn_zero, f"0x{unkn_zero} .unkn_zero")
         pass
+
+        # if not self.max_bits_in_vertex_delta:   # bmw 07157901 001E 01 02 [1E:MAP__11k_11] = 0!! bits
+        #     self.max_bits_in_vertex_delta = 16
 
     def unpack(self) -> bytearray:      # noqa 'bit_stream.unpack' is too complex (23)Flake8(C901)
         """основная функция, возвращает распакованный _raw"""
@@ -150,6 +154,9 @@ class bitstream():
                 self.res += line
             pass
 
+        # if not self.max_bits_in_vertex_delta:
+        #     self.res += b"\x00" * (self.li_vrtx.cnt * VERTEX.size)
+
         # <<<<<<<<<< 4 VERTEX
         # дальше запакованы вертексы, delta-coding
         if self.li_vrtx.cnt:
@@ -162,7 +169,7 @@ class bitstream():
             # a_hex = vrtx.hex()
 
             # распаковка дельта-кодированных локальных координат
-            for num in range(self.li_vrtx.cnt - 1):     # minus 1st xy
+            for _ in range(self.li_vrtx.cnt - 1):     # minus 1st xy
                 prev_x = self.__unpack_half_vertex(prev_x)      # x
                 prev_y = self.__unpack_half_vertex(prev_y)      # y
                 # упаковка в vertex
@@ -202,11 +209,11 @@ class bitstream():
             #  0715AB01 001E 01 02 [1E:MAP__11k_11] - 0111000010010000001000000000
             # 0111000010110000001 01110000101000000001 01110000101100000001(sc5 antalia)
 
-            ten_zero_idx = self.buffer.find(bitarray('0000000000000000'))     # Находим индекс единицы
+            # ten_zero_idx = self.buffer.find(bitarray('0000000000000000'))     # Находим индекс единицы
             
-            if ten_zero_idx:
-                self.tail_cutted_after_str = self.buffer[:ten_zero_idx]
-                self.buffer = self.buffer[ten_zero_idx:]   # Отрезаем всё, что было до
+            # if ten_zero_idx:
+            #     self.tail_cutted_after_str = self.buffer[:ten_zero_idx]
+            #     self.buffer = self.buffer[ten_zero_idx:]   # Отрезаем всё, что было до
             
             # Отрезаем все 0, что было для пространства использования преамбульных сокращений,
             #
@@ -219,7 +226,11 @@ class bitstream():
                     self.buffer = self.buffer[first_one_idx:]   # Отрезаем всё, что было до неё
                 else:
                     # Исключение сработает, если в массиве вообще больше нет TSTR
-                    raise ValueError(f"Ууууу, значит, не всегда TSTR в остатке есть: {self.head.bladdr}")
+                    if ba2int(self.buffer) != 0:
+                        raise ValueError(f"Ууууу, значит, не всегда TSTR в остатке есть: {self.head.bladdr}")
+                    # else bmw sc11 07155F03 001E 01 04 [1E:MAP__11k_11] buffer = 0
+                #
+                #
             else:
                 try:
                     first_one_idx = self.buffer.index(1)        # Находим индекс первой единицы
@@ -239,13 +250,11 @@ class bitstream():
             #  - ptr_linesign указывают на TSTRS с типом 0 - полигон (похоже принадлежность?)
             #  - sc5, версия - все = li_tstr.ptr
 
-            if self.head.bltype.value == 0x14:     # пока только для sc5 14h типа 5 бит
-                bit_in_ptr2poi = 4  # 5
-                pass
-            else:
+            if self.head.bltype.value not in [0x14, 0x1e]:     # пока только для sc5 14h типа 5 бит
                 raise NotImplementedError(f"тип блока {self.head.bltype}")
 
             # подбор значения bit_in_ptr2poi
+            bit_in_ptr2poi = 4
             watchdog = self.li_lin.cnt
             if watchdog and self.flag_unpack_lin5:
                 # нет дорог - нет характеристик
@@ -359,10 +368,8 @@ class bitstream():
             # :: ptr2tstr <--  self.max_bits_in_ptr - 1
 
             # для проверки - ptr_linesign указывают на TSTRS с типом 10 - полилиния
-            if self.head.bltype.value == 0x14:     # пока только для 14 типа 5 бит
-                bit_in_ptr2poi = 55555555      # TODO - вообще убрать после проверки на др типах
-            else:
-                raise NotImplementedError(f"тип блока {self.head.bltype}")
+            if self.head.bltype.value not in [0x14, 0x1e]:     # пока только для 14 типа 5 бит
+                raise NotImplementedError(f"тип блока {self.head.bltype}:0x{self.head.bltype.value:X}")
             
             # 8 - offset ptr_linesign in GEO_LINE
             INNER_OFFSET_POI = GEO_LINE.size - 4
@@ -397,7 +404,7 @@ class bitstream():
                 self.res[offset:offset + 2] = shrtEnd
                 offset += GEO_LINE.size
 
-        # <<<<<<<<<<<<<<<<<<<< если осталось что- либо нераспакованное - его в tail
+        # <<<<<<<<<<<<<<<<<<<< если осталось что- либо нераспакованное - его в tail  000100111110
         if self.buffer and ba2int(self.buffer) > 0:
             self.tail = self.buffer
             #
@@ -545,30 +552,47 @@ class bitstream():
         Returns:
             int: short значение координаты x или y
         """
-        prefix = self.pop(2)
-        bits_to_read = self.max_bits_in_vertex_delta
-        
-        if prefix == CONST_BA_11:                   # CONST_BA_11 = bitarray([1, 1])
-            # load full short
-            half = ba2int(self.pop(BITS_IN_WORD))
+        # вырожденный случай - max_bits_in_vertex_delta=0
+        if self.max_bits_in_vertex_delta:
+            prefix = self.pop(2)
+            bits_to_read = self.max_bits_in_vertex_delta
+            
+            if prefix == CONST_BA_11:                   # CONST_BA_11 = bitarray([1, 1])
+                # load full short
+                half = ba2int(self.pop(BITS_IN_WORD))
+                return half
+            
+            elif prefix == CONST_BA_10:                 # CONST_BA_10 = bitarray([1, 0])
+                # read max_bits_in_vertex_delta бит, вычесть значение из предыдущего
+                val = -ba2int(self.pop(bits_to_read))
+
+            elif prefix == CONST_BA_01:                 # CONST_BA_01 = bitarray([0, 1])
+                # read 8 бит, и +добавить ~9й~ старший
+                val = ba2int(self.pop(bits_to_read - 1))
+                val = (1 << bits_to_read) | val         # 0b100000000 | val
+
+            else:
+                # CONST_BA_00
+                val = ba2int(self.pop(bits_to_read - 1))
+
+            # 0 - сложить, 10-вычесть, 11 - уже вернули
+            half = prev + val
             return half
-        
-        elif prefix == CONST_BA_10:                 # CONST_BA_10 = bitarray([1, 0])
-            # read max_bits_in_vertex_delta бит, вычесть значение из предыдущего
-            val = -ba2int(self.pop(bits_to_read))
-
-        elif prefix == CONST_BA_01:                 # CONST_BA_01 = bitarray([0, 1])
-            # read 8 бит, и +добавить ~9й~ старший
-            val = ba2int(self.pop(bits_to_read - 1))
-            val = (1 << bits_to_read) | val         # 0b100000000 | val
-
         else:
-            # CONST_BA_00
-            val = ba2int(self.pop(bits_to_read - 1))
-
-        # 0 - сложить, 10-вычесть, 11 - уже вернули
-        half = prev + val
-        return half
+            # delta=0, bmw 07157901 001E 01 02 [1E:MAP__11k_11]
+            prefix = self.pop(1)
+            if prefix == bitarray([0]):
+                # оставить старое значение
+                return prev
+            # второй бит ==1?
+            prefix = self.pop(1)
+            if prefix == bitarray([1]):
+                # == '11' load full short
+                half = ba2int(self.pop(BITS_IN_WORD))
+                return half
+            else:
+                # prefix = 10?
+                raise ValueError("max_bits_in_vertex_delta=0, prefix = 10? так работатет")
 
         # 0x70F0E03 in bmv vdo
         #     C:/DIY/VDO/db_src/bmw34-2010/DB/DB_0
@@ -608,6 +632,7 @@ class bitstream():
         # Причём "пустые" элементы = b'A'
 
         # но 11 это преамбула, поэтому от 0100001 до 0100110
+        #
         preambula = {}
         for k in range(0b0100001, 0b0100111):
             # первые 3 бита = 000
@@ -716,7 +741,7 @@ class bitstream():
                 byte_lang = self._unpack_byte(8)
             # else:   # use prev language
             # type
-            if ba2int(self.pop(1)):
+            if ba2int(self.pop(1)):         # 07155F03 001E 01 04 [1E:MAP__11k_11] non-empty bitarray expected
                 # read type
                 byte_type = self._unpack_byte(5)
             # else:   # use prev type

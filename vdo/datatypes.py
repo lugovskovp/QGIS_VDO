@@ -334,10 +334,10 @@ class VDO_FILE:
             )
 
         # Проверяем, coord_origin, coord_max: оба либо None, либо COORD
-        is_none = coord_origin is None and coord_max is None
-        is_coord = type(coord_origin).__name__ == 'COORD' and type(coord_max).__name__ == 'COORD'
+        is_none_coords = coord_origin is None and coord_max is None
+        is_both_coord = type(coord_origin).__name__ == 'COORD' and type(coord_max).__name__ == 'COORD'
 
-        coords_ok = is_none or is_coord
+        coords_ok = is_none_coords or is_both_coord
 
         if not coords_ok:
             raise RuntimeError(
@@ -350,7 +350,7 @@ class VDO_FILE:
         # Загружаем блок, принудительно считая offset с 0 адреса.
         # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"
         # block: block_base
-        if is_none:
+        if is_none_coords:
             block = vdo.get_block(0)
         else:
             block = vdo.get_block(0, coord_origin, coord_max)

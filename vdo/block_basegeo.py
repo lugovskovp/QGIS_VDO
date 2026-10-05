@@ -86,8 +86,9 @@ class block_basegeo(block_base):
         self.li_tstr = self.read_list(OFFSET_LI_TSTR)        # наименования на разных языках
 
         # ---------------------------------------------------
+        self.write_raw(name="c:/temp/_packed_block.bin")        # ame: str = "c:/temp/_base_block.bin
         # распаковать, если carin-packed
-        if not self.is_unpacked:
+        if not self.is_unpacked and self.head.arch_type == 1:
             unpacker = bitstream(self)
             self._raw = memoryview(unpacker.unpack())
             self.is_unpacked = True
@@ -102,23 +103,23 @@ class block_basegeo(block_base):
                 pass
             # _raw.hex()
             pass
-        # сразу записать - на случай если при разборке упадёт
-      
-        # DEBUG: записать распакованное
-        self.write_raw()
-        if not self.is_unpacked:
-            print(f"Save tail into tail_{self.head.bladdr}.bin")
-            try:
-                with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
-                    f.write(self.bit_tail.buffer.tobytes())
-            except PermissionError:
-                print(f"Permission error Save tail into tail_{self.head.bladdr}.bin")
-            print(f"Save unpacked into raw_{self.head.bladdr}.bin")
-            try:
-                with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
-                    f.write(self._raw)
-            except PermissionError:
-                print(f"Permission error Save unpacked into raw_{self.head.bladdr}.bin")
+            # сразу записать - на случай если при разборке упадёт
+        
+            # DEBUG: записать распакованное
+            self.write_raw()
+            if not self.is_unpacked:
+                print(f"Save tail into tail_{self.head.bladdr}.bin")
+                try:
+                    with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
+                        f.write(self.bit_tail.buffer.tobytes())
+                except PermissionError:
+                    print(f"Permission error Save tail into tail_{self.head.bladdr}.bin")
+                print(f"Save unpacked into raw_{self.head.bladdr}.bin")
+                try:
+                    with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
+                        f.write(self._raw)
+                except PermissionError:
+                    print(f"Permission error Save unpacked into raw_{self.head.bladdr}.bin")
 
         #0x070A240f - lzw
         
@@ -346,7 +347,8 @@ class block_basegeo(block_base):
     
     # -------------------------------------------
     # -------------------------------------------
-    def getObjects(self, isGetLines: bool = True, isGetShapes: bool = True) -> Iterator[GEO_LINE | GEO_CATEGORY]:
+    def getObjects(self, isGetLines: bool = True,
+                   isGetShapes: bool = True) -> Iterator[GEO_LINE | GEO_CATEGORY]:
         """
         Iterator geo objects
         Args:
@@ -381,7 +383,7 @@ class block_basegeo(block_base):
                 offset += obj_size
                 # вертексы - в координаты
                 yield obj
-
+        
     def get_all_categories(self) -> Iterator[GEO_CATEGORY]:
         """
         Yeld:
@@ -389,9 +391,9 @@ class block_basegeo(block_base):
         """
         offset = self.toc.li_cat.ptr
         # -1 -- самая последняя категория - нулевая с замыкающими ptr
-        for i in range(self.toc.li_cat.cnt):
+        for _ in range(self.toc.li_cat.cnt + 1):
             res = self.read_category(offset)
-            self.cats.append(res)
+            # self.cats.append(res)
             offset += GEO_CATEGORY.size
             yield res
 
@@ -426,16 +428,21 @@ if __name__ == '__main__':
 
     bla = vdo.get_bladdr(0x070A240f)
 
-    bla = vdo.get_bladdr(0x070D9E01)
+    # bla = vdo.get_bladdr(0x070D9E01)
     # 070D9E01 0014 01 02 [14:MAP__05k200]
     # cannot access local variable 'unpacked_bin_strings' where it is not associated with a value
     # noqa tail: 000000000000000000000000001000000000000000000000000000000000101001000010100100001010010000000000010000000010000000010001000000000000000000000000000000000000000000000
-    lzw_14 = vdo.get_block(bla)
+    # lzw_14 = vdo.get_block(bla)
+
+    # bla = vdo.get_bladdr(0x07151504)   # 1d
+
+    # bla = vdo.get_bladdr(0x070D9E01)   # 14
+    blo = vdo.get_block(bla)
     pass
 
     """
         # noqa
-        071515 04  BlockType.MAP__10k400: 0x1d
+        07151504  BlockType.MAP__10k400: 0x1d
         Max PTR bits: 12
     самый хвост
         0000000000000000000000000000000000000000001100011000000100010101100000110001101001100110001110010100110001111011000100010110001000101101010001011100100010111101000110000000000000000000000000000000000000000000000000000000

@@ -201,7 +201,6 @@ class block_base(BYTESTRUCT):
             # Если пришла строка "0" или другой невалидный тип —
             # бизнес-логика гасит ошибку и безопасно отдает пустую строку
             raise TypeError("TypeError read_str")
-            return ''
 
     def write_raw(self, name: str = "c:/temp/_base_block.bin") -> None:
         try:

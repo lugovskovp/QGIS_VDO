@@ -73,6 +73,9 @@ class block_basegeo(block_base):
 
         # инициализировать - и распаковать, если zlib
         super().__init__(addr)
+        # # DEBUG: записать нераспакованное
+        self.write_raw()
+        
         # территория покрытия карты
         self.map = MAP_AREA(self.read(OFFSET_MAP_AREA, MAP_AREA.size))
         # на сколько сдвинуть единицу координат в карте влево, чтобы получить порядок значений COORD
@@ -105,8 +108,6 @@ class block_basegeo(block_base):
             pass
             # сразу записать - на случай если при разборке упадёт
         
-            # DEBUG: записать распакованное
-            self.write_raw()
             if not self.is_unpacked:
                 print(f"Save tail into tail_{self.head.bladdr}.bin")
                 try:
@@ -437,6 +438,9 @@ if __name__ == '__main__':
     # bla = vdo.get_bladdr(0x07151504)   # 1d
 
     # bla = vdo.get_bladdr(0x070D9E01)   # 14
+
+    # 0x70EDB03 - камчатка
+    
     blo = vdo.get_block(bla)
     pass
 

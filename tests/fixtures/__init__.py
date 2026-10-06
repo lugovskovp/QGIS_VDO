@@ -15,3 +15,8 @@ BIN_FILES = [
 def bin_file_path(request):
     """Поочередно возвращает Path к каждому из трех bin-файлов"""
     return FIXTURES_DIR / request.param     # pragma: no cover
+
+
+"""
+
+"""

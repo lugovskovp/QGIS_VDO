@@ -230,7 +230,23 @@ class en_TeleAtlasRegion(enum.Enum):             # TeleAtlasHexRegion
     UNITED_KINGDOM = 0xDF                     # Великобритания
     STATO_DELLA_CITTA_DEL_VATICANO = 0xE5     # Ватикан
     SRBIJA_I_CRNA_GORA = 0xF1                 # Сербия и Черногория
+"""
+ChatGPT:
 
+• MALTA = 0x82 — Мальта (Malta)
+• KOSOVO = 0x73 — Косово (Kosovo, в некоторых версиях карт идет отдельно от Сербии)
+• CRNA_GORA = 0x91 — Черногория (Montenegro, как независимый регион в более свежих релизах карт,
+    отдельно от старой константы 0xF1)
+
+coutry_code=0xa4 или 0x52
+• 0x52 — это Гваделупа (GUADELOUPE / Французские Антильские острова)
+    в ГИС-структурах Tele Atlas этот регион часто идет сразу за Гибралтаром (0x53).
+• 0xA4 — в этой конкретной кодировке это Мальта (MALTA), либо (в зависимости от релиза карт) 
+    этот байт используется под Люксембург (если в системе происходит инверсия или смещение 
+    относительно стандартного ISO).
+
+• QAZAQSTAN = 0x71                          # Казахстан
+"""
 
 @enum.unique
 class en_GEO_CATEGORY(enum.Enum):    	#//{en_GEO_OBJ_TYPE	// 03->05->06->08->01->00 blocks MAPS

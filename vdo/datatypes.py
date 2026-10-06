@@ -1,14 +1,29 @@
 """
+Модуль определяет базовые типы данных и структуры для работы с файловым форматом VDO (картографические данные CarIND).
+Это ядро парсера бинарного формата навигационных баз данных.
 
 классы:
-VDO_FILE
-BYTESTRUCT
+VDO_FILE    # Главный интерфейс для работы с VDO-файлами, реализует паттерн синглтон для пустого файла
+BYTESTRUCT  # Базовый класс для всех структурных типов с zero-copy memory management
 BL_ADDR  DWORD, Структура адреса блока
 PTR      WORD near - указатель
 LIST
 FAR_LIST
 CH_IDX
 BLSTART
+
+Архитектурные паттерны
+    Паттерн	Где используется
+    Синглтон	VDO_FILE для пустой заглушки
+    Zero-copy	BYTESTRUCT + memoryview
+    __slots__	Все классы — экономия памяти
+    Динамический импорт	setup_known_types() + get_block()
+    Композиция	FAR_LIST = BLADDR + LIST, CH_IDX = BLADDR + LIST, BLSTART = BLADDR
+Сильные стороны
+    Производительность: memoryview + __slots__ + struct.unpack_from — минимум аллокаций
+    Безопасность типов: Строгая проверка isinstance() в конструкторах
+    Масштабируемость: Динамическая загрузка блоков из blocks/ без хардкода
+    Изоляция контекста: Каждый структурный тип привязан к VDO_FILE через vdo
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
@@ -89,7 +104,15 @@ KNOWN_BLOCKS = setup_known_types()
 
 # ----
 class VDO_FILE:
-    """ класс работы с файлом формата carindb """
+    """
+    Роль: Главный интерфейс для работы с VDO-файлами, реализует паттерн синглтон для пустого файла
+
+    __slots__ — экономия памяти, жёстко фиксированные атрибуты
+    __new__ + __init__ — разделение логики: невалидный файл возвращает синглтон-заглушку
+    Метод get_block() — динамическая загрузка классов блоков через importlib из папки blocks/
+    load_single_block() — загрузка одного блока из отдельного файла (обходит синглтон-систему)
+    Встроенная валидация по маркеру формата (первые 4 байта == 1)
+    """
     
     # Запрещаем создание __dict__, жестко фиксируем свойства экземпляра
     __slots__ = (
@@ -102,6 +125,8 @@ class VDO_FILE:
         "dbrev",
         "segsize",
         "file_size",
+        "_file_handle",
+        "_file_closed",
     )
     
     # Переменная класса для хранения синглтона (не входит в __slots__)
@@ -131,14 +156,24 @@ class VDO_FILE:
             if cls._singleton_instance is None:
                 cls._singleton_instance = super().__new__(cls)
                 cls._singleton_instance._initialized = False
+                cls._singleton_instance._file_handle = None
+                cls._singleton_instance._file_closed = True
             return cls._singleton_instance
 
         # Если файл валидный -> создаем новый объект
         obj = super().__new__(cls)
         obj._initialized = False
+        obj._file_handle = None
+        obj._file_closed = True
         return obj
 
     def __init__(self, file_path: Optional[str] = None):
+        # Инициализируем атрибуты ДО проверки _initialized,
+        # чтобы read() и close() могли безопасно вызываться даже при повторных init
+        self._file_handle = None
+        self._file_closed = True
+        self.is_empty = True  # дефолт: синглтон/пустой
+
         # Защита от повторной инициализации синглтона
         if getattr(self, "_initialized", False):
             return
@@ -164,6 +199,8 @@ class VDO_FILE:
         self.is_single = False
         self.filename = os.path.basename(path_str)
         self.file_size = os.path.getsize(self.file_path)
+        self._file_handle = None
+        self._file_closed = True
         
         # Безопасное чтение метаданных напрямую через распаковку bytes
         dbrev_bytes = self.read(OFFSET_DB_REVISION, 2)
@@ -186,15 +223,41 @@ class VDO_FILE:
         return f"{folder_name}_0x{self.file_size:04X}"
 
     def read(self, offset: int, size: int) -> bytes:
-        """Чтение блока байт заданной длины по указанному смещению."""
+        """Чтение блока байт заданной длины по указанному смещению.
+        
+        Использует кэшированный файловый дескриптор для избежания
+        повторных open/close при множественных чтениях.
+        """
         if self.is_empty or size <= 0 or (offset + size) > self.file_size:
             return EMPTY_BUFFER
+        
         try:
-            with open(self.file_path, "rb") as f:
-                f.seek(offset)
-                return f.read(size)
+            # Lazy open: открываем файл при первом чтении
+            if self._file_handle is None or self._file_closed:
+                self._file_handle = open(self.file_path, "rb")
+                self._file_closed = False
+            
+            self._file_handle.seek(offset)
+            return self._file_handle.read(size)
         except (OSError, FileNotFoundError):    # pragma: no cover
+            self._file_closed = True
+            if self._file_handle:
+                self._file_handle.close()
+                self._file_handle = None
             return EMPTY_BUFFER
+
+    def close(self) -> None:
+        """Явно закрыть кэшированный файловый дескриптор."""
+        fh = getattr(self, "_file_handle", None)
+        fc = getattr(self, "_file_closed", True)
+        if fh and not fc:
+            self._file_handle.close()
+            self._file_handle = None
+            self._file_closed = True
+
+    def __del__(self) -> None:
+        """Гарантируем закрытие дескриптора при сборке мусора."""
+        self.close()
 
     def get_bladdr(self, bladdr: Union[int, 'BLADDR']) -> 'BLADDR':
         """Возвращает экземпляр BLADDR, привязанный к текущему vdo context."""
@@ -271,10 +334,10 @@ class VDO_FILE:
             )
 
         # Проверяем, coord_origin, coord_max: оба либо None, либо COORD
-        is_none = coord_origin is None and coord_max is None
-        is_coord = type(coord_origin).__name__ == 'COORD' and type(coord_max).__name__ == 'COORD'
+        is_none_coords = coord_origin is None and coord_max is None
+        is_both_coord = type(coord_origin).__name__ == 'COORD' and type(coord_max).__name__ == 'COORD'
 
-        coords_ok = is_none or is_coord
+        coords_ok = is_none_coords or is_both_coord
 
         if not coords_ok:
             raise RuntimeError(
@@ -287,7 +350,7 @@ class VDO_FILE:
         # Загружаем блок, принудительно считая offset с 0 адреса.
         # Передаем целое число 0, чтобы get_block взял смещение 0 напрямую и строку-маркер "is_single"
         # block: block_base
-        if is_none:
+        if is_none_coords:
             block = vdo.get_block(0)
         else:
             block = vdo.get_block(0, coord_origin, coord_max)
@@ -331,6 +394,8 @@ class VDO_FILE:
             new_obj.file_size = os.path.getsize(path_to_single)
             new_obj.dbrev = dbrev
             new_obj.segsize = segsize
+            new_obj._file_handle = None
+            new_obj._file_closed = True
             
             # 3. Вызываем внутренний метод генерации имени группы QGIS
             # Используем ИМЕННО new_obj.filename, так как у исходного синглтона имя пустое
@@ -495,10 +560,15 @@ class VDO_FILE:
 
     
 # ================================================
-
-
 class BYTESTRUCT:
-    """Base for other data structures with high-performance zero-copy memory management."""
+    """
+    Роль: Базовый класс для всех структурных типов с zero-copy memory management
+
+    memoryview — нулевое копирование буфера
+    __slots__ = ("_raw",) — только один слот
+    Методы: read(), read_str() (cp1250, 0-terminated), uchar(), ushort(), uint()
+    hex — отладочный дамп памяти по 16 байт
+    """
 
     # Выделяем память строго под один слот
     __slots__ = ("_raw",)
@@ -588,6 +658,10 @@ class BYTESTRUCT:
 
 class BLADDR(BYTESTRUCT):
     """
+    Роль: 4-байтовый адрес блока (3 байта номер + 1 байт размер в сегментах)
+    Свойства: blocknumber, segcnt, sizeofblock, offset, isZero
+    Сравнение: __eq__, __lt__, __le__ с проверкой совместимости segsize
+
     b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks
     """
     # Фиксируем слоты. Базовый '_raw' уже унаследован, здесь пишем только новые поля
@@ -595,7 +669,7 @@ class BLADDR(BYTESTRUCT):
     
     size: int = UINT_BYTES_CNT
 
-    def __init__(self, buffer: ReadableBuffer, vdo: getattr = None) -> None:
+    def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None) -> None:
         # Передаем буфер строго фиксированной длины в базовый класс
         super().__init__(buffer, size=UINT_BYTES_CNT)
         
@@ -678,7 +752,11 @@ class BLADDR(BYTESTRUCT):
 
 # ----
 class PTR(BYTESTRUCT):
-    ''' Указатель(near) 01 02 -> near offset 0x102 '''
+    '''
+    Роль: 2-байтовый near-указатель (offset в пределах сегмента)
+
+    Указатель(near) 01 02 -> near offset 0x102
+    '''
     # Класс не вводит новых переменных, но чтобы не создавался __dict__,
     # нужно явно объявить пустые __slots__
     __slots__ = ()
@@ -712,8 +790,12 @@ class PTR(BYTESTRUCT):
     
 # ----
 class LIST(BYTESTRUCT):
-    ''' ptr: указатель(near) на начало массива; cnt: количество элементов
-    b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304 '''
+    '''
+    Роль: Пара ptr:cnt (указатель + счётчик элементов списка)
+    
+    ptr: указатель(near) на начало массива; cnt: количество элементов
+    b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304
+    '''
     # Сохраняем оптимизацию памяти базового класса, запрещая создание __dict__
     __slots__ = ()
 
@@ -741,7 +823,7 @@ class LIST(BYTESTRUCT):
 # ----
 class FAR_LIST(BYTESTRUCT):
     """
-    Композитная структура: BLADDR (4 байта) + LIST (4 байта).
+    Роль: Композит BLADDR + LIST (8 байт) — полный адрес блока + смещение внутри блока
     Общий размер: 8 байт.
     """
     # Жестко фиксируем поля в памяти. __dict__ больше не создается!
@@ -799,6 +881,8 @@ class FAR_LIST(BYTESTRUCT):
 # ==========
 class CH_IDX(BYTESTRUCT):
     '''
+    Роль: Индексный блок для поиска по буквам (страны, города, улицы, POI)
+    Структура: BLADDR(4) + char(1) + is_out(1) + LIST(4) + align(2) = 12 байт
     CH_IDX   3*DWORD, указатель на список букв или (страны, города, улицы, poi)
         0  DWORD bl_postaddr адрес блока
         4  byte  ch    собственно буква
@@ -865,7 +949,12 @@ class CH_IDX(BYTESTRUCT):
 
 # ==========
 class BLSTART(BYTESTRUCT):
-    """ Первый DWORD любого блока
+    """
+    Роль: Заголовок любого блока VDO
+    Структура: BLADDR(4) + bl_type(2) + arch_type(1) + unarch_size(1) = 8 байт
+    Свойства: bltype (enum), arch_type (0=не сжато, 1=bytype, 2=zlib), sizeofblock
+
+    Первый DWORD любого блока
         offset  type  sense         value
         00   dword   BLADDR          00000001 always
         04   word    bl_type         0012
@@ -881,7 +970,7 @@ class BLSTART(BYTESTRUCT):
         if len(buffer) < self.size:
             raise TypeError(f"Размер массива байтов {len(buffer)} меньше требуемого {self.size}")
         if vdo is not None and not isinstance(vdo, VDO_FILE):
-            raise TypeError(f"Тип vdo {len(buffer)} не VDO_FILE и не None")
+            raise TypeError(f"Тип vdo '{type(vdo)}' не VDO_FILE и не None")
             
         super().__init__(buffer, size=self.size)
         

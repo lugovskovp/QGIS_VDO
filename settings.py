@@ -109,7 +109,7 @@ class Settings():
     def removeRecentFiles(cls, recentFile: str):
         """ Remuve one file from recent files array """
         all_files = cls.RecentFiles(True)
-        if recentFile in all_files:
+        if recentFile in all_files:     # pragma: no cover
             all_files.remove(recentFile)
         QSettings().setValue(f'{cls.PREFIX}/{cls.NAME_RECENT_FILES}', all_files)
 

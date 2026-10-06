@@ -33,7 +33,7 @@ from QGIS_VDO.vdo.consts import struct_2UINT, MOST_SIGNIFICANT_BIT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
 # use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
-GEO_CATEGORY_struct = struct.Struct(">bbHxbH")
+GEO_CATEGORY_struct = struct.Struct(">BBHxBH")
 
 # use: (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
 GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
@@ -45,7 +45,7 @@ GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
 # use: (x, y) = VERTEX_struct.unpack(buf)
 VERTEX_struct = struct.Struct(">HH")
 
-TSTR_struct = struct.Struct(">Hbb")
+TSTR_struct = struct.Struct(">HBB")
 
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm

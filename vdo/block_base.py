@@ -200,13 +200,13 @@ class block_base(BYTESTRUCT):
         except TypeError:
             # Если пришла строка "0" или другой невалидный тип —
             # бизнес-логика гасит ошибку и безопасно отдает пустую строку
-            return ''
+            raise TypeError("TypeError read_str")
 
-    def write_raw(self, name: str = "_base_block.bin") -> None:
+    def write_raw(self, name: str = "c:/temp/_base_block.bin") -> None:
         try:
             with open(name, "wb") as f:
                 f.write(self._raw)
-        except PermissionError:
+        except PermissionError:         # pragma: no cover
             print(f"Ошибка прав доступа записи _base_block.bin {str(self)}")
 
 

@@ -667,13 +667,15 @@ class BLADDR(BYTESTRUCT):
     b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks
     """
     # Фиксируем слоты. Базовый '_raw' уже унаследован, здесь пишем только новые поля
-    __slots__ = ('vdo',)
+    __slots__ = ('vdo', 'value')
     
     size: int = UINT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None) -> None:
         # Передаем буфер строго фиксированной длины в базовый класс
         super().__init__(buffer, size=UINT_BYTES_CNT)
+
+        self.value = struct_UINT.unpack_from(buffer, 0)[0]
         
         # Экономим память: создаем новый VDO_FILE() - singletone
         if vdo is None:
@@ -688,11 +690,11 @@ class BLADDR(BYTESTRUCT):
         """Быстрая проверка на нулевой dword без сравнения массивов байт"""
         return self.value == 0
     
-    @property
-    def value(self) -> int:
-        """Числовое значение всего dword (Big-Endian)"""
-        # Индекс [0] обязателен, если unpack_from возвращает кортеж (val,)
-        return struct_UINT.unpack_from(self._raw, 0)[0]
+    # @property
+    # def value(self) -> int:
+    #     """Числовое значение всего dword (Big-Endian)"""
+    #     # Индекс [0] обязателен, если unpack_from возвращает кортеж (val,)
+    #     return struct_UINT.unpack_from(self._raw, 0)[0]
 
     @property
     def blocknumber(self) -> int:
@@ -702,7 +704,7 @@ class BLADDR(BYTESTRUCT):
     @property
     def segcnt(self) -> int:
         """Размер в сегментах (последний 4-й байт)"""
-        return self._raw[3]
+        return self._raw[3]     # its faster self.value & 0xFF
     
     @property
     def sizeofblock(self) -> int:

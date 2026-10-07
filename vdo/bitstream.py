@@ -46,6 +46,27 @@ CONST_BA_00 = bitarray([0, 0])
 
 # --------- bitstream - Class wrapper for bitarray
 
+"""
+https://github.com/fdemusso/OpenCarin/blob/main/docs/carindb/04-cf1-codec.md
+
+9.11.2 Primitives (offsets in CC-93 pbp)
+0x3660  uncompressed_sectors(hdr)   bit 0 of hdr[6] -> hdr[7] otherwise blockid&0xff
+0x3698  dispatch: if hdr[6]&1 -> init + switch on BLOCK_TYPE:
+        - 0x00:                 branch 0x36b4 -> bsr 0x3ea0 (decode_type00)
+        - 0x0E:                 branch 0x36be -> bsr 0x4320 (decode_type0E)
+        - 0x14, 0x15, 0x16:     branch 0x36c8 -> bsr 0x46aa
+        - others > 0x0E (0x10, 0x12, etc.): branch 0x36d2 -> pass length*2048, bsr 0x6a06
+            (memset 0 — buffer zeroed because non-rendered)
+        otherwise (CF=0): branch 0x3726 (memcpy raw sectors)
+0x4798  init(src)        PTRBITS = bits_needed(usize * SECTOR)   [CC-93: SECTOR=2048]
+0x47da  copy_raw(dst,n)  memcpy from raw cursor, cursor += n
+0x4800  copy_section(base, entry, recsize, plus1)
+0x49a8  bits_init()      base = current cursor, bitpos = 0
+0x49bc  getbits(n)       BFEXTU (a0){bitpos:n}  -> MSB-first
+0x4a68  bits_needed(n)   bits to represent 0..n-1, 16-bit arithmetic
+"""
+
+
 class bitstream():
     '''
     Распаковщик geo-блоков: @ 070EFB07 0014 01 09 [14:MAP__05k200]

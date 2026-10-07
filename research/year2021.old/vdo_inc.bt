@@ -1,0 +1,438 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+/*
+NAVI_DB carindb  size 513990656 hex 1EA2E000 clusters 3D45C
+*/
+
+#ifndef H_VDO_INC_INCLUDED
+#define H_VDO_INC_INCLUDED
+
+// #include "_inc_vdo_enums.bt"
+#include "vdo_enums.bt"
+BigEndian(); 
+local DWORD tmpPtr <format=hex,hidden=true>;  // tmp pointer for seek and back
+local DWORD curBlockOffset <format=hex,hidden=true>;    // in BL_HEADER setted, in arrays used
+
+
+//
+local en_BL_DATA_TYPE tmpNextBL_ADDRType <hidden=true>;     // bl_type then destination is too far in BL_ADDR
+tmpNextBL_ADDRType = _unknown;
+
+
+/*
+    enums
+en_BL_DATA_TYPE     Types of DATA BLOCKS
+en_DATA_UNIT_TYPE   Types of string in 0x13 block
+
+
+    local vars
+tmpPtr
+tmpNextBL_ADDRType
+DWORD curBlockOffset
+
+
+    structures:
+UNKN            unknown DWORD - red color <format=hex, fgcolor=0x0000fa>;
+deprecate STRZ            zero ended string
+PTR             WORD - pointer in curr block, 
+                    |has offset = currBlOffset + PTR
+PTR_CNT         DWORD = WORD - offset from data block begin 
+                        | WORD - counter of data units
+p_arr_WORD      DWORD and array = PTR_CNT local adress and cnt
+                        | array of cnt WORDs
+p_arr_WORD      DWORD and array = PTR_CNT local adress and cnt
+                        | array of cnt DWORDs
+p_arr_STRZ      DWORD and array = PTR_CNT local adress and cnt
+                        | array of cnt STRZs
+p_arr_BL_ADDR
+BL_ADDR         DWORD = 3 byte as number claster 
+                        | 1 byte as length block in 2k clasters
+FAR_PTR_CNT     QWORD = BL_ADDR - block addr
+                        | PTR_CNT - data
+BL_HEADER       3*DWORD = BL_ADDR | 2 bytes type of block (en_BL_DATA_TYPE)  
+                        | 2 bytes archived(? or crypted?)
+                        | PTR_CNT to data
+???p_BL_ADDR       2 DWORDs in diff places = 2 bytes  offset in this block to BL_ADDR
+                        | 2 bytes counter (1)
+                        | on this offset BL_ADDR (!!!) uses tmpNextBL_ADDRType
+
+LON_LAT         QWORD  = DWORD hex longtityde / 0x54C56D - 30;
+                              | DWORD hex latatude
+    
+
+        functions
+int isFullFileCarindb() - 0 if 'carindb', -1 if not
+deprecate DWORD getBLoffset(BL_ADDR &a)
+string StrBlockAddr(BL_ADDR &a)
+jmp(PTR_CNT);   - store tmpPtr and FSeek PTR_CNT.ptr
+jumpp(PTR);
+ret();          - restore Pos from tmpPtr
+*/
+
+
+
+
+/*
+ -------------------- STRUCTURES -------------------
+*/
+// --- UNKN            unknown DWORD - red color <format=hex, fgcolor=0x0000fa>;
+//<bgcolor=0x0050c0, fgcolor=0xfafafa>;
+typedef struct{
+//    SetForeColor (cDkGreen);fgcolor=0x0000fa
+    DWORD   x <format=hex, fgcolor=cDkRed, bgcolor=cLtRed>;
+}UNKN;
+typedef struct{
+    WORD   x <format=hex, fgcolor=cDkRed, bgcolor=cLtRed>;
+}UNKNw;
+
+typedef struct{
+    DWORD zero <hidden=true, fgcolor=cLtGray>;
+    if(zero){
+        FSeek(FTell()-4);
+        DWORD zero <bgcolor=cRed>;
+    }
+}ZERO_DWORD;
+typedef struct{
+    WORD zero <hidden=true, fgcolor=cLtGray>;
+    if(zero){
+        FSeek(FTell()-2);
+        WORD zero <bgcolor=cRed>;
+    }
+}ZERO_WORD;
+
+
+typedef struct (DWORD cnst){
+    local DWORD check = ReadUInt(FTell());
+    local DWORD cnstant <hidden=true> = cnst ;
+    if(check == cnst){
+        DWORD value <hidden=true, bgcolor=cLtAqua, fgcolor=cBlue>;
+    }else{
+        DWORD value <bgcolor=cRed>;
+    }
+}CONST_DWORD <read=Read_CONST_DWORD>;
+typedef struct (WORD cnst){
+    local WORD check = ReadUShort(FTell());
+    local WORD cnstant <hidden=true> = cnst ;
+    if(check == cnst){
+        WORD value <hidden=true, bgcolor=cLtAqua, fgcolor=cBlue>;
+    }else{
+        WORD value <bgcolor=cRed>;
+    }
+}CONST_WORD;
+string Read_CONST_DWORD(CONST_DWORD &a){
+    local string s;
+    SPrintf(s, "const = 0x%02X %i ; val = 0x%02X %i ", 
+            a.cnstant, a.cnstant, a.value, a.value);
+    return s;
+}
+string Read_CONST_WORD(CONST_WORD &a){
+    local string s;
+    SPrintf(s, "const = 0x%02X %i ; val = 0x%02X %i ", 
+            a.cnstant, a.cnstant, a.value, a.value);
+    return s;
+}
+
+// consts DWORD in 0x0A dec_11, dec_22, dec_33, 
+
+
+// --- STRZ     zero ended string
+typedef struct{
+      string str <bgcolor=cLtGreen>;
+//    local string str;
+//    str = ReadLine(FTell());
+//    FSeek(FTell()+ReadStringLength(FTell()));
+}STRZ <read=Read_STRZ>;
+string Read_STRZ( STRZ &a ){
+    local string s;
+    s=a.str;
+    return s;
+}
+
+
+// --- PTR - pointer inside curr block, 
+//                    |has offset = currBlOffset + PTR
+typedef struct {
+//use as check val in begin
+    //local  DWORD offset <hidden=true> = ReadUShort(FTell());
+local  DWORD offset  = ReadUShort(FTell());
+    if(offset){
+        WORD    Ptr <format=hex, fgcolor=cDkGreen>;
+        offset = curBlockOffset + Ptr;
+    }
+    else{
+        WORD    Ptr <format=hex, fgcolor=cWhite>;
+        offset = 0;
+    }
+    
+    local DWORD back_from_EOB <hidden=true> = FTell();
+        if(offset){
+            FSeek(offset);
+            uchar here <bgcolor=cAqua>;
+            FSeek(back_from_EOB);
+        }            
+        
+}PTR <read=Read_PTR, bgcolor=cLtGray>;
+string Read_PTR( PTR &a ){
+    local string s;
+    SPrintf( s, "[%04X] : %x  %04X h", a.Ptr, (a.offset>>16), (a.offset & 0xffff) );
+    //s = s + ":" + a.Cnt;
+    return s;
+}
+
+// --- PTR_CNT         DWORD = WORD - offset from data block begin 
+//                        | WORD - counter of data units
+typedef struct {   // struct pointer + counter
+//    local WORD pp <hidden=true>;
+//    pp = ReadUShort(FTell());
+    if( ReadUInt(FTell()) ){
+        // val != 0
+        WORD    Ptr <format=hex, fgcolor=cDkGreen>;
+        WORD    Cnt <fgcolor=cBlue>;
+    }else{
+        WORD    Ptr <format=hex, fgcolor=cWhite>;
+        WORD    Cnt <fgcolor=cLtBlue>; 
+    }   
+    //local DWORD offset <format=hex> = startof(this);
+    local DWORD offset <format=hex> = (this.Cnt == 0)? 0 : this.Ptr + curBlockOffset;
+    local DWORD back_from_EOB <hidden=true> = FTell();
+        if(offset){
+            FSeek(offset);
+        }            
+        uchar here <bgcolor=cAqua>;
+        FSeek(back_from_EOB);
+    
+} PTR_CNT <read=Read_PTR_CNT, bgcolor=cLtGray>;
+string Read_PTR_CNT( PTR_CNT &a ){
+    local string s;
+    if(a.Ptr){
+        SPrintf( s, "%X  %04X h  : %d", (a.offset>>16), (a.offset & 0xffff), a.Cnt);
+    }else{
+        SPrintf( s, "0 : %d", a.Cnt);
+    }
+    //SPrintf( s, "%04X:%d", a.offset, a.Cnt);
+    //SPrintf( s, "%04X:%d", a.Ptr + curBlockOffset, a.Cnt);
+    return s;
+}
+
+
+
+// --- block address structure 
+// BL_ADDR         DWORD = 3 byte as number claster 
+//                        | 1 byte as length block in 2k clasters
+// use tmpNextBL_ADDRType
+typedef struct{
+    local DWORD     far_hex <format=hex>, hex <format=hex, hidden=false>;
+    
+    local DWORD     offset <format=hex> = 0 ;      // offset from carindb begin
+    local           en_BL_DATA_TYPE  block_type <format=hex> = _unknown;
+block_type = tmpNextBL_ADDRType;  // block type, enum BL_DATA_TYPE
+
+    hex = ReadUInt(FTell());  // read all 4 byte of BL_ADDR
+    offset = (hex >> 8)*0x800;
+    // set local temp ptr
+    local DWORD     l_bl_tmpPtr <hidden=true> = FTell();
+    if(FSeek(offset+5) == 0){ 
+        // ptr can be acsessed and readed
+        block_type = ReadUByte();
+        FSeek(FTell()-5);
+        far_hex = ReadUInt(FTell());
+    }else{
+        // addr out of range
+        // block_type = (tmpNextBL_ADDRType == _empty)? 
+        //    _too_far : tmpNextBL_ADDRType;
+        block_type = _too_far;
+        far_hex = 1;
+    }
+    FSeek(l_bl_tmpPtr);
+
+    //
+    if(hex == 0){ //  00 00 00 00 value
+        UCHAR   n[3] <bgcolor=cLtGray, fgcolor=cYellow>;
+        UCHAR   size <bgcolor=cLtGray, fgcolor=cDkYellow>;
+        block_type = _empty;
+        //hex = 0;  
+    }else if(hex == far_hex){
+            // not 0, all clear
+            UCHAR   n[3] <bgcolor=0x008cff, fgcolor=cYellow>;
+            UCHAR   size <bgcolor=0x008cff, fgcolor=cDkYellow>;
+            }else{
+            // ERROR! NOT BL_ADDR
+            UCHAR   n[3] <bgcolor=cLtRed, fgcolor=cYellow>;
+            UCHAR   size <bgcolor=cLtRed, fgcolor=cDkYellow>;
+            block_type = _invalid;
+return;
+            }
+    //}
+    tmpNextBL_ADDRType = _unknown;    // clear presetted value
+} BL_ADDR <read=Read_BL_ADDR, comment=Comment_BL_ADDR>;
+string Read_BL_ADDR (BL_ADDR &a){
+    local string s;
+    if(a.block_type == _empty){
+        s = "zero";
+        return s;
+    }
+    if(a.block_type == _invalid){
+        s="invalid";
+        return s;
+    }
+    SPrintf( s, "0x%08X: %02X%s", a.offset, a.block_type, EnumToString(a.block_type) );
+    return s;
+}
+string Comment_BL_ADDR(BL_ADDR &a){
+    local string s;
+    if(a.block_type == _unknown){
+        SPrintf( s, "%04Xh _empty data -",
+                a.offset);   // null data
+    }else{
+        //to off_end = a.length*0x800 + off_st - 1;
+        SPrintf( s, "%02X %02X %02X:%02X  - %02X%s", 
+                a.n[0], a.n[1], a.n[2], a.size,   
+                a.block_type, EnumToString(a.block_type));
+    }
+    return s;
+}
+string StrBlockAddr(BL_ADDR &a){
+    local string s;
+    SPrintf( s, "%02X%02X%02X:%02X", 
+            a.n[0], a.n[1], a.n[2], a.size);
+    return s;
+}
+/*DWORD getBLoffset(BL_ADDR &a){
+    //local DWORD res;
+    
+    return a.offset;
+}*/
+
+
+
+// --- FAR_PTR_CNT     QWORD = BL_ADDR - block addr
+//                        | PTR_CNT - data
+typedef struct { 
+    BL_ADDR far_block_addr;
+    PTR_CNT far_data <bgcolor=0x22BFFF>;
+    local DWORD offset=far_block_addr.offset + far_data.Ptr;
+} FAR_PTR_CNT <read=Read_FAR_PTR_CNT, comment=Comment_FAR_PTR_CNT, bgcolor=0x008CFF>;
+string Read_FAR_PTR_CNT (FAR_PTR_CNT &a){
+    local string s;
+    SPrintf( s, "%04X+%02X=%04X cnt=%i (%02Xh); %s", a.far_block_addr.offset, 
+            a.far_data.Ptr, a.far_block_addr.offset+a.far_data.Ptr,
+            a.far_data.Cnt, a.far_data.Cnt,
+            Read_BL_ADDR(a.far_block_addr ));
+    return s;
+}
+string Comment_FAR_PTR_CNT(FAR_PTR_CNT &a){
+    local string s;
+    SPrintf(s, " %s", Comment_BL_ADDR(a.far_block_addr));
+    return s;
+}
+
+
+
+ 
+
+
+
+
+// --- header block structure 
+// --- BL_HEADER       QWORD = BL_ADDR | 2 bytes type of block (en_BL_DATA_TYPE)  
+//                        | 2 bytes archived(? or crypted?) |PTR_CNT data
+typedef struct { 
+    local DWORD offset <format=hex> = FTell();
+    curBlockOffset = offset;    // PTR, PTR_CNT use it
+    BL_ADDR    		addr; 
+    //offset = addr.offset; //own_block_addr.off_st;
+    en_BL_DATA_TYPE type ; 
+    ZERO_WORD       crypted <hidden=true>; FSeek(FTell()-2);     // just for colors
+    uchar is_compressed;      // First byte =[1,0] - marker "block compressed", 
+    uchar length_unpack;    //second - length uncompressed in 800h clusters
+    PTR_CNT         data;
+
+    local DWORD back_from_EOB <hidden=true> = FTell();
+        FSeek(offset + addr.size*0x800 - 1);
+        char LastBlockByte <bgcolor=cAqua>;
+        FSeek(back_from_EOB);
+
+} BL_HEADER <read=Read_BL_HEADER, comment=comment_BL_HEADER>;
+string Read_BL_HEADER( BL_HEADER &a ){
+    local string s;
+    s = EnumToString(a.type); 
+    if (Strlen(s) < 3){
+        SPrintf(s, "%02X is unknown en_BL_DATA_TYPE...", a.type);
+    }
+    SPrintf( s, "%s len: %i", s, a.addr.size);
+    return s;
+}
+string comment_BL_HEADER(BL_HEADER &a){
+    local string s;
+    SPrintf(s, "%02X %02X %02X :%02X %02X%s",
+            a.addr.n[0], a.addr.n[1], 
+            a.addr.n[2], a.addr.size, 
+            a.type, 
+            EnumToString(a.type)); 
+    return s;
+}
+
+
+
+
+
+//jmp(PTR_CNT);   - store tmpPtr and FSeek PTR_CNT.ptr
+void jmp(PTR_CNT &a){
+    tmpPtr = FTell();
+    if(a.Ptr){
+        FSeek(a.Ptr + block.offset);
+    }
+}
+void jmpp(PTR &a){
+    tmpPtr = FTell();
+    if(a.Ptr){
+        FSeek(a.Ptr + block.offset);
+    }
+}
+//ret();          - restore Pos from tmpPtr
+void ret(){
+    FSeek(tmpPtr);
+}
+
+
+int isFullFileCarindb(){
+    local char  fname[] ;
+    local int res=0, size;
+    
+    fname = FileNameGetBase(GetFileName());
+    res = RegExSearch(fname, "carindb", size);
+    Printf("res: %i", res);
+    return res;
+}
+
+typedef struct{
+    PTR_CNT p_try;
+    local DWORD t_ptr <hidden=true> =FTell();
+    FSeek(p_try.Ptr + block.offset);
+        byte begin_here <bgcolor=cAqua>;
+    FSeek(t_ptr);
+}PCT;
+typedef struct{
+    PTR p_try;
+    local DWORD t_ptr <hidden=true> =FTell();
+    FSeek(p_try.Ptr + block.offset);
+        byte begin_here <bgcolor=cAqua>;
+    FSeek(t_ptr);
+}PT;
+
+string getStrPtr(PTR &a){
+    local string s = ReadString(a.offset);
+    return s;
+}
+
+
+#include "__geo.bt"
+#include "__svg.bt"
+
+
+#endif  // include vdo_inc.bt only once
+
+
+
+
+

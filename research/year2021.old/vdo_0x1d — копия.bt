@@ -1,0 +1,539 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+#ifndef H_VDO_0x1d_INC_INCLUDED
+#define H_VDO_0x1d_INC_INCLUDED
+
+#include "vdo_inc.bt"
+
+/*
+GEO_TYPE
+    GEO_SHAPE
+        GEO_VERTEX
+*/
+typedef enum<WORD>{
+    scale_40    =   6h,
+    scale_80    =   7h,
+    scale_100   =   8h,
+    scale_200   =   9h,
+    scale_400   =   0ah,
+    scale_667   =   0bh
+}en_SCALES <format=hex, bgcolor=cDkGreen, fgcolor=cAqua>;
+
+
+typedef struct{
+     local DWORD  first_type_sea<format=hex> = 0x0100;
+    local DWORD   off_sea= parentof(this).p_all_shapes.Ptr;
+}should_be<read=Read_should_be>;
+string Read_should_be(should_be &a){
+    local string s;
+    SPrintf(s, "%02X %02X %02X %02X", 
+        (a.first_type_sea>>8), (a.first_type_sea&0xff) ,
+        (a.off_sea>>8), (a.off_sea&0xff)
+        );
+    return s;
+}
+
+
+typedef struct{
+        WORD type <bgcolor=cLtYellow>;
+        //GEO_VERTEX xy;
+    WORD m;
+    WORD n;
+}mb_poi<read=Read_mb_poi>;
+string Read_mb_poi(mb_poi &a){
+    local string s;
+    SPrintf(s, "%04X %04X %04X", a.type , a.m, a.n);
+    return s;
+}
+
+
+
+typedef struct(local DWORD v){
+    local DWORD raw <format=hex, hidden=false> = v;
+    local en_GEO_OBJ_TYPE type = raw >>24;
+    local en_MAP_SHAPE_TYPE is_line = (raw >>16) & 0x00ff;
+    local WORD p_type_obj<format=hex> = raw & 0x0000ffff;   // ptr to start objs
+    local WORD cnt = 0;                                     // object`s count
+}l_geo_type <read=Read_l_geo_type>;
+string Read_l_geo_type(l_geo_type &a){
+        local string s;
+    SPrintf(s, "->0x%04X %s; [%i] off: 0x%04X", 
+        (a.raw >>16), EnumToString(a.type), 
+        a.cnt, a.p_type_obj);
+    return s;
+}
+
+DWORD unarc_geo_type(DWORD buf, WORD len){
+//return 0x6a017891;
+    local unsigned DWORD res;
+    // Printf(" :[%05X] \t", buf );
+        // ### 1 type
+    local WORD type = (buf >> (len-8) ) <<7; 
+    type = (type & 0xff00) | (type & 0x00FF)>>7;
+//    Printf(" %04X", type );
+        // ### 2 addr
+    local WORD val = (buf &0x00000FFF) <<1;
+    //val <<=1;
+//    Printf(" %04X ", val );
+//    if(type == 0) Printf("<---\n"); // last, 0000 xxxx <-ptr2str-10h
+    res = type;
+    res <<= 16;
+    res |= val;
+//    Printf(" =%08X= ", res );
+    return res;
+}
+
+
+//*************************************
+//-----------------------------------
+typedef struct{
+        local DWORD         ptr<format=hex>; // 8 first coded Types
+        local unsigned QUAD raw<format=hex>;    // binary LIFO
+        local unsigned byte akk_shift;          // akkumulated shift of real bytes ptr
+}BIN_BUFFER;
+
+// load more NEXT BITS in the buffer
+void refill_buff(BIN_BUFFER &buffer, WORD bits_qty ){
+    local unsigned QUAD  buf_t<format=hex>;     // temp buff
+//    local unsigned byte sss;                    // rshifting buf_t
+    // bits_qty MUST be less 64
+    if(bits_qty > 64){
+        break; //err!!!
+    }
+    // calculate pointer for buf_t
+    buffer.ptr +=  bits_qty>>3;        // qty bytes in bits
+    buffer.akk_shift += (bits_qty % 8);// 
+    if(buffer.akk_shift >= 8){
+        buffer.akk_shift -=8;
+        buffer.ptr++;
+    } 
+//     Printf("\n s:%i f:ptr=%08X akk=%i tmp_b:", (bits_qty % 8), ptr+1, akk_shift);
+    buf_t = ReadUQuad(buffer.ptr+1);     // Print_buf(buf_t);
+    buf_t >>= 8 - buffer.akk_shift ;     // Printf("shifted:"); Print_buf(buf_t); Printf(":\n");
+    buffer.raw |= buf_t; 
+}
+
+// global LIFO buffer - getting bits from head
+unsigned DWORD pull_bits(BIN_BUFFER &buffer, WORD bits_from_head_buff ){
+    local unsigned DWORD val;
+    val = buffer.raw >> (64 - (bits_from_head_buff ) );
+    // Printf (" gb val = %X", val); 
+    buffer.raw <<= bits_from_head_buff;
+    refill_buff(buffer, bits_from_head_buff);   // read equal qty next bits
+    return val;
+}
+unsigned DWORD show_bits(BIN_BUFFER &buffer, WORD bits_from_head_buff ){
+    local unsigned DWORD val;
+    val = buffer.raw >> (64 - (bits_from_head_buff ) );
+    return val;
+}
+
+void pb(BIN_BUFFER &buffer){
+    Printf(" %08X %08X ", buffer.raw >>32, buffer.raw & 0xffffffff);
+}
+void pbn(BIN_BUFFER &buffer){
+    Printf(" %08X %08X (%08X%08X>>%i)\n", buffer.raw >>32, buffer.raw & 0xffffffff,
+        (buffer.raw >> buffer.akk_shift)>>32, 
+        (buffer.raw >> buffer.akk_shift) & 0xffffffff, buffer.akk_shift
+    );
+}
+//-----------------------------------
+//*************************************
+
+
+//======================================================
+//BLOCK_TYPE_0x1d 
+//07h scales[i-off32h:scale]:  5(9:200h)-0x14 6(7:80h)-0x15 7(6:40h)-0x16 
+                           //  9(8:100h)-0x1c a(a:400h)-0x1d b(b:666h)-0x1e 
+typedef struct{
+    local WORD i <hidden=true>, k <hidden=true>; // cycles counter
+//header start
+    BL_HEADER   block;          // block.data - list of geo_types
+    struct{
+            PTR_CNT     p_all_shapes <bgcolor=cLtYellow>;
+            PTR_CNT     p_all_lines  <bgcolor=cLtYellow>;
+            PTR_CNT     p_all_vertexes <bgcolor=cLtYellow>;
+            PTR_CNT     p_all_pois;
+            PTR_CNT     p_all_pgeo_str <bgcolor=cLtYellow>;
+            geo_area    map_area;
+            CONST_WORD       unkn_eq_1(0x1) <hidden=true>;  
+            en_SCALES   en_scale <hidden=true>;  // VertexXY left shift value for coordinate value equal
+            local WORD vrtx_max_x, vrtx_max_y;
+            vrtx_max_x =  map_area.h_size  >> en_scale;
+            vrtx_max_y =  map_area.v_size >> en_scale;
+    }head;
+    //
+    if(block.is_compressed){
+        // compressed data
+        DWORD seems_useless <format=hex, fgcolor=cDkRed, bgcolor=cLtRed>;
+        local struct BIN_BUFFER buff; // 8 first coded Types after seems_useless
+        buff.ptr = FTell();
+        buff.raw =  ReadUQuad(buff.ptr);
+        buff.akk_shift = 0;
+        //------ 1. list of types
+    
+            //calc addr_sh
+        local DWORD tmp_start_ptr = buff.ptr;   // for end coloring
+        local unsigned byte addr_sh=0;  // 19 bits len compressed type
+        if ( ((buff.raw>> (64-20) & 0xff ))<<1 == head.p_all_shapes.Ptr ) addr_sh = 1;    // 20  bits len compressed type
+        if ( ((buff.raw>> (64-20) & 0xff ))<<2 == head.p_all_shapes.Ptr ) addr_sh = 2;    // 21  bits len compressed type
+//Printf("addr_sh = %i, b:%X o:%X\n", addr_sh, (buff.raw>> (64-20) & 0xff ), head.p_all_shapes.Ptr);
+            // uncompress types
+        local unsigned DWORD tmp<format=hex, hidden=true>, val<format=hex, hidden=true> =0;
+//Printf("\n");
+        struct{
+            for (i=0; i <= block.data.Cnt; i++){
+//pbn(buff);
+                        // type
+                    tmp = pull_bits(buff, 7);    //
+                    val = tmp << 24;
+                    // is_line
+                    tmp = pull_bits(buff, 1);
+                    val |= tmp<<16;
+                    //offset             
+                //0 >>1, r12<<1
+                //1 r12 <<1
+                //2 r12 <<2            
+                    tmp = pull_bits(buff, 11+addr_sh);
+                //if(!addr_sh) tmp <<=1;  // bl 0x053d7e, no shift
+                tmp <<= 1;
+                //Printf(" tmp==%04X shifted=%04X", tmp, tmp<<addr_sh); 
+                val |= tmp;
+                //Printf(" pulled  %i %08X \n", i,  val);
+                local struct C_GEO_TYPE geo_type;
+                geo_type[i].type = val >>24;
+                geo_type[i].is_line = (val >>16) & 0xf;
+                geo_type[i].p_type_obj.Ptr = val & 0xffff;
+                if(i){ // fill p_next_type_obj and obj count of prev geotype
+                    geo_type[i-1].p_next_type_obj.Ptr = geo_type[i].p_type_obj.Ptr;
+                    if(geo_type[i-1].type != 0){
+                        if(geo_type[i-1].is_line){
+                            geo_type[i-1].obj_cnt = ( geo_type[i-1].p_next_type_obj.Ptr - geo_type[i-1].p_type_obj.Ptr ) / 10h;
+                        }else{
+                            geo_type[i-1].obj_cnt = ( geo_type[i-1].p_next_type_obj.Ptr - geo_type[i-1].p_type_obj.Ptr ) / 14h;
+                        }
+                    }
+                }
+            }
+        byte COMPRESSED_GEO_TYPES[buff.ptr-tmp_start_ptr+1] <bgcolor=cBlue, fgcolor=cLtRed>;
+        }all_types;
+        //--- all poligons
+                /*    shape
+                2h - ptr2str/0; 
+                2h - ptr2vertexes (first=first vert)
+                4h - id [0000 7685]
+                8h - LON_LAT
+                2h = 00 00 - aligment
+                2h - ptr2 list strPtr
+                */
+        tmp_start_ptr = buff.ptr;
+        // make empty shape array with last tail
+        struct{
+            
+        
+        // fill  shape array itemp
+    Printf("ul:%08X ------ [%08X %08X]\n", seems_useless, head.map_area.bottom_left.hlon, head.map_area.bottom_left.hlat);
+local unsigned WORD tmp_qty_bits = 18 - ( (seems_useless >>8) & 0xff) ;
+local unsigned WORD pstr_qtybits, vrtx_qtybits, vrtx_bits, id_qtybits;
+local unsigned DWORD tmp_show; 
+
+
+// 1 calc vrtx_qtybits
+tmp_show = show_bits(buff, 32);     //get 32 first buff bits
+tmp_show <<= 12;                // skip pstr bits
+
+vrtx_qtybits = 1;
+do{
+    tmp_show <<=1;
+    vrtx_qtybits ++;
+//Printf("vq=%i %X\n" , vrtx_qtybits, tmp_show);
+}while( ( (tmp_show & 0x80000000) != 0x80000000) && vrtx_qtybits < 21);
+// 2 calc pstr_qtybits
+if(vrtx_qtybits < 16){
+    pstr_qtybits = 12;
+    id_qtybits = 32;
+}else{
+    pstr_qtybits = 14;
+    vrtx_qtybits -=2;
+    id_qtybits = 17;
+}
+Printf("vq=%i\t firstStr=%04X \t pVtrx=%04X  afterVrtx=%04X \t \n" , vrtx_qtybits,
+    head.p_all_pgeo_str.Ptr + (head.p_all_pgeo_str.Cnt*4),
+    head.p_all_vertexes.Ptr,
+    head.p_all_vertexes.Ptr + (head.p_all_vertexes.Cnt*4)
+    
+    ); 
+
+
+
+
+            for(i=0; i < head.p_all_shapes.Cnt+1; i++){
+    pb(buff);
+                local struct C_GEO_SHAPE shape;
+
+
+                all_poligons.shape[i].p_str_name.Ptr = pull_bits(buff, pstr_qtybits);
+
+    Printf("pstr(%i)=%04X ", pstr_qtybits, all_poligons.shape[i].p_str_name.Ptr);
+
+
+                //all_poligons.shape[i].p_vertexes_obj.Ptr = tmp_show;
+//                if(i == 0) all_poligons.shape[i].p_vertexes_obj.Ptr -=1; //decrement 4 first
+vrtx_bits = pull_bits(buff, vrtx_qtybits);
+                all_poligons.shape[i].p_vertexes_obj.Ptr = vrtx_bits;
+all_poligons.shape[i].p_vertexes_obj.Ptr &= 0xfffe;
+all_poligons.shape[i].p_vertexes_obj.Ptr <<=1;
+all_poligons.shape[i].p_vertexes_obj.Ptr += head.p_all_vertexes.Ptr; /// ??? so strange, need check after VERTEX decompress
+Printf("pvrt(%i)=%04X(%04X) ", vrtx_qtybits, all_poligons.shape[i].p_vertexes_obj.Ptr, vrtx_bits);
+
+id_qtybits = 32; //empiric 05000700 05000800
+
+ if( seems_useless == 0x0D180900 ) id_qtybits = 21;  ///empiric 0D180900 (10D9F800)
+
+if( seems_useless == 0x0E170700 ) id_qtybits = 17; ///empiric 0E170700 ()
+ if( seems_useless == 0x00160800 ) id_qtybits = 17;  // 00160800 (0F09F800)
+ if( seems_useless == 0x0E170700 ) id_qtybits = 18;  ///empiric (0F59F800)
+ if( seems_useless == 0x0F170700 ) id_qtybits = 18;  ///empiric 0F170700  (0F59F800) 0F49F800
+ if( seems_useless == 0x0F150800 ) id_qtybits = 17;  ///empiric 0F150800 - 18 (0F29F800)
+
+
+
+ if( seems_useless == 0x0D140800 ) id_qtybits = 13; // (0EA9F800)
+ if( seems_useless == 0x0E160800 ) id_qtybits = 17; // (0F19F800)
+ if( seems_useless == 0x0D130800 ) id_qtybits = 13; // (0F19F800)
+
+
+ if( seems_useless == 0x0E140800 ) id_qtybits = 17; ///empiric 0E140800 (0FB9F800)
+ if( seems_useless == 0x0E140800 ) id_qtybits = 14;  /// so bad: D2100000 7CF21D7C (0E140800)
+    if( all_poligons.shape[0].p_str_name.Ptr ==0 )  id_qtybits = 17;
+/*
+05000700 ------ [0E29F800
+     89800280 083B861B pstr(12)=0898 pvrt(11)=0078(0001) id(32)=40041DC3  [0DBE22D6
+05000800
+     8B000500 10770C36 pstr(12)=08B0 pvrt(10)=00B4(0001) 
+
+ if( seems_useless == 0x0E140800 ) id_qtybits = 17; ///empiric 0E140800 (0FB9F800)
+     0000001E 13487E1A pstr(14)=0000 pvrt(14)=0338(0001) id(17)=0001C269  [0FC34941 
+
+ if( seems_useless == 0x0E140800 ) id_qtybits = 14;  /// so bad: D2100000 7CF21D7C (0E140800)
+     D2100000 7CF21D7C pstr(14)=3484 pvrt(19)=0638(0000) id(14)=00003E79  [0EBE163A 
+
+ if( seems_useless == 0x0D180900 ) id_qtybits = 21;  ///empiric 0D180900 (10D9F800)
+     0000000D 1DCD0438 pstr(14)=0000 pvrt(15)=14DC(0001) id(17)=00014773  
+
+if( seems_useless == 0x0E170700 ) id_qtybits = 17; ///empiric 0E170700 ()
+ if( seems_useless == 0x00160800 ) id_qtybits = 17;  // 00160800 (0F09F800)
+ pstr(13?)    00000005 97E81E43 pstr(14)=0000 pvrt(16)=02D4(0001) id(17)=0000CBF4  [0F21E47B 
+
+ if( seems_useless == 0x0E170700 ) id_qtybits = 18;  ///empiric (0F59F800)
+     00000002 38D807A5 pstr(14)=0000 pvrt(17)=03DC(0001) id(17)=000038D8 
+     00000001 301F03D8 pstr(14)=0000 pvrt(18)=038C(0001) id(17)=0000603E   
+
+ if( seems_useless == 0x0F170700 ) id_qtybits = 18;  ///empiric 0F170700  (0F59F800) 0F49F800
+      00000002 38D807A5 pstr(14)=0000 pvrt(17)=03DC(0001) id(17)=000038D8  [07A5DCC2 
+
+ if( seems_useless == 0x0F150800 ) id_qtybits = 17;  ///empiric 0F150800 - 18 (0F29F800)
+     00000003 AD050F40 pstr(14)=0000 pvrt(17)=038C(0001) id(17)=0001AD05  [0F40E852 
+
+ if( seems_useless == 0x0D140800 ) id_qtybits = 13; // (0EA9F800)
+     9D800000 39643AD4 pstr(14)=2760 pvrt(19)=0814(0000) id(13)=00000E59  [0EB52DEC 
+
+ if( seems_useless == 0x0E160800 ) id_qtybits = 17; // (0F19F800)
+     00000001 FAB8078E pstr(14)=0000 pvrt(18)=0360(0001) id(17)=0001F570  [0F1C080B 
+
+ if( seems_useless == 0x0D130800 ) id_qtybits = 13; // (0F19F800)
+     A0900001 4CF878F4 pstr(14)=2824 pvrt(18)=09F0(0001) id(13)=0000099F  [0F1E99E6 
+*/  
+
+
+                all_poligons.shape[i].id = pull_bits(buff, id_qtybits);
+    Printf("id(%i)=%08X ", id_qtybits, all_poligons.shape[i].id);
+
+    if (all_poligons.shape[i].id){
+                all_poligons.shape[i].coord.hlon = pull_bits(buff, 32);
+                all_poligons.shape[i].coord.lo = 1.0f * all_poligons.shape[i].coord.hlon / 0x54C56D - 30;
+                all_poligons.shape[i].coord.hlat = pull_bits(buff, 32);
+                all_poligons.shape[i].coord.la = 1.0f * all_poligons.shape[i].coord.hlat / 0x54C56D;
+    }
+    Printf(" [%08X %08X]\n", all_poligons.shape[i].coord.hlon, all_poligons.shape[i].coord.hlat);
+    /*
+        c_shape[i].pstr_name = get_bits(12,0);
+            c_shape[i].p_vertex  = get_bits(12,0);
+            c_shape[i].p_vertex += ReadUShort(start_ptr + 0x14)-2; /// ??? so strange, need check after VERTEX decompress
+            c_shape[i].id = get_bits(31,0);
+        c_shape[i].coord.hlon = get_bits(32,0);
+        c_shape[i].coord.hlat = get_bits(32,0);
+        c_shape[i].coord.lo = 1.0f * c_shape[0].coord.hlon / 0x54C56D - 30;
+        c_shape[i].coord.la = 1.0f * c_shape[0].coord.hlat / 0x54C56D;
+    */
+            }
+        }all_poligons;
+
+
+    // IF NOT COMPRESSED -------------------------------------
+    }else{  // if(block.is_compressed){
+        //--- all types
+        if(block.data.Ptr){
+            jmp(block.data);
+                struct{
+                    //GEO_TYPE 
+                    GEO_TYPE geo_type[block.data.Cnt+1]<optimize=false>; 
+                    //GEO_TYPE geo_type; //zero_tail_list_type;
+                }all_types;
+            ret();
+        };
+        //--- all poligons
+        // PTR_CNT     p_all_shapes <bgcolor=cLtYellow>;
+        if(head.p_all_shapes.Ptr){
+            jmp(head.p_all_shapes);
+                struct{
+                    GEO_SHAPE shape[head.p_all_shapes.Cnt+1]<optimize=false>;
+                    //GEO_SHAPE tail_shape;
+                }all_poligons;
+            ret();
+            // set the geo_types for shapes
+            k=0;
+            for(i=0; i<head.p_all_shapes.Cnt; i++){
+                if(all_poligons.shape[i].id){    // if !=0
+                    if( all_poligons.shape[i].offset  >= all_types.geo_type[k+1].p_type_obj.offset ){
+                        // start next type
+                        k++;
+                    }
+                    all_poligons.shape[i].type = all_types.geo_type[k].type;
+                }
+            } //for(i=0; i<head.p_all_shapes.Cnt; i++){
+        }
+        //--- all polilines
+       // PTR_CNT     p_all_lines  <bgcolor=cLtYellow>;
+        if(head.p_all_lines.Ptr){
+            jmp(head.p_all_lines);
+                struct{
+                    GEO_PLINE pline[head.p_all_lines.Cnt+1]<optimize=false>;
+                    // last GEO_PLINE tail_pline;
+                }all_polilines;
+            ret();
+            // set the geo_types for polilines
+            // k =0;
+            for(i=0; i<head.p_all_lines.Cnt; i++){
+                if(all_polilines.pline[i].id){    // if !=0
+                    if( all_polilines.pline[i].offset  >= all_types.geo_type[k+1].p_type_obj.offset ){
+                        // start next type
+                        k++;
+                    }
+                    all_polilines.pline[i].type = all_types.geo_type[k].type;
+                }
+            } //for(i=0; i<head.p_all_shapes.Cnt; i++){
+        }
+        //--- all vertexes
+        // list all vertexes for Shapes and Lines
+        //PTR_CNT     p_all_vertexes <bgcolor=cLtYellow>;
+        if(head.p_all_vertexes.Ptr){
+            jmp(head.p_all_vertexes);
+            struct{
+                GEO_VERTEX vertex[head.p_all_vertexes.Cnt] <optimize = false>;
+            }all_vertexes;
+            ret();
+        }
+
+        //--- all strings
+        // list all vertexes for Shapes and Lines
+        //PTR_CNT     p_all_vertexes <bgcolor=cLtYellow>;
+        if(head.p_all_pgeo_str.Ptr){
+            jmp(head.p_all_pgeo_str);
+            struct{
+                //GEO_VERTEX vertex[head.p_all_vertexes.Cnt] <optimize = false>;
+                DWORD pstr[head.p_all_pgeo_str.Cnt] <bgcolor=cLtGreen>;
+            }all_pstrings;
+            ret();
+        }
+
+    }
+    // header end, last = 0Ch -1 
+} BLOCK_TYPE_0x1d < read=Read_BLOCK_TYPE_0x1d, 
+    comment=Comment_block0x1d >;
+
+string Comment_block0x1d(BLOCK_TYPE_0x1d &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x1d(BLOCK_TYPE_0x1d &a){
+    local string s;
+    if(a.block.is_compressed == 0 ) {
+        SPrintf(s, ":%i: %s [%Xx%X]  %i types, %i shapes, %i lines", 
+            a.block.addr.size,
+            EnumToString(a.block.type),
+            a.head.vrtx_max_x, a.head.vrtx_max_y,
+            a.block.data.Cnt, 
+            a.head.p_all_shapes.Cnt, a.head.p_all_lines.Cnt
+        );
+
+    }else{
+        SPrintf(s, "::%i->%i:: %s  [%Xx%X] ; %i types, %i shapes, %i lines",
+            a.block.addr.size, a.block.length_unpack,
+            // EnumToString(a.head.en_scale),
+            //a.head.map_area.scale,
+            EnumToString(a.block.type), 
+            a.head.vrtx_max_x, a.head.vrtx_max_y,
+            a.block.data.Cnt, 
+            a.head.p_all_shapes.Cnt, 
+            a.head.p_all_lines.Cnt
+        );
+    }
+    return s;
+}
+
+// DELIT!!!
+typedef struct{
+
+break;
+    if(block.crypted.zero !=0 ) {
+       // local should_be st;
+        
+
+
+        // 2. poligons
+/*
+// shape
+2h  - ptr2str/0; 
+2h - ptr2vertexes (first=first vert)
+4h - id [0000 7685]
+8h - LON_LAT
+2h = 00 00 - aligment
+2h - ptr2 list strPtr
+*/
+__pStrName_0 = head.p_all_pgeo_str.Ptr + head.p_all_pgeo_str.Cnt*4;
+// only for useless=05...
+// 19-0, 20-1, 21 -2???
+buffer <<= d_len-19;
+local DWORD Ptr_Str_Name <format=hex> = buffer >> (64-12);
+buffer <<= 12;
+
+        // 3. polilines
+    break;
+    }
+
+
+PTR_CNT     p_all_pois;
+if(p_all_pois.Ptr){
+    jmp(p_all_pois);
+        mb_poi pppp[p_all_pois.Cnt];
+    
+    ret();
+}
+        //p_geo strings
+        PTR_CNT     p_all_pgeo_str <bgcolor=cLtYellow>;
+        if(p_all_pgeo_str.Ptr){
+            jmp(p_all_pgeo_str);
+            struct{
+                GEO_OBJ_STR pstr[p_all_pgeo_str.Cnt] <optimize = false>;
+            }all_strings;
+            ret();
+        }
+
+    // 0xA800 scale=10, 1*1, 64*64
+
+}old_x1d;
+
+
+
+
+#endif //H_VDO_0x1d_INC_INCLUDED

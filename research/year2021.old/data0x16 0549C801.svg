@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+	"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+	baseProfile="full"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:ev="http://www.w3.org/2001/xml-events"
+	width="2048" height="2048">
+
+	<rect x="0" y="0" name="background" width="2048" height="2048"
+		fill="#f8daa4" stroke="black" stroke-width="1px" stroke-opacity="0.5"/>
+
+	<g name="en_WATER-0x01" fill="#89d5c5" fill-opacity="0.8" stroke="#80BBDB" stroke-width="0.5px" >
+		<polygon name="vstersjvn" id="0x4002D929" 
+			  points=" 1267,409 712,668 136,802 0,788 0,409">
+			<title>vstersjvn</title></polygon>
+		<polygon name="baltiyskoe more" id="0x400327B3" 
+			  points=" 1432,409 1354,454 1017,627 767,728 740,741 455,828 269,871 217,879 137,880 96,880 0,865 0,409">
+			<title>baltiyskoe more</title></polygon>
+		<polygon name="baltijos jura" id="0x400381B4" 
+			  points=" 1432,409 1354,454 1017,627 767,728 740,741 455,828 269,871 217,879 137,880 96,880 0,865 0,409">
+			<title>baltijos jura</title></polygon>
+		<polygon name="morze baltyckie" id="0x40048B58" 
+			  points=" 1432,409 1354,454 1017,627 767,728 740,741 455,828 269,871 217,879 137,880 96,880 0,865 0,409">
+			<title>morze baltyckie</title></polygon>
+	</g>
+
+</svg>

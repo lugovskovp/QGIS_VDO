@@ -1,0 +1,258 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+#ifndef H_VDO_0x07_INC_INCLUDED
+#define H_VDO_0x07_INC_INCLUDED
+
+#include "vdo_inc.bt"
+// p_BL_ADDR
+
+/*
+In the car driver can chouse "Map scale"
+10m 20m 100m 200m 500m 1km 2km 5km 10km 50km 100km
+cnt=11
+*/
+
+
+typedef struct{
+    BL_ADDR bl_almanac;  //scale_list_maps;
+    local DWORD folder_side_size <format=hex> = 0;
+    local WORD  qty_in_side_almanac <format=hex> = 0;
+    local WORD  qty_folders = 0;
+    if(bl_almanac.offset){ 
+        folder_side_size = ReadUInt(bl_almanac.offset + 0x0c);
+        qty_folders      = ReadUShort(bl_almanac.offset + 0x0A); 
+        LON_LAT  world_bot_left, world_top_right;
+        if(folder_side_size>0)
+                //world_size 
+                qty_in_side_almanac =  ( world_top_right.hlat - world_bot_left.hlat)
+                         / folder_side_size;
+        
+        DWORD _MB_SCALE <fgcolor=cRed>;
+        if(file_version == 1){
+            
+            WORD _MB_SCALE_too <fgcolor=cRed>;
+            ZERO_WORD blank;
+        }else{
+            local WORD _MB_SCALE_too = 0;
+        }
+    }else{
+    //scale_list_maps = 0000000
+        DWORD MB_La_1 <fgcolor=cGray>, MB_Lo_1 <fgcolor=cGray>, 
+            MB_La_2 <fgcolor=cGray>, MB_Lo_2 <fgcolor=cGray>;
+        DWORD _MB_SCALE  <fgcolor=cGray>;
+        if(file_version == 1){
+            WORD _MB_SCALE_too  <fgcolor=cGray>;
+            ZERO_WORD blank;
+        }else{
+            local WORD _MB_SCALE_too = 0;
+        }
+    }  
+}SCALE <read=Read_SCALE>;
+string Read_SCALE(SCALE &a){
+    local string s;
+    if(a.qty_folders == 0) return ("---");
+    SPrintf(s, "%04X %04x    %04X | side: 0x%04Xk, %ix%i \tfolders: %i", 
+        (a._MB_SCALE >> 16),
+        (a._MB_SCALE & 0xffff),
+        a._MB_SCALE_too,
+        (a.folder_side_size / 1024),
+        a.qty_in_side_almanac, a.qty_in_side_almanac,
+        a.qty_folders
+);
+    return s;
+}
+//--------------------------------------------
+
+
+
+
+//--------------------------------------------
+//}BLOCK_TYPE_0x07
+typedef struct{
+local USHORT i <hidden=true>;
+// only here i find different between 0A addinfo fields count
+// 1 - new, 2 - old, non-crypted
+local WORD file_version = ReadUShort(0x2e);
+// header begin
+    BL_HEADER   block;
+    //_0x18_block and str name some maps countries
+    PTR_CNT  p_country_terr_divisions <bgcolor=cLtYellow>;   
+    if(file_version == 1){
+        PTR_CNT  p_10_idx_countryes  <bgcolor=cLtYellow>;
+    }
+// header end
+//locals
+
+local DWORD world_size <format=hex>, world_size_h <format=hex>;
+//
+// fill data
+/*
+In the car driver can chouse "Map scale"
+10m 20m 100m 200m 500m 1km 2km 5km 10km 50km 100km
+*/
+    struct{
+        SCALE   scale[12] <optimize=false>;
+    }__scales; 
+    world_size = __scales.scale[0].world_top_right.hlat 
+                        - __scales.scale[0].world_bot_left.hlat;
+/*    world_size_w =   __scales.scale[0].MB_La_2.value -
+            __scales.scale[0].MB_La_1.value;
+    world_size_h =   __scales.scale[0].MB_Lo_2.value -
+            __scales.scale[0].MB_Lo_1.value;
+*/  
+    UNKN xx01;
+    ZERO_DWORD zero_xx;
+    UNKN xx02;
+
+    PTR  p_const_last_in_bl_data_202a;
+    jmpp(p_const_last_in_bl_data_202a);
+        CONST_WORD last_word_in_data(0x202a);
+    ret();
+    ZERO_WORD s;
+//DWORD _end <bgcolor=cAqua>;
+//BL_ADDR try;
+
+struct{
+//jmp(block.data);
+    struct{
+        WORD    understanded_main_data <fgcolor=cRed>;
+        PTR     p_zero_char;
+        ZERO_WORD   blank;
+        jmpp(p_zero_char);
+            char zero_char <bgcolor=cLtAqua>;
+        ret();
+    }__main_data[block.data.Cnt] <optimize=false>;
+//ret();
+}__main_data;
+
+
+//PTR_CNT  p_0c_str_0x18_block <bgcolor=cLtYellow>;
+if(p_country_terr_divisions.Cnt){
+//jmp(p_0c_str_0x18_block);
+    struct {
+        BL_ADDR    bl_idx_terr_division;
+        WORD    eq_08_scale_list_addinfo <fgcolor=cDkGreen, bgcolor=cLtGreen>;
+        WORD    mb_cnt <fgcolor=cRed>;
+// MB FAR_PTR_CNT
+        PTR     p_str_name <bgcolor=cLtGreen>; //, optimize=false>;
+
+WORD    mb_geo_type_country_100 <bgcolor=cLtBlue, fgcolor=cYellow>;
+        WORD    w_country_idx_num <fgcolor=cDkAqua, bgcolor=cLtYellow>; 
+// AFTER ARRAY p_0c.p_try.Cnt == w_country_idx_num
+        ZERO_WORD   w_z;
+        PTR_CNT     _0x18_block1;
+        local DWORD l_tmp <hidden=true> = FTell(); 
+        FSeek(p_str_name.offset);
+        string __str_name <bgcolor=cLtGreen>;
+        FSeek(l_tmp);
+    }__country_territorial_division [p_country_terr_divisions.Cnt] <optimize=false>; 
+    for(i=0; i<p_country_terr_divisions.Cnt; i++) 
+        CONST_WORD __maps_countries_array_0c( 
+            __country_territorial_division[i].w_country_idx_num);
+//ret();
+} //if(p_0c_str_0x18_block.Cnt){
+
+if(file_version == 1){
+//jmp(p_10_idx_countryes);
+    struct {
+        WORD w_country_idx_num <fgcolor=cDkAqua, bgcolor=cLtYellow>;
+        CONST_DWORD _01f4012c(0x01f4012c);
+        CONST_DWORD _03e8f401(0x03e8f401);
+        ZERO_WORD  blank;
+        WORD   _0_or_1 <fgcolor=cRed>;;
+        CONST_WORD fff(0xffff);;
+        ZERO_DWORD  blankw; 
+        ZERO_WORD  blankw; 
+    } _10_idx_countryes [p_10_idx_countryes.Cnt] <optimize=false>;
+//ret();
+} //if(p_0c_str_0x18_block.Cnt){
+
+
+
+
+
+
+
+
+//header end
+
+
+}BLOCK_TYPE_0x07<comment=Comment_block0x07,read=Read_BLOCK_TYPE_0x07 >;
+string Comment_block0x07(BLOCK_TYPE_0x07 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x07(BLOCK_TYPE_0x07&a){
+    local string s;
+    SPrintf (s, "0x%08X wide", a.world_size);
+    
+    return s;
+}
+
+//------------------------------------
+
+
+
+
+
+
+
+
+//-------------------------------
+
+
+/*
+
+//---------------------- RUS
+// goto 08 from 07
+// 0- 0x55E0000  sc = 00 28 00 00
+// 1- 0x48a2000  sc = 0a 00 00 00
+// 2- 0x15070800 sc = 02 80 00 00
+// 3- 0x13c2f000 sc = 01 40 00 00
+// 4- 0x127bf800 sc = 01 40 00 00
+// 5- 0x1e6e5800 sc = 14 00 00 00 (3 items only!)
+FSeek(0x1e6e5800);
+BL_HEADER       header_0x08;
+// p_arr_BL_ADDR   all_09_idx_geo_data;
+WORD   seems_like_scale;
+WORD   unknown <fgcolor = cRed>;
+// // 5- 0x1e6e5800 sc = 14 00 00 00 (3 items only!)
+// goto 09 from 08
+// 0- 0x1e6e6000
+// 1- 0x1e6e6800
+// 3- 0x1e6e9000
+FSeek(0x1e6e6000);
+BL_HEADER       header_0x09; 
+// p_arr_BL_ADDR   all_0_geo_data;
+PTR_CNT         seems_like_ink_to_data;
+//BL_ADDR         _0E_streets_list;
+//  0x10a01000
+//  0x10e01000
+FSeek(0x10a01000);
+BL_HEADER       header_00;
+// p_arr_WORD  try_zero01;    // BL_ADDR 0x3a00000
+// p_arr_WORD  try_zero02;
+//FSeek(0x3a00000);
+//BL_HEADER       header_00_01;
+//BL_ADDR  try_zero02; 
+
+//FSeek(0x3a00000);
+
+
+//----------------------
+// goto 08 from 07
+//FSeek(0x4801800);
+//BL_HEADER       header_0x08;
+//BL_ADDR         _0E_streets_list;
+//00 20 00 00 
+// 
+// goto 0e from 08
+//FSeek(0x807800);
+//BL_HEADER       header_0x0e; //CRYPT!!! 0108
+//p_arr_STRZ    data;
+//PTR_CNT unk2;
+//BL_ADDR         _0E_streets_list;
+
+
+
+*/
+#endif//H_VDO_0x07_INC_INCLUDED

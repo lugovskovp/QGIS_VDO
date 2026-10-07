@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+	"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+	baseProfile="full"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:ev="http://www.w3.org/2001/xml-events"
+	width="2048" height="2048">
+
+	<rect x="0" y="0" name="background" width="2048" height="2048"
+		fill="#f8daa4" stroke="black" stroke-width="1px" stroke-opacity="0.5"/>
+
+	<g name="en_WATER-0x01" fill="#89d5c5" fill-opacity="0.8" stroke="#80BBDB" stroke-width="0.5px" >
+		<polygon name="aegean sea" id="0x4007113A" 
+			  points=" 1508,578 1454,422 1513,461 1560,443 1512,418 1511,409 1625,409 1629,413 1629,409 1638,409 1638,704 1631,699 1570,697">
+			<title>aegean sea</title></polygon>
+		<polygon name="ionian sea" id="0x4008CDFD" 
+			  points=" 417,433 433,409 1258,409 1313,457 1295,483 1339,540 1347,501 1374,497 1420,584 1434,530 1461,528 1508,578 1570,697 1565,742 1304,1056 424,545 422,515 447,499 438,469 417,459">
+			<title>ionian sea</title></polygon>
+		<polygon name="mediterranean sea" id="0x400A46D4" 
+			  points=" 72,409 92,426 149,434 251,488 307,495 333,530 413,549 424,545 1304,1056 1087,1158 1080,1342 955,1411 851,1343 448,1257 430,1125 0,1029 0,409">
+			<title>mediterranean sea</title></polygon>
+		<polygon name="mediterranean sea" id="0x400BC9AF" 
+			  points=" 1304,1056 1565,742 1638,746 1638,1174 1502,1137 1481,1086">
+			<title>mediterranean sea</title></polygon>
+	</g>
+
+	<g name="en_ISLAND-0x08" fill="#f8daa4" fill-opacity="1" stroke="yellow" stroke-width="1px" >
+		<polygon name="" id="0x14F3F5EB" 
+			  points=" 294,627 310,629 346,654 341,662 325,659 315,654 313,640 304,634 295,632">
+			<title></title></polygon>
+		<polygon name="" id="0x400142D8" 
+			  points=" 1565,742 1570,697 1631,699 1638,704 1638,746">
+			<title></title></polygon>
+		<polygon name="" id="0x40026FD3" 
+			  points=" 433,409 417,433 417,459 438,469 447,499 422,515 424,545 413,549 333,530 307,495 251,488 149,434 92,426 72,409">
+			<title></title></polygon>
+	</g>
+
+</svg>

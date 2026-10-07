@@ -1,0 +1,241 @@
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#include "vdo_block.bt"
+//  12  bl_offset(0);
+//  0a  bl_offset(2000h);  
+
+//bl_addr(0x00000101);
+
+// need to see ERRs:
+ //  bl_offset( 0x28CE4000 ); // 0x0E140800 [9 types]
+ //  bl_offset( 0x28C9F800 ); // 0x0E140800 [7 types]
+ // bl_offset( 0x28BCD000 ); // 0x0E140800 [8 types]
+
+/*
+ bl_offset( 0x28D0C800 ); // 0x0E140800 [7 types]
+    decode_types( 0x28D0C800 );
+
+ bl_offset( 0x28BCD000 ); // 0x0E140800 [7 types]
+    decode_types( 0x28BCD000 );
+
+
+ bl_offset( 0x28CF2800 ); //// 0x0E140800 [6 types] 21
+    decode_types( 0x28CF2800 );
+*/
+
+/*
+// shape
+2h  - ptr2str/0; p_name [16 e0] - PstristBeg=16 48 00 26, 26*4 + 1648 = 1648
+2h - ptr2vertexes (first=first vert)    p_vertexes_obj = 07f8 0316 [07F8]
+4h - id [0000 7685]         id  [0000 7685]
+8h - LON_LAT                coord [0e2f80b 105e3c7a]
+2h = 00 00 - aligment       [0000]
+2h - p_table_name (next name?) [1648]
+ -- last ptr2vertexes - end of prev
+*/
+//2800097B61C000
+bl_offset( 0x29EF3800 ); // :01	1-0: 	05000800 0203C000 A246000A 00025ED8 -> 0100003C  00000050  ... 
+/*
+Malme sea
+struct PTR_CNT p_all_shapes     003c 0001
+struct PTR_CNT p_all_vertexes   0064 022b
+struct PTR_CNT p_all_pgeo_str   0910 0002
+*/
+FSeek(0x29ef383d); 
+QWORD beg <format=hex,bgcolor=cYellow>; 
+QWORD beg1 <format=hex,bgcolor=cYellow>; 
+DWORD beg2 <format=hex,bgcolor=cYellow>; 
+FSeek(0x29ef383d); 
+
+// buf = 46000A00025ED871h, beg = 46000A00025ED871h
+//  ? lastVrtx = 910 - 4 = 90c
+//shape[0] = (>0910)  0064        0000 xxxx yyyyyyyy yyyyyyyy 0000 0910
+//shape[1] = 0000     (090c/910)  0000 0000 00000000 00000000 0000 (tailStrTable, >0910)
+
+
+FSeek(0x29ef3e10); byte xx<bgcolor=cYellow>;
+// pstr: xxxx yyzz xxxx- ptr to string/0; yy [13, ff] - country code; zz - [00 10] - language?
+// c10 <<2 = 3040   c1c<<2 = 3040
+
+//
+bl_offset( 0x2A664000 ); // :01	2-0: 	05000800 0201E000 32C0A000 A0006048 -> 0100003C  65010000 00000068  ... 
+/*
+struct PTR_CNT p_all_shapes     003c 0002
+struct PTR_CNT p_all_vertexes   0078 05e5
+struct PTR_CNT p_all_pgeo_str   180c 0002
+*/
+// buf = C0A000A000604886h, beg = C0A000A000604886h
+// ---- c0a <<5 = 1814 - like str/0
+// lastVrtx = 180c - 4 = 1808? (1804?
+//shape[0] = (>180ñ)  0078        0000 xxxx yyyyyyyy yyyyyyyy 0000 180ñ
+//shape[1] = 0000     (1808)  0000 0000 00000000 00000000 0000 (tailStrTable, 1814?)
+
+FSeek(0x2a664f50); byte xxx<bgcolor=cYellow>;
+// 608608   608<<2 = 1820
+
+
+//
+bl_offset( 0x2981B000 ); // :01	2-0: 	05000700 0203C000 CA88000A 001CE798
+bl_offset( 0x28AD3000 ); // :01	2-0: 
+bl_offset( 0x2B924800 ); // :01	7-0: 
+
+
+
+
+//
+bl_offset( 0x28E61800 );  //uncripted
+
+bl_offset( 0x2B879800 ); // :01	8-0: 	05000900 0203C001 BAC6000A 00158B40 -> 0100003C  65010000 000000E0  ... 
+bl_offset( 0x2B87E800 ); // :01	9-0: 	05000900 0203C001 E2180010 97FF7B90 -> 0100003C  65010000 000000F4  ... 
+bl_offset( 0x2B87F000 ); // :01	21-0: 	05000900 0200F000 3C20A800 1141246C -> 0100003C  65010000 000001E4  ... 
+bl_offset( 0x2B881000 ); // :01	17-0: 	05000900 0201E000 C8A86000 81FED200 -> 0100003C  65010000 00000194  ... 
+bl_offset( 0x2B885800 ); // :01	12-0: 	05000900 0203C002 5A0A0011 C6962950 -> 0100003C  65010000 00000130  ... 
+bl_offset( 0x2B889000 ); // :01	18-0: 	05000900 0201E000 D28AE001 4001C2F5 -> 0100003C  65010000 000001A8  ... 
+
+/*
+bl_offset( 0x29EF3800 ); // :01	1-0: 	05000800 0203C000 A246000A 00025ED8 -> 0100003C  00000050  ... 
+
+bl_offset( 0x2A664000 ); // :01	2-0: 	05000800 0201E000 32C0A000 A0006048 -> 0100003C  65010000 00000068  ... 
+bl_offset( 0x28AD3000 ); // :01	2-0: 	05000700 0203C000 CA26000A 0020EE18 -> 0100003C  65010000 00000068  ... 
+bl_offset( 0x2981B000 ); // :01	2-0: 	05000700 0203C000 CA88000A 001CE798 -> 0100003C  65010000 00000068  ... 
+
+bl_offset( 0x2B924800 ); // :01	7-0: 	05000900 0201E000 64DCA000 A0013E9A -> 0100003C  65010000 000000CC  ..
+bl_offset( 0x2B8D1800 ); // :01	7-0: 	05000900 0201E000 648BA000 A0013E9A -> 0100003C  65010000 000000CC  ... 
+bl_offset( 0x2B40E800 ); // :01	7-0: 	05000A00 0203C001 920A0014 0004BDB0 -> 0100003C  65010000 000000CC  ...
+
+bl_offset( 0x29EEA000 ); // :01	12-0: 	05000900 0200F000 25A01000 14001DCC -> 0100003C  65010000 00000130  ...  
+
+*/
+
+
+void decode_types(DWORD block_offset){
+    local DWORD ptr = block_offset + 0x38; // ptr 2 coded Types
+    local unsigned QUAD buffer, buf_t;
+    local unsigned WORD d_len = 20, tmp_w;
+    local unsigned DWORD res;
+    
+    //
+    buffer = ReadUQuad(ptr); // 8 first coded Types
+    ptr += 8; //next packet of bytes
+                
+    //  Print_buf( buffer );
+
+    // #1 add_shift - qty bits for addr in type
+    tmp_w = buffer>> (64-20) & 0xff;    // first 5 nibbles - type and inner offset
+    //  Printf("\n addr first  %04X\n",( tmp_w ));
+   // if( tmp_w<<0 == ReadUShort(block_offset +0x0c) ) d_len = 19;
+    if( tmp_w<<1 == ReadUShort(block_offset +0x0c) ) d_len = 20;
+    if( tmp_w<<2 == ReadUShort(block_offset +0x0c) ) d_len = 21;
+   // if( tmp_w<<3 == ReadUShort(block_offset +0x0c) ) d_len = 22;
+    //  Printf(" data bits   %i\n",( d_len ));
+    Printf("\n\n bl_offset( 0x%08X ); // 0x%08X [%i types] %i\n", block_offset, ReadUInt(block_offset+0x34), 
+            ReadUShort(block_offset+0ah), d_len );
+
+    
+    //1,2
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+        tmp_w = res>>28;
+    buf_t = ReadUQuad(ptr)>>(64 - d_len*2);
+    buffer |= buf_t;
+    //Print_buf( buf_t );
+    ptr+=5;
+    Printf("\n");
+    
+    
+    //3,4
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    //  bl_offset( 0x28D0C800 ); // 0x0E140800 [6 types] 20
+    if ( tmp_w > 0) {
+        buf_t = ReadUQuad(ptr)>>(64 - d_len*2);
+    }else{
+        buf_t = ReadUQuad(ptr) >>20;
+    }
+    //
+    buffer |= buf_t;
+    ptr+=5;
+    Printf("\n");
+    
+    //5,6
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    //buf_t = ReadUQuad(ptr)>>(64 - d_len*2);
+    buf_t = ReadUQuad(ptr) >>18;
+    buffer |= buf_t;
+    ptr+=5;
+    Printf("\n");
+    
+    //7,8
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    
+    buf_t = ReadUQuad(ptr)>>16;
+    buffer |= buf_t;
+    ptr+=5;
+    Printf("\n");
+    
+    //9,10
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    
+    
+    buf_t = ReadUQuad(ptr)>>16;
+    buffer |= buf_t;
+    ptr+=5;
+    
+    Printf("\n");
+
+    return;
+}
+
+
+//----
+DWORD calc_type_addr(DWORD buf, WORD len){
+    local unsigned DWORD res;
+    // Printf(" :[%05X] \t", buf );
+        // ### 1 type
+    local WORD type = (buf >> (len-8) ) <<7; 
+    type = (type & 0xff00) | (type & 0x00FF)>>7;
+//    Printf(" %04X", type );
+        // ### 2 addr
+    local WORD val = (buf &0x00000FFF) <<1;
+    //val <<=1;
+//    Printf(" %04X ", val );
+//    if(type == 0) Printf("<---\n"); // last, 0000 xxxx <-ptr2str-10h
+    res = type;
+    res <<= 16;
+    res |= val;
+//    Printf(" =%08X= ", res );
+    return res;
+}
+
+
+
+
+void Print_buf(QUAD b){
+    Printf(" %08X %08X ", b >>32, b & 0xffffffff);
+}
+

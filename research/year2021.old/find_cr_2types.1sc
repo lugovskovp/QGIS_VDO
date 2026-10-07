@@ -1,0 +1,111 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File:  Find block by type and length
+/*
+Find only block with one type geo - 01 sea or 05? city
+*/
+BigEndian(); 
+ Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+
+// ee_map.txt
+// - 2B6D2800: 056DA501 :  			1c_MAP_POLI_9_k100 --- 0262
+//   2B873000: 0570E601 :  	08_SCALE_ALMANAC --- 0001
+//      local DWORD ptr, ptrStart = 0x2B6D2800, ptrEnd = 0x2B873000, constBlSize=0x800;
+local DWORD ptr, ptrStart, ptrEnd, constBlSize=0x800;
+local DWORD val;
+local byte blockType, FlagCompressed, cnt_types, end_offs;
+local WORD inner_offset <format=hex>;
+local DWORD ch_sea1 , ch_sea2;
+local WORD eof_poli;
+
+// ee 28AD2000: 0515A401 :  			16_MAP_POLI_7_k40 --- 4806
+ptrStart = 0x28AD2000; ptrEnd = 0x2B947000;//ee
+// bnl 0B6BE000: 016D7C01 :  			16_MAP_POLI_7_k40 cnt- 0838
+//ptrStart = 0x0B6BE000; ptrEnd=0x0C05F000;//bnl
+
+Printf("bl_addr :cnt_types poliline_offs :  DW_1 DW_2\n"); 
+for(ptr=ptrStart; ptr<ptrEnd; ptr+=constBlSize){
+    if(FSeek(ptr) != 0){    // EOF -> exit
+        Printf("0x%08X EOF!\n", ptr); return;}
+
+    val = ReadUInt(ptr);
+    // is this block start?
+    if( ((val>>8)*constBlSize) == ptr){
+        // check block type\
+        blockType = ReadByte(ptr+0x05);
+        //Printf("%01X    \n", blockType);
+        if( !( (blockType == 0x16 ) || (blockType == 0x15 ) || (blockType == 0x1c )
+            || (blockType == 0x14 ) || (blockType == 0x1d ) || (blockType == 0x1e ) ) )
+            continue;
+
+/*        // is this block compressed?
+        if(ReadByte(ptr+0x06) == 1){
+//Printf("%04X    \n", ptr);
+
+        }else{  //block not compressed
+           // continue;
+        }
+*/
+        // cnt types =2
+        if(ReadByte(ptr+0x0b) != 2){
+            // continue;
+        }
+
+        FlagCompressed = ReadByte(ptr+0x06);
+        if(FlagCompressed == 1){
+            // 2- smallest
+            // one poligon and one poliline
+            if(ReadByte(ptr+0x13) == 0){ // poliline !=0
+                continue;
+            }
+            if(ReadByte(ptr+0xf) == 0){ // poliline !=0
+                continue;
+            }
+
+                inner_offset = ReadUShort(ptr + 8);
+            cnt_types = ReadByte(ptr + 0xb);
+            end_offs = ReadByte(ptr + 0xd);
+            ch_sea1 = ReadUInt( ptr + inner_offset);
+            ch_sea2 = ReadUInt( ptr + inner_offset + 4);
+            Printf("0x%08X :%02X %02X :  %08X %08X %08X %08X ->", ptr, cnt_types, end_offs,  ch_sea1, ch_sea2,
+                 ReadUInt( ptr + inner_offset + 8) ,
+                ReadUInt( ptr + inner_offset + 12)
+                ); 
+             // should be
+            // 0x28B55000 :01 3C :  05000800 0200F000 -> 01 00 00 3C 00 00 00 DC
+            //  end of poligons ptr 
+            eof_poli = ( ReadUShort(ptr+0x0e) * 0x14 ) + ReadUShort(ptr+0x0c);
+eof_poli = ReadUShort(ptr+0x14) - 0x10;
+            Printf(" %02X%02X%02X%02X  %02X%02X%02X%02X %02X%02X%02X%02X  ... \n", 
+                ReadByte(ptr + 0x38)>>1, 0, // type, 0-poligon
+                ReadUShort(ptr+0x0c)>>8 , ReadUShort(ptr+0x0c) & 0xff , // poligon ptr
+                65h, 1, // poli start !!!!!65 - read as 6x, 1 - poliline
+                (ReadUShort(ptr+0x10))>>8 , (ReadUShort(ptr+0x10)) & 0xff,
+
+                0,0,// last type =0, ptr2:pstr-10h
+                (ReadUShort(ptr+0x14)-10h)>>8 , (ReadUShort(ptr+0x14)-10h) & 0xff
+                );  
+            //break;
+        }else{
+            continue;
+            Printf("0x%08X \n", ptr);
+        }
+    }
+}
+//
+
+
+return;
+
+/*
+
+
+file name: carindb_bnl
+0x0BFFC800 :01 3C :  05000900 0200F000 3C20A800 -> 01 00 00 3C  00 00 01 E0  ... 
+    3C20A800 - 00111100001000001010100000000000
+     01 E0   -000111100000
+0x0C034000 :01 3C :  051F0900 0200F000 57A11000 -> 01 00 00 3C  00 00 02 BC  ... ??? WRONG!
+    57A11000 - 01010111101000010001000000000000
+    2BC     - 001010111100
+*/

@@ -1,0 +1,56 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#ifndef H_VDO_0x64_INC_INCLUDED
+#define H_VDO_0x64_INC_INCLUDED
+
+/*
+Carinet
+
+00000000: 00000001 :  66 cnt- 0001
+00000800: 00000108 :  64 cnt- 0002 
+    https://ru.wikipedia.org/wiki/SIGMET METAR notam Notices to Airmen - ICAO
+    ??rds
+00005000: 00000A08 :  65 cnt- 0049
+*/
+
+#include "vdo_inc.bt"
+
+typedef struct {
+    WORD        SEEMS_LIKE_CODE_WITH_HIGH_OCTET <hidden = true>;
+    local uchar high_oct = SEEMS_LIKE_CODE_WITH_HIGH_OCTET >>11; //0x07ff
+    local WORD  code = SEEMS_LIKE_CODE_WITH_HIGH_OCTET & 0x07ff ;
+    WORD        u2 <format=hex>;
+    PTR_string  pstr;
+}bl_0x64_data <read=Read_bl_0x64_data>;
+string Read_bl_0x64_data(bl_0x64_data &a){
+    local string s;
+    SPrintf(s, "%X - %04X (%04X): %s", a.high_oct, a.code, a.u2, a.pstr.str);
+    return s;
+}
+
+/////////////////////
+
+typedef struct{
+//header start
+    BL_HEADER   block;
+    BL_ADDR     next_64_block;
+    BL_ADDR     prev_64_block;
+// header end, last = 0Ch -1 
+
+    bl_0x64_data data[ block.data.Cnt] <optimize = false>;
+
+}BLOCK_TYPE_0x64 < read=Read_BLOCK_TYPE_0x64, 
+    comment=Comment_block0x64 >;
+string Comment_block0x64(BLOCK_TYPE_0x64 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x64(BLOCK_TYPE_0x64 &a){
+    local string s;
+    //SPrintf(s, "%i of %i; %ix%i;   Size: %f degr", a.map_files_cnt,  
+    //    a.block.data.Cnt, a.sq_size, a.sq_size, a.deg_size);
+    return s;
+}
+
+
+#endif //H_VDO_0x64_INC_INCLUDED

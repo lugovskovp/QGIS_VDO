@@ -1,0 +1,20 @@
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#include "vdo_block.bt"
+
+
+//VDO_BLOCK bt_12(0);
+bl_offset(0);
+//bl_addr(0x00000101);
+
+
+//
+local struct BLOCK_TYPE_0x12 A_bl_0x12;
+
+ //bl_addr(0x05726a01);
+ //bl_addr(0x0571AB01);
+
+
+

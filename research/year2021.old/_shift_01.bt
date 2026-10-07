@@ -1,0 +1,438 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+
+// Printf("\n\nWTF???\n\n");
+
+#include "vdo_block.bt"
+
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+//return;
+
+local DWORD start_ptr<format=hex>;
+
+start_ptr=0x29EF3800; //:01 1-0; [05000800] str(12,0) vrtx(13,0) id(30,0) sum=55 
+//bl_offset( 0x2B8A7000 ); // :03	6-365: 	0D1A0900 0A011678 1A344100 00BD0D14 -> 05000044  650100D0 000017A0  ... 
+//ptr = 0x2B8A7000;
+/*
+0x2B0E9000 :08 58 :  0F170900 0602C0A0 4A0C16C1 01760218 -> 03000058  65010378 00000508  ... 
+0x2B0EA000 :09 5C :  0C180900 06017050 108301B0 200E2020 -> 0300005C  65010200 00001220  ... 
+0x2B0EC000 :09 5C :  0C180900 06017050 13030124 200CE020 -> 0300005C  65010214 00001074  ... 
+0x2B0EE000 :07 54 :  0E170900 06015050 350304A1 9626ED11 -> 03000054  650104DC 00000D1C  ... 
+0x2B0F0800 :09 5C :  0E160900 06017050 1F8304D0 04290CB1 -> 0300005C  65010598 00001088  ... 
+0x2B0F3000 :09 5C :  0E180900 06017050 3883064C 0433ACB1 -> 0300005C  650106C4 00000E64  ... 
+0x2B0F6000 :06 50 :  0E160900 06014050 23030565 962DAD33 -> 03000050  650105B4 00000FF4  ... 
+0x2B0F8800 :07 54 :  0F160900 06015050 328304B5 9626ECF2 -> 03000054  650104DC 00000C0C  ... 
+0x2B0FB000 :09 5C :  0D170900 06017050 1A8302F0 20196020 -> 0300005C  650103A4 00001344  ... 
+0x2B0FD800 :09 5C :  0E160900 0602E0A0 7E0C1DC1 01FA0220 -> 0300005C  65010458 00000678  ... 
+0x2B0FF000 :07 54 :  0E170900 06015050 32830659 96340D11 -> 03000054  65010680 00000B30  ... 
+
+bl_offset( 0x28AD3000 ); // :01	2-0: 	05000700 0203C000 CA26000A 0020EE18 -> 0100003C  65010000 00000068  ... 
+bl_offset( 0x28AD4000 ); // :01	3-0: 	05000800 0203C000 F243000A 00197D80 -> 0100003C  65010000 0000007C  ... 
+bl_offset( 0x28AD5800 ); // :01	5-0: 	05000800 0203C001 422C0014 0041DC30 -> 0100003C  65010000 000000A4  ... 
+
+
+bl_offset( 0x28AD5800 ); // :01	5-0: 	05000800 0203C001 422C0014 0041DC30 -> 0100003C  65010000 000000A4  ... 
+bl_offset( 0x28AEE800 ); // :04	30-1: 	00160800 06024100 7402128D 115A0016 -> 03000048  650102B4 000002C4  ... 
+bl_offset( 0x28AEF800 ); // :04	22-0: 	05150700 06012050 1F84019C 040E2000 -> 03000048  65010000 00000204  ... 
+bl_offset( 0x28AF1800 ); // :05	43-1: 	0F170700 06013050 3904027C 041B6D50 -> 0300004C  650103BC 000003CC  ... 
+
+*/
+// bl_offset( 0x28AD5800 ); // :01	5-0:
+//
+//start_ptr = 0x2B0FD800;  //1
+//start_ptr = 0x2B924800;
+
+
+// start_ptr = 0x2A02A800; //2
+// start_ptr=0x2B0FF000; //:07 4e-4b  add_=0; [0E170900] str(16,0) vrtx(17,0) id(16,0) sum=49 
+
+//start_ptr=0x28AD3000; //:01 2:0  add_=0; [05000700] str(12,0) vrtx(13,0) id(30,0) sum=55 
+//start_ptr=0x28AD4000; //:01 3-0 add_=0; [05000800] str(12,0) vrtx(13,0) id(30,0) sum=55 
+//
+
+// start_ptr=0x28AD5800; //:01 5-0; [05000800] str(12,0) vrtx(12,0) id(30,0) sum=54   0CE5 -vrtx(12) =<<3+ptr2vtrx
+// start_ptr=0x28AF1800; //:05 43-1; [0F170700] str(15,0) vrtx(10,0) id(24,0) sum=49 
+//
+
+// start_ptr=0x28AEE800; //:04 30-1; [00160800] str(12,0) vrtx(20,0) id(15,0) sum=47 in end (((
+// start_ptr=0x28AEF800; //:04 22-0; [05150700] str(12,0) vrtx(12,0) id(24,0) sum=48 
+
+
+
+local unsigned QUAD  buff<format=hex>;  // global buffer
+local byte addr_sh;         // shift type Ptr
+local WORD akk_shift=0;     // akkumulated qty bits
+
+local DWORD ptr;
+        local byte sh, buff_sh;
+
+
+ptr = start_ptr + 0x38;
+do_decode( start_ptr ); 
+
+FSeek(start_ptr+0x38);
+byte types_compressed[ptr - start_ptr - 0x38] <bgcolor=cBlue>;
+if (akk_shift) byte types_compressed <bgcolor=cBlue>;
+
+
+
+//return;
+// addr_sh = 0; buff_sh = 0;   //
+// akk_shift =0; 
+// buff = ReadUQuad( start_ptr + 0x38 );   
+
+//buff <<= addr_sh;
+
+//do_shift(0, 15); // 05 15 07 00 (15=21)
+
+
+
+
+local WORD i, shapes_cnt;
+shapes_cnt = ReadUShort(start_ptr + 0xc);
+if (shapes_cnt > 5) shapes_cnt = 5;
+
+for(i=0; i<0x4; i++){
+Printf("\n\n %i ", i);
+    do_shape(); 
+}
+
+return;
+
+
+
+void do_shape(void){
+/*    shape
+2h - ptr2str/0; 
+2h - ptr2vertexes (first=first vert)
+4h - id [0000 7685]
+8h - LON_LAT
+2h = 00 00 - aligment
+2h - ptr2 list strPtr
+*/
+
+
+local byte str_bits, str_sh, vrtx_bits, vrtx_sh, id_bits, id_sh;
+str_bits  = 12; str_sh  =0;
+vrtx_bits = 11; vrtx_sh =0; 
+id_bits   = 32; id_sh   =0;
+
+
+
+Printf("start_ptr=0x%08X; //:%02i %i-%i; [%08X] str(%i,%i) vrtx(%i,%i) id(%i,%i) sum=%i \n", 
+    start_ptr, 
+    ReadUShort(start_ptr+0xa),ReadUShort(start_ptr+0xe),ReadUShort(start_ptr+0x12), 
+    ReadUInt(start_ptr+0x34), 
+    str_bits, str_sh, vrtx_bits, vrtx_sh, id_bits, id_sh,
+    str_bits+vrtx_bits+id_bits
+     );
+        Print_buf(buff);
+// ptr to string
+Printf("\n  %04X -str(%i) \t", get_bits(str_bits, str_sh), str_bits );  //addr_sh=0 - 4,16/ 0
+        Print_buf(buff);
+// ptr to vertexes
+Printf("\n  %04X -vrtx(%i) =<<3+ptr2vtrx\t", get_bits(vrtx_bits, vrtx_sh), vrtx_bits );  //addr_sh=0 - 4,16/ 0
+        Print_buf(buff);
+// id
+Printf("\n  %08X -id(%i) \t", get_bits(id_bits, id_sh), id_bits );  //addr_sh=0 - 4,16/ 0
+        Print_buf(buff);
+// coordinates
+Printf("\n   %08X -LAT(%i)  \t", get_bits(32, 0), 32 );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+Printf("\n   %08X -LON(%i)  \t", get_bits(32, 0), 32 );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+
+return;
+Printf("\n  %04X -vertex(%i) \t", ( do_shift(sh_vert, 16))>>2, sh_vert );  //addr_sh=0 - 1,16
+        Print_buf(buff);
+Printf("\n  %08X -id(%i) \t", do_shift(sh_id, 32), sh_id );  //addr_sh=0 - 5, 32  E97730A1C7DF79E0
+        Print_buf(buff);
+
+//2h = 00 00 - aligment
+Printf("\n  %04X <-0000 ", do_shift(16, 16) );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+//2h - ptr2 list strPtr
+Printf("\n  %04X  ", do_shift(16, 16) );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+
+
+
+return;
+
+
+
+}
+
+//-================================
+DWORD get_bits(WORD bits_from_head_buff, WORD shift_after){
+    local DWORD val;
+    // global QUAD buff, DWORD ptr
+    val = buff >> (64 - (bits_from_head_buff ) );
+    buff <<= bits_from_head_buff;
+    do_fill_end_buff(bits_from_head_buff);
+    val <<= shift_after;
+    return val;
+}
+
+DWORD do_shift(WORD sh_bits, DWORD bits_qty){
+    local DWORD val;
+    // global QUAD buff, DWORD ptr
+    buff >>=sh_bits;
+    val = buff >> (64 - (bits_qty ) );
+    buff <<= (bits_qty ) ;
+    do_fill_end_buff(bits_qty - sh_bits);
+    return val;
+}
+
+
+void do_t(void){
+    Print_buf(buff); Printf(" = %02X", buff>>(64-7) );
+    buff <<=7;
+     sh = 7;  buff >>= sh; Printf(" %02X =", buff>>(64-8) );
+    //Print_buf(buff); 
+    buff <<=8;  Print_buf(buff); 
+    //addr 
+/*
+0 >>1, r12<<1
+1 r12 <<1
+2 r12 <<2
+*/
+
+if (!addr_sh ){
+    buff >>=1;
+    Printf(" | %03X <<%i = %04X = ", (buff>>(64-12)), addr_sh+1, (buff>>(64-12))<<(addr_sh+1) );
+    buff <<=1;
+}else{
+    Printf(" | %03X <<%i = %04X = ", (buff>>(64-12)), addr_sh, (buff>>(64-12))<<(addr_sh) );
+}
+
+buff <<=11+addr_sh;
+
+     Print_buf(buff);  
+    
+     do_fill_buff(11+8+addr_sh);
+
+//Printf("\n");
+
+}
+
+// load more buffer
+void do_fill_buff(WORD bits_qty){
+    local unsigned QUAD  buf_t<format=hex>;
+    // use global DWORD ptr, WORD akk_shift
+    Printf ("\n  b:%i a:%i, -%i-", bits_qty, akk_shift, 
+        ( (bits_qty+akk_shift) >>3 ) );
+    // increase pointer
+    ptr+= ( (bits_qty+akk_shift) >>3 ); // divide by 3
+    Printf ("\n  ptr=%X\n", ptr);
+
+//     Printf ("\n  a: %i %i, -%i-", akk_shift, bits_qty, ( (bits_qty+akk_shift) >>3 ) );
+
+
+// akk_shift - akkumulated
+    akk_shift = (bits_qty+akk_shift) - (((bits_qty+akk_shift)>>3)<<3);     
+
+    buf_t = ReadUQuad(ptr);
+     Print_buf(buf_t);
+    buf_t <<= akk_shift;
+     Print_buf(buf_t);
+    buff |= buf_t;
+     Printf("\n");
+
+}
+
+
+
+
+
+
+//-------------------------------------------
+void Print_buf(QUAD b){
+    Printf(" %08X %08X ", b >>32, b & 0xffffffff);
+}
+
+void do_decode(DWORD ptr_block_begin){
+    
+    local DWORD off_start_compr<format=hex> = ptr_block_begin + 38h;
+    local DWORD ptr<format=hex> = off_start_compr;
+    local WORD i;   //counter
+    // extern global QUAD buffer, WORD 
+
+// decode headers
+    bl_offset( ptr_block_begin );
+
+//calc addr_sh
+    ptr = off_start_compr;
+    buff = ReadUQuad(off_start_compr);
+    // local unsigned QUAD  buff<format=hex>, buf_t<format=hex>;
+
+    addr_sh = 0; buff_sh = 0;   // 19 bits len compressed type
+    if ( ((buff>> (64-20) & 0xff ))<<1 == 
+                ReadUShort (ptr_block_begin +0x0c) ) addr_sh = 1;    // 20
+    if ( ((buff>> (64-20) & 0xff ))<<2 == 
+                ReadUShort (ptr_block_begin +0x0c) ) addr_sh = 2;    // 21
+
+Printf(" calc addr_sh: -- %04X <<  %i = %04X\n", 
+        buff>> (64-20) & 0xff , addr_sh, ReadUShort (ptr_block_begin+0x0c) );
+
+    //ptr = off_start_compr;
+    //buff = ReadUQuad(ptr);
+
+Printf(" types: %04X\n\n", ReadUShort(ptr_block_begin + 0xa) );
+/*
+Print_buf(buff); 
+Printf(" %02i %08X \n", i,  decode_type());
+*/
+
+    for (i=0; i<= ReadUShort(ptr_block_begin + 0xa); i++){
+        //local DWORD value = decode_type();
+        Printf(" #%02i %08X \n", i,  decode_type());
+    }
+;
+Printf(" buffer:"); Print_buf(buff); 
+    // color uncompressed bytes with geo_types 
+    //FSeek();
+    // return WORD end_ptr;
+}
+
+DWORD decode_type(void){
+    // extern global QUAD buffer
+    local DWORD val<format=hex> =0;
+    //type
+    val = ( buff>>(64-7) ) <<24;    //type
+    buff <<=7;
+    buff >>=7;
+    val |= ( buff>>(64-8) )<<16;    // 0- shape, 1 - poliline
+    buff <<=8;
+    //addr 
+/*
+0 >>1, r12<<1
+1 r12 <<1
+2 r12 <<2
+*/
+    if (!addr_sh ){
+        buff >>=1;
+        //Printf(" | %03X <<%i = %04X = ", (buff>>(64-12)), addr_sh+1, (buff>>(64-12))<<(addr_sh+1) );
+        val |= (buff>>(64-12))<<(addr_sh+1);
+        buff <<=1;
+    }else{
+        //
+//Printf(" | %03X <<%i = %04X = ", (buff>>(64-12)), addr_sh, (buff>>(64-12))<<(addr_sh) );
+        val |= (buff>>(64-12))<<(addr_sh);
+    }
+    //Print_buf(buff);
+    buff <<=11+addr_sh;
+    //Print_buf(buff);      
+     do_fill_end_buff(11+8+addr_sh);
+//Printf("\n");   
+    return val;
+}
+
+
+
+// load more buffer
+void do_fill_end_buff(WORD bits_qty ){
+    local unsigned QUAD  buf_t<format=hex>;
+    
+    // use global DWORD ptr, WORD akk_shift
+    // increase pointer
+    ptr+= ( (bits_qty+akk_shift) >>3 ); // divide by 3
+    // akk_shift - akkumulated
+    akk_shift = (bits_qty+akk_shift) - (((bits_qty+akk_shift)>>3)<<3);
+
+//     Printf ("\n  a: %i %i, -%i-", akk_shift, bits_qty, ( (bits_qty+akk_shift) >>3 ) );
+//     Printf ("\n  a: %i %i, -%i-", akk_shift, bits_qty, ( (bits_qty+akk_shift) >>3 ) );
+
+    buf_t = ReadUQuad(ptr);
+     //Print_buf(buf_t);
+    buf_t <<= akk_shift;
+     //Print_buf(buf_t);
+    buff |= buf_t;
+     //Printf("\n");
+}
+
+
+
+// ============================
+// ------------- delit
+
+
+// ====================
+// Strings  08B0 -str(12) 
+local DWORD tp = 0x28ad5d98;  //ReadUShort(start_ptr + 0x1c);
+//tp = 0x28ad5d;
+Printf ("\n\n Str = %08X, p=0x%04X\n", ReadUInt(start_ptr + 0x1c), tp );
+local QUAD sbuf = ReadUQuad(tp);
+Print_buf(sbuf);
+
+buff = ReadUQuad(tp);
+FSeek(tp);
+QUAD here_q<fgcolor=cDkGreen, bgcolor=cLtGreen>;
+
+//  3A 284528 A915A2C0      3A284528A915A2C0
+local char chr[12];
+chr[0] = 0x31; //0x74;
+chr[1] = 0x1a;
+chr[2] = 0x28;
+chr[3] = 0x84;
+chr[4] = 0x45;
+chr[5] = 0x52;
+chr[6] = 0x28;
+chr[7] = 0x8a;
+//get_bits(7,0);
+
+Printf("\n\nstr chr=%s\n", chr);
+
+get_bits(4,0);
+Print_buf(buff);
+
+chr[0] = get_bits(7,0);
+chr[1] = get_bits(7,0);
+chr[2] = get_bits(7,0);
+chr[3] = get_bits(7,0);
+chr[4] = get_bits(7,0);
+chr[5] = get_bits(7,0);
+chr[6] = get_bits(7,0);
+chr[7] = get_bits(7,0);
+chr[8] = get_bits(7,0);
+chr[9] = get_bits(7,0);
+chr[10] = get_bits(7,0);
+chr[11] = get_bits(7,0);
+//get_bits(7,0);
+
+Printf("\nstr7 chr=%s\n", chr);
+/*
+buff = ReadUQuad(tp);
+get_bits(6,0);
+chr[0] = get_bits(8,0);
+chr[1] = get_bits(8,0);
+chr[2] = get_bits(8,0);
+chr[3] = get_bits(8,0);
+chr[4] = get_bits(8,0);
+chr[5] = get_bits(8,0);
+chr[6] = get_bits(8,0);
+chr[7] = get_bits(8,0);
+chr[8] = get_bits(8,0);
+chr[9] = get_bits(8,0);
+chr[10] = get_bits(8,0);
+chr[11] = get_bits(8,0);
+//get_bits(7,0);
+
+Printf("\nstr8 chr=%s\n", chr);
+*/
+return;
+//===================

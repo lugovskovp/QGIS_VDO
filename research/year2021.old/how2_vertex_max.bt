@@ -1,0 +1,94 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: 
+
+#include "vdo_block.bt"
+
+bl_offset( 0x2B8D5800 );
+bl_offset( 0x28E61800 );
+
+return;
+
+/*
+scale = 06 - !!! LEFT SHIFT?????
+all block type = 0x16
+*/
+bl_offset( 0x28E61800 ); // (scale_40: 0x000C) _MAP_POLI_7_k40; 8 types, 71 shapes, 31 lines, 	first: 's'...
+/*
+0e31f800 - 0e29f800 = 8 0000
+10625000 - 105a5000 = 8 0000
+max_x = 2000 	 max_y = 2000
+*/
+bl_offset( 0x2934B800 ); // (scale_40: 0x0019) _MAP_POLI_7_k40; 8 types, 50 shapes, 22 lines, 	first: 's'...
+/*
+0ff9f800 - 0fe9f800 = 10 0000
+0fca5000 - 0fba5000 = 10 0000
+max_x = 4000 	 max_y = 4000
+*/
+bl_offset( 0x293B9000 ); // (scale_40: 0x0033) _MAP_POLI_7_k40; 8 types, 25 shapes, 9 lines, 	first: 's'...
+/*
+10a9f800 - 1089f800 = 20 0000
+0fba5000 - 0faa5000 = 10 0000
+max_x = 8000 	 max_y = 4000
+*/
+
+local WORD i,j,k, max_x, max_y;
+local DWORD ptr;
+
+return;
+
+for(i=0;i<3;i++){
+    // каждый из 3 блоков типа 0x16
+    max_x = 0;
+    max_y = 0;
+    ptr = __bl_0x16[i].block.addr.offset + __bl_0x16[i].p_all_vertexes.Ptr;
+    for(k = 0; k< __bl_0x16[i].p_all_vertexes.Cnt; k++){
+        if (max_x < ReadUShort(ptr)) max_x = ReadUShort(ptr);
+        if (max_y < ReadUShort(ptr+2)) max_y = ReadUShort(ptr+2);
+        ptr += 4;
+    }
+    Printf("max_x = %X \t max_y = %X\n", max_x, max_y);
+}
+
+
+/*
+bl_offset( 0x293C0000 ); 
+bl_offset( 0x29C43000 ); 
+bl_offset( 0x2A465800 ); 
+bl_offset( 0x2A542000 );
+*/ 
+bl_offset( 0x2B573800 ); 
+    max_x = 0;
+    max_y = 0;
+    ptr = __bl_0x15.block.addr.offset + __bl_0x15.p_all_vertexes.Ptr;
+    for(k = 0; k< __bl_0x15.p_all_vertexes.Cnt; k++){
+        if (max_x < ReadUShort(ptr)) max_x = ReadUShort(ptr);
+        if (max_y < ReadUShort(ptr+2)) max_y = ReadUShort(ptr+2);
+        ptr += 4;
+    }
+    Printf("0x15: max_x = %X \t max_y = %X\n", max_x, max_y);
+/*
+scale=7, bl_type=0x15
+10e9f800 - 10a9f800 = 40 0000
+12ba5000 - 127a5000 = 40 0000
+max_x = 8000 	 max_y = 8000 === 40 0000 <<7
+*/
+bl_offset( 0x2B797000 ); 
+    max_x = 0;
+    max_y = 0;
+    ptr = __bl_0x1c.block.addr.offset + __bl_0x1c.p_all_vertexes.Ptr;
+    for(k = 0; k< __bl_0x1c.p_all_vertexes.Cnt; k++){
+        if (max_x < ReadUShort(ptr)) max_x = ReadUShort(ptr);
+        if (max_y < ReadUShort(ptr+2)) max_y = ReadUShort(ptr+2);
+        ptr += 4;
+    }
+    Printf("0x1c: max_x = %X \t max_y = %X\n", max_x, max_y);
+/*
+scale=8, bl_type=0x1c
+13e9f800 - 1369f800 = 80 0000
+0efa5000 - 0e7a5000 = 80 0000
+max_x = 8000 	 max_y = 8000 == 80 0000 <<8
+
+max_x = x2-x1 >>scale
+*/

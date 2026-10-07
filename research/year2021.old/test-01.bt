@@ -1,0 +1,57 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//  Проверить - сколько бит занимает дельта между соседними x и e вертексов
+//      File: 00 + 04 types
+
+//------------------------------------------------
+#include "vdo_block.bt"
+
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+//return;
+/*
+bl_offset( 0x28E61800 ); 
+bl_offset( 0x2934B800 ); 
+bl_offset( 0x293B9000 ); 
+bl_offset( 0x293C0000 ); 
+bl_offset( 0x29C43000 ); 
+bl_offset( 0x2A465800 );
+*/
+
+local byte i,j;
+local DWORD ptr;   // vertex list start
+local WORD x_cur, x_next, y_cur, y_next;
+
+bl_offset( 0x2934B800 ); 
+ptr = 0x2934bdc4;
+FSeek(ptr);
+
+local signed short delta;   // -7873
+
+for(i=0; i<100; i++){
+    x_cur = ReadUShort(ptr);
+    y_cur = ReadUShort(ptr+2);
+    x_next = ReadUShort(ptr+4);
+    y_next = ReadUShort(ptr+6);
+    ptr +=8;
+    delta = x_next - x_cur;
+    /*Printf("%04X-%04X=%04X \t \n",
+        x_next, x_cur, delta
+    );
+    */
+    if (x_cur > 0x3d00 || x_next > 0x3d00 || y_cur > 0x3d00 || y_next > 0x3d00 ){
+        Printf("%04X %04X \t%04X %04X\t %i \n",
+            x_next, y_next, x_cur, y_cur, delta
+        );
+    }
+}
+
+
+
+
+return;
+
+bl_offset( 0x293B9000 ); 
+bl_offset( 0x293C0000 ); 
+bl_offset( 0x29C43000 ); 
+bl_offset( 0x2A465800 );

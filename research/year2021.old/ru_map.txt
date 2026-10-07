@@ -1,0 +1,80 @@
+Executing script 'C:\Work\VDO_Dayton\010_bt\vdo_map.1sc' on 'C:\Work\VDO_Dayton\db_src\NAV_DB\carindb'...
+ --- 0001
+00000000: 00000001 :  12_GLOBAL_HEADER --- 0001
+00000800: 00000101 :  13_FILE_INFO --- 0001
+00001000: 00000201 :  07_LST_WORLD_SCALES --- 0001
+00001800: 00000301 : 	 0b_SYMBOLS_COUNTR --- 0001
+00002000: 00000402 : 		 0a_COUNTRYS --- 0001
+00003000: 0000060C :  			0d_SYMBOLS_CITIES --- 0003
+00010800: 00002110 :  				0c_CITIES --- 0692
+011F6000: 0023EC10 :  					0f_SYMBOLS_ROADS --- 0031
+012EA000: 0025D408 :  						0e_ROADS --- 1114
+02401800: 0048030C :  							11_SYMBOLS_POI --- 0145
+02763800: 004EC70C :  								10_POI --- 1524
+048A2000: 00914401 :  	08_SCALE_ALMANAC --- 0001
+048A2800: 00914505 :  		09_FOLDER_MAPS --- 0009
+048BC800: 00917901 :  			06__POLI_1 --- 5198
+055E0000: 00ABC008 :  	08_SCALE_ALMANAC --- 0017
+05620800: 00AC4101 :  		09_FOLDER_MAPS --- 7192
+0643F800: 00C87F02 :  			00_0x00_DATA_ --- 15329
+127BF800: 024F7F03 :  	08_SCALE_ALMANAC --- 0001
+127C1000: 024F8201 :  		09_FOLDER_MAPS --- 0169
+1281C000: 02503801 :  			03__POLI_4 --- 5867
+13C2F000: 02785E03 :  	08_SCALE_ALMANAC --- 0001
+13C30800: 02786101 :  		09_FOLDER_MAPS --- 0169
+13C8A800: 02791501 :  			02__POLI_3 --- 5809
+15070800: 02A0E101 :  	08_SCALE_ALMANAC --- 0001
+15071000: 02A0E201 :  		09_FOLDER_MAPS --- 0054
+1509C800: 02A13901 :  			01__POLI_2 --- 5279
+16335000: 02C66A01 :  	08_SCALE_ALMANAC --- 0001
+16335800: 02C66B01 :  		09_FOLDER_MAPS --- 0086
+16365800: 02C6CB01 :  			16_MAP_POLI_7_k40 --- 15817
+1C36A000: 0386D401 :  	08_SCALE_ALMANAC --- 0001
+1C36A800: 0386D501 :  		09_FOLDER_MAPS --- 0026
+1C37A000: 0386F401 :  			15_MAP_POLI_6_k80 --- 4097
+1E00A800: 03C01501 :  	08_SCALE_ALMANAC --- 0001
+1E00B000: 03C01602 :  		09_FOLDER_MAPS --- 0003
+1E010000: 03C02001 :  			1c_MAP_POLI_9_k100 --- 1095
+1E6E5800: 03CDCB01 :  	08_SCALE_ALMANAC --- 0001
+1E6E6000: 03CDCC01 :  		09_FOLDER_MAPS --- 0003
+1E6EA000: 03CDD401 :  			14_MAP_POLI_5_k200 --- 0324
+1E90D800: 03D21B01 :  	08_SCALE_ALMANAC --- 0001
+1E90E000: 03D21C05 :  		09_FOLDER_MAPS --- 0001
+1E910800: 03D22102 :  			1d_MAP_POLI_10_k400 --- 0113
+
+
+void print_carindb_map(){
+    BigEndian(); 
+    //#include "vdo_block.bt"
+    
+    local DWORD ptr, val, cnt_bl_types=0, cnt=1000000, cBlSize=0x800;
+    local en_BL_DATA_TYPE type=_too_far, prev_type=_empty;
+    
+    
+    //Printf ("%08X: %06X\t%08X\n", 0x800, ReadUInt(0x800) , (ReadUInt(0x800)>>8)*0x800 );
+    cnt_bl_types = 1;
+ //ru =    0x1Ea2d800
+    
+    //733470720 - EOF
+    for(ptr=0; ptr< 0x1Ea2d800; ptr+=cBlSize){
+    //for(ptr=0; ptr< ( cnt*cBlSize); ptr+=cBlSize){
+        if(FSeek(ptr) != 0){
+            Printf("seek\n"); break;}
+        val = ReadUInt(ptr);
+        if( ((val>>8)*cBlSize) == ptr){
+            //Printf ("%08X: %08X\n", ptr, val);
+            type = ReadByte(ptr+0x05);
+            
+            if( type != prev_type){
+                prev_type = type;
+                Printf (" --- %04i\n%08X: %08X :  %02x%s", 
+                     cnt_bl_types,
+                    ptr,   val,
+                    type, EnumToString(type) );
+                cnt_bl_types = 0;
+             }
+            cnt_bl_types ++;
+        }
+    }
+    Printf (" --- %04i\n", cnt_bl_types);
+}

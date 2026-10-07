@@ -1,0 +1,503 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: inc_common.bt
+//   Authors: P.Lugovskov
+//   Purpose: Include file for Illustrates for Habr (illustrate_4habr.bt)
+//     Using: #include "inc_common.bt"
+//------------------------------------------------
+#ifndef H_VDO_inc_common_INCLUDED
+#define H_VDO_inc_common_INCLUDED
+
+BigEndian();
+
+// сonstant max allowed addr
+const int MAX_FILE_ADDR <hidden=true> = FileSize(); 
+
+// only here i find different between 0A addinfo fields count
+// 1 - new, 2 - "old", non-crypted, not-compressed
+local ubyte IS_OFICIAL_MAP <hidden=true> = ( ReadUShort(0x2e) == 1);
+
+// Multiply coefficient for traslate float degrees to int
+local uint MULCOORD = 0x54C563; // dec 5555555;
+
+// Block types enum ------------------------------------------
+typedef enum <uchar>{
+    ABSTRACT    = 12h,
+    CH_country  = 0Bh,  //fully parsed chars idxs
+    COUNTRY     = 0Ah,  //fully parsed COUNTRY INFO
+    CH_idx_d    = 0Dh,  //fully parsed chars idxs
+    CITY        = 0ch,  //fully parsed CITY INFO
+    CH_idx_f    = 0Fh,  //fully parsed chars idxs
+    ROAD        = 0Eh,  //
+    CH_idx_11   = 11h,  //fully parsed chars idxs
+    POI        = 10h,  // fully parsed, POI
+    
+    Invalid  = 0xFF
+}en_BL_TYPE <format=hex>;
+
+//en_LANG
+typedef enum <uchar>{
+	_Nederlands =   1,		//01 (1) 	 nederland, belgie - Dutch 
+	_English    =   2,  	//02 (2) 	 united kingdom, eire
+	_French     =   3,  	//03 (3) 	 france, luxembourg
+	_Deutch     =   4,  	//04 (4) 	 deutschland oesterreich osterreich schweiz
+	_Italian    =   5,  	//05 (5) 	 italia
+	_Hispain    =   6,  	//06 (6) 	 espana
+	_Svedian    =   7,  	//07 (7) 	 sverige
+	__unk_08	=	8,
+	__unk_09	=	9,
+	_Danian 	=   0xA, 	//0A (10) 	 danmark
+	_Catalan 	=   0xB, 	//0B (11) 	 andorra
+	_Finnish    =   0xC, 	//0C (12) 	 suomen tasavalta
+	__unk_0d	=	0xd,
+	_Norvegian  =   0xE, 	//0E (14) 	 norge    
+	_Portugal   =   0xF, 	//0F (15) 	 portugal  
+	__unk_10	=	0x10,
+	__eng_TOO   =   0x11,
+	_Polish     =   0x12, 	//12 (18) 	 polska
+	_Czech      =   0x13, 	//13 (19) 	 ceska republika
+	_Slovak     =   0x14, 	//14 (20) 	 slovenska republika
+	_Croatian	=	0x1A,	//1A (26) 	 hrvatska
+	_Latvian	=	0x1B,	//1B (27) 	 latvija
+	_Lithuanian	=	0x18,	//18 (24) 	 lietuva
+	_Slovene	=	0x17,	//17 (23) 	 slovenija
+	_UNK_lng  = 0xFF
+}en_LANG  <bgcolor=cGreen, fgcolor=cDkGreen>; 
+
+//en_ENG_COUNTRY_NAME
+typedef enum <ushort>{
+    Albania	=	2,
+    Andorra	=	5,
+    Austria	=	14,
+    Azerbaijan	=	15,
+    Belarus	=	20,
+    Belgium	=	21,
+    Bosnia_and_Herzegovina	=	27,
+    Bulgaria	=	33,
+    Croatia	=	53,
+    Cyprus	=	55,
+    Czech_Republic	=	56,
+    Denmark	=	57,
+    Estonia	=	67,
+    Finland	=	72,
+    France	=	73,
+    Georgia	=	80,
+    Germany	=	81,
+    Gibraltar = 83,
+    Greece	=	84,
+    Hungary	=	97,
+    Iceland	=	98,
+    Ireland	=	103,
+    Italy	=	105,
+    Latvia	=	117,
+    Liechtenstein = 122,
+    Lithuania	=	123,
+    Luxembourg	=	124,
+    North_Macedonia	=	126,
+    Moldova_Republic_of	=	140,
+    Monaco      = 141,
+    Netherlands	=	150,
+    Norway	=	160,
+    Poland	=	171,
+    Portugal	=	172,
+    Romania	=	176,
+    Russian_Federation	=	177,
+    San_Marino  = 183,
+    Slovakia_Slovak_Republic	=	190,
+    Slovenia	= 191,
+    Spain	=	196,
+    Sweden	=	204,
+    Switzerland	=	205,
+    Turkey	=	216,
+    Ukraine	=	221,
+    United_Kingdom	=	223,
+    Vatican_City = 229,
+    Serbia_and_Montenegro	=	241
+}en_ENG_COUNTRY_NAME  <bgcolor=cGreen, fgcolor=cDkGreen>;
+
+//{en_PLACE_CATEGORY	 0xA 0xC blocks
+typedef enum <ushort>{
+    Car_repair  = 0xB,
+    Gas_station = 0xC,
+    CarRent     = 0xD,
+    Parking     = 0xE,
+    ParkAndRide = 0xF, // park and ride, intercept parking, parkuj i jedz metro marymont
+
+    RestingPlace= 0x10, //  mop olesnica mala,  mop jonas polnoc, mop jonas poludnie
+	Intresting  = 0x14,
+    Hotel       = 0x15,
+    Restaurant  = 0x16,
+    Bank        = 0x17,
+    Culture     = 0x18,
+    Library     = 0x19,
+    Court       = 0x1a,
+    Embassy     = 0x1D,
+    BankomatATM = 0x1E,
+    Tourist_info= 0x1F,
+
+	Museum	    = 0x20,	//musee d'art moderne, musee de l'armee, musee des sciences Naturelles
+    Theater     = 0x21,
+    Sport       = 0x23,  //automotodrom brno, o2 arena, ski areal jasna, o2 arena
+    Church      = 0x24,
+	Architecture = 0x25,	//
+	Fun_park    = 0x26,	//boudewijn seapark, bruparck
+	Nature_park = 0x27,	//het zwin, nationale plantentuin
+    UN_United_Nations = 0x28,
+    Hospital    = 0x29,
+    Police      = 0x2A,
+    Goverment   = 0x2B,
+    Post        = 0x2C,
+    Clinic      = 0x2D,
+    Aphoteca    = 0x2E,
+    Shop        = 0x2F, // supermarket?
+
+	City	    = 0x30,	//russian map
+    Cinema      = 0x31,
+    __golf_club = 0x32, //first warsaw golf country club
+    RailStation = 0x33,
+	Border_point= 0x34, //
+	Seaport     = 0x35,  // oostende ramsgate (tonnel), zeebrugge (port), need mode exmpls
+    BusStation  = 0x36,
+    Pier        = 0x37, // przystan kortowska-> Piers, Dock
+    Shcool      = 0x38,
+    Winery      = 0x39, // lanson caves, champagne krug, moet et chandon, ruinart caves
+	Aeroport    = 0x3a,	//brussel nationaal, brussels airport; , luchthaven brussel
+    __bmw_motorbike_service = 0x3B,
+    Business    = 0x3D    // Olsztyn, Poland https://en.wikipedia.org/wiki/Michelin_Polska
+
+}en_PLACE_CATEGORY	<format=hex, bgcolor=cDkGreen, fgcolor=cAqua>;
+
+//}en_TYPE_ADDR
+typedef enum <ubyte>{
+    area  = 0,
+    alias = 1
+}en_TYPE_ADDR<format=hex, bgcolor=cLtAqua, fgcolor=cDkYellow>;
+
+// --- Data structs and functions -----------------------------
+// }BL_ADDR Структура адреса блока
+typedef struct{
+    // 
+    BitfieldDisablePadding();  //биты - как сплошная последовательность 
+    local uchar  is_valid <hidden=true>; // Признак валидности структуры, default-0 
+    local uint   raw <hidden=true> = ReadUInt(FTell()); // read onplace var value
+    local uint   offset <hidden=true> = ((raw & 0xffffff00)<<3); // calc offset
+    local en_BL_TYPE type=0xFF;       // Тип блока который начинается по этому адресу
+    local ushort r_size=0;   // real uncompressed size, if 0 - block uncompressed
+    if( !raw ){     // raw=0 -> empty BL_ADDR, 00 00 00 00
+        unsigned int    addr : 24 <bgcolor=0x00a0f0, fgcolor=cYellow>; //первые 3 байта - адрес, offset/0x800
+        unsigned short  size : 8 <bgcolor=0x00a0f0, fgcolor=cDkAqua>;  //последний байт - размер
+        is_valid = 1;// 00 00 00 00 - too valid
+    }else{ // raw > 0, have data
+        if ( offset < FileSize() )   // Если offset внутри file
+            is_valid = ( ReadUInt(offset) == raw );   // Прочитать реальное значение по offset адресу
+        if(!is_valid){  // data on addr != addr
+            DWORD non_valid_bl_addr<bgcolor=cRed, fgcolor=cSilver>; // paint it in red
+        }else{ // data on addr == addr, All Clear!
+            // получить тип блока       
+            type = ReadUByte(offset+5); // Через байта после BL_ADDR - type
+            // get value compressed size
+            r_size = ReadUByte(offset+7) * 0x800; // if non compressed = 0
+            unsigned int    addr : 24 <bgcolor=0x00a0f0, fgcolor=cYellow>; //первые 3 байта - адрес, offset/0x800
+            if(!r_size){  // non - compressed
+                unsigned short  size : 8 <bgcolor=0x00a0f0, fgcolor=cDkAqua>;  //последний байт - размер
+                r_size = size * 0x800;
+            }else{  // 
+                unsigned short  size : 8 <bgcolor=cRed, fgcolor=cSilver>;  //последний байт - размер 
+            }
+        }
+    }  
+}BL_ADDR <read = Read_BL_ADDR>;
+
+// Во вкладке Variables в колонку Value вывести строковое значение
+string Read_BL_ADDR(BL_ADDR &a){
+    local string s;
+    if( a.is_valid){
+            SPrintf(s, "block(0x%08X); //:%02Xh(%s) sz=%i of:0x%08X", 
+        a.raw, a.type, EnumToString(a.type), a.size, a.offset);
+    }else{
+        // Если по рассчитанному смещению лежит иное значение, 
+        SPrintf(s, "%s =0x%08X", EnumToString(a.type), a.raw);
+        Printf("BL_ADDR %04X not valid\n", a.raw); // log event
+    }
+    return s;
+}
+// }BL_ADDR 
+
+
+//{BL_HEAD ----------------------------------
+typedef struct{
+    local DWORD tmp_ptr <hidden=true>;    // for jumping to last block byte
+    local uchar is_valid <hidden=true>; // Структура ОБЯЗАНА располагаться на 
+    BL_ADDR addr;   // block address
+    is_valid = addr.is_valid; // non valid addr -> non valid BL_HEAD
+    if(is_valid) is_valid = (addr.offset == FTell()-4);// addr on selfdescribed place
+// если нет - это не BL_HEAD     
+    if(is_valid){
+        SetBackColor(0x00a0f0);    // orange
+            //zero_aligment allways  0 hide it
+        uchar   zero_aligment <hidden=true, fgcolor=cLtGray>;  
+        en_BL_TYPE   type<fgcolor=cDkPurple>;   // type of block
+    // `is_compressed` и `uncompressed_size` в carindb_rus всегда = 0, посему скрыты
+        uchar   is_compressed <hidden=false, fgcolor=cLtGray>;  
+        uchar   uncompressed_size <hidden=false, fgcolor=cLtGray>;
+    }else{
+        SetBackColor(cRed);    // on error paint in red
+        local en_BL_TYPE   type=0xFF;
+        DWORD non_valid_bl_head<fgcolor=cLtGray>;
+    }
+    // отмечу последний байт блока - на него удобно прыгать будет, кликом в Variables
+    if(is_valid){
+        tmp_ptr = FTell();      // Запомнить текущее положение
+        FSeek(addr.offset + addr.size*0x800 - 1); // Уходим на почти конец блока
+        uchar here_last_byte <bgcolor=cPurple, fgcolor=cAqua>;     // Самый последний байт блока
+        FSeek(tmp_ptr);         // Возврат к запомненной позиции
+    }
+}BL_HEAD <read = Read_BL_HEAD>;
+
+// Во вкладке Variables в колонку Value вывести строковое значение
+string Read_BL_HEAD(BL_HEAD &a){
+    local string s;
+    if( a.is_valid ){
+        SPrintf(s, "tp:%02Xh(%s) of:0x%06X sz=%i ", 
+                a.type, EnumToString(a.type), a.addr.offset, a.addr.size);
+    }else{
+        SPrintf(s, EnumToString(a.type)); // Если признак невалидности - АЛЯРМ! 
+        Printf("BL_HEAD %04X not valid\n", a.addr.offset); // log event
+    }
+    return s;
+}
+//}BL_HEAD 
+
+//{PTR
+typedef struct{
+    //SetBackColor(cNone); 
+    local uint offset <format=hex>;
+	if( exists(parentof(this).size) ){
+       if ( ReadUShort(FTell()) > parentof(this).size){
+		    SetBackColor(cRed);  // wrong pointer when bigger block size
+			Printf("ERR! hex off=%X PTR=0x%04X > block.size 0x%X\n", 
+                FTell(),
+                ReadUShort(FTell()), 
+                parentof(this).size); // Log situation
+        }
+	}
+    if(ReadUShort(FTell())){
+	    ushort ptr <format=hex,  fgcolor=cBlue>;        // relative offset pointer value
+    }else{
+        ushort ptr <format=hex,  fgcolor=cSilver>; // 00 00
+    }
+//local uint offset = parentof(this).offset + ptr;
+    if(ptr){        // do if ptr != 0
+        if( exists(parentof(this).offset) ){ // absolute block begin offset
+            offset = parentof(this).offset;
+            if( (parentof(this).offset + ptr) < MAX_FILE_ADDR-1){
+                local DWORD curr_position <hidden=true> = FTell();
+                FSeek(parentof(this).offset + ptr); // jump to calc addr
+                    byte here <bgcolor=cAqua>;          // make bookmark
+                FSeek(curr_position);               // return 
+                offset += ptr;
+            }else{
+                Printf("ERR offset PTR! hexoff=%X PTR %04X PTR.offset=0x%04X > file.size 0x%X\n", 
+                    FTell(), ptr, (offset + ptr), MAX_FILE_ADDR);
+            }
+            
+        }
+    }
+}PTR <read = Read_PTR, bgcolor=cAqua>;
+string Read_PTR(PTR &a){
+	local string s;
+	SPrintf(s, "0x%04X", 
+            a.ptr      // value, relative offset
+            );
+    if( exists(parentof(this).offset) )
+        SPrintf(s, "%s (0x%04X)", s,
+            parentof(a).offset + a.ptr); // absolute address
+	return s;
+}
+//}PTR
+
+// {LIST - список указатель на начало массива и количество элементов 
+typedef struct{
+	local uint offset <format=hex>, size <format=hex>;   // block offset and size for next PTR ptr
+    if( exists(parentof(this).offset) ){
+        offset = parentof(this).offset; // start block offset 
+    }
+    if( exists(parentof(this).size) ){
+        size = parentof(this).size; // parent block size 
+    }
+	PTR 	ptr <bgcolor=cLtAqua>;	// ptr to first list item
+	offset = ptr.ptr + offset;	// absolute addr of list begin
+	ushort	cnt <>; // items quantity
+}LIST <read=Read_LIST, fgcolor=cDkPurple, bgcolor=cLtAqua>;
+string Read_LIST(LIST &a){
+	local string s;
+	SPrintf(s, "0x%04X (0x%04X)  :cnt:%i(%Xh)", 
+        a.ptr.ptr, a.offset, a.cnt, a.cnt );
+	return s;
+}
+//}LIST
+
+//{FAR_LIST
+typedef struct{
+    BL_ADDR far_block; // link to block type 0xd
+    local ushort size <hidden=false>  = far_block.r_size;
+    local uint   offset <hidden=true> = far_block.offset;
+    LIST    pl_data <bgcolor=0x22BFFF>;  // far pointer list, BL_ADDR+LIST
+}FAR_LIST <read=Read_FAR_LIST>;
+//C07000+774=C07774 cnt=24(18h); 00180E08 :0Fh(CH_idx_f) sz=8 of:0x00C07000
+string Read_FAR_LIST (FAR_LIST &a){
+    local string s;
+    SPrintf( s, "block(0x%06X); // [%i] tp:%s(%02X) of:%06X",
+        a.far_block.raw, a.pl_data.cnt, 
+        EnumToString(a.far_block.type), a.far_block.type,
+        a.pl_data.offset
+        );
+    return s;
+}
+//}FAR_LIST
+
+
+//}PSTR
+// pointer to string
+typedef struct{
+    local uint offset <hidden=false, format=hex>;   // absolute block offset for next PTR ptr
+    if( exists(parentof(this).offset) ){
+        offset = parentof(this).offset; // start block offset 
+    }
+    if(ReadUShort(FTell())){
+	    ushort ptr <format=hex,  fgcolor=cDkGreen>;        // relative offset pointer value
+    }else{
+        ushort ptr <format=hex,  fgcolor=cSilver>; // 00 00
+    }
+    if(ptr){ // theoreticaly may==0, in this case no need calculate any vars
+        offset = ptr + offset;                // set own absolute offset 
+        if(offset){ // shoulb be not zero
+            local uint curr_position <format=hex, hidden=true> = FTell(); // remember ret
+            FSeek(offset);          // jmp to offset
+                // first byte - ascii or ptr?
+                ubyte here <bgcolor=cAqua>;
+                FSeek(FTell()-1);
+                //if( here > 20h){
+                    string str <bgcolor=cLtGreen, fgcolor=cDkYellow>; // str as real
+                /*}else{
+                    local uint ret_here <hidden=true> = FTell(); // remember ret
+                    FSeek( ReadUShort(FTell()) + offset);
+                        string str <bgcolor=cLtGreen, fgcolor=cDkYellow>;
+                    FSeek(ret_here);
+                }*/
+            FSeek(curr_position);   //ret
+        }else{
+            local string str;  // str as local
+            SPrintf(str, "PSTR No offset %04X", ptr);
+        }
+    }else{ // if(ptr.ptr == 0, aniway str must be
+        local string str="---";
+    }
+}PSTR <read=Read_PSTR,bgcolor=cLtAqua>;
+string Read_PSTR(PSTR &a){
+    local string s;
+	SPrintf(s, "%s", a.str);
+	return s;
+}
+//}PSTR
+
+
+//{CONST_B
+typedef struct(ubyte val){
+    local uchar is_valid <hidden=true> = 1;
+    local ubyte wait_b = val;   // remember init val
+    if(ReadUByte(FTell()) != val){
+        is_valid = 0;
+        SetBackColor(cRed);
+        Printf("WARN. 0f:%04X const ubyte(%02Xh) != %Xh\n", 
+            FTell(), wait_b, ReadUByte(FTell()));
+    }
+    ubyte value;
+}CONST_B <fgcolor=cWhite, bgcolor=cGray, hidden=true, read=Read_CONST_B>;
+string Read_CONST_B(CONST_B &a){
+    local string s;
+    if(a.is_valid){
+        SPrintf(s, "ubyte= %X", a.value);
+    }else{
+        SPrintf(s, "WARN! ubyte %X != %X", a.value, a.wait_b);
+    }   
+    return s;
+}
+//}CONST_B
+//{CONST_S
+typedef struct(ushort val){
+    local uchar is_valid <hidden=true> = 1;
+    local ushort wait_s = val;   // remember init val
+    if(ReadUShort(FTell()) != val){
+        is_valid = 0;
+        SetBackColor(cRed);
+        Printf("WARN. 0f:%04X const ushort (%04Xh) != %Xh\n", 
+            FTell(), wait_s, ReadUShort(FTell()));
+    
+    }
+    ushort value;
+    //Assert(value!=val,"asssert");
+}CONST_S<fgcolor=cWhite, bgcolor=cGray, hidden=true, read=Read_CONST_S>;
+string Read_CONST_S(CONST_S &a){
+    local string s;
+    if(a.is_valid){
+        SPrintf(s, "ushort= %X", a.value);
+    }else{
+        SPrintf(s, "WARN! ushort %X != %X", a.value, a.wait_s);
+    }   
+    return s;
+}
+//}CONST_S
+//{CONST_I
+typedef struct(uint val){
+    local uchar is_valid <hidden=true> = 1;
+    local uint   wait_i = val;   // remember init val
+    if(ReadUInt(FTell()) != val){
+        is_valid = 0 ;
+        SetBackColor(cRed);
+        Printf("WARN. 0f:%04X const uint (%08Xh) != %Xh\n", 
+            FTell(), wait_i, ReadUInt(FTell()));
+    }
+    uint value;
+}CONST_I<fgcolor=cWhite, bgcolor=cGray, hidden=true, read=Read_CONST_I>;
+string Read_CONST_I(CONST_I &a){
+    local string s;
+    if(a.is_valid){
+        SPrintf(s, "uint= %X", a.value);
+    }else{
+        SPrintf(s, "WARN! uint %X != %X", a.value, a.wait_i);
+    }   
+    return s;
+}
+//}CONST_I
+
+//{LON_LAT
+typedef struct{
+    uint    hlon <fgcolor=cYellow>;
+    uint    hlat <fgcolor=cWhite>;
+    local double lon = ((1.0f * hlon )/ MULCOORD) - 30.0;
+    local double lat = 1.0f * hlat / MULCOORD;
+}LON_LAT <bgcolor=cDkGreen, read=Read_LON_LAT, comment=Comment_LON_LAT>;
+string Read_LON_LAT(LON_LAT &a){
+    local string s;
+        SPrintf( s, "%06f%s, %06f%s", 
+            Abs(a.lat), (a.lat>0)?"N":"S",
+            Abs(a.lon), ((a.lon>=0)?"E":"W") );
+    return s;
+}
+string Comment_LON_LAT(LON_LAT &a){
+    local string s;
+    local ubyte zoom = 19;
+    // like https://www.google.com/maps/@54.6184459,18.8018413,15z
+    SPrintf(s, "https://www.google.com/maps/@%06f,%06f,%iz",
+        a.lat, a.lon, zoom);
+    // https://www.openstreetmap.org/#map=17/59.37247/28.18919
+    SPrintf(s, "https://www.openstreetmap.org/#map=%i/%06f/%06f",
+        zoom, a.lat, a.lon );
+    return s;
+}
+//}LON_LAT
+
+
+#endif //#ifndef H_VDO_inc_common_INCLUDED

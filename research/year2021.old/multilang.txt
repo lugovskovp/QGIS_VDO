@@ -1,0 +1,28 @@
+
+
+bl_addr(0x05726601); //ee
+
+0200 __poligone - mediterranean seao
+italian 	0502  - mar mediterraneo
+hispanian	0602  - mar mediterráneo
+portugal	0F02  - mar mediterrâneo
+katalanian	0B02  - mar mediterrània
+svedian		0702  - medelhavet
+			italian		0302  - mer mediterranee
+danian	0A02  - middelhavet
+		0E02  - middelhavet
+holland		0102  - middellandse zee
+deutch		0402  - mittelmeer
+finnish		0C02  - välimeri
+0200 __poligone - mediterranean sea
+0502  - mar mediterraneo
+0602  - mar mediterráneo
+0F02  - mar mediterrâneo
+0B02  - mar mediterrània
+0702  - medelhavet
+0302  - mer mediterranee
+0A02  - middelhavet
+0E02  - middelhavet
+0102  - middellandse zee
+0402  - mittelmeer
+0C02  - välimeri

@@ -1,0 +1,108 @@
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#include "vdo_block.bt"
+
+
+//VDO_BLOCK bt_12(0);
+local DWORD DB_BLOCK_SIZE = 0x800;
+
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+Printf("FileSize =\t0x%02X\n", FileSize());
+Printf("BlSize=\t0x%02X\n", DB_BLOCK_SIZE);
+
+bl_offset(0);   //12h
+
+if (FileSize() == 0xC2A1800){   // 0xC2A1800 BNL_13_14
+    
+    bl_addr(0x0C055000); // 0x0C055000 : 1E (01) : 0180AA02 001E0103 00340004
+    
+    }
+if (FileSize() == 0x2BB7E000){  // 0x2BB7E000 EE_13_14
+    bl_addr(0x201);   // 07
+    
+   
+    bl_offset(0x2B8EA000);  //0x2B8EA000 : 1D (03) : 0571D403 001D0000 00340001
+
+    
+    bl_offset(0x2B8D7800);      // 0x2B8D7800 : 1D (01) : 0571AF01 001D0102 00340002
+    bl_offset(0x2B905000);      // 0x2B905000 : 1D (02) : 05720A02 001D0103 00340004
+
+/*    bl_addr(0x056C2605);  //6
+    bl_addr(0x05554806);  //7
+    bl_addr(0x05709405);  //9
+    bl_addr(0x05723A03);  //10
+    bl_offset(0x2B6E2000); // 1c with length 1|2
+    //bl_offset(0x2B6E5800);
+    //bl_offset(0x2B6F5800);
+    //bl_offset(0x2B86B000);
+    bl_offset(0x2B871800); //2 types 60.330784 N, 27.118092 E, sea + kotka-haapsari
+    bl_offset(0x2B6D4800);//only 1 type    
+  */  
+    bl_offset(0x22C37000);      // 0x22C37000 : 00 (01) : 04586E03 00000105 00740003
+    bl_offset(0x28AD3000);      // 0x28AD3000 : 16 (01) : 0515A601 00160102 00340001
+    bl_offset(0x2B6B2800);      // 0x2B6B2800 : 15 (01) : 056D6501 00150102 00340002
+    bl_offset(0x2B6D4800);      // 0x2B6D4800 : 1C (01) : 056DA902 001C0103 00340001
+    bl_offset(0x2B8D2800);      // 0x2B8D2800 : 14 (01) : 0571A502 00140103 00340001
+    bl_offset(0x2B8D7800);      // 0x2B8D7800 : 1D (01) : 0571AF01 001D0102 00340002
+    bl_offset(0x2B93E000);      // 0x2B93E000 : 1E (01) : 05727C02 001E0103 00340004
+/**/
+
+    bl_offset(0x2B8D2800);      // 0x2B8D2800 : 14 (01) : 0571A502 00140103 00340001
+// ::2->3:: _MAP_POLI_5_k200  [8000x8000] ; 1 types, 5 shapes, 0 lines
+//(0x2B8D2800)	:0571A502 00140103  1 ul:05000900 
+
+    bl_offset(0x28AD3000);      // 0x28AD3000 : 16 (01) : 0515A601 00160102 00340001
+//::1->2:: _MAP_POLI_7_k40  [8000x8000] ; 1 types, 2 shapes, 0 lines
+//(0x28AD3000)	:0515A601 00160102  0 ul:05000700 
+    
+    bl_offset(0x2BB7E000);
+
+}
+
+ //bl_addr(0x05726a01);
+ //bl_addr(0x0571AB01);
+
+
+
+//write_svg(__bl_0x1d);
+
+
+/*
+bl_addr(0x015A5408);
+bl_addr(0x00000401);    //0x0a
+bl_addr(0x00002406);    //0x0c
+bl_addr(0x00232D06);    //0x0e
+*/
+
+/*
+bl_offset(0xBCB0000); // 0x15 strange 250 0009
+bl_offset(0xBF03000); //
+
+//bl_offset(0xBe027b0);
+bl_offset(0xBf02800);
+
+
+*/
+//write_svg(__bl_0x14);
+/*
+bl_addr(0x05726601); //ee
+
+0200 __poligone - mediterranean seao
+italian 	0502  - mar mediterraneo
+hispanian	0602  - mar mediterráneo
+portugal	0F02  - mar mediterrâneo
+katalanian	0B02  - mar mediterrània
+svedian		0702  - medelhavet
+			italian		0302  - mer mediterranee
+danian	0A02  - middelhavet
+		0E02  - middelhavet
+holland		0102  - middellandse zee
+deutch		0402  - mittelmeer
+finnish		0C02  - välimeri
+0200 __poligone - mediterranean sea
+*/
+
+//
+

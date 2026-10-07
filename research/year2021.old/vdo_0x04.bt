@@ -1,0 +1,58 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+#ifndef H_VDO_0x04_INC_INCLUDED
+#define H_VDO_0x04_INC_INCLUDED
+#include "__place.bt"
+
+typedef enum {
+    
+
+}en_BIT_COLOR;
+
+typedef struct{
+    DWORD item_word;
+    DWORD item_word_2;
+    WORD item_word_2;
+}CH_1;
+
+typedef struct{
+    BL_HEADER   block;
+    //PTR_CNT     p_add_info;
+    BL_ADDR     bl_00_or_another;
+//
+
+//CH_1 ch1[(block.data.Cnt-1)/(2)] <optimize=false>;
+CH_1 ch1[block.data.Cnt] <optimize=false>;
+
+//FSeek(FTell()-4);
+WORD __data_end <bgcolor=cAqua>;
+
+//
+/*
+//jmp(p_add_info);
+
+DWORD __add_data_begin <bgcolor=cGreen>;
+//DWORD __add_info[(add_info.Cnt-1)/(2*4)] <bgcolor=cLtGreen>;
+ret();
+*/
+/*
+struct {
+    CONST_DWORD     _7ff_0(0x7fff7fff);
+    CONST_DWORD     _7ff_1(0x7fff7fff);
+    ZERO_WORD blank;
+} __seems[0x40] <optimize=false>;
+DWORD tst2 <bgcolor=cAqua>;
+*/
+}BLOCK_TYPE_0x04 <read=Read_BLOCK_TYPE_0x04, comment=Comment_block0x04 >;
+string Comment_block0x04(BLOCK_TYPE_0x04 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x04(BLOCK_TYPE_0x04 &a){
+    local string s;
+    SPrintf(s, "%04X - data in %08X ", a.block.data.Cnt, 
+        a.bl_00_or_another.hex);
+    return s;
+}
+
+#endif//H_VDO_0x04_INC_INCLUDED

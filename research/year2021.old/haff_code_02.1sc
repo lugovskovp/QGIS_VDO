@@ -1,0 +1,128 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+// https://www.mccme.ru/s43/math/uroki/2009_2010/9mat_0910/spec/15_Data_Compression_Codes_Information.pdf
+
+BigEndian(); 
+//#include "vdo_block.bt"
+
+//local DWORD ptr, val, cnt_bl_types=0, cnt=1000000, cBlSize=0x800;
+//local en_BL_DATA_TYPE type=_too_far, prev_type=_empty;
+
+/*
+//Riga @56.9845008,24.1897154
+bl_addr(0x056C2605);  //6
+bl_addr(0x05554806);  //7
+bl_addr(0x05709405);  //9
+bl_addr(0x05723A03);  //10
+Printf("\n %08X\n", addr2ptr(0x056C2605));
+// tallin  @59.4135024,24.7191187
+bl_addr(0x056D2B06); //6
+bl_addr(0x055C4906); //7
+bl_addr(0x0570D006); //9
+bl_addr(0x05723D03); //10
+// pavilosta (coast) @56.8869296,21.1947241
+bl_addr(0x056B1203); //6
+bl_addr(0x054E5604); //7
+bl_addr(0x05705407); //9
+bl_addr(0x05723203); //10
+// Salpenaj (w|o sea?) @55.5658691,21.7102862
+bl_addr(0x056A8405); //6
+bl_addr(0x054B0A04); //7
+bl_addr(0x05703405); //9
+bl_addr(0x05722C03); //10
+*/
+
+
+local DWORD bl_addr, ptr_start, ptr, i, j;
+bl_addr = 0x05723A03 ;
+
+ptr_start = addr2ptr(bl_addr);
+local en_BL_DATA_TYPE type = ReadByte(ptr_start + 5) ;
+Printf("\nBlock addr: 0x%08X; ObjTypes: %i; 0x%02X%s; ", 
+        bl_addr, ReadByte(ptr_start + 0xb),
+        type, EnumToString(type) );
+Printf("Riga @56.9845008,24.1897154\n");
+
+
+
+/// compressed bytes
+local uchar cr_size = 0x20;
+local uchar crypted[cr_size] <format=hex>;
+    //read
+ptr = ptr_start + ReadByte(ptr_start + 9);
+//ptr += 4;
+    for(i=0; i<cr_size; i++){
+        crypted[i] = ReadByte(ptr++);
+    }
+    //print
+//Printf("\n");
+
+// print 4 firs bytes crypted
+    for (i=0; i<4; i++){
+        //Printf("   %02X    ", crypted[j*8 + i] );
+        Printf(" %02X (%i) ", crypted[i], crypted[i] );
+    }
+    Printf("\n");
+    for (i=0; i<4; i++){
+        Printf("%s ", bit_rep(crypted[i]) );
+    }
+    Printf("\n");
+
+ptr=4; // as cntr
+
+for(j=0; j<2; j++){
+    for (i=0; i<8; i++){
+        //Printf("   %02X    ", crypted[j*8 + i] );
+        Printf("   %02X    ", crypted[ptr++] );
+    }
+    ptr -= 8;
+    Printf("\n");
+    for (i=0; i<8; i++){
+        Printf("%s ", bit_rep(crypted[ptr++]) );
+    }
+    Printf("\n");
+}
+
+// waited bytes
+local uchar ch_wait[8] = {1, 0, 0, 0x54, 5, 0, 1};
+ch_wait[2] = ReadByte(ptr_start+0xc);
+ch_wait[3] = ReadByte(ptr_start+0xd);
+
+for (i=0; i<8; i++){
+    Printf("   %02X    ", ch_wait[i] );
+}
+Printf("\n|");
+for (i=0; i<8; i++){
+    Printf("%s|", bit_rep(ch_wait[i]) );
+}
+//Printf("\n");
+
+
+//---------------------------------
+DWORD addr2ptr(DWORD addr){
+    return (addr>>8)*0x800;
+}
+
+string bit_rep( byte ch)
+{
+    local string s="", res="";
+    local byte i;
+    for(i=3; i>=0; i--){
+        switch( ( ch>>(i*2) ) & 0x3){
+        case 0:
+            s="00";
+            break;
+        case 1:
+            s="01";
+            break;  
+        case 2:
+            s="10";
+            break;  
+        case 3:
+            s="11";
+            break;   
+        }
+        SPrintf(res, "%s%s", res, s);
+    }
+    return res;
+}

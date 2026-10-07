@@ -1,0 +1,41 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+//   History: 
+//------------------------------------------------
+
+#include "vdo_inc.bt"
+
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+
+
+local DWORD ptr;
+local unsigned QUAD  buffer, buf_t;
+
+ptr = 0x29EF3800;
+
+//2800097B61C000
+bl_offset( ptr ); // :01	1-0: 	05000800 0203C000 A246000A 00025ED8 -> 0100003C  00000050  ... 
+/*
+Malme sea
+struct PTR_CNT p_all_shapes     003c 0001
+struct PTR_CNT p_all_vertexes   0064 022b
+struct PTR_CNT p_all_pgeo_str   0910 0002
+*/
+FSeek(0x29ef383d); 
+QWORD beg <format=hex,bgcolor=cYellow>; 
+QWORD beg1 <format=hex,bgcolor=cYellow>; 
+DWORD beg2 <format=hex,bgcolor=cYellow>; 
+FSeek(0x29ef383d);
+
+
+
+
+
+

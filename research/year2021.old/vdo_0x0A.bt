@@ -1,0 +1,454 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#ifndef H_VDO_0x0A_INC_INCLUDED
+#define H_VDO_0x0A_INC_INCLUDED
+#include "__place.bt"
+
+/*
+addinfo 
+GEO_INFO_COUNTRY 0x0a = size 14 DWORD 
+
+*/
+
+
+
+// GEO_INFO_COUNTRY
+// (block.type == 0x0A) size 14 DWORD 
+typedef struct{
+local WORD add_info_if_1 = 1;
+    FAR_PTR_CNT fp_ch_list;//ch_idx_info;    // pTEXT_INFO.p_add_info -> here
+    // consts DWORD in 0x0A dec_11, dec_22, dec_33,
+    CONST_DWORD dec_11(0x0B) <hidden=true>;
+    CONST_DWORD dec_22(0x16) <hidden=true>;
+    CONST_DWORD dec_33(0x21) <hidden=true>;
+    CONST_DWORD dec_44(0x2C) <hidden=true>;
+    PTR_CNT p_symb_poi;
+    CONST_DWORD hex01f4012c(0x01f4012c); // <hidden=true>;
+    CONST_DWORD hex03e801f4(0x03e801f4) <hidden=true>;
+  //in 0x0A ru = 01 f4 01 2c   03 e8 01 f4
+    ZERO_WORD zew1;
+WORD  v_eq_bl07h_struct_10_idx_countryes <bgcolor=cLtYellow>; 
+WORD  v_eq_bl07h_w_country_idx_num <fgcolor=cDkAqua, bgcolor=cLtYellow>; 
+    ZERO_WORD x3 <fgcolor=cRed>;
+    // but in official + 3DWORD bl_0x12
+    if(file_version == 1){
+        ZERO_WORD mb_DWORD_with_next <hidden=true>;
+    //https://ru.wikipedia.org/wiki/ISO_3166-1
+        string  alpha_2_ISO3166_1 <bgcolor=cLtGreen, fgcolor=cBlue>;
+        uchar   zero_val <hidden=true>;
+        CONST_WORD    _2d2d(0x2d2d);
+        CONST_DWORD   _2d000000(0x2d000000);
+    }
+    // rec end
+
+//fill data
+    local DWORD l_tmp <hidden=true> = FTell();
+    if(fp_ch_list.far_data.Cnt){
+        FSeek(fp_ch_list.offset);
+            SYMBOL ch_list[fp_ch_list.far_data.Cnt] <optimize=false>; 
+    }
+    FSeek(p_symb_poi.offset);
+        BL_ADDR bl_symp_POI;
+    FSeek(l_tmp);
+}GEO_INFO_COUNTRY;/* <read = Read_GEO_INFO_COUNTRY>;
+string Read_GEO_INFO_COUNTRY(GEO_INFO_COUNTRY &a){
+    local string s;
+//    SPrintf(s, "%s", a.alpha_2_ISO3166_1);
+    return s;
+};
+
+*/
+
+
+
+// --- GEO_PLACE
+// main data of 0A.
+typedef struct{
+    GEO place <optimize=false>;;
+    local DWORD l_geo_tmp <hidden=true> =FTell();
+    //local DWORD ofss = places.place.place.p_geo_info.offset;
+    FSeek(places.place.place.p_geo_info.offset);
+        GEO_INFO_COUNTRY  __geo_info;
+    FSeek(l_geo_tmp);
+}GEO_PLACE  <read = Read_GEO_PLACE, optimize=false>; //,  comment=Comment_GEO_PLACE>;
+string Read_GEO_PLACE(GEO_PLACE &a){
+    local string s;
+    SPrintf(s, "%s (%s) %s", Read_GEO(a.place),
+             a.place.parent_name, a.place.name);
+    return s;
+}
+ 
+
+typedef struct{
+    FAR_PTR_CNT         bl_ch_poi;
+    en_PLACE_CATEGORY   type;//UNKNw unkn;
+    PTR_string          name <bgcolor=cLtGreen>;
+}P_POI <read=Read_P_POI, optimize=false>;
+string Read_P_POI(P_POI &a){
+    local string s;
+    SPrintf(s, "%s: %x %s", Read_PTR_string(a.name) , a.type,
+             EnumToString(a.type));
+    return s;
+}
+//-----------------------------------------------------
+typedef struct{
+// only here i find different between 0A addinfo fields count
+// 1 - new, 2 - old, non-crypted
+local WORD file_version = ReadUShort(0x2e);
+
+//header start
+    BL_HEADER  block;
+//local DWORD curBlockOffset = block.addr.offset;
+    PTR_CNT     p_geo_info; // 0A->_0D_ch_idx_files
+    ZERO_DWORD  p_map_data;
+    PTR_CNT     p_ch_POI;   //p_list_idx_0x11 c 0x5800 0x0c block, notBL_ADDR
+    ZERO_DWORD  blank01;
+    PTR_CNT     MB_coordinates <comment="0x0A=0">;//1F84h
+    BL_ADDR      try_neightboard <comment="zero 0x0A, ee0x0C 000024=0">; // 00 13 07 -9800h - 0C_regionList
+    UNKN  blank03 <comment="zero 0x0A, ee0x0C=0 ru0C=5f48 03c2">;
+    ZERO_DWORD     next_0A; // <comment="zero 0x0A, ee0x0C 000024=0x2a08">;
+    ZERO_DWORD     prev_0A;  //bl_a_0c_0c
+    //
+SetUnoptimizedArraysCollapsible(false);
+    //struct {
+        GEO_PLACE   place[block.data.Cnt] <optimize=false>;
+    //} places;
+    //
+    struct {   
+            GEO_INFO_COUNTRY geo_info[p_geo_info.Cnt] <optimize=false>;
+    } geo_info;
+//if p_ch_POI
+    struct {
+        struct{
+            FAR_PTR_CNT bl_ch_poi;
+            en_PLACE_CATEGORY type;//UNKNw unkn;
+            PTR begin_str_vals <bgcolor=cLtGreen>;
+        }list_ch_poi [p_ch_POI.Cnt] <optimize=false>;
+    }symbols_POI <optimize=false>;
+
+}exBLOCK_TYPE_0x0A <comment=Comment_block0x0A >;
+string aComment_block0x0A(exBLOCK_TYPE_0x0A &a){
+    return aComment_BL_ADDR(a.block.addr);
+}
+
+
+
+
+
+typedef struct{
+// only here i find different between 0A addinfo fields count
+// 1 - new, 2 - old, non-crypted
+local WORD file_version = ReadUShort(0x2e);
+//header start
+    BL_HEADER  block;
+    PTR_CNT     p_geo_info; // 0A->_0D_ch_idx_files
+    ZERO_DWORD  p_map_data;
+    PTR_CNT     p_ch_POI;   //p_list_idx_0x11 c 0x5800 0x0c block, notBL_ADDR
+    ZERO_DWORD  blank01;
+    PTR_CNT     MB_coordinates <comment="0x0A=0">;//1F84h
+    BL_ADDR      try_neightboard <comment="zero 0x0A, ee0x0C 000024=0">; // 00 13 07 -9800h - 0C_regionList
+    UNKN  blank03 <comment="zero 0x0A, ee0x0C=0 ru0C=5f48 03c2">;
+    ZERO_DWORD     next_0A; // <comment="zero 0x0A, ee0x0C 000024=0x2a08">;
+    ZERO_DWORD     prev_0A;  //bl_a_0c_0c
+// -------------- fill data
+    struct {
+        GEO_PLACE   place[block.data.Cnt] <optimize=false>;
+    } places;
+    struct {   
+            GEO_INFO_COUNTRY geo_info[p_geo_info.Cnt] <optimize=false>;
+    } geo_info;
+//if p_ch_POI
+    struct {
+        P_POI list_ch_poi [p_ch_POI.Cnt] <optimize=false>;
+    }POIs;
+}BLOCK_TYPE_0x0A <comment=Comment_block0x0A >;
+string Comment_block0x0A(BLOCK_TYPE_0x0A &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+
+
+//return;
+// ------------------ DELIT -------------------------
+/// deprecate??
+typedef struct{
+    FAR_PTR_CNT     bl_ch_idx;
+    //WORD  obj_cnt_or_type <fgcolor=cLtRed, format=hex>;
+    en_interface_choice_type bl_type;
+    uchar           first_letter <bgcolor=cLtGreen, fgcolor=cBlue>;
+    PTR         p_str_table_begin <fgcolor=cDkGreen, bgcolor=cLtGray>;
+}pCH_INDEX <read=Read_pCH_INDEX>;
+string Read_pCH_INDEX(pCH_INDEX &a){
+    local string s;
+    SPrintf(s, "[%s %02X%s] '%02X'", StrBlockAddr(a.bl_ch_idx.far_block_addr),
+             a.bl_ch_idx.far_block_addr.block_type,
+            EnumToString(a.bl_ch_idx.far_block_addr.block_type),
+            a.bl_type
+            );
+    return s;
+}
+
+typedef struct{
+    local WORD length = p_list_idx_0x11.Cnt;// <hidden=true>;
+    pCH_INDEX  item_11[p_list_idx_0x11.Cnt]<optimize=false>;
+}LIST_IDX_0x11 <read=Read_LIST_IDX_0x11>;
+string Read_LIST_IDX_0x11(LIST_IDX_0x11 &a){
+    local string s;
+    SPrintf(s, "[%i] vals", a.length);
+    return s;
+}
+
+//---------------
+//aditional info
+
+//0A -> 0D
+// 0C - >0F - ch_idx_street
+typedef struct{
+//if(block.type == 0x0A){
+// size 14 DWORD 
+    FAR_PTR_CNT     p_ch_list;//ch_idx_info;    // pTEXT_INFO.p_add_info -> here
+
+// consts DWORD in 0x0A dec_11, dec_22, dec_33, 
+DWORD dec_11 <hidden=true, bgcolor=cLtAqua>;
+    if(dec_11 != 11){
+        FSeek(FTell()-4);
+        DWORD dec_11 <bgcolor=cRed>;
+    }
+DWORD dec_22 <hidden=true, bgcolor=cLtAqua>;
+    if(dec_22 != 22){
+        FSeek(FTell()-4);
+        DWORD dec_22 <bgcolor=cRed>;
+    }
+DWORD dec_33 <hidden=true, bgcolor=cLtAqua>;
+    if(dec_33 != 33){
+        FSeek(FTell()-4);
+        DWORD dec_33 <bgcolor=cRed>;
+    }   
+DWORD dec_44 <hidden=true, bgcolor=cLtAqua>;
+    if(dec_44 != 44){
+        FSeek(FTell()-4);
+        DWORD dec_44 <bgcolor=cRed>;
+    }  
+    PTR_CNT  IS_ptr_to_geo_coordinates;
+DWORD hex01f4012c <hidden=true, bgcolor=cLtAqua>;
+    if(hex01f4012c != 0x01f4012c){
+        FSeek(FTell()-4);
+        DWORD hex01f4012c <bgcolor=cRed>;
+    }  
+DWORD hex03e801f4 <hidden=true, bgcolor=cLtAqua>;
+    if(hex03e801f4 != 0x03e801f4){
+        FSeek(FTell()-4);
+        DWORD hex03e801f4 <bgcolor=cRed>;
+    } 
+  //in 0x0A ru = 01 f4 01 2c   03 e8 01 f4
+    ZERO_WORD zew1, zew2;
+    DWORD x3 <fgcolor=cRed>;
+    // rec end
+    // but in official + 3DWORD bl_0x12
+    if(bl_12.add_info_if_1 == 0x08000001){
+        ZERO_WORD mb_DWORD_with_next <hidden=true>;
+    //https://ru.wikipedia.org/wiki/ISO_3166-1
+        string  alpha_2_ISO3166_1 <bgcolor=cLtGreen, fgcolor=cBlue>;
+        uchar   zero_val <hidden=true>;
+        WORD    _2d_2d;
+        DWORD   _2d_00_00_00;
+    }
+//fill data
+    local DWORD l_tmp <hidden=true> = FTell();
+    FSeek(IS_ptr_to_geo_coordinates.offset);
+        pCH_INDEX ch_idx;
+//? CH_far_ptr  ch_idx;
+    FSeek(p_ch_list.offset);
+//        CH_far_ptr ch_list[p_ch_list.far_data.Cnt] <optimize=false>;
+    FSeek(l_tmp);
+}pADD_INFO_COUNTRY <read = Read_pADD_INFO_COUNTRY>;
+string Read_pADD_INFO_COUNTRY(pADD_INFO_COUNTRY &a){
+    local string s;
+//    SPrintf(s, "%s", a.alpha_2_ISO3166_1);
+    return s;
+}
+
+typedef struct{
+//    if(block.type == 0x0C){
+    // size 14 DWORD 
+        FAR_PTR_CNT     p_ch_list;    // pTEXT_INFO.p_add_info -> here
+        PTR_CNT lptr_idx_11;
+        BL_ADDR block0x00;
+        PTR ppCH_INDEX_item_11;
+ZERO_WORD zero;
+        PTR_CNT IS_ptr_to_geo_coordinates;//zero_in_eng_0c;
+
+        //fill data
+        local DWORD l_tmp <hidden=true> = FTell();
+        if(IS_ptr_to_geo_coordinates.offset != 0){
+            FSeek(IS_ptr_to_geo_coordinates.offset);
+    //            pCH_INDEX ch_idx;
+    //            byte tst <bgcolor=cAqua>;
+        }
+        if(ppCH_INDEX_item_11.offset != 0){
+            FSeek(ppCH_INDEX_item_11.offset);
+    //pCH_INDEX aaa;
+    //            pCH_INDEX ch_idx;
+    //            byte tst <bgcolor=cAqua>;
+        }
+        if(p_ch_list.offset != 0){
+            FSeek(p_ch_list.offset);
+//                CH_far_ptr ch_list[p_ch_list.far_data.Cnt] <optimize=false>;
+        }
+        
+        if(lptr_idx_11.Ptr != 0){
+            FSeek(lptr_idx_11.offset);
+               // CH_far_ptr item_11
+//                CH_far_ptr idx_11[lptr_idx_11.Cnt]<optimize=false>;
+        }
+
+FSeek(l_tmp);
+//!!!!!!!!!!!!!!!
+// next if bl_type = 0A, but not 0x0C5CC830:1 5CC830:1
+}pADD_INFO_CITY <read=Read_pADD_INFO_CITY>;
+string Read_pADD_INFO_CITY(pADD_INFO_CITY &a){
+    local string s;
+
+    return s;
+}
+
+
+//pADD_INFO_ROAD;
+
+typedef struct{
+        local WORD length;
+        switch(block.type){
+        case 0x0A:    
+            length = p_add_info.Cnt;// <hidden=true>;
+            pADD_INFO_COUNTRY  info[length]<optimize=false>;
+            break;
+        case 0x0C:
+            
+        default:
+            length = p_add_info.Cnt;// <hidden=true>;
+            pADD_INFO_CITY  info[length]<optimize=false>; 
+            break;
+        }
+}LIST_pADD_INFO <read=Read_LIST_pADD_INFO>;
+string Read_LIST_pADD_INFO(LIST_pADD_INFO &a){     
+    local string s;
+    SPrintf(s, "count = [%i]", a.length);
+    return s;
+}
+
+
+
+// --------------
+// main data of 0A.
+typedef struct{
+//rec start
+    PTR    p_str_name;
+    en_GEO_TYPE     geo_type <format=hex>;
+    en_GEO_COUNTRY  mb_geo_subtype  <format=hex,bgcolor=cLtRed>;
+    PTR     p_str_parent_name;  //in 0x0a ZERO_WORD   blank <fgcolor=cLtGray>;
+    PTR     p_add_info <fgcolor=cDkGreen, bgcolor=0x008CFF>;
+//rec end
+
+// data on ptr`s
+    //
+    local DWORD l_tmp <hidden=true> = FTell();
+    FSeek(p_str_name.offset);
+        string name <bgcolor=cLtGreen>;
+    //
+    FSeek(p_add_info.offset);
+    switch(block.type){
+    case 0x0A:    
+        pADD_INFO_COUNTRY  add_info;
+        break;
+    case 0x0C:
+        pADD_INFO_CITY  add_info;
+        break;
+    default:
+        pADD_INFO_CITY  add_info;
+        //pADD_INFO_ROAD  add_info; 
+        break;
+    }
+    //
+    if(p_str_parent_name.Ptr);
+        FSeek(p_str_parent_name.offset);
+        string parent_name <bgcolor=cGreen>;
+    FSeek(l_tmp);
+}pTEXT_INFO <read = Read_pTEXT_INFO, comment=Comment_pTEXT_INFO>;
+string Read_pTEXT_INFO(pTEXT_INFO &a){
+    local string s;
+    SPrintf(s, "%02X-%02X (%s) %s ", a.geo_type, a.mb_geo_subtype, 
+             a.parent_name, a.name);
+    return s;
+}
+string Comment_pTEXT_INFO(pTEXT_INFO &a){
+    local string s;
+    SPrintf(s, " %s", Comment_BL_ADDR(a.add_info.p_ch_list.far_block_addr));
+    return s;
+}
+
+typedef struct{  
+        local WORD length = block.data.Cnt;// <hidden=true>;
+        pTEXT_INFO  info[block.data.Cnt]<optimize=false>;  
+}LIST_pTEXT_INFO <read=Read_LIST_pTEXT_INFO>;
+string Read_LIST_pTEXT_INFO(LIST_pTEXT_INFO &a){     
+    local string s;
+    SPrintf(s, "count = [%i]", a.length);
+    return s;
+}
+/*
+//-----------------------------------------------------
+typedef struct{
+//header start
+    BL_HEADER  block;
+    PTR_CNT     p_add_info; // 0A->_0D_ch_idx_files
+    ZERO_DWORD  blank0;
+//next - ptr to last(?) p_add_info[], 
+//where ch_idx_info - 11h type, not 0D like previous
+// and dec11-22-33-44 - is Red  and ptr_to_geo.... eq 2048h
+    PTR_CNT      p_list_idx_0x11;   // c 0x5800 0x0c block, notBL_ADDR
+    ZERO_DWORD  blank01;
+    PTR_CNT     MB_coordinates <comment="0x0A=0">;//1F84h
+    BL_ADDR      try_neightboard <comment="zero 0x0A, ee0x0C 000024=0">; // 00 13 07 -9800h - 0C_regionList
+    UNKN  blank03 <comment="zero 0x0A, ee0x0C=0 ru0C=5f48 03c2">;
+    BL_ADDR     next_0c; // <comment="zero 0x0A, ee0x0C 000024=0x2a08">;
+    BL_ADDR     prev_0c;  //bl_a_0c_0c
+// header end, len = 30h -1 
+  //  main data - from 0x30 ,str_name - p_ch_idx by 
+//    jmp(block.data);
+        LIST_pTEXT_INFO    data_str_geo; // array pTEXT_INFO  info[]
+//    ret();
+    //
+//    jmp(p_add_info);
+        LIST_pADD_INFO add_info;
+//  ret();
+        LIST_IDX_0x11 list_IDX_0x11;
+
+
+}BLOCK_TYPE_0x0A;
+
+*/
+
+
+//-----------------------------------------------------
+//-----------------------------------------------------
+
+
+// --------------
+
+
+
+
+
+
+
+
+//----------------------------------------------------------
+// -- begin data
+/*
+if( isFullFileCarindb() != 0 ){
+    // this file is not 'carindb'
+    BLOCK_TYPE_0x0A   bl_0A;
+}
+*/
+
+#endif//H_VDO_0x0A_INC_INCLUDED

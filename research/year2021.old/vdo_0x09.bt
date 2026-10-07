@@ -1,0 +1,54 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+#ifndef H_VDO_0x09_INC_INCLUDED
+#define H_VDO_0x09_INC_INCLUDED
+
+#include "vdo_inc.bt"
+
+typedef struct{
+    local DWORD t_ptr, offset <hidden=true> = 0, hex<hidden=true> = 0;
+    local en_BL_DATA_TYPE map_type = _empty;
+    PTR p_bl_map;
+    if(p_bl_map.Ptr){
+        t_ptr=FTell();
+        FSeek(p_bl_map.offset);
+        BL_ADDR bl_map;
+        offset = bl_map.offset;
+        hex = bl_map.hex;
+        map_type = bl_map.block_type;
+        FSeek(t_ptr);
+    }
+    
+}MAP_FROM_FOLDER <read=Read_MAP_FROM_FOLDER>;
+string Read_MAP_FROM_FOLDER(MAP_FROM_FOLDER &a){
+    local string s;
+    SPrintf(s, "%s", EnumToString(a.map_type));
+    return s;
+}
+
+typedef struct{
+//header start
+    BL_HEADER       block;
+    PTR_CNT         p_valid_maps;
+//header end
+//data
+    DWORD map_side_size <format=hex, fgcolor=cYellow,bgcolor=cDkGreen>; 
+    struct{
+        MAP_FROM_FOLDER map[block.data.Cnt] <optimize = false, fgcolor=cDkAqua>;
+    }maps;
+    BL_ADDR valid_maps[p_valid_maps.Cnt] <optimize = false>;
+}BLOCK_TYPE_0x09 < read=Read_BLOCK_TYPE_0x09, 
+       comment=Comment_block0x09 >;
+string Comment_block0x09(BLOCK_TYPE_0x09 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x09(BLOCK_TYPE_0x09 &a){
+    local string s; 
+    SPrintf(s, "one map side: 0x%08X; maps %i of %i [0x%02X]", 
+        a.map_side_size, a.p_valid_maps.Cnt,
+        a.block.data.Cnt, a.block.data.Cnt);
+    return s;
+}
+
+
+#endif //H_VDO_0x09_INC_INCLUDED

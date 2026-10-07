@@ -1,0 +1,15 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+#ifndef H_VDO_0x1c_INC_INCLUDED
+#define H_VDO_0x1c_INC_INCLUDED
+
+#include "vdo_inc.bt"
+
+/*
+GEO_TYPE
+    GEO_SHAPE
+        GEO_VERTEX
+*/
+typedef  BLOCK_TYPE_0x1d  BLOCK_TYPE_0x1c;
+
+#endif //H_VDO_0x1c_INC_INCLUDED

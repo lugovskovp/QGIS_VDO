@@ -1,0 +1,31 @@
+
+//000002010010
+
+#include "vdo_block.bt"
+
+bl_addr(0x0);
+//bl_offset(0x600);
+bl_addr(0x201);     //.. 07 - almanac
+bl_addr(0xabc008);  // 08 folders
+bl_addr(0x03c01806); // 09 - ptr 2 maps
+bl_addr(0x00917901); //0x06type, 
+// bl_addr(0x02969201); // х3ъ 01_0x01_unkn
+// bl_addr(0x026e0601); // х4ъ 01_0x01_unkn
+
+bl_addr(0x03c68a03); // x1c kaliningrad offs = 0x1e345000
+//bl_addr(0x402); // off 0x120 - romania0x110 - poland 98 - france
+//polska - fptr.addr = 0x262c val = 0000060c 36d80020
+// a - list, b - ch`s
+//russia - fpc.offset = 0x26b0 val = 0000120c 0db00019
+// 'j' [15] | jahroma | jajva | jam gavrilov | jantarnyi | jaransk | jarcevo | jaroslavl' | jasnogorsk | jasnyj | jegorlykskaja | jersov | joskar ola | jur'ev pol'skij | jurjevec | juza |
+// 'i' [21] | a b c d e g h i k l m n o p r s t u v y z |
+// 'f' [8] | ' a e i l o r u |
+//bl_addr(0x60c);
+
+//////////////bl_addr(0x03c68a03); // 0x 1e345000 - 0x1c kaliningrad
+//bl_addr(0x16030010); //
+
+
+// bl_addr(0x120c);'1' [1] | 17 y uchastok | 9db0: 0013af0c 0d60
+
+// mamaaul '0018d30f 0030003b'

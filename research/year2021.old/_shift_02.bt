@@ -1,0 +1,683 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+
+// Printf("\n\nWTF???\n\n");
+
+#include "vdo_block.bt"
+
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+//return;
+bl_offset( 0x28E61800 ); 
+
+local DWORD start_ptr<format=hex>;
+
+
+
+start_ptr=0x29EF3800; //:01 1-0; [05000800] str(12,0) vrtx(13,0) id(30,0) sum=55 
+
+//bl_offset( 0x2B8A7000 ); // :03	6-365: 	0D1A0900 0A011678 1A344100 00BD0D14 -> 05000044  650100D0 000017A0  ... 
+//ptr = 0x2B8A7000;
+
+//start_ptr = 0x28AD3000; //:01 2:0  add_=0; [05000700] str(12,0) vrtx(13,0) id(30,0) sum=55 
+//start_ptr = 0x28AD3000;
+
+//start_ptr=0x28AD4000; //:01 3-0 add_=0; [05000800] str(12,0) vrtx(13,0) id(30,0) sum=55 
+//
+
+// start_ptr=0x28AD5800; //:01 5-0; [05000800] str(12,0) vrtx(12,0) id(30,0) sum=54   0CE5 -vrtx(12) =<<3+ptr2vtrx
+// start_ptr=0x28AF1800; //:05 43-1; [0F170700] str(15,0) vrtx(10,0) id(24,0) sum=49 
+//
+
+// start_ptr=0x28AEE800; //:04 30-1; [00160800] str(12,0) vrtx(20,0) id(15,0) sum=47 in end (((
+// start_ptr=0x28AEF800; //:04 22-0; [05150700] str(12,0) vrtx(12,0) id(24,0) sum=48 
+
+//start_ptr = 0x2A02A800; // :07 3f-10
+
+
+
+local unsigned QUAD buff;   // global LIFO buffer
+local DWORD g_ptr;          // global pointer to read buffer
+local WORD g_akk_shift;     // global accumulated l_shift for LIFO buffer
+
+
+local struct compressed_shape c_shape[ ReadUShort(start_ptr + 0x0e)+1 ];
+
+local struct GEO_VERTEX      c_vertex[ReadUShort(start_ptr + 0x16)];
+
+decompress_block(start_ptr); 
+
+//Printf("\n\nwtf\n\n");
+return;
+
+
+//
+void decompress_block(DWORD ptr_block_begin){
+    // use extern global QUAD buff
+    local DWORD off_start_compr<format=hex> = ptr_block_begin + 38h; 
+
+    // decode headers
+    bl_offset( ptr_block_begin );
+
+    g_ptr = off_start_compr;
+    buff = ReadUQuad(off_start_compr);    
+
+    // decode list of types
+    _uncompress_types(ptr_block_begin);
+
+    //
+    _uncompress_shapes(ptr_block_begin);
+    //
+    _uncompress_plines();
+
+
+//Exec("iexplore", "c:\Work\VDO_Dayton\010_bt\data0xtest.svg");
+//return;
+
+//local string str_points = "";
+//test_another(0x051cc303, 0x08a0, 0x0924);
+//test_another(0x051cc303, 0x09a0, 0x0a08);
+
+//return;
+
+    //
+//g_akk_shift = 0;
+//g_ptr = 
+    _uncompress_vertexes(ptr_block_begin);
+
+}
+
+
+//
+void test_another(DWORD bl_addr, WORD off_start, WORD off_end){
+    local DWORD bl_offset = (bl_addr >>8) * 0x800;
+    local DWORD ptr = bl_offset + off_start;
+
+    for(ptr; ptr< (bl_offset + off_end); ptr += 4){
+        Printf("ptr=%08X x: %04X-%04X = %04X |%04X| ", 
+            ptr, ReadUShort(ptr), ReadUShort(ptr+4), ReadUShort(ptr+4) - ReadUShort(ptr),
+            ((ReadUShort(ptr+4) - ReadUShort(ptr)) < 0xF000) ?  (ReadUShort(ptr+4) - ReadUShort(ptr)) : (ReadUShort(ptr) - ReadUShort(ptr+4))
+            );
+        ptr+=2;
+        Printf(" y: %04X-%04X = %04X |%04X| \n", 
+            ReadUShort(ptr), ReadUShort(ptr+4), ReadUShort(ptr+4) - ReadUShort(ptr),
+            ((ReadUShort(ptr+4) - ReadUShort(ptr)) < 0xF000) ?  (ReadUShort(ptr+4) - ReadUShort(ptr)) : (ReadUShort(ptr) - ReadUShort(ptr+4))
+            );
+    }
+
+}
+
+//----------------------------------------------
+void _uncompress_vertexes(DWORD ptr_block_begin){
+    // use extern global QUAD buff
+    local unsigned WORD i;
+
+    Printf("\n Vertexes cnt: %i [%X]\n", ReadUShort(ptr_block_begin + 0x16), ReadUShort(ptr_block_begin + 0x16));
+
+
+
+/*
+get_bits(33,0); //  seems good - shift 33, x-14, y-14
+c_vertex[0].x=get_bits(14,0);
+Print_buf(buff); 
+c_vertex[0].y=get_bits(14,0);
+
+Print_buf(buff); Printf("\n");
+*/
+/*
+0000 0000 
+0000 3xxx 0010 3xxx
+
+*/
+local WORD qty_bytes;
+qty_bytes =  ReadUShort(ptr_block_begin + 0x16) * 4* 10 / 16;
+
+byte VRTX_COMPR[ qty_bytes ] <bgcolor=cLtBlue, fgcolor=cAqua>; 
+
+c_vertex[0].x=1000;
+c_vertex[0].y=1000;
+
+local WORD cnt = 0x10;
+local WORD t_x, t_y;
+cnt = ( 0x484 - 0x78) /4;
+cnt=0x50;
+
+
+
+//-----------------------
+// <vmanual getbits
+local string str_points="";
+local WORD tmp_x, tmp_y, x, y;
+Printf ("------\n vmanual getbits\n"); 
+//Printf ("0x0e49f800 - 0x0e29f800 = %X\n\n", 0xe49f800 - 0x0e29f800); 
+//Printf ("0x0e49f800 - 0x0e29f800 = %X\n\n", 0xe49f800 - 0x0e29f800); 
+
+//get_bits(32,0);
+//get_bits(4,0);
+get_bits(30,0);
+//
+get_bits(4,0);
+Print_buf(buff);
+/*
+i=0;
+tmp_x=get_bits(14,0);
+tmp_y=get_bits(14,0);
+Printf("\n#%02i x [%04X][%04X] %i,%i \n", i++,  tmp_x, tmp_y, tmp_x, tmp_y); Print_buf(buff);
+SPrintf(str_points, "%s %i,%i", str_points, tmp_x, tmp_y);
+x=tmp_x; y=tmp_y;
+*/
+//1
+Printf("\n(x0) 0, 30+4bits \n");
+//tmp_x = get_bits(2,0);
+tmp_x = get_bits(14,0);
+    Printf("(y0) %s\t [%X]\t %i \n",  ShortToBinaryStr(tmp_x, 14), tmp_x, tmp_x );
+Print_buf(buff); Printf("\n");
+//(0)= 0,1b10 0,6928
+
+//2
+//get_bits(1,0); // ==1, 
+tmp_x = get_bits(11,0);
+    Printf("(x1) %s\t [%X]\t %i \n",  ShortToBinaryStr(tmp_x, 11), tmp_x, tmp_x );
+// C000407B F648D675 (x1) 110 0000 0000	 [600]	 1536 
+tmp_x = get_bits(14,0);
+    Printf("(y1) %s\t [%X]\t %i \n",  ShortToBinaryStr(tmp_x, 14), tmp_x, tmp_x );
+Print_buf(buff);
+
+
+
+
+    Printf("\n\n");
+for(i; i< 0x10; i++){
+
+    tmp_x = get_bits(11,0);
+    Printf("(#%02i) %s\t [%X]\t %i \n", i, ShortToBinaryStr(tmp_x, 11), tmp_x, tmp_x );
+}
+
+
+
+
+/*
+//E019...  11
+Print_buf(buff);
+tmp_x=get_bits(10,0);
+Printf(" -- x=[%X] %i ::: ", tmp_x, tmp_x);
+tmp_x +=x;
+Print_buf(buff);
+tmp_y=get_bits(10,0);
+Printf(" -- y=[%X] %i\n", tmp_y, tmp_y);
+y += tmp_y;
+tmp_y=y;
+Printf("#%02i x [%04X][%04X] %i,%i \n", i,  tmp_x, tmp_y, tmp_x, tmp_y); Print_buf(buff);
+SPrintf(str_points, "%s %i,%i", str_points, tmp_x, tmp_y);
+x=tmp_x; y=tmp_y;
+
+*/
+
+//Printf("\npoints=\"%s\n",str_points);
+
+
+
+return;
+// vmanual getbits>
+//-----------------------
+
+get_bits(37,0);
+Print_buf(buff); Printf("\n");
+
+c_vertex[0].x=get_bits(14,0);
+c_vertex[0].y=get_bits(14,0);
+//
+//
+c_vertex[1].x=get_bits(9,0);
+c_vertex[1].y=get_bits(14,0);
+//c_vertex[0].y=0x000;
+
+
+Printf("0  %04X %04X \n", c_vertex[0].x, c_vertex[0].y);
+Printf("1  %04X %04X \n", c_vertex[1].x, c_vertex[1].y);
+for(i=2; i<cnt; i++){
+
+//
+Printf("\n %i", i); Print_buf(buff);
+t_x = get_bits(11,0);
+t_y = get_bits(11,0);
+Printf("  dx=%03X dy=%03X ", t_x, t_y);
+
+    if( t_x > 0x1ff ){
+        t_y -= 0x1ff;
+        c_vertex[i].x = c_vertex[i-1].x - t_x;
+    }else{
+        c_vertex[i].x = c_vertex[i-1].x + t_x;
+    }
+    if( t_y > 0x1ff ){
+        t_y -= 0x1ff;
+        c_vertex[i].y = c_vertex[i-1].y - t_y;
+    }else{
+        c_vertex[i].y = c_vertex[i-1].y + t_y;
+    }
+Printf("   %04X %04X ", c_vertex[i].x, c_vertex[i].y);
+/*
+    if(get_bits(1,0)==1){
+        c_vertex[i].x = c_vertex[i-1].x - get_bits(10,1);
+    }else{
+        c_vertex[i].x = c_vertex[i-1].x + get_bits(10,1);
+    }
+    if(get_bits(1,0)==1){
+        c_vertex[i].y = c_vertex[i-1].y - get_bits(10,1);
+    }else{
+        c_vertex[i].y = c_vertex[i-1].y + get_bits(10,1);
+    }
+    */
+}
+return;
+
+    Printf("\n");
+    for(i=0; i<0x30; i++){
+        Printf("#%02i %04X %04X\n",
+            i, c_vertex[i].x, c_vertex[i].y
+            ); 
+    }
+Printf("\n");
+
+    for(i=0; i<cnt; i++){
+        Printf("%i,%i ",
+            c_vertex[i].x/24, c_vertex[i].y/24
+            ); 
+    }
+Printf("\n");
+
+}
+
+//--------------------------------
+string ShortToBinaryStr( WORD num, unsigned WORD qtyBits ){
+    local string s = "";
+    local unsigned WORD i=4;
+    
+    while(qtyBits--){
+        if( !i-- ) {
+            SPrintf(s, " %s", s);
+            i=3;
+        }
+        SPrintf(s, "%s%s", (num & 1)? "1" : "0", s);
+        num >>=1;
+    }
+    //for(i=0; i<qtyBit
+    return s;
+}
+
+//---------------------------------
+void _uncompress_shapes(DWORD ptr_block_begin){
+    // use extern global QUAD buff
+    local unsigned WORD i;
+                /*    shape
+                2h - ptr2str/0; 
+                2h - ptr2vertexes (first=first vert)
+                4h - id [0000 7685]
+                8h - LON_LAT
+                2h = 00 00 - aligment
+                2h - ptr2 list strPtr
+                */
+    // 053de701 - 
+//start_ptr=0x29EF3800; //:01 1-0; [05000800] str(12,0) vrtx(13,0) id(30,0) sum=55 
+    Printf("\n Shapes: %i \n", ReadUShort(ptr_block_begin + 0x0e));
+Print_buf(buff);
+    
+for(i=0; i<ReadUShort(ptr_block_begin + 0x0e); i++){
+        //local struct compressed_shape c_shape;
+    c_shape[i].pstr_name = get_bits(12,0);
+    c_shape[i].p_vertex  = get_bits(13,0); //buff 0028000
+    c_shape[i].p_vertex >>= 3;
+    c_shape[i].p_vertex <<=2;
+    c_shape[i].p_vertex += ReadUShort(start_ptr + 0x14);
+    //get_bits(3,0);
+    c_shape[i].id = get_bits(30,0);
+    c_shape[i].coord.hlon = get_bits(32,0);
+    c_shape[i].coord.hlat = get_bits(32,0);
+    c_shape[i].coord.lo = 1.0f * c_shape[0].coord.hlon / 0x54C56D - 30;
+    c_shape[i].coord.la = 1.0f * c_shape[0].coord.hlat / 0x54C56D;
+}
+
+//Print_buf(buff);
+//decode_shape(c_shape[1]);   LAST TAILED SHAPE - ONLY PTR P_VERTEX
+        //local struct compressed_shape c_shape;
+    c_shape[i].pstr_name = get_bits(12,0);
+    c_shape[i].p_vertex  = get_bits(12,0); //buff 0028000
+    //c_shape[1].p_vertex >>= 3;
+    //c_shape[1].p_vertex <<=3;
+    c_shape[i].p_vertex += ReadUShort(start_ptr + 0x14);
+    c_shape[i].id = get_bits(30,0);
+    c_shape[i].coord.hlon = 0; //get_bits(32,0);
+    c_shape[i].coord.hlat = c_shape[1].coord.hlon;
+
+Printf("\n");
+for(i=0; i< ReadUShort(ptr_block_begin + 0x0e)+1; i++){
+    Printf("[%04X] [%04X] [%08X] %fN, %fE [0000] [0910] \n",
+        c_shape[i].pstr_name, c_shape[i].p_vertex, c_shape[i].id,
+        c_shape[i].coord.la , c_shape[i].coord.lo 
+        );
+}
+
+Printf("\n");
+Print_buf(buff);
+Printf("\n");
+
+    //color compressed shapes 
+    local WORD qty_bytes=22;
+    byte SHAPES_COMPR[ qty_bytes ] <bgcolor=cDkGreen, fgcolor=cLtRed>; 
+}
+
+
+//------------------------------
+void _uncompress_plines(void){}
+
+
+//--------------------------------------------
+//void uncompress_types(DWORD ptr_block_begin){
+void _uncompress_types(DWORD ptr_block_begin){
+    // use extern global QUAD buff
+    local unsigned byte i, addr_sh=0;  // 19 bits len compressed type
+
+    //calc addr_sh
+    if ( ((buff>> (64-20) & 0xff ))<<1 == 
+                ReadUShort (ptr_block_begin +0x0c) ) addr_sh = 1;    // 20  bits len compressed type
+    if ( ((buff>> (64-20) & 0xff ))<<2 == 
+                ReadUShort (ptr_block_begin +0x0c) ) addr_sh = 2;    // 21  bits len compressed type
+    Printf(" Types cnt: %04X\n", ReadUShort(ptr_block_begin + 0xa) );
+    Printf(" \tcalc addr_sh:  %04X << %i = %04X\n", 
+            buff>> (64-20) & 0xff , addr_sh, ReadUShort (ptr_block_begin+0x0c) );
+    
+    // uncompress types
+    for (i=0; i<= ReadUShort(ptr_block_begin + 0xa); i++){
+        //local DWORD value = decode_type();
+        //Print_buf(buff);
+        Printf(" #%02i %08X \n", i,  decode_type(addr_sh));
+    }
+
+    // color compressed bytes with geo_types 
+    FSeek(ptr_block_begin + 0x38);
+
+    // bits in compressed type * qty
+    local WORD qty_bytes = (19+addr_sh)*( ReadUShort(ptr_block_begin+0x0a) +1)/8;
+    if(g_akk_shift) qty_bytes++;
+    byte TYPES_COMPR[ qty_bytes ] <bgcolor=cBlue, fgcolor=cLtRed>; 
+
+    // ret offset to end of compressed
+    //  return ((19+addr_sh)*(ReadUShort(ptr_block_begin+0x0a))/8);
+}
+
+
+//---------------------------------------
+DWORD decode_type(unsigned WORD addr_sh){
+    // extern global QUAD buffer
+    local unsigned DWORD tmp<format=hex>, val<format=hex> =0;
+    // type
+//Print_buf(buff);
+    tmp = get_bits(7,0);    //
+//Printf( "\ntype: %02X", tmp);
+//Print_buf(buff);
+    val = tmp << 24;
+    // is_line
+    tmp = get_bits(1,0);
+    val |= tmp<<16;
+    //addr 
+/*
+0 >>1, r12<<1
+1 r12 <<1
+2 r12 <<2
+*/
+    tmp = get_bits(11+addr_sh, 0);
+    if(!addr_sh) tmp <<=1;  // bl 0x053d7e, no shift
+//Printf(" tmp==%04X ", tmp);
+    if(addr_sh) tmp <<= addr_sh-1;
+//Printf(" tmp==%04X ", tmp);
+    val |= tmp;
+//Printf(" val = %08X\n\n", val);
+    return val;
+}
+
+//-----------------------------------------
+// global LIFO buffer - getting bits from head
+unsigned DWORD get_bits(WORD bits_from_head_buff, WORD shift_result_after){
+    local unsigned DWORD val;
+    // use global QUAD buff
+    val = buff >> (64 - (bits_from_head_buff ) );
+    // Printf (" gb val = %X", val); 
+    buff <<= bits_from_head_buff;
+    fill_end_buff(bits_from_head_buff);
+    val <<= shift_result_after;
+    return val;
+}
+
+//-----------------------------------
+// load more NEXT BITS in the buffer
+void fill_end_buff(WORD bits_qty ){
+    // use global QUAD  buff, DWORD ptr, WORD akk_shift
+    local unsigned QUAD  buf_t<format=hex>;     // temp buff
+    local unsigned byte sss;                    // rshifting buf_t
+    // bits_qty MUST be less 64
+    if(bits_qty > 64){
+        break; //err!!!
+    }
+    // calculate pointer for buf_t
+    g_ptr +=  bits_qty>>3;        // qty bytes in bits
+    g_akk_shift += (bits_qty % 8);    // 
+    if(g_akk_shift >= 8){
+        g_akk_shift -=8;
+        g_ptr++;
+    } 
+//     Printf("\n s:%i f:ptr=%08X akk=%i tmp_b:", (bits_qty % 8), ptr+1, akk_shift);
+    buf_t = ReadUQuad(g_ptr+1);     // Print_buf(buf_t);
+    buf_t >>= 8 - g_akk_shift ;     // Printf("shifted:"); Print_buf(buf_t); Printf(":\n");
+    buff |= buf_t; 
+return;
+}
+
+
+
+typedef struct{
+    local WORD    pstr_name;
+    local WORD    p_vertex;
+    local DWORD   id;
+    local LON_LAT coord <optimize=false>;
+    local WORD  aligment_zero = 0;
+    local WORD    p_pstr_name;
+}compressed_shape;
+
+
+
+//=============================================================
+//=============================================================
+//=============================================================
+
+
+local unsigned QUAD  buff<format=hex>;  // global buffer
+local byte addr_sh;         // shift type Ptr
+local WORD akk_shift=0;     // akkumulated qty bits
+
+local DWORD ptr;
+        local byte sh, buff_sh;
+
+
+// recover types list
+local DWORD tmp_begin =  start_ptr + 0x38;
+ptr = start_ptr + 0x38;
+do_decode( start_ptr ); 
+
+
+
+// for future coloring shapes
+tmp_begin =  ptr;
+local WORD i=0;
+
+
+byte shapes_compressed[ptr - tmp_begin] <bgcolor=cDkGreen>;
+
+
+
+
+
+
+// 20 00 - maximum in vertex, in 
+i=13; // - 14from 16 - full data. 13 from 16 - sems like onlyvrtxes i=13; // 03FF
+Printf("%i %i", 0x22b, 0x22b + 0x22b/8*i);
+//byte vertex_compressed[0x22b + 0x22b/8*i] <bgcolor=0xFF8080>;
+
+i=13; // 03FF  // 13 bits.
+
+//i=get_bits(1,0);    //14 bits per coord, tryed shift[0-31]: 22/14/14   24/14/14
+//i=get_bits(31,0);    //13 bits per coord, tryed shift[0-31]
+
+struct{
+    local struct GEO_VERTEX vertex[0x22b];
+}ver;
+
+//
+i=get_bits(20,0);
+
+
+buff <<=3;
+Print_buf(buff);
+//Printf("12 8 = %i\n", 15%8);
+fill_end_buff(3);
+Print_buf(buff);
+
+return;
+// ---- load buff
+
+
+
+Printf("\n\n");
+// for(i=0; i<0x22b; i++){
+for(i=0; i<0x10; i++){
+    ver.vertex[i].x = get_bits(14,0);
+    ver.vertex[i].y = get_bits(14,0);
+    Printf("%i,%i ", ver.vertex[i].x/4, ver.vertex[i].y/4 );
+   // Printf("%04X,%04X \t\t %i \t%i\n", ver.vertex[i].x, ver.vertex[i].y, ver.vertex[i].x, ver.vertex[i].y );
+}
+
+byte vertex_compressed[ptr - tmp_begin] <bgcolor=0xFF8080>;
+
+
+
+BYTE end;
+
+
+return; //////
+
+ //<optimize=false>;
+
+
+void decode_shape(local struct compressed_shape &c_shape){
+    
+    //local struct compressed_shape c_shape;
+    c_shape.pstr_name = get_bits(12,0);
+    c_shape.p_vertex  = get_bits(13,0); //buff 0028000
+    c_shape.p_vertex >>= 3;
+    c_shape.p_vertex <<=2;
+    c_shape.p_vertex += ReadUShort(start_ptr + 0x14);
+    //get_bits(3,0);
+    c_shape.id = get_bits(30,0);
+    c_shape.coord.hlon = get_bits(32,0);
+    c_shape.coord.hlat = get_bits(32,0);
+    return;
+}
+
+
+
+void do_shape(void){
+
+
+
+local byte str_bits, str_sh, vrtx_bits, vrtx_sh, id_bits, id_sh;
+str_bits  = 12; str_sh  =0;
+vrtx_bits = 13; vrtx_sh =0; 
+id_bits   = 30; id_sh   =0;
+
+
+
+Printf("start_ptr=0x%08X; //:%02i %i-%i; [%08X] str(%i,%i) vrtx(%i,%i) id(%i,%i) sum=%i \n", 
+    start_ptr, 
+    ReadUShort(start_ptr+0xa),ReadUShort(start_ptr+0xe),ReadUShort(start_ptr+0x12), 
+    ReadUInt(start_ptr+0x34), 
+    str_bits, str_sh, vrtx_bits, vrtx_sh, id_bits, id_sh,
+    str_bits+vrtx_bits+id_bits
+     );
+        Print_buf(buff);
+// ptr to string
+Printf("\n  %04X -str(%i) \t", get_bits(str_bits, str_sh), str_bits );  //addr_sh=0 - 4,16/ 0
+        Print_buf(buff);
+// ptr to vertexes
+Printf("\n  %04X -vrtx(%i) =<<3+ptr2vtrx\t", get_bits(vrtx_bits, vrtx_sh), vrtx_bits );  //addr_sh=0 - 4,16/ 0
+        Print_buf(buff);
+// id
+Printf("\n  %08X -id(%i) \t", get_bits(id_bits, id_sh), id_bits );  //addr_sh=0 - 4,16/ 0
+        Print_buf(buff);
+// coordinates
+Printf("\n   %08X -LAT(%i)  \t", get_bits(32, 0), 32 );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+Printf("\n   %08X -LON(%i)  \t", get_bits(32, 0), 32 );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+
+return;
+Printf("\n  %04X -vertex(%i) \t", ( do_shift(sh_vert, 16))>>2, sh_vert );  //addr_sh=0 - 1,16
+        Print_buf(buff);
+Printf("\n  %08X -id(%i) \t", do_shift(sh_id, 32), sh_id );  //addr_sh=0 - 5, 32  E97730A1C7DF79E0
+        Print_buf(buff);
+
+//2h = 00 00 - aligment
+Printf("\n  %04X <-0000 ", do_shift(16, 16) );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+//2h - ptr2 list strPtr
+Printf("\n  %04X  ", do_shift(16, 16) );  //addr_sh=0 - 0,32
+        Print_buf(buff);
+
+
+
+return;
+
+
+
+}
+
+
+
+
+//-================================
+
+
+
+
+
+
+
+
+
+
+//-------------------------------------------
+void Print_buf(QUAD b){
+    Printf(" %08X %08X ", b >>32, b & 0xffffffff);
+}
+
+
+
+
+
+
+
+
+
+
+// ============================

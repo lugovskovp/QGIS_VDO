@@ -1,0 +1,184 @@
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#include "vdo_block.bt"
+bl_offset(0);           //12
+bl_addr(0x00000101);    //13
+
+// bmw 04: 04284f02 - 0441f401
+
+//bl_offset(0x10A13C00);  //bl_addr(0x04284f02);
+
+
+bl_addr(0x04587201); //04 22C39000: 04587201 :04_BIT_MASK --- 26562
+// to 04587201 ptr from 02020a04(06-0) 023fb3 (00-1) 092b8a02 (00-01)
+// ptr 54h 
+
+return;
+//EE file
+ bl_addr(0x5726201); //:1: _MAP_POLI_11 [8000x8000]  1 types, 1 shapes, 0 lines
+
+bl_addr(0x05280f05);
+ bl_addr(0x5265606);
+ bl_addr(0x5265c06);
+ bl_addr(0x5266205); //::5->7:: _MAP_POLI_7_k40  [8000x8000] ; 9 types, 72 shapes, 40 lines
+ bl_addr(0x5432805);
+
+
+bl_addr(0x05721302);
+bl_addr(0x05723802);
+bl_addr(0x05720402);
+bl_addr(0x05721302); //wo poligons
+//not arch:
+bl_addr(0x0515A701);
+bl_addr(0x0515AD01);
+
+bl_addr(0x0515D701);
+bl_addr(0x0515D901);
+bl_addr(0x05241502);
+
+bl_addr(0x055E9B02);
+bl_addr(0x056BA601);
+//arch
+ bl_addr(0x05164704); //0 lines
+ bl_addr(0x0553F305);
+// 7f01
+bl_addr(0x46a808);
+bl_addr(0x5e1408);
+bl_addr(0x017f0108);    // 7f01?
+
+//
+ return;
+local int i=0x0515A6;       //0515A6 - first 16 tpe
+local int offs;
+local int addr, type, usl;
+local int iscompr, ptr, aptr;
+for (i; i<0x0576f7; i++){ //0x0576f7 - end EE
+    
+    offs = i*0x800;
+    FSeek(offs);
+    addr = ReadUInt();
+    //ReadUQuad(buff.ptr);
+    if ((addr >> 8) == i){
+        FSeek(offs+4);
+        type = ReadUInt();
+        iscompr = (type >> 8) & 0xFF;
+        if (!iscompr){
+            FSeek(offs+0x34);
+            usl = ReadUInt();
+            FSeek(offs+0xd);
+            ptr = ReadUByte();
+            FSeek(offs+0x34+5);
+            aptr = ReadUShort();
+            FSeek(offs+0x38);
+            /*Printf("-- 0x%06X %06X %01i %02X %08X %08X --usls: %08X\n", 
+                offs, i, iscompr, (type >> 16) & 0xFF,
+                addr, type, ReadUInt());*/
+            Printf("%01i\t%02X\t%02X\t%02X\t%08X %08X --usls: \t'%04X\t'%04X\t", 
+                iscompr, (type >> 16) & 0xFF, addr &0xFF, type &0xFF,
+                addr, type, (usl>>16), (usl&0xFFFF));
+            Printf("'%08X\t'%02X\t'%02X\t'%02X\t'%02X\t'%02X\t'%02X\t\n", ReadUInt(), ptr, 
+                 aptr, aptr>>1, aptr>>2, aptr>>3, aptr>>4);
+        }
+    }
+}
+
+//BMW file
+//bl_addr(0x0201);
+
+return;
+/*
+0x2B0BD000 :02 40 :  0F160900 0A0106A9 0C0008D0 -> 05 00 00 40  00 01 08 4C  ... 
+0x2B0D9000 :02 40 :  10160900 0A020D33 6800388B -> 05 00 00 40  00 01 06 BC  ... 
+0x2B1A4800 
+0x2B258800 :02 40 :  0E160900 0A010699 C5000E89 -> 05 00 00 40  00 01 0E 14  ... 
+0x2B2A9800 
+0x2B2AA000 :02 40 :  00160900 0A010699 340009B0 -> 05 00 00 40  00 01 09 8C  ... 
+0x2B334800 
+*/
+
+/*
+bl_offset(0x2B0BD000);
+bl_offset(0x2B0D9000);
+
+bl_offset(0x2B1A4800);
+bl_offset(0x2B258800);
+
+bl_offset(0x2B2A9800);
+bl_offset(0x2B2AA000);
+bl_offset(0x2B334800);
+
+bl_offset(0x2998F000);
+bl_offset(0x29990800);
+
+//0x298E3800 :02 40 :  10160800 0A0106A8 8C800485 -> 05 00 00 40  00 01 04 50  ... 
+bl_offset(0x298E3800);
+
+//0x29293800 :02 40 :  10150800 0A020D31 2400134C 5a000088 -> 05000040  6x010248 00000268 ... 
+bl_offset(0x29293800);
+//0x292B8000 :02 40 :  10150900 0A0106A8 F30007E9 -> 05000040  6x010798 000007e8 ... 
+bl_offset(0x292B8000);
+*/
+/*
+0x29293800 :02 40 :  10150800 0A020D31 2400134C -> 05000040  6x010248 00000268
+05000040 - 00000101000000000000000001000000
+69010248 - 01101001000000010000001001001000
+00000268 - 00000000000000000000001001101000
+
+0A020D31 - 00001010000000100000110100110001
+2400134C - 00100100000000000001001101001100
+5a000088 - 01011010000000000000000010001000
+
+<-00001010000000100000110100110001+00100100000000000001001101001100+01011010000000000000000010001000
+->00000101000000000000000001000000+01101001000000010000001001001000+00000000000000000000001001101000
+00001010+00000010+00001101+00110001
+  00001010
+
+
+69010798 - 01101001000000010000011110011000 
+
+*/
+//..?0? ??????????
+
+// non compr
+/*
+bl_offset(0x2A674800 );
+bl_offset(0x2A67A800 );
+bl_offset(0x2A67D800 );
+bl_offset(0x2A67F000 );
+bl_offset(0x2A682000 );
+bl_offset(0x2A682800 );
+bl_offset(0x2A686000 );
+bl_offset(0x2A68A000 );
+bl_offset(0x2A68F000 );
+bl_offset(0x2A690000 );
+bl_offset(0x2A695000 );
+bl_offset(0x2A699800 );
+bl_offset(0x2A69D000 );
+bl_offset(0x2A69D800 );
+*/
+bl_offset( 0x28B12800 ); // 0x0e140800
+// 0300 0048 
+// 6700 0042 
+// 2880 1180 
+bl_offset( 0x28B14000 ); // 0x0e140800
+// 0300 002A 
+// 1F80 0080 
+// 0200 02D4 
+bl_offset( 0x28B18800 ); // 0x0e140800
+// 0300 0026 
+// 1100 1010 
+// 5100 02CC 
+local byte a=0;
+//bl_addr(0x0605e30d);
+bl_offset( 0x28E61800 ); 
+bl_offset( 0x2934B800 ); 
+bl_offset( 0x293B9000 ); 
+bl_offset( 0x293C0000 ); 
+bl_offset( 0x29C43000 ); 
+bl_offset( 0x2A465800 ); 
+bl_offset( 0x2A542000 ); 
+bl_offset( 0x2B573800 ); 
+bl_offset( 0x2B797000 ); 
+

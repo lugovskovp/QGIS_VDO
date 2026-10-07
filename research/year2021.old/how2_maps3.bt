@@ -1,0 +1,186 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+
+#include "vdo_block.bt"
+
+
+bl_offset(0); // start block
+bl_addr(__bl_0x12._07_scales_almanac.far_block_addr.hex); //open almanac 
+
+//
+local uchar scale_num = 1;
+
+
+//__POLI_1 len: 1
+//bl_addr(__bl_0x07.__scales.scale[1].bl_almanac.hex);
+//bl_addr(__bl_0x08.folder[10].bl_folder.hex);
+//bl_addr(__bl_0x09.valid_maps[10].hex);
+
+
+// 03_MAP_POLI_4 len: 1
+//bl_addr(__bl_0x07.__scales.scale[4].bl_almanac.hex);
+    // 176-"side: 0x280000	 [8x8] maps: 9 of 64 (0x40); 	bl_folder: 024F8A01 "
+    // 178-"side: 0x140000	 [16x16] maps: 34 of 256 (0x100); 	bl_folder: 024F8C01 "
+    // 210-"side: 0xA0000	     [32x32] maps: 64 of 1024 (0x400); 	bl_folder: 024F9302 "
+    // 373-"side: 0x50000	 [64x64] maps: 70 of 4096 (0x1000); 	bl_folder: 024FC405 "
+//bl_addr(__bl_0x08.folder[373].bl_folder.hex);
+//bl_addr(__bl_0x09.valid_maps[10].hex);
+
+//tsts 00
+//bl_addr(0x02649804);
+  //bl_addr(0x00ebaf07);
+  //bl_addr(0x00ebc304);
+//bl_addr(0x00ebaf07);
+//bl_addr(0x00ebaf07);  
+
+
+
+// 16_MAP_POLI_7_k40 len: 1
+//bl_addr(__bl_0x07.__scales.scale[7].bl_almanac.hex);
+//bl_addr(__bl_0x08.folder[8].bl_folder.hex);
+//bl_addr(__bl_0x09.valid_maps[0].hex);
+
+            //ru  width 28000000h /  0x54C56D = 78h = 120 degrees
+            //bl     A800 F5CD6500 30.795902 S, 29.992258 W
+            //tr 2800A800 1DCD6500 89.999847 N, 90.803490 E
+
+            //ee  width 2000 0000 / 0x54C56D = 60h = 96 degrees
+            //bl FDE9F800 FC7A5000 10.636721 S, 36.299679 W
+            //tr 1DE9F800 1C7A5000 85.999878 N, 60.336922 E
+
+local int r ;
+//r = is_map_exists(-10.636711, -36.299669, "bl ee");
+// @50.9619376,11.256128 r = is_map_exists(50.9619376, 11.256128, "Nohra");
+//
+
+// @50.0484509,14.4055077
+//r = is_map_exists(50.0484509, 14.4055077, "Prague");
+
+
+//r = is_map_exists(30, -29, "atl oc 0x03CDdd01 14");
+
+
+print_about_coord(50.9619376, 11.256128, "Nohra");
+
+bl_addr(0x00D65801);	// scale 0
+bl_addr(0x00958E01);	// scale 1  0x06; 50.835602 N, 11.059422 E - 51.307457 N, 11.531281 E
+/*bl_addr(0x02B54D04);	// scale 2
+bl_addr(0x028D2904);	// scale 3
+
+bl_addr(0x02644E04);	// scale 4; 0x03; 50.835602 N, 11.059422 E - 51.307457 N, 11.531281 E
+bl_addr(0x03CF9A09);	// scale 5; 0x14; 50.363743 N,  7.756413 E - 52.251175 N, 11.531281 E
+bl_addr(0x03965005);	// scale 6; 0x15; 50.363743 N, 10.587563 E - 51.307457 N, 11.531281 E
+bl_addr(0x02F6F404);	// scale 7; 0x16; 50.835602 N, 11.059422 E - 51.307457 N, 11.531281 E 
+//bl_addr(0x00000000);	// scale 8;   
+bl_addr(0x03C4A30B);	// scale 9; 0x1c; 50.363743 N,  9.643848 E - 52.251175 N, 11.531281 E
+bl_addr(0x03D33D07);	// scale 10;0x1d; 50.363743 N,  7.756413 E - 52.251175 N, 11.531281 E
+//bl_addr(0x00000000);	// scale 11;0x1e;
+
+*/
+
+// from sc[2] 0x06
+bl_addr(0x829B0C);
+bl_addr(0x00958F01);
+bl_addr(0x00959001);
+bl_addr(0x00959101);
+bl_addr(0x00959201);
+bl_addr(0x00959301);
+bl_addr(0x00959401);
+bl_addr(0x00959501);
+bl_addr(0x00959601);
+
+//bl_addr(0x0570E705);  //ee
+//bl_addr(0x03CDCD05);    // ru
+//
+//bl_offset(0x1E6E5800);
+//bl_offset(0x1E6E6800);
+//
+//bl_addr(0x03CFA306);    // ru
+
+
+// ru only bl_offset(0x1E6EA000); //14_MAP_POLI_5_k200
+
+
+
+void print_about_coord( double lat, double lon, string rem){
+    local uchar i;
+    local DWORD  block_a;
+    Printf("\n");
+    for(i=0; i<=11; i++){
+        block_a = get_bl_poli_addr(lat, lon, i);
+        //Printf("scale: %i;  poli - 0x%08X\n" , i, block_a );
+        Printf("bl_addr(0x%08X);\t// scale %i\n" , block_a, i );
+    }
+}
+
+
+
+
+// getting bl_addr by coordinates and scale num, or 0 if not exist
+DWORD get_bl_poli_addr(double lat, double lon, uchar scale_num){
+    local DWORD bl_res;
+    // check in values
+    local int hlat = double2hlat(lat), hlon=double2hlon(lon);
+    // < bl
+    if( hlat < __bl_0x07.__scales.scale[0].world_bot_left.hlat)
+        return 0;
+    if( hlon < __bl_0x07.__scales.scale[0].world_bot_left.hlon)
+        return 0;
+    // > tr
+    if( hlat > __bl_0x07.__scales.scale[0].world_top_right.hlat)
+        return 0;
+    if( hlon > __bl_0x07.__scales.scale[0].world_top_right.hlon)
+        return 0;
+    if( (scale_num > 11) || (scale_num == 8) )
+        return 0;
+//Printf("\n%s: %08X %08X %f, %f\n", rem, hlon, hlat, lat, lon);
+
+    // find folder_num - num in array 0x08 file
+    if ( __bl_0x07.__scales.scale[scale_num].bl_almanac.hex == 0)
+        return 0;
+    local int world_bl_hlat, world_bl_hlon;
+world_bl_hlat = __bl_0x07.__scales.scale[scale_num].world_bot_left.hlat;
+world_bl_hlon = __bl_0x07.__scales.scale[scale_num].world_bot_left.hlon;
+
+    local int folder_side_size, folder_x, folder_y, folder_num;
+    folder_side_size = __bl_0x07.__scales.scale[scale_num].folder_side_size;
+//Printf("0x%0X\n",folder_side_size);
+    folder_x = (hlat - world_bl_hlat)/folder_side_size;
+    folder_y = (hlon - world_bl_hlon)/folder_side_size;
+    folder_num = folder_x + (folder_y * __bl_0x07.__scales.scale[scale_num].qty_in_side_almanac);
+
+    local DWORD bl_08_offset = __bl_0x07.__scales.scale[scale_num].bl_almanac.offset;
+//Printf("0x08: 0x%08X \n", bl_08_offset);
+
+    local DWORD bl_09_offset = ((ReadUInt(bl_08_offset + 0x10 + 4*folder_num) >>8) * 0x800);
+    if( !bl_09_offset )
+        return 0;
+//Printf("FOL x: %i  y: %i\n  N folder: %i ; bl_09_offset = 0x%08X\n",  folder_x, folder_y, folder_num, bl_09_offset);
+
+    // find map_num - num in array 0x09 file
+    local int map_side_size, qty_in_side_folder, map_x, map_y, map_num;
+    map_side_size = ReadUInt(bl_09_offset + 0x10);
+    qty_in_side_folder = folder_side_size / map_side_size;
+//Printf("0x09: 0x%08X \n", bl_09_offset);
+//Printf("map side: 0x%0X|%i; qty: 0x%0X|%i \n", map_side_size, map_side_size, qty_in_side_folder, qty_in_side_folder);
+
+    map_x =( hlat - folder_x*folder_side_size - world_bl_hlat) / map_side_size;
+    map_y =( hlon - folder_y*folder_side_size - world_bl_hlon) / map_side_size;
+    map_num = map_x + map_y * qty_in_side_folder;
+//Printf("MAP x: %i  y: %i\n  N map: %i \n", map_x, map_y, map_num);
+
+    // bl_POLI_addr 
+    local DWORD  inner_offset_to_poli;
+inner_offset_to_poli = ReadUShort(bl_09_offset + 
+                            ReadUShort(bl_09_offset + 0x8) + 2*map_num );
+// Printf("\ninner_offset_to_poli: 0x%08X \n", inner_offset_to_poli);
+    if( !inner_offset_to_poli)
+        return 0;
+    bl_res = ReadUInt(bl_09_offset + inner_offset_to_poli);
+
+    //bl_res = ReadUInt(inner_offset_to_poli);
+
+// Printf("0xPOLI: 0x%08X \n", bl_res);
+    return bl_res;
+}
+

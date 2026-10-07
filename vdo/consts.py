@@ -57,3 +57,18 @@ CRS_PROJECTION_STRING = "PROJ4:+proj=longlat +lon_0=100 +datum=WGS84 +no_defs"
 
 # старший знаковый бит
 MOST_SIGNIFICANT_BIT = 0x80000000           # hi bit =1 -> minus val.
+
+
+def bits_needed(n: int) -> int:
+    """
+    tnx fdemusso: numero di bit per rappresentare 0..n-1, aritmetica a 16 bit.
+    """
+    v = n & 0xFFFF
+    if v == 1:
+        return 1
+    v = (v - 1) & 0xFFFF
+    out = 0
+    while v:
+        v >>= 1
+        out += 1
+    return out

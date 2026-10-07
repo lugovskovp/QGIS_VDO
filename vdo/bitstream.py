@@ -27,6 +27,7 @@ from QGIS_VDO.vdo.consts import (
     BITS_IN_WORD,
     BITS_IN_UINT,
     LOOKUP_CHAR_BYTES,
+    bits_needed,
 )
 
 from QGIS_VDO.vdo.block_base import block_base
@@ -96,10 +97,7 @@ class bitstream():
 
         # Максимальная длинна указателя в битах (по размеру распакованного блока, если на 1 меньше - word wrap align)
         # self._const_segsize * self.unarc_segcn Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
-        max_bits_in_ptr = len("{:b}".format(archive.head.sizeofblock - 1))  # noqa bin(0xfff)="0b111111111111", w|o '0b' len=12
-        if max_bits_in_ptr > 16:
-            raise ValueError(f"max_ptr_bits > 16: {max_bits_in_ptr}")      # такое вообще хоть бывает???
-        self.max_bits_in_ptr = max_bits_in_ptr    # max possible bits in near offset
+        self.max_bits_in_ptr = bits_needed(archive.head.sizeofblock)    # max possible bits in near offset
 
         # распаковывать ли lin{5} - характеристика дороги, предположительно макс скорость
         self.flag_unpack_lin5 = False
@@ -141,9 +139,13 @@ class bitstream():
         # if not self.max_bits_in_vertex_delta:   # bmw 07157901 001E 01 02 [1E:MAP__11k_11] = 0!! bits
         #     self.max_bits_in_vertex_delta = 16
 
-    def unpack(self) -> bytearray:      # noqa 'bit_stream.unpack' is too complex (23)Flake8(C901)
-        """основная функция, возвращает распакованный _raw"""
+    def unpack14(self) -> bytearray:      # noqa 'bit_stream.unpack' is too complex (23)Flake8(C901)
+        """
+        функция, возвращает распакованный _raw
+        для блоков типов 14 15 16 1c 1d 1e в архивах CF=1
+        """
         # <<<<<<<<<< 1 GEO_CATEGORY
+        # self.res = _unpack_all_categories
         if self.li_cat.cnt:     # Для каждой геокатегории
             # +1 - всегда есть завершающий итем, нулевой
             for _ in range(self.li_cat.cnt + 1):      # noqa
@@ -449,9 +451,11 @@ class bitstream():
     # ------------ ФУНКЦИИ РАСПАКОВКИ СУЩНОСТЕЙ  -----------
     def __unpack_next_category(self) -> bytes:
         """
-        BYTE  en_GEO_CATEGORY <--- 7 bits
-        BYTE  0poligon_1poliline en_DRAW_TYPE <--- 1 bit
-        WORD  ptr_to_category PTR <--- max_PTR_bits-1 bits
+        S0 (T[0x3b]=4)  +0 u8 category (7 bits), +1 u8 draw flag, +2 u16 S1/S2 offset
+
+        BYTE  en_GEO_CATEGORY                   <--- 7 bits
+        BYTE  0poligon_1poliline en_DRAW_TYPE   <--- 1 bit
+        WORD  ptr_to_category PTR               <--- max_PTR_bits-1 bits
         """
         # <<<<<<<<<< GEO_CATEGORY
         res = b''

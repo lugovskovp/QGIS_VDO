@@ -93,7 +93,7 @@ class block_basegeo(block_base):
         # распаковать, если carin-packed
         if not self.is_unpacked and self.head.arch_type == 1:
             unpacker = bitstream(self)
-            self._raw = memoryview(unpacker.unpack())
+            self._raw = memoryview(unpacker.unpack14())
             self.is_unpacked = True
             # tail = ba2int()
             if unpacker.tail is not None:

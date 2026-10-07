@@ -38,6 +38,7 @@ typedef struct{
 
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR
+from QGIS_VDO.vdo.geotypes import MAP_AREA
 
 OFFSET_LIST_STR_LABEL = 0x14
 OFFSET_LIST_STR_DESCRIPTION = 0x18
@@ -48,7 +49,7 @@ class block_0x13(block_base):
     '''
     class BlockType(enum.Enum):    BIBLIOGR = 0x13
     '''
-    __slots__ = ('str_label', 'str_description', 'str_information')
+    __slots__ = ('str_label', 'str_description', 'str_information', 'coverage')
                  
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
@@ -56,6 +57,7 @@ class block_0x13(block_base):
         self.str_label = self.read_li_str(OFFSET_LIST_STR_LABEL)
         self.str_description = self.read_li_str(OFFSET_LIST_STR_DESCRIPTION)
         self.str_information = self.read_li_str(OFFSET_LIST_STR_INFORMATION)
+        self.coverage = MAP_AREA(self.read(0x1c, MAP_AREA.size))
 
 
 # -------------------------------------------------------------------------

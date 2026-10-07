@@ -57,6 +57,8 @@ OFFSET_DB_REVISION = 0x1a
 
 MAX_STR_LEN = 63    # 255
 
+struct_LIST = struct.Struct(">HH")
+
 
 def setup_known_types(blocks_dir: str | None = None) -> dict[int, str]:
     """
@@ -797,27 +799,28 @@ class LIST(BYTESTRUCT):
     b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304
     '''
     # Сохраняем оптимизацию памяти базового класса, запрещая создание __dict__
-    __slots__ = ()
+    __slots__ = ('ptr', 'cnt')
 
     size: int = 4       # UINT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer) -> None:
         # Жестко ограничиваем буфер размером структуры (4 байта)
         super().__init__(buffer, size=4)         # 4 - self.bytescnt
+        (self.ptr, self.cnt) = struct_LIST.unpack_from(buffer, 0)
 
     def __repr__(self):
         ''' View while debug value'''
         return f"{self.ptr:04X}:{self.cnt:04X} cnt:{self.cnt}"
         
-    @property
-    def ptr(self) -> int:
-        ''' Near ptr to begin list'''
-        return self.ushort(0)
+    # @property
+    # def ptr(self) -> int:
+    #     ''' Near ptr to begin list'''
+    #     return self.ushort(0)
 
-    @property
-    def cnt(self) -> int:
-        ''' List counter '''
-        return self.ushort(2)
+    # @property
+    # def cnt(self) -> int:
+    #     ''' List counter '''
+    #     return self.ushort(2)
  
 
 # ----

@@ -63,21 +63,23 @@ jobs:
       - name: Upload Artifact to GitHub Release
         if: steps.release.outputs.released == 'true'
         uses: actions/github-script@v7
+        env:
+          # Передаем данные из PSR во внутренние переменные среды шага.
+          # Это полностью изолирует текст от JS-парсера Гитхаба и убирает любые ошибки синтаксиса!
+          RAW_TAG: ${{ steps.release.outputs.tag }}
+          CHANGELOG_DATA: ${{ steps.release.outputs.changelog }}
         with:
           script: |
             const fs = require('fs');
             const path = 'dist/QGIS_VDO.zip';
             
-            // 1. Берем сырой тег и принудительно вычищаем из него любые непечатаемые символы (включая \u000b)
-            const rawTag = "${{ steps.release.outputs.tag }}";
-            const tagName = rawTag.replace(/[^\x20-\x7E]/g, "").trim();
+            // Читаем чистые данные из env процесса Node.js
+            const tagName = process.env.RAW_TAG.trim();
+            const changelogBody = process.env.CHANGELOG_DATA.trim() || "Initial description for development release.";
             
-            // 2. Безопасно получаем текст изменений (changelog) напрямую из контекста джобы
-            const changelogBody = `${{ steps.release.outputs.changelog }}`.trim() || "Initial description for development release.";
+            console.log(`Submitting clean release for tag: "${tagName}"`);
             
-            console.log(`Cleared Tag Name to submit: "${tagName}"`);
-            
-            // 3. Отправляем запрос к API GitHub на создание релиза
+            // Создаем официальный релиз на GitHub
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -88,7 +90,7 @@ jobs:
               body: changelogBody
             });
             
-            // 4. Загружаем ZIP-архив плагина QGIS
+            // Прикрепляем очищенный ZIP-архив плагина QGIS
             await github.rest.repos.uploadReleaseAsset({
               owner: context.repo.owner,
               repo: context.repo.repo,

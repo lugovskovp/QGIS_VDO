@@ -4,7 +4,7 @@ import struct
 from QGIS_VDO.vdo.block_basegeo import block_basegeo
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE
-from QGIS_VDO.vdo.geotypes import GEO_LINE, GEO_SHAPE
+from QGIS_VDO.vdo.geotypes import GEO_LINE, GEO_SHAPE, VERTEX
 from QGIS_VDO.vdo.enums import en_DRAW_TYPE     # , en_GEO_CATEGORY
 
 from QGIS_VDO.tests.fixtures import FIXTURES_DIR
@@ -222,7 +222,11 @@ def test_valid_lines(geoblock_fixture):
 
         # ссылка на tstr c_p_line_sign ведёт в область tstr и делится на 4
         if lin.c_p_line_sign:
-            assert block.li_tstr.ptr <= lin.c_p_line_sign < str_start_ptr
+            if block.li_tstr.cnt:
+                assert block.li_tstr.ptr <= lin.c_p_line_sign < str_start_ptr
+            else:
+                # TSTR нет-> ссылка на следующее после vrtx
+                assert lin.c_p_line_sign == block.li_vrtx.ptr + block.li_vrtx.cnt * VERTEX.size
             assert lin.c_p_line_sign == ((lin.c_p_line_sign >> 2) << 2)
 
     # добавляем заключительный элемент с нулями
@@ -236,7 +240,7 @@ def test_valid_lines(geoblock_fixture):
         assert p_str_name == 0
         assert ptr2firstObjVertex == block.li_vrtx.ptr + (block.li_vrtx.cnt) * 4
         assert id == 0
-        if ptr_linesign:
+        if ptr_linesign and block.li_tstr.cnt:
             assert ptr_linesign == block.li_tstr.ptr
         assert ptr2poi == 0
         # assert ptr2tstr == 0    # assert 4 == 0  0x070e8503

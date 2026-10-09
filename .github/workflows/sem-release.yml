@@ -1,0 +1,79 @@
+name: Release & Package QGIS Plugin
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    #   - 104-hatch-вместо-setuptools
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    concurrency: release
+
+    # ЭТОТ БЛОК ЗАМЕНЯЕТ НАСТРОЙКИ НА САЙТЕ ГИТХАБА:
+    permissions:
+      contents: write       # Позволяет PSR делать коммиты изменений в metadata.txt и пушить теги
+      pull-requests: write  # Позволяет PSR управлять PR, если это необходимо
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          pip install python-semantic-release hatch
+
+      - name: Run Semantic Release (Determine version & update files)
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@://github.com"
+          
+          # Запускаем PSR. Если релиз/пререлиз генерируется, он обновит файлы и создаст тег
+          semantic-release version
+
+      # Этот шаг выполнится ТОЛЬКО если PSR успешно создал новый Git-тег
+      - name: Package QGIS Plugin to ZIP
+        if: steps.release.outputs.released == 'true'
+        run: |
+          # 1. Задаем имя папки плагина внутри архива (как требует QGIS)
+          PLUGIN_NAME="QGIS_VDO"
+          
+          # 2. Создаем чистую временную структуру сборки
+          mkdir -p build_dir/$PLUGIN_NAME
+          
+          # 3. Собираем исходники через Hatch (sdist), используя правила из pyproject.toml
+          hatch build --target sdist
+          
+          # 4. Распаковываем созданный .tar.gz архив во временную папку,
+          # чтобы взять оттуда файлы с уже обновленными версиями в metadata.txt
+          tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
+          
+          # 5. Упаковываем в финальный ZIP-архив
+          cd build_dir
+          zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
+          cd ..
+          
+          echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
+
+      # Публикуем архив на GitHub в секцию Releases
+      - name: Upload Artifact to GitHub Release
+        if: steps.release.outputs.released == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          # Прикрепляем созданный ZIP к тегу, который только что сгенерировал PSR
+          tag_name: ${{ steps.release.outputs.tag }}
+          files: dist/QGIS_VDO.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

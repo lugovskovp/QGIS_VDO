@@ -64,18 +64,26 @@ bypass = false
 [tool.hatch.build.targets.wheel]
 bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
 
-# --- НАСТРОЙКА PYTHON-SEMANTIC-RELEASE ДЛЯ ОБНОВЛЕНИЯ ОБОИХ ФАЙЛОВ ---
 [tool.semantic_release]
-# 1. Автоматически обновляет __version__ внутри vdo/__about__.py
-version_variables = ["vdo/__about__.py:__version__"]
 version_toml = ["pyproject.toml:project.version"]
+version_variables = ["vdo/__about__.py:__version__"]
 
-
-# 2. Через автозамену обновляет версию в metadata.txt для QGIS
+# Настройка автозамены в метаданных QGIS
 [[tool.semantic_release.text_replacements]]
 path = "metadata.txt"
 search = "version={version}"
 replace = "version={new_version}"
+
+# Настройка поведения веток: main - релиз, dev - пререлиз
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.branches.dev]
+match = "(dev|104-hatch-вместо-setuptools)" # Сработает для dev и для вашей текущей ветки
+prerelease = true
+prerelease_token = "dev" # Версия будет вида X.Y.Z-dev.1
+
 
 [tool.pytest.ini_options]
 minversion = "7.0"

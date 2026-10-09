@@ -11,18 +11,18 @@ jobs:
   release:
     runs-on: ubuntu-latest
     concurrency: release
-
-    # ЭТОТ БЛОК ЗАМЕНЯЕТ НАСТРОЙКИ НА САЙТЕ ГИТХАБА:
     permissions:
-      contents: write       # Позволяет PSR делать коммиты изменений в metadata.txt и пушить теги
-      pull-requests: write  # Позволяет PSR управлять PR, если это необходимо
+      contents: write
+      pull-requests: write
 
     steps:
+      # Обновлено до v4 (или v5, если доступно в маркетплейсе)
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      # Обновлено до v5 (или актуальной мажорной версии)
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -35,45 +35,52 @@ jobs:
       - name: Run Semantic Release (Determine version & update files)
         id: release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@://github.com"
-          
-          # Запускаем PSR. Если релиз/пререлиз генерируется, он обновит файлы и создаст тег
           semantic-release version
 
-      # Этот шаг выполнится ТОЛЬКО если PSR успешно создал новый Git-тег
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
         run: |
-          # 1. Задаем имя папки плагина внутри архива (как требует QGIS)
           PLUGIN_NAME="QGIS_VDO"
-          
-          # 2. Создаем чистую временную структуру сборки
-          mkdir -p build_dir/$PLUGIN_NAME
-          
-          # 3. Собираем исходники через Hatch (sdist), используя правила из pyproject.toml
+          mkdir -p build_dir/\$PLUGIN_NAME
           hatch build --target sdist
-          
-          # 4. Распаковываем созданный .tar.gz архив во временную папку,
-          # чтобы взять оттуда файлы с уже обновленными версиями в metadata.txt
-          tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
-          
-          # 5. Упаковываем в финальный ZIP-архив
+          tar -xzf dist/*.tar.gz -C build_dir/\$PLUGIN_NAME --strip-components=1
           cd build_dir
-          zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
+          zip -r "../dist/\({PLUGIN_NAME}.zip" "\)PLUGIN_NAME"
           cd ..
-          
-          echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
+          echo "ZIP package successfully created at dist/\${PLUGIN_NAME}.zip"
 
-      # Публикуем архив на GitHub в секцию Releases
+      # Используем официальный нативный шаг релиза от самого GitHub (вместо стороннего softprops)
+      # Он гарантированно работает на актуальной версии Node.js
       - name: Upload Artifact to GitHub Release
         if: steps.release.outputs.released == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: actions/github-script@v7
         with:
-          # Прикрепляем созданный ZIP к тегу, который только что сгенерировал PSR
-          tag_name: ${{ steps.release.outputs.tag }}
-          files: dist/QGIS_VDO.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = 'dist/QGIS_VDO.zip';
+            
+            // Получаем информацию о созданном теге
+            const tagName = "\${{ steps.release.outputs.tag }}";
+            
+            // Создаем или находим релиз
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: `Release ${tagName}`,
+              draft: false,
+              prerelease: tagName.includes('-dev') // автоматически ставит флаг пререлиза для dev-веток
+            });
+            
+            // Загружаем наш ZIP архив в релиз
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              name: 'QGIS_VDO.zip',
+              data: fs.readFileSync(path)
+            });

@@ -799,7 +799,7 @@ class bitstream():
             bit_compressed:  Количество бит для интерпретации, как байт
             left_shift:      сдвиг влево после распаковки
         Returns:
-            bytes
+            byte - один байт
         Raises:
             Value Error При bit_compressed более чем 8 бита
         """

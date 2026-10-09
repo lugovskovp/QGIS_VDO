@@ -45,7 +45,10 @@ jobs:
         if: steps.release.outputs.released == 'true'
         run: |
           git push origin HEAD
-          git push origin --tags
+          # Отправляем теги с флагом --force, чтобы обновить тег на сервере, 
+          # если он завис там во время прошлых отладочных запусков
+          git push origin --tags --force
+          
 
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'

@@ -60,7 +60,6 @@ jobs:
           cd ..
           echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
 
-      # Публикуем релиз с автогенерацией описания коммитов
       - name: Upload Artifact to GitHub Release
         if: steps.release.outputs.released == 'true'
         uses: actions/github-script@v7
@@ -68,11 +67,17 @@ jobs:
           script: |
             const fs = require('fs');
             const path = 'dist/QGIS_VDO.zip';
-            const tagName = "\${{ steps.release.outputs.tag }}";
             
-            // Безопасно передаем сгенерированный PSR текст изменений в JS контекст
-            const changelogBody = ${{ toJson(steps.release.outputs.changelog) }} || "No changelog provided.";
+            // 1. Берем сырой тег и принудительно вычищаем из него любые непечатаемые символы (включая \u000b)
+            const rawTag = "${{ steps.release.outputs.tag }}";
+            const tagName = rawTag.replace(/[^\x20-\x7E]/g, "").trim();
             
+            // 2. Безопасно получаем текст изменений (changelog) напрямую из контекста джобы
+            const changelogBody = `${{ steps.release.outputs.changelog }}`.trim() || "Initial description for development release.";
+            
+            console.log(`Cleared Tag Name to submit: "${tagName}"`);
+            
+            // 3. Отправляем запрос к API GitHub на создание релиза
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -80,9 +85,10 @@ jobs:
               name: `Release ${tagName}`,
               draft: false,
               prerelease: tagName.includes('-dev'),
-              body: changelogBody // <-- Теперь описание будет автоматически наполняться
+              body: changelogBody
             });
             
+            // 4. Загружаем ZIP-архив плагина QGIS
             await github.rest.repos.uploadReleaseAsset({
               owner: context.repo.owner,
               repo: context.repo.repo,

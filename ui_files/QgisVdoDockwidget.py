@@ -120,76 +120,76 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         pass    # def __init__(self, parent_plugin, iface, parent=None):
 
-    # def tabInfo_DrawTocAreas(self):
-    #     """
-    #     Отображает на карте area_A, area_B
-    #     Скрывает и сворачивает остальные toc группы
-    #     """
-    #     # Проверить наличие открытого/активного сохранённого проекта
-    #     if not self._isExistsOpenProject():
-    #         return
-    #     project: QgsProject = QgsProject.instance()
-    #     if project is None:
-    #         return
+    def tabInfo_DrawTocAreas(self):
+        """
+        Отображает на карте area_A, area_B
+        Скрывает и сворачивает остальные toc группы
+        """
+        # Проверить наличие открытого/активного сохранённого проекта
+        if not self._isExistsOpenProject():
+            return
+        project: QgsProject = QgsProject.instance()
+        if project is None:
+            return
 
-    #     return
-    #     # получаем корневой ТОС area layer в группе
-    #     layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
+        # return
+        # получаем корневой ТОС area layer в группе
+        layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
 
-    #     # hide all another vdo root groups but root_group_name
-    #     self.iface.setActiveLayer(layer)
-    #     root = project.layerTreeRoot()
-    #     if root is None:
-    #         return
-    #     root_group = root.findGroup(self.vdo.QGISvdoGroupName)
-    #     if root_group is None:
-    #         return
-    #     root_group.setItemVisibilityChecked(True)
-    #     root_group.setExpanded(True)  # False — свернуть, True — развернуть
+        # hide all another vdo root groups but root_group_name
+        self.iface.setActiveLayer(layer)
+        root = project.layerTreeRoot()
+        if root is None:
+            return
+        root_group = root.findGroup(self.vdo.QGISvdoGroupName)
+        if root_group is None:
+            return
+        root_group.setItemVisibilityChecked(True)
+        root_group.setExpanded(True)  # False — свернуть, True — развернуть
 
-    #     # по значению настроек - скрываем все другие группы vdo
-    #     if Settings.HideNonActiveVdoEnabled():
-    #         # Задаем регулярное выражение для поиска корневых vdo групп
-    #         pattern = r"_0x[0-9a-f]{4,}$"
-    #         regex = re.compile(pattern, re.IGNORECASE)
-    #         for child in project.layerTreeRoot().children():
-    #             if isinstance(child, QgsLayerTreeGroup):
-    #                 if child.name() != root_group.name():
-    #                     # Проверяем имя группы через regexp
-    #                     if regex.search(child.name()):
-    #                         child.setItemVisibilityChecked(False)
-    #                         child.setExpanded(False)  # False — свернуть, True — развернуть # noqa
-    #         pass
+        # по значению настроек - скрываем все другие группы vdo
+        if Settings.HideNonActiveVdoEnabled():
+            # Задаем регулярное выражение для поиска корневых vdo групп
+            pattern = r"_0x[0-9a-f]{4,}$"
+            regex = re.compile(pattern, re.IGNORECASE)
+            for child in project.layerTreeRoot().children():
+                if isinstance(child, QgsLayerTreeGroup):
+                    if child.name() != root_group.name():
+                        # Проверяем имя группы через regexp
+                        if regex.search(child.name()):
+                            child.setItemVisibilityChecked(False)
+                            child.setExpanded(False)  # False — свернуть, True — развернуть # noqa
+            pass
 
-    #     # Is dbrev old? no areas, show warning
-    #     if self.vdo.dbrev != 34:
-    #         # Сообщение - что area a, b only in v.34
-    #         self.iface.messageBar().pushMessage(
-    #                 self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
-    #                 Qgis.Warning, 3)
-    #         return
+        # Is dbrev old? no areas, show warning
+        if self.vdo.dbrev != 34:
+            # Сообщение - что area a, b only in v.34
+            self.iface.messageBar().pushMessage(
+                    self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
+                    Qgis.Warning, 3)
+            return
 
-    #     # Areas from TOC block
-    #     bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
-    #     area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
-    #     _DrawRectangleArea(area, "Area_B", layer)   # Area_A is bigger
-    #     area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
-    #     _DrawRectangleArea(area, "Area_A", layer)
-        
-    #     # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
-    #     # Получаем доступ к карте (холсту)
-    #     canvas = self.iface.mapCanvas()
-    #     # Создаем трансформер координат
-    #     transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
-    #     # Трансформируем границы слоя в СК проекта
-    #     layer_extent = layer.extent()
-    #     layer_extent.scale(1.2)     # отступ +20% от границ
-    #     project_extent = transform.transformBoundingBox(layer_extent)
-    #     # Зуммируем
-    #     canvas.setExtent(project_extent)
-    #     # Обновляем карту для отображения изменений
-    #     canvas.refresh()
-    #     pass
+        # Areas from TOC block
+        bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
+        area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
+        _DrawRectangleArea(area, "Area_B", layer)   # Area_A is bigger
+        area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
+        _DrawRectangleArea(area, "Area_A", layer)
+
+        # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
+        # Получаем доступ к карте (холсту)
+        canvas = self.iface.mapCanvas()
+        # Создаем трансформер координат
+        transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+        # Трансформируем границы слоя в СК проекта
+        layer_extent = layer.extent()
+        layer_extent.scale(1.2)     # отступ +20% от границ
+        project_extent = transform.transformBoundingBox(layer_extent)
+        # Зуммируем
+        canvas.setExtent(project_extent)
+        # Обновляем карту для отображения изменений
+        canvas.refresh()
+        pass
 
     def tabTopo_DrawAlmanacArea(self, idScale: int) -> None:
         """
@@ -251,7 +251,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             self.l_Art_coord.setText(bl_toc.area_A[1].__repr__())
             self.l_Blb_coord.setText(bl_toc.area_B[0].__repr__())
             self.l_Brt_coord.setText(bl_toc.area_B[1].__repr__())
-            pass
+
+            # отрисовать области покрытия
+            self.tabInfo_DrawTocAreas()
         # bl_13
         self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
         self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)

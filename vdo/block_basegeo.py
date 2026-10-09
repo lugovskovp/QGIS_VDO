@@ -93,20 +93,21 @@ class block_basegeo(block_base):
         # распаковать, если carin-packed
         if not self.is_unpacked and self.head.arch_type == 1:
             unpacker = bitstream(self)
-            self._raw = memoryview(unpacker.unpack())
+            self._raw = memoryview(unpacker.decode())
             self.is_unpacked = True
             # tail = ba2int()
-            if unpacker.tail is not None:
-                # что-то нераспакованное осталось
-                print(f"0x{unpacker.head.bladdr.value:X}:tail: {unpacker.tail.to01()}")
-                pass
-            if unpacker.tail_cutted_after_str is not None:
-                # что-то нераспакованное осталось
-                print(f"0x{unpacker.head.bladdr.value:X}:cute: {unpacker.tail_cutted_after_str.to01()}")
-                pass
+            # if unpacker.tail is not None:
+            #     # что-то нераспакованное осталось
+            #     print(f"0x{unpacker.head.bladdr.value:X}:tail: {unpacker.tail.to01()}")
+            #     pass
+            # if unpacker.tail_cutted_after_str is not None:
+            #     # что-то нераспакованное осталось
+            #     print(f"0x{unpacker.head.bladdr.value:X}:cute: {unpacker.tail_cutted_after_str.to01()}")
+            #     pass
             # _raw.hex()
             pass
             # сразу записать - на случай если при разборке упадёт
+            self.write_raw(name="c:/temp/_base_block.bin")
         
             if not self.is_unpacked:
                 print(f"Save tail into tail_{self.head.bladdr}.bin")

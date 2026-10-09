@@ -4,7 +4,7 @@ import pytest
 from QGIS_VDO.vdo.datatypes import VDO_FILE, BLADDR
 from QGIS_VDO.vdo.geotypes import COORD
 from QGIS_VDO.vdo.blocks import block_0x09
-from QGIS_VDO.vdo.consts import struct_UINT     # , struct_WORD
+# from QGIS_VDO.vdo.consts import struct_UINT     # , struct_WORD
 
 from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
@@ -163,13 +163,12 @@ def test_block_0x09_items_cnt_break(ee_09_block_2):
     # проверка прохода до граничных значений RLE x, y
     items = list(alm.get_items())
     
-    assert len(items) == 1  # там один сплощной элемент в файле
+    assert len(items) == 1  # там один сплошной элемент в файле
 
     # Уменьшаем счетчик на 4
-    li = struct_UINT.unpack(alm.li_items._raw)[0]
-    li = li - 4          # cnt < 0x400 - 4
-    alm.li_items._raw = struct_UINT.pack(li)       # Уменьшили кол-во итемов на 4
-
+    # li = struct_UINT.unpack(alm.li_items._raw)[0]
+    # li -= 4
+    alm.li_items.cnt -= 4    # cnt < 0x400 - 4
     # получаем последний элемент
     last_bladdr = alm._get_xy_item(31, 31)
     assert last_bladdr is None

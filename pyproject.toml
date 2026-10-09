@@ -31,7 +31,9 @@ Source = "https://github.com/lugovskovp/QGIS_VDO"
 
 # --- Настройка версии для Hatch (из __about__.py) ---
 [tool.hatch.version]
-path = "vdo/__about__.py"
+source = "regex"
+path = "metadata.txt"
+pattern = '^version\s*=\s*(?P<version>[^\s]+)'
 
 [tool.hatch.envs.types]
 extra-dependencies = ["mypy>=1.0.0"]
@@ -73,8 +75,9 @@ exclude = [
 bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
 
 [tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-version_variables = ["vdo/__about__.py:__version__"]
+# Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
+version_toml = []
+version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 
 # Настройка автозамены в метаданных QGIS
 # [[tool.semantic_release.text_replacements]]
@@ -84,6 +87,7 @@ version_variables = ["vdo/__about__.py:__version__"]
 
 # Настройка поведения веток: main - релиз, dev - пререлиз
 [tool.semantic_release.branches.main]
+# Указываем PSR точечно менять строки по регексам в обоих файлах
 match = "main"
 prerelease = false
 

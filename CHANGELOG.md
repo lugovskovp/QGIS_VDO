@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.11 (2026-10-09)
+
+### Bug Fixes
+
+- Передаем данные из PSR во внутренние переменные среды шага.
+  ([`811ad77`](https://github.com/lugovskovp/QGIS_VDO/commit/811ad770c978749603e72d9f3504baf15de66592))
+
+
 ## v1.0.0-dev.10 (2026-10-09)
 
 

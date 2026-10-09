@@ -515,7 +515,7 @@ class bitstream():
         Why 4B???? stop. coord vs vertex
         """
         if not self.li_vrtx.cnt:
-            return
+            return                  # pragma: no cover imposibry
 
         # первые2 значения - рассматриваем, как xy начальных точек.
         prev_x = ba2int(self.pop(16))
@@ -804,7 +804,7 @@ class bitstream():
             Value Error При bit_compressed более чем 8 бита
         """
         if bit_compressed > BITS_IN_BYTE:
-            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_BYTE}, _unpack_byte")
+            raise NotImplementedError(bit_compressed, f"Значение больше {BITS_IN_BYTE}, _unpack_byte")
         
         res: bitarray = self.pop(bit_compressed)
         # добавить справа нолей на к-во сдвига

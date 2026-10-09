@@ -74,5 +74,8 @@
   "github-actions.workflows.pinned.workflows": [
     ".github/workflows/test-coverage-badge.yml",
     ".github/workflows/auto_upd_coverage.yml"
+  ],
+  "python.testing.pytestArgs": [
+    "tests"
   ]
 }

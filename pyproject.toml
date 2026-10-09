@@ -13,7 +13,6 @@ keywords = ["qgis", "pyqgis", "gis", "plugin"]
 authors = [{ name = "Paul Lugovskov", email = "p.lugovskov@gmail.com" }]
 classifiers = [
   "Development Status :: 4 - Beta",
-  # фокус смещен на исправление багов и тестирование
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
@@ -23,16 +22,14 @@ classifiers = [
   "Topic :: Scientific/Engineering :: GIS",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-# "Development Status :: 5 - Production/Stable" для версий 1.0.0 и выше
-# "Development Status :: 6 - Mature" Изменения вносятся крайне редко
-# "Development Status :: 7 - Inactive"  заброшен автором или устарел. Код больше не поддерживается
 dependencies = ["bitarray"]
 
 [project.urls]
-Documentation = "https://github.com/lugovskovp/QGIS_VDO#readme"
-Issues = "https://github.com/lugovskovp/QGIS_VDO/issues"
+Documentation = "https://github.com"
+Issues = "https://github.com"
 Source = "https://github.com/lugovskovp/QGIS_VDO"
 
+# --- Настройка версии для Hatch (из __about__.py) ---
 [tool.hatch.version]
 path = "vdo/__about__.py"
 
@@ -42,29 +39,43 @@ extra-dependencies = ["mypy>=1.0.0"]
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:vdo tests}"
 
+# --- Корректный File Selection для sdist (включая ресурсы плагина) ---
 [tool.hatch.build.targets.sdist]
-# Перечисляем только то, что ДОЛЖНО уйти клиенту/на сервер
-include = ["/*.py", "/README.md"]
-# Исключаем файлы и папки из архива исходного кода (.tar.gz)
+include = [
+  "/*.py",
+  "/metadata.txt",
+  "/README.md",
+  "/LICENSE",
+  "/vdo/",
+  "/ui_files/",
+  "/i18n/",
+  "/resources/",
+]
 exclude = [
   "/.env",
   "/.pre-commit-config.yaml",
   "/tests",
   "/.github",
   "/.vscode",
+  "/.gigacode_vsc",
 ]
 bypass = false
 
 [tool.hatch.build.targets.wheel]
-# Отключаем генерацию wheel-пакетов
-bypass = true
-# Отключаем дефолтный wheel, чтобы он не мусорил
-# detached = true
-# # Говорим, что файлы лежат в корне репозитория (flat layout)
-# packages = ["vdo", "ui_files"]
-# # Исключаем файлы из собранного пакета (.whl)
-# exclude = ["/.env", "/.pre-commit-config.yaml", "/tests"]
+bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
 
+# --- НАСТРОЙКА PYTHON-SEMANTIC-RELEASE ДЛЯ ОБНОВЛЕНИЯ ОБОИХ ФАЙЛОВ ---
+[tool.semantic_release]
+# 1. Автоматически обновляет __version__ внутри vdo/__about__.py
+version_variables = ["vdo/__about__.py:__version__"]
+version_toml = ["pyproject.toml:project.version"]
+
+
+# 2. Через автозамену обновляет версию в metadata.txt для QGIS
+[[tool.semantic_release.text_replacements]]
+path = "metadata.txt"
+search = "version={version}"
+replace = "version={new_version}"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -81,14 +92,13 @@ markers = [
 ]
 
 [tool.coverage.run]
-source_pkgs = ["vdo"]                     # ["vdo", "tests"]
+source_pkgs = ["vdo"]
 branch = true
 parallel = true
 omit = ["vdo/__about__.py", "ext_libs/*"]
 
 [tool.coverage.paths]
 vdo = ["vdo", "*/QGIS_VDO/vdo"]
-# tests = ["tests", "*/QGIS_VDO/tests"]
 
 [tool.coverage.report]
 show_missing = true
@@ -105,10 +115,6 @@ exclude_lines = [
 ]
 
 [tool.hatch.envs.default]
-type = "system"     # Использует текущую глобальную/системную среду OSGeo4W
-detached = true     # Изолирует среду от автоматической установки зависимостей самого проекта
-skip-install = true # Пропускает pip install пакета в самого себя (критично для QGIS-плагинов)
-
-
-# [tool.hatch.build.targets.wheel]
-# bypass = true
+type = "system"
+detached = true
+skip-install = true

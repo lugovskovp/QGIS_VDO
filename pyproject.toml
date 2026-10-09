@@ -8,18 +8,20 @@ dynamic = ["version"]
 description = 'Viewing cartographic information from Carindb VDO car navigation files in QGIS.'
 readme = "README.md"
 requires-python = ">=3.12"
-license = "GPLv3"
+license = "GPL-3.0-or-later"
 keywords = ["qgis", "pyqgis", "gis", "plugin"]
 authors = [{ name = "Paul Lugovskov", email = "p.lugovskov@gmail.com" }]
 classifiers = [
-  "Development Status :: 4 - Beta",                              # фокус смещен на исправление багов и тестирование
+  "Development Status :: 4 - Beta",
+  # фокус смещен на исправление багов и тестирование
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.12",                      # Если ориентируетесь на QGIS 3.34+
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Intended Audience :: Science/Research",
   "Intended Audience :: End Users/Desktop",
-  "Topic :: Scientific/Engineering :: GIS",                      # Обязательный тег для ГИС-сообщества
+  "Topic :: Scientific/Engineering :: GIS",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
 # "Development Status :: 5 - Production/Stable" для версий 1.0.0 и выше
 # "Development Status :: 6 - Mature" Изменения вносятся крайне редко
@@ -41,6 +43,8 @@ extra-dependencies = ["mypy>=1.0.0"]
 check = "mypy --install-types --non-interactive {args:vdo tests}"
 
 [tool.hatch.build.targets.sdist]
+# Перечисляем только то, что ДОЛЖНО уйти клиенту/на сервер
+include = ["/*.py", "/README.md"]
 # Исключаем файлы и папки из архива исходного кода (.tar.gz)
 exclude = [
   "/.env",
@@ -49,10 +53,18 @@ exclude = [
   "/.github",
   "/.vscode",
 ]
+bypass = false
 
 [tool.hatch.build.targets.wheel]
-# Исключаем файлы из собранного пакета (.whl)
-exclude = ["/.env", "/.pre-commit-config.yaml", "/tests"]
+# Отключаем генерацию wheel-пакетов
+bypass = true
+# Отключаем дефолтный wheel, чтобы он не мусорил
+# detached = true
+# # Говорим, что файлы лежат в корне репозитория (flat layout)
+# packages = ["vdo", "ui_files"]
+# # Исключаем файлы из собранного пакета (.whl)
+# exclude = ["/.env", "/.pre-commit-config.yaml", "/tests"]
+
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -69,15 +81,10 @@ markers = [
 ]
 
 [tool.coverage.run]
-source_pkgs = ["vdo"] # ["vdo", "tests"]
+source_pkgs = ["vdo"]                     # ["vdo", "tests"]
 branch = true
 parallel = true
-omit = [
-  "vdo/__about__.py",
-  "d01 keys for dict.py",
-  "d04-createPOI.py",
-  "ext_libs/*",
-]
+omit = ["vdo/__about__.py", "ext_libs/*"]
 
 [tool.coverage.paths]
 vdo = ["vdo", "*/QGIS_VDO/vdo"]
@@ -96,3 +103,12 @@ exclude_lines = [
   "no cov",
   "if TYPE_CHECKING:",
 ]
+
+[tool.hatch.envs.default]
+type = "system"     # Использует текущую глобальную/системную среду OSGeo4W
+detached = true     # Изолирует среду от автоматической установки зависимостей самого проекта
+skip-install = true # Пропускает pip install пакета в самого себя (критично для QGIS-плагинов)
+
+
+# [tool.hatch.build.targets.wheel]
+# bypass = true

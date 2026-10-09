@@ -1,0 +1,207 @@
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#include "vdo_block.bt"
+
+
+//VDO_BLOCK bt_12(0);
+bl_offset(0);
+bl_addr(0x00000101);
+
+// 0x07 07_LIST_GEO_MAPS    // 00 00 02:01  - 
+bl_addr(0x00000201); 
+
+// 0x08 - list maps of scale
+local uchar lScale = 4; // 
+
+// 0x08 - 08_SCALE_LST_MAPS scale[lScaleNum] list maps
+/*
+1   0x00  06_MAP_POLI_1
+2
+3
+4 - 0x03
+5   [2x2]   [16x16] 0x14    0009 
+6   [8x8]   [16x16] 0x15    0007 +[32x32]
+7   [16x16] [16x16] 0x16    0006    -?only oceans??
+9   [2x2]   [32x32] 0x1c
+10  [1x1]   [64x64] 0x1d
+*/
+bl_offset(__bl_0x07.__scales.scale[lScale].bl_almanac.offset);
+
+// territorial divisions countries
+//bl_addr(__bl_0x07.__country_territorial_division[0].bl_idx_terr_division.hex); //18h ee
+//bl_addr(__bl_0x18.__list_terr_division[0].bl_terr_division.hex);
+
+
+// 0x09 - list maps
+local uchar lMapNuminScale = 0;
+//bl_offset(__bl_0x08.existing_scale_maps_list.map_block_0x09[lScaleMapNum].offset);
+bl_offset(__bl_0x08.folder[lMapNuminScale].offset);
+
+/*
+lScale = 4
+lScaleMapNum = 0
+__bl_0x03
+bl_addr(__bl_0x09.maps[0].hex);
+
+*/
+//
+bl_addr(0x03CC5A07);  //1c
+//bl_addr(0x02969491); // 0x04
+bl_addr(0x00c87f02); // 0x00
+
+bl_addr(0x0188f50b);    //0x00 data
+
+bl_addr(0x01890b02);
+
+bl_addr(0x0188bb09);
+/*
+bl_addr(__bl_0x09.maps[0].hex);
+
+bl_addr(__bl_0x09.maps[1].hex);
+bl_addr(__bl_0x09.maps[2].hex);
+
+
+
+break;
+bl_addr(__bl_0x09.maps[3].hex);
+bl_addr(__bl_0x09.maps[4].hex);
+bl_addr(__bl_0x09.maps[5].hex);
+bl_addr(__bl_0x09.maps[6].hex);
+bl_addr(__bl_0x09.maps[7].hex);
+bl_addr(__bl_0x09.maps[8].hex);
+*/
+//write_svg(__bl_0x14);
+
+
+/*
+lScale = 5
+lScaleMapNum = 0
+__bl_0x14
+bl_addr(__bl_0x09.maps[5].hex);
+lMapNuminScale = 1;
+bl_addr(__bl_0x09.maps[67].hex);
+*/
+
+/*
+bl_addr(__bl_0x09.maps[7].hex);
+bl_addr(__bl_0x09.maps[8].hex);
+bl_addr(__bl_0x09.maps[9].hex);
+bl_addr(__bl_0x09.maps[10].hex);
+bl_addr(__bl_0x09.maps[11].hex);
+*/
+//
+
+
+
+/*
+lScale = 6
+lScaleMapNum = 6
+__bl_0x15
+bl_addr(__bl_0x09.maps[5].hex);
+*/
+
+/*  
+lScale = 7
+lScaleMapNum = 17
+__bl_0x16
+    bl_addr(__bl_0x09.maps[3].hex); // 1-17-3 
+    bl_addr(__bl_0x09.maps[4].hex);
+write_svg_0x16(__bl_0x16);
+*/
+
+// maps polygons
+/*  
+lScale = 10
+lScaleMapNum = 0
+__bl_0x1d
+bl_addr(__bl_0x09.maps[1].hex);
+bl_addr(__bl_0x09.maps[2].hex);
+bl_addr(__bl_0x09.maps[3].hex);
+bl_addr(__bl_0x09.maps[4].hex);
+bl_addr(__bl_0x09.maps[5].hex);
+
+ bl_addr(__bl_0x09.maps[26].hex);
+bl_addr(__bl_0x09.maps[29].hex);
+write_svg_0x1d(__bl_0x1d);
+*/
+
+/*
+//lScaleMapNum = 2
+//lScale = 9
+bl_addr(__bl_0x09.maps[6].hex);
+
+   bl_addr(__bl_0x09.maps[7].hex); // 2  -- strange tell
+//write_svg_0x1c(__bl_0x1c);
+
+    bl_addr(__bl_0x09.maps[8].hex);     // 3
+//bl_addr(__bl_0x09.maps[9].hex);
+//bl_addr(__bl_0x09.maps[10].hex);
+    bl_addr(__bl_0x09.maps[11].hex);    //4
+//bl_addr(__bl_0x09.maps[12].hex);
+//bl_addr(__bl_0x09.maps[13].hex);
+    
+    bl_addr(__bl_0x09.maps[14].hex);    //  lScale = 9 lScaleMapNum = 2 [14]novgorod
+    bl_addr(__bl_0x09.maps[15].hex);    //2 lScale = 9 lScaleMapNum = 2 [15]ladoga-spb
+
+//    bl_addr(__bl_0x09.maps[16].hex); //0xE4 
+    bl_addr(__bl_0x09.maps[47].hex);    //2 lScale = 9 lScaleMapNum = 2 [47]murmansk
+  bl_addr(__bl_0x09.maps[16].hex);    //3 sortavala 
+  bl_addr(__bl_0x09.maps[8].hex);
+write_svg_0x1c(__bl_0x1c);
+*/
+
+//write_svg(__bl_0x1c);
+
+
+/*
+struct{
+
+    local DWORD one_map_unit <format=hex> = 0;
+local DWORD units_in_world <format=hex> = 0;
+    local DWORD scl_8 <format=hex> = 0;
+    local DWORD scl_9 <format=hex> = 0;
+
+    //if(bl07_mb_addr){  __bl_0x07.world_size_w /
+   //scl1 = ( __bl_0x08.one_unit *  __bl_0x09.one_unit);
+scl_8 = __bl_0x07.world_size_w / __bl_0x08.one_unit;
+scl_9 = __bl_0x07.world_size_w / __bl_0x09.one_unit;
+one_map_unit =  scl_8 * scl_9;
+units_in_world = __bl_0x07.world_size_w / one_map_unit;
+
+    local DWORD bl07_mb_addr <format=hex> = 
+        __bl_0x07.__scales.scale[lScaleNum]._MB_SCALE;
+    local DWORD bl07_mb_addr_too <format=hex> = 
+        __bl_0x07.__scales.scale[lScaleNum]._MB_SCALE_too;
+//}
+}__research_scale;
+*/
+
+//  __bl_0x08.maps.maps[0]   bl_offset(__bl_0x08.map_blocks.map_block_0x09[0].offset);
+//__bl_0x07._08_idx_idx_list[11] 05 72 61:01  - 1E_0x1e_unkn - 
+//__bl_0x07._08_idx_idx_list[10] 03 D2 24:01  - 1D_MAP_POLI_k400
+//__bl_0x07._08_idx_idx_list[9]  05 6D A5:01  - 1C_MAP_POLI_k100
+//__bl_0x07._08_idx_idx_list[8] -------
+//__bl_0x07._08_idx_idx_list[7] 01 6D DC:01  - 16_MAP_POLI_k40
+//__bl_0x07._08_idx_idx_list[6] 03 86 F4:01  - 15_MAP_POLI_k80 
+//__bl_0x07._08_idx_idx_list[5] 05 70 EC:01  - 14_MAP_POLI_k200
+//__bl_0x07._08_idx_idx_list[4] 04 EF C1:01  - 03_0x03_unkn
+//__bl_0x07._08_idx_idx_list[3] 10  02 96 92:01  - 02_0x02_unkn
+//__bl_0x07._08_idx_idx_list[2] 01 6C C0:01  - 01_0x01_unkn
+//__bl_0x07._08_idx_idx_list[1] ru00 91 79:01  - 06_0x06_unkn | en-none
+//__bl_0x07._08_idx_idx_list[0] none
+
+
+
+//03 CD 52:01  - 1C_MAP_POLI_k100
+//05 6D A5:01  - 1C_MAP_POLI_k100 
+//bl_addr(0x0180bc01);    //bnl - belgie 18h [0016 0001
+//bl_addr(0x02a40001); 
+
+
+
+
+
+
+

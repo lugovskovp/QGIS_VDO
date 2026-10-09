@@ -1,0 +1,301 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+#include "vdo_block.bt"
+
+
+
+
+
+
+
+local string s="";
+//bl_addr(0x031A9908); // ru tallin sc=7, 0x16
+//bl_addr(0x03A00906); // ru tallin sc=6, 0x15
+
+    //local DWORD bl_map = get_map_poligons_bl_addr(10, 59.4135024,24.7191187);
+    //Printf("\n0x%08X\n", bl_map);
+
+bl_addr(0);
+
+
+/*
+bl_addr(0x1fee401); //01 FE E4:01 06__POLI_1
+
+
+//
+bl_addr(0x056D2B06); // ee tallin sc=6, 0x15. cr 08 h 9obj
+//0d 17 09 00  06 01 70 50
+//01 00 00 5c ?05
+    bl_addr(0x055C4906); // ee tallin sc=7, 0x16. cr 08 h Aobj
+    //0c 12 08 00  06 01 80 50
+    //01 00 00 60 ?05
+    bl_addr(0x0570D006); // ee tallin sc=9, 0x1c. cr 08 h 7obj
+    //0c 1c 0A 00  06 01 50 50
+    //01 00 00 54
+bl_addr(0x0570d601);// ee sc=9, 0102, 4obj
+//0F 1A 0A 00  06 04 82 00
+//01 00 00 48 ?05 
+bl_addr(0x0570d706);// ee sc=9, 0108, 6obj
+bl_addr(0x0570CC04);// ee sc=9, 0105, 7obj
+bl_addr(0x05723D03); // ee tallin sc=10,0x1d, cr 05 h 5obj
+*/
+// write_svg(__bl_0x15);
+
+
+local string s0 ="------------";
+//Riga @56.9845008,24.1897154
+bl_addr(0x056C2605);  //6
+bl_addr(0x05554806);  //7
+bl_addr(0x05709405);  //9
+bl_addr(0x05723A03);  //10
+
+// tallin  @59.4135024,24.7191187
+bl_addr(0x056D2B06); //6
+bl_addr(0x055C4906); //7
+bl_addr(0x0570D006); //9
+bl_addr(0x05723D03); //10
+
+// pavilosta (coast) @56.8869296,21.1947241
+bl_addr(0x056B1203); //6
+bl_addr(0x054E5604); //7
+bl_addr(0x05705407); //9
+bl_addr(0x05723203); //10
+
+// Salpenaj (w|o sea) @55.5658691,21.7102862
+bl_addr(0x056A8405); //6
+bl_addr(0x054B0A04); //7
+bl_addr(0x05703405); //9
+bl_addr(0x05722C03); //10
+
+//bl_addr(0x04587201); // mask?
+//bl_addr(0x04587301); bl_addr(0x023fb602);
+//
+Printf("\n0x%08X\n", get_map_poligons_bl_addr(10, 55.5658691,21.7102862));
+
+/*
+find 05554806
+170A139Ah - 2e1403 03 _00 0106
+28ACC030h - 051597 02 _09
+2AAA4000h - here
+*/
+
+/*
+//zayachi ostrov  @59.9677172,30.2939939
+lat = 59.9677172;
+lon = 30.2939939;
+
+// @28.2685357,-16.3828795 - tenerife
+lat = 28.2685357;
+lon = -16.3828795;
+
+// @38.7116171,-9.1356795 - lisboa - lissabon
+lat = 38.7116171;
+lon = -9.1356795;
+
+// point above tenerife
+lat =  32.870774;
+lon = -14.936804;
+
+*/
+
+DWORD get_map_poligons_bl_addr(uchar scale, double lat, double lon){
+    local DWORD res_bl_map=0;
+// 10 - 1d (1 - 00 0a)
+// 9  - 1c  1 - 00 08
+// 7  - 16  1 - 00 06
+// 6  - 15  1 - 00 07 
+    if ((scale >10) || (scale < 6) || (scale == 8)) return 1;
+
+// 0x07 07_LIST_GEO_MAPS    // 00 00 02:01  - 
+    bl_addr(0x00000201); 
+    local DWORD world_bl_hlon <format=hex> = __bl_0x07.__scales.scale[scale].world_bot_left.hlon;
+    local DWORD world_bl_hlat <format=hex> = __bl_0x07.__scales.scale[scale].world_bot_left.hlat;
+    local DWORD qty_in_side_almanac <format=hex> = __bl_0x07.__scales.scale[scale].qty_in_side_almanac;
+
+//0x08 almanac of folders of maps
+    bl_addr(__bl_0x07.__scales.scale[scale].bl_almanac.hex); 
+
+    local DWORD hla_goal <format=hex> = doubleLat2hlat(lat);
+    local DWORD hlo_goal <format=hex> = doubleLon2hlon(lon);
+    
+ // calc folder_map index
+    local int fold_x = (hlo_goal - world_bl_hlon) /  __bl_0x08.folder_side_size;
+    local int fold_y = (hla_goal - world_bl_hlat) /  __bl_0x08.folder_side_size;
+    local int fold_ind = fold_x * qty_in_side_almanac + fold_y;
+// bl 0x09
+    bl_offset(__bl_0x08.folder[ fold_ind ].offset);  
+
+// calc map index in folder
+    local DWORD folder_bl_hlat <format=hex> = world_bl_hlat + fold_y * __bl_0x08.folder_side_size ;
+    local DWORD folder_bl_hlon <format=hex> = world_bl_hlon + fold_x * __bl_0x08.folder_side_size;
+    //local double folder_bl_lat = hlat2double(folder_bl_hlat);
+    //local double folder_bl_lon = hlon2double(folder_bl_hlon);
+
+    local DWORD folder_bl_hlat_delta <format=hex> = fold_y * __bl_0x08.folder_side_size;
+    local DWORD folder_bl_hlon_delta <format=hex> = fold_x * __bl_0x08.folder_side_size;
+    local int map_y = (hla_goal  - folder_bl_hlat_delta - world_bl_hlat) / __bl_0x09.map_side_size;
+    local int map_x = (hlo_goal  - folder_bl_hlon_delta - world_bl_hlon) / __bl_0x09.map_side_size;
+    local int map_ind = map_x * __bl_0x08.folder[ fold_ind ].qty_maps_folder_side + map_y;
+
+    , = __bl_0x09.maps.map[map_ind].hex;
+   
+    return res_bl_map;
+}
+
+
+//=====================================================
+/*
+//  valid block 
+local uchar l_scale_num = 7;
+// 10 - 1d (1 - 00 0a)
+// 9  - 1c  1 - 00 08
+// 7  - 16  1 - 00 06
+// 6  - 15  1 - 00 07
+// 0x07 07_LIST_GEO_MAPS    // 00 00 02:01  - 
+bl_addr(0x00000201); 
+local DWORD world_bl_hlon <format=hex> = __bl_0x07.__scales.scale[l_scale_num].world_bot_left.hlon;
+local DWORD world_bl_hlat <format=hex> = __bl_0x07.__scales.scale[l_scale_num].world_bot_left.hlat;
+//local DWORD world_tr_hlon <format=hex> = __bl_0x07.__scales.scale[l_scale_num].world_top_right.hlon;
+//local DWORD world_tr_hlat <format=hex> = __bl_0x07.__scales.scale[l_scale_num].world_top_right.hlat;
+//
+local DWORD qty_in_side_almanac <format=hex> = __bl_0x07.__scales.scale[l_scale_num].qty_in_side_almanac;
+
+//0x08 almanac of folders of maps
+bl_addr(__bl_0x07.__scales.scale[l_scale_num].bl_almanac.hex); 
+
+// goal coordinates
+local double lat = 62.1;
+local double lon = 31.1;
+//tenerife
+lat = 28.2685357;
+lon = -16.3828795;
+//lisboa
+lat = 38.7116171;
+lon = -9.1356795;
+//@52.5264438,13.4327697  berlin
+lat = 52.5264438;
+lon = 13.4327697;
+//zayachi ostrov  @59.9677172,30.2939939
+lat = 59.9677172;
+lon = 30.2939939;
+// kaliningrad  @54.6935166,20.5549571
+lat = 54.6935166;
+lon = 20.5549571;
+
+local DWORD hla_goal <format=hex> = doubleLat2hlat(lat);
+local DWORD hlo_goal <format=hex> = doubleLon2hlon(lon);
+
+
+
+// calc folder_map index
+local int fold_x = (hlo_goal - world_bl_hlon) /  __bl_0x08.folder_side_size;
+local int fold_y = (hla_goal - world_bl_hlat) /  __bl_0x08.folder_side_size;
+local int fold_ind = fold_x * qty_in_side_almanac + fold_y;
+
+// bl 0x09
+bl_offset(__bl_0x08.folder[ fold_ind ].offset);  
+// one map side: 0x00A00000; maps 17 of 1024 [0x400]
+// calc map index in folder
+local DWORD folder_bl_hlat <format=hex> = world_bl_hlat + fold_y * __bl_0x08.folder_side_size ;
+local DWORD folder_bl_hlon <format=hex> = world_bl_hlon + fold_x * __bl_0x08.folder_side_size;// - world_bl_hlon;
+    local double folder_bl_lat = hlat2double(folder_bl_hlat);
+    local double folder_bl_lon = hlon2double(folder_bl_hlon);
+
+
+local DWORD folder_bl_hlat_delta <format=hex> = fold_y * __bl_0x08.folder_side_size;
+local DWORD folder_bl_hlon_delta <format=hex> = fold_x * __bl_0x08.folder_side_size;
+local int map_y = (hla_goal  - folder_bl_hlat_delta - world_bl_hlat) / __bl_0x09.map_side_size;
+local int map_x = (hlo_goal  - folder_bl_hlon_delta - world_bl_hlon) / __bl_0x09.map_side_size;
+local int map_ind = map_x * __bl_0x08.folder[ fold_ind ].qty_maps_folder_side + map_y;
+
+
+
+bl_addr(__bl_0x09.maps.map[map_ind].hex);
+
+
+// write_svg(__bl_0x1d);
+
+//===============================================================
+//  valid block [351]
+bl_addr(__bl_0x07.__scales.scale[l_scale_num].bl_almanac.hex); 
+//0001 0078    0000 | al side: 0x14000000, 	qty in al: 2
+bl_offset(__bl_0x08.map_block_0x09[ 0 ].offset);  //fldr 9-0  32x32 - 17 of 1024; 0x00A00000;   Size: 
+bl_addr(__bl_0x09.maps[0].hex);     // 351
+// 9-0-0: =la 23.939671 N,lo 22.442524 W tr = 25.827105 N, 20.555092 W
+// 640A800 h - 92D6500 h
+
+// going to bl[0] coords
+local double lat = 24.1;
+local double lon = -21.1;
+local DWORD hla_goal = doubleLat2hlat(lat);
+local DWORD hlo_goal = doubleLon2hlon(lon);
+
+local double lon_back = hlon2double(hlo_goal);
+// in folder map has number 157, 
+//x=157/32=4, y=157-128=29
+// lo-la
+//280A800h - 0x7ED6500    320A800h - 88D6500h
+local DWORD first_bl_bottom_la <format=hex> = 0x7ED6500;
+local DWORD _coord_delta_la <format=hex> = hla_goal - first_bl_bottom_la;   //5 1D38h < A0 0000
+local DWORD first_bl_bottom_lo <format=hex> = 0x280A800;
+local DWORD _coord_delta_lo <format=hex> =  hlo_goal - first_bl_bottom_lo; //71 CEB0 < A0 0000, right!
+
+local DWORD side = __bl_0x09.one_unit; //0xA00000;
+
+local int x = (hlo_goal - world_bl_hlon) / side;
+local int y = (hla_goal - world_bl_hlat) / side;
+local int ind = x * 32 + y;
+
+// !!--157
+break;
+//----------------------------------
+// first block - GOOD
+
+l_scale_num = 9
+// first valid block 
+bl_addr(__bl_0x07.__scales.scale[l_scale_num].bl_almanac.hex); 
+//0001 0078    0000 | al side: 0x14000000, 	qty in al: 2
+bl_offset(__bl_0x08.map_block_0x09[ 0 ].offset);  //fldr 9-0  32x32 - 17 of 1024; 0x00A00000;   Size: 
+bl_addr(__bl_0x09.maps[0].hex);     // 9-0-0: bl =la 23.939671 N,lo 22.442524 W tr = 25.827105 N, 20.555092 W
+// in folder map has number 157, 
+//x=157/32=4, y=157-128=29
+// lo-la
+//280A800h - 0x7ED6500    320A800h - 88D6500h
+local DWORD first_bl_bottom_la <format=hex> = 0x7ED6500;
+local DWORD _coord_begin_x <format=hex> = first_bl_bottom_la - (0x00A00000 * 29); //0x00A00000 - 0x09 block
+local DWORD _coord_begin_delta_x <format=hex> = world_bl_hlat - _coord_begin_x; 
+//local double lat_from_hex = hlat2double(0x7ED6500); // ==0
+
+local DWORD first_bl_bottom_lo <format=hex> = 0x280A800;
+local DWORD _coord_begin_y <format=hex> = first_bl_bottom_lo - (0x00A00000 * 4); //0x00A00000 - 0x09 block
+local DWORD _coord_begin_delta_y <format=hex> = world_bl_hlon - _coord_begin_y;
+//local DWORD coord_start = world_bl_hlat - 4
+---------------
+
+//  valid block [351]
+bl_addr(__bl_0x07.__scales.scale[l_scale_num].bl_almanac.hex); 
+//0001 0078    0000 | al side: 0x14000000, 	qty in al: 2
+bl_offset(__bl_0x08.map_block_0x09[ 0 ].offset);  //fldr 9-0  32x32 - 17 of 1024; 0x00A00000;   Size: 
+bl_addr(__bl_0x09.maps[16].hex);     
+// 9-0-16: bl =la 27.714539 N,lo 11.117922 W  tr = 29.601973 N, 9.230490 W
+// 640A800 h - 92D6500 h
+// in folder map has number 351, 
+//x=351/32=10, y=351-320=31
+// lo-la
+//280A800h - 0x7ED6500    320A800h - 88D6500h
+local DWORD first_bl_bottom_la <format=hex> = 0x92D6500;
+local DWORD _coord_begin_x <format=hex> = first_bl_bottom_la - (0x00A00000 * 31); //0x00A00000 - 0x09 block
+local DWORD _coord_begin_delta_x <format=hex> = world_bl_hlat - _coord_begin_x; 
+//local double lat_from_hex = hlat2double(0x7ED6500); // ==0
+
+local DWORD first_bl_bottom_lo <format=hex> = 0x640A800;
+local DWORD _coord_begin_y <format=hex> = first_bl_bottom_lo - (0x00A00000 * 10); //0x00A00000 - 0x09 block
+local DWORD _coord_begin_delta_y <format=hex> = world_bl_hlon - _coord_begin_y;
+//local DWORD coord_start = world_bl_hlat - 4
+
+//------------------------------
+
+
+
+*/

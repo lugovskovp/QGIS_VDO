@@ -1,0 +1,106 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File: 
+
+
+BigEndian(); 
+
+
+// ee 
+local DWORD ptr, bl_start <format=hex> = 2B86b000h; //0x0570d601 = 2B86b000h
+//0x2B6E5800; //
+//bl_start = 0x2B6E2000;
+//bl_start = 0x2B6f5800;
+
+local WORD  i, j, inner_offset <format=hex> = ReadUShort(bl_start + 8);
+
+// bl_addr(0x2B6E5800);
+
+// waited bytes
+local uchar ch_wait[8] = {1, 0, 0, 0x54, 5, 0, 1};
+ch_wait[2] = ReadByte(bl_start+0xc);
+ch_wait[3] = ReadByte(bl_start+0xd);
+Printf("BlOff=0x%08X Waiting for:\n", bl_start);
+for (i=0; i<8; i++){
+    Printf("   %02X    ", ch_wait[i] );
+}
+Printf("\n|");
+for (i=0; i<8; i++){
+    Printf("%s|", bit_rep(ch_wait[i]) );
+}
+Printf("\n");
+local DWORD ch_sea1 = ReadUInt( bl_start + inner_offset);
+local DWORD ch_sea2 = ReadUInt( bl_start + inner_offset + 4);
+Printf("sea_01=0x%08X %08X\n", ch_sea1, ch_sea2);
+// 
+local uchar cnt_raw = 28;
+
+uchar ch_raw[cnt_raw]<format=hex>;
+//FSeek(bl_start + inner_offset);
+
+// read compresser data
+i=0;
+for (ptr=(bl_start + inner_offset); ptr < (bl_start + inner_offset + cnt_raw); ptr++){
+
+    ch_raw[i++] = ReadByte(ptr);
+}
+//---
+
+// print 4 firs bytes crypted
+    for (i=0; i<4; i++){
+        //Printf("   %02X    ", crypted[j*8 + i] );
+        Printf(" %02X (%i) ", ch_raw[i], ch_raw[i] );
+    }
+    Printf("\n");
+    for (i=0; i<4; i++){
+        Printf("%s ", bit_rep(ch_raw[i]) );
+    }
+    Printf("\n");
+
+//
+
+ptr=4; // as cntr
+
+for(j=0; j<2; j++){
+    for (i=0; i<8; i++){
+        //Printf("   %02X    ", crypted[j*8 + i] );
+        Printf("   %02X    ", ch_raw[ptr++] );
+    }
+    ptr -= 8;
+    Printf("\n");
+    for (i=0; i<8; i++){
+        Printf("%s]", bit_rep(ch_raw[ptr++]) );
+    }
+    Printf("\n");
+}
+
+
+//-------------------------------------------------------------------
+DWORD addr2ptr(DWORD addr){
+    return (addr>>8)*0x800;
+}
+
+string bit_rep( byte ch)
+{
+    local string s="", res="";
+    local byte i;
+    for(i=3; i>=0; i--){
+        switch( ( ch>>(i*2) ) & 0x3){
+        case 0:
+            s="00";
+            break;
+        case 1:
+            s="01";
+            break;  
+        case 2:
+            s="10";
+            break;  
+        case 3:
+            s="11";
+            break;   
+        }
+        SPrintf(res, "%s%s", res, s);
+    }
+    return res;
+}

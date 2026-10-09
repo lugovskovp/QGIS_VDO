@@ -1,0 +1,360 @@
+
+
+#include "vdo_block.bt"
+
+//absolute blocsk addresses are differeint in diff carindb
+local string CarindbFile = GetFileName();
+CarindbFile = FileNameGetBase(CarindbFile);
+Printf("file name: %s\n\n", CarindbFile);
+enum en_carindb_type{
+    en_ct_rus =   1,
+    en_ct_ee  =   2,
+    en_ct_bnl =   3,
+    en_ct_unk =   0
+};
+local en_carindb_type en_ct = en_ct_unk;
+if(CarindbFile == "carindb")
+    en_ct = en_ct_rus;
+else if(CarindbFile == "carindb_ee")
+    en_ct = en_ct_ee;
+else if(CarindbFile == "carindb_bnl")
+    en_ct = en_ct_bnl;
+else
+    return;
+
+//----------------------------
+// __bl_0x07 - run on carindb
+bl_offset(0); // start block
+bl_addr(__bl_0x12._07_scales_almanac.far_block_addr.hex); //open almanac 
+
+//print_about_coord(54.7039687, 20.4759146, "Kaliningrad");
+
+
+//rus
+if(en_ct == en_ct_rus){
+//    bl_addr(0x6fe70c);
+    //
+//    bl_addr(0x26c0501);
+// Kaliningrad
+    // no scale 0
+    bl_addr(0x009BAC02);	// scale 1
+    bl_addr(0x02BC5B01);	// scale 2
+    bl_addr(0x0294AF01);	// scale 3
+    bl_addr(0x026C0801);	// scale 4
+    bl_addr(0x03D02C04);	// scale 5
+    bl_addr(0x039E6B06);	// scale 6
+    bl_addr(0x03126405);	// scale 7
+    // no scale 8
+    bl_addr(0x03C68A03);	// scale 9
+    bl_addr(0x03D3940B);	// scale 10
+    // no scale 11
+
+// far_soe - 0x26c0501=03 0x16bc60b=0
+// bl_addr(0x16bc60b);
+// Tallinn
+/*    bl_addr(0x01341802);	// scale 0
+    bl_addr(0x009DB402);	// scale 1
+    bl_addr(0x02BDCC02);	// scale 2
+    bl_addr(0x02965103);	// scale 3
+    bl_addr(0x026DC003);	// scale 4
+    bl_addr(0x03D04405);	// scale 5
+    bl_addr(0x03A01D05);	// scale 6
+    bl_addr(0x031ACD0B);	// scale 7
+    // no scale 8
+    bl_addr(0x03C6EF04);	// scale 9
+    bl_addr(0x03D39F09);	// scale 10*/
+    // no scale 11
+//write_svg(__bl_0x1d[0]);
+}
+
+
+
+if(en_ct == en_ct_bnl){
+// bl_addr(0x2B6D4800);
+
+}
+
+
+if(en_ct == en_ct_ee){
+// Kaliningrad
+    // no scale 0
+    // no scale 1
+    // no scale 2
+    // no scale 3
+    // no scale 4
+    /*bl_addr(0x05717804);	// scale 5
+    bl_addr(0x056A4901);	// scale 6
+    bl_addr(0x0549C801);	// scale 7
+    // no scale 8
+    bl_addr(0x05702B01);	// scale 9
+    bl_addr(0x05722903);	// scale 10
+    bl_addr(0x05727F02);	// scale 11*/
+//write_svg();
+// Tallinn
+// no scale 0
+    bl_addr(0x02153206);	// scale 1
+    bl_addr(0x05153C03);	// scale 2
+    bl_addr(0x05117205);	// scale 3
+    bl_addr(0x0508DB05);	// scale 4
+    bl_addr(0x05719B04);	// scale 5
+    bl_addr(0x056D2B06);	// scale 6
+    bl_addr(0x055C4906);	// scale 7
+    // no scale 8
+    bl_addr(0x0570D006);	// scale 9
+    bl_addr(0x05723D03);	// scale 10
+    bl_addr(0x05728101);	// scale 11
+
+//---------
+// only 1 type geo
+/*
+bl_addr :cnt_types poliline_offs :  DW_1 DW_2
+0x28B55000 :01 3C :  05000800 0200F000 14236C00 -> 01 00 00 3C  00 00 00 A0  ... 
+0x29917000 :01 3C :  05160900 0A00F000 C822E400 -> 0x 00 00 3C  00 00 06 40  ... // x != 1, x!=5 
+0x29EEA000 :01 3C :  05000900 0200F000 25A01000 -> 01 00 00 3C  00 00 01 2C  ... 
+0x29EEE800 :01 3C :  05000800 0200F000 1BA11400 -> 01 00 00 3C  00 00 00 DC  ... 
+0x2A666000 :01 3C :  05000800 0200F000 19230400 -> 01 00 00 3C  00 00 00 C8  ... 
+0x2B87F000 :01 3C :  05000900 0200F000 3C20A800 -> 01 00 00 3C  00 00 01 E0  ... 
+*/
+bl_offset(0x28B55000);
+bl_offset(0x29917000);
+bl_offset(0x29EEA000);
+bl_offset(0x29EEE800);
+bl_offset(0x2A666000);
+bl_offset(0x2B87F000);
+bl_offset(0x2B880800);
+
+/*
+  05 00 0a 00  02 01 e0 00 ->
+  01 00 00 3c  00 00 01 c4(?)
+01 00 - sea
+00 3c - offset from p_all_poligons
+00 00 - marker last element types
+01 c4 = no p_all_polilines, 10 b8 - p_all_vertexes - 14h(size one poligon)
+*/
+//bl_offset(0x2B717800);
+/*
+  0d 18 0a 00  06 02 60 a0  44 cf 06 2d ... ->
+  05 00 00 4c  ... 
+  01 00 00 4c  05 00 ...
+*/
+
+//bl_offset(0x2B871800);
+/* 
+geo types qty: 2 types: 01 sea and (?) 08 island?
+there are no polilines, 15h polygons
+    05 19 0a 00  10 04 00 43  00 00 79 00 ...->
+    01 00 00 40  08 00 xx xx  00 00 01 e4 ...
+    01 00 00 40  05 00 01 e4 ... (01 f8 - 14h)
+    
+
+*/
+}
+
+/*
+    print_about_coord(54.7039687, 20.4759146, "Kaliningrad");
+// no scale 0
+bl_addr(0x009BAC02);	// scale 1
+bl_addr(0x02BC5B01);	// scale 2
+bl_addr(0x0294AF01);	// scale 3
+bl_addr(0x026C0801);	// scale 4
+bl_addr(0x03D02C04);	// scale 5
+bl_addr(0x039E6B06);	// scale 6
+bl_addr(0x03126405);	// scale 7
+// no scale 8
+bl_addr(0x03C68A03);	// scale 9
+bl_addr(0x03D3940B);	// scale 10
+// no scale 11
+
+
+ee:
+// no scale 0
+// no scale 1
+// no scale 2
+// no scale 3
+// no scale 4
+bl_addr(0x05717804);	// scale 5
+bl_addr(0x056A4901);	// scale 6
+bl_addr(0x0549C801);	// scale 7
+// no scale 8
+bl_addr(0x05702B01);	// scale 9
+bl_addr(0x05722903);	// scale 10
+bl_addr(0x05727F02);	// scale 11
+
+bnl:
+// no scale 0
+// no scale 1
+// no scale 2
+// no scale 3
+// no scale 4
+// no scale 5
+// no scale 6
+// no scale 7
+// no scale 8
+// no scale 9
+bl_addr(0x01807901);	// scale 10
+bl_addr(0x0180AD02);	// scale 11
+*/
+
+
+
+/*
+ru
+// no scale 0
+bl_addr(0x009BAC02);	// scale 1
+bl_addr(0x02BC5B01);	// scale 2
+bl_addr(0x0294AF01);	// scale 3
+bl_addr(0x026C0801);	// scale 4
+bl_addr(0x03D02C04);	// scale 5
+bl_addr(0x039E6B06);	// scale 6
+bl_addr(0x03126405);	// scale 7
+// no scale 8
+bl_addr(0x03C68A03);	// scale 9
+bl_addr(0x03D3940B);	// scale 10
+// no scale 11
+
+
+*/
+
+
+//print_about_coord(50.9619376, 11.256128, "Nohra");
+// Nohra
+
+/*
+ee
+bl_addr(0x0571CF03);	// scale 10
+bl_addr(0x05727301);	// scale 11
+
+bnl
+bl_addr(0x01804F05);	// scale 10
+bl_addr(0x0180A101);	// scale 11
+
+ru
+// Nohra
+bl_addr(0x00D65801);	// scale 0
+bl_addr(0x00958E01);	// scale 1
+bl_addr(0x02B54D04);	// scale 2
+bl_addr(0x028D2904);	// scale 3
+bl_addr(0x02644E04);	// scale 4
+bl_addr(0x03CF9A09);	// scale 5
+bl_addr(0x03965005);	// scale 6
+bl_addr(0x02F6F404);	// scale 7
+// no scale 8
+bl_addr(0x03C4A30B);	// scale 9
+bl_addr(0x03D33D07);	// scale 10
+// no scale 11
+*/
+
+//print_about_coord(54.608067, 18.8003503, "Hel");
+
+print_about_coord(59.4391176, 24.7504547, "Tallinn");
+// Tallinn
+
+
+
+/*
+    print_about_coord(50.9619376, 11.256128, "Nohra");
+bl_addr(0x00D65801);	// scale 0 - 0x00 _0x00_DATA_ len: 1
+bl_addr(0x00958E01);	// scale 1 - 0x06 __POLI_1
+bl_addr(0x02B54D04);	// scale 2 - 0x01 __POLI_2
+bl_addr(0x028D2904);	// scale 3 - 0x02 __POLI_3
+bl_addr(0x02644E04);	// scale 4 - 0x03 __POLI_4
+bl_addr(0x03CF9A09);	// scale 5 - 0x14 _MAP_POLI_5_k200
+bl_addr(0x03965005);	// scale 6 - 0x15 _MAP_POLI_6_k80
+bl_addr(0x02F6F404);	// scale 7 - 0x16 _MAP_POLI_7_k40
+// no scale 8
+bl_addr(0x03C4A30B);	// scale 9 - 0x1c _MAP_POLI_9_k100
+bl_addr(0x03D33D07);	// scale 10- 0x1d _MAP_POLI_10_k400
+// no scale 11
+*/
+
+
+return;
+// =========================================================
+void print_about_coord( double lat, double lon, string rem){
+    local uchar i;
+    local DWORD  block_a;
+    Printf("\n// %s\n", rem);
+    for(i=0; i<=11; i++){
+        block_a = get_bl_poli_addr(lat, lon, i);
+        if(!block_a){
+            Printf("// no scale %i\n", i);
+        }else{
+            //Printf("scale: %i;  poli - 0x%08X\n" , i, block_a );
+            Printf("bl_addr(0x%08X);\t// scale %i\n" , block_a, i );
+        }
+    }
+}
+
+
+
+
+// return bl_addr by coordinates and scale num, or 0 if not exist
+DWORD get_bl_poli_addr(double lat, double lon, uchar scale_num){
+    local DWORD bl_res <format=hex>; //  result BL_ADDR
+    local DWORD tmp_offset <format=hex>;
+    
+    // info from 0x07 - world scales
+    local DWORD side_world <format=hex>;   // tr-bl
+
+    // info from 0x08 - folders almanac
+    local DWORD folder_side_size <format=hex>;   // side size items 0x08 almanac
+    local DWORD folders_side_qty; // qty folders in almanac = (side_world / folder_side_size) ** 2
+    local int folder_x, folder_y, folder_num;
+    
+    // info from 0x09 - maps folder
+    local DWORD map_side_size <format=hex>;
+    local DWORD maps_side_qty;
+    local int map_x, map_y, map_num;
+    
+    // ------------------- double lat lon -> hex
+    local int hlat = double2hlat(lat), hlon=double2hlon(lon);
+
+    // ------------------- check input values - are they in carindb world   
+    if( (scale_num > 11) || (scale_num == 8) )
+        return 0;
+    if(  __bl_0x07.__scales.scale[scale_num].bl_almanac.hex == 0)
+        return 0;       // There are no 0x08 alanac in scale
+    if( (hlat < __bl_0x07.__scales.scale[scale_num].world_bot_left.hlat)  ||
+        (hlon < __bl_0x07.__scales.scale[scale_num].world_bot_left.hlon) )
+            return 0;       //      < bl
+    if( (hlat > __bl_0x07.__scales.scale[scale_num].world_top_right.hlat) ||
+        (hlon > __bl_0x07.__scales.scale[scale_num].world_top_right.hlon) )
+            return 0;       //      > tr
+
+    // ------------------- 
+    side_world = __bl_0x07.__scales.scale[scale_num].world_top_right.hlon - 
+        __bl_0x07.__scales.scale[scale_num].world_bot_left.hlon; 
+    
+    // Offset to DWORD 0x08.folder_side_size , bl_08_offset
+    tmp_offset = __bl_0x07.__scales.scale[scale_num].bl_almanac.offset + 0x0c;
+    folder_side_size = ReadUInt(tmp_offset);
+    folders_side_qty = side_world / folder_side_size;
+    folder_x = (hlat - __bl_0x07.__scales.scale[scale_num].world_bot_left.hlat)/folder_side_size;
+    folder_y = (hlon - __bl_0x07.__scales.scale[scale_num].world_bot_left.hlon)/folder_side_size;
+    folder_num = folder_x + (folder_y * folders_side_qty);
+    
+
+    // bl_09_offset 
+    tmp_offset = ((ReadUInt(__bl_0x07.__scales.scale[scale_num].bl_almanac.offset 
+        + 0x10 + 4*folder_num) >>8) * 0x800);
+    if( !tmp_offset )
+        return 0; // trere are no folder block for this coordinates
+
+    // find map_num - num in array 0x09 file
+    map_side_size = ReadUInt(tmp_offset + 0x10);
+    maps_side_qty = folder_side_size / map_side_size;
+    map_x =( hlat - __bl_0x07.__scales.scale[scale_num].world_bot_left.hlat
+            - folder_x*folder_side_size) / map_side_size;
+    map_y =( hlon - __bl_0x07.__scales.scale[scale_num].world_bot_left.hlon
+            - folder_y*folder_side_size) / map_side_size;
+    map_num = map_x + map_y * maps_side_qty;
+
+    // bl_POLI_addr 
+    local DWORD  inner_offset_to_poli = ReadUShort(tmp_offset + 
+                            ReadUShort(tmp_offset + 0x8) + 2*map_num );
+    if( !inner_offset_to_poli)
+        return 0;
+    bl_res = ReadUInt(tmp_offset + inner_offset_to_poli);
+
+    return bl_res;
+}

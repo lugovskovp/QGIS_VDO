@@ -1,0 +1,85 @@
+ --- 0001 en_GEO_COUNTRY
+00000000: 00000001 :  12_GLOBAL_HEADER --- 0001
+00000800: 00000101 :  13_FILE_INFO --- 0001
+00001000: 00000201 :  07_LST_WORLD_SCALES --- 0001
+00001800: 00000301 :  	0b_SYMBOLS_COUNTR --- 0001
+00002000: 00000401 :  		0a_COUNTRYS --- 0001
+00002800: 00000508 :  			0d_SYMBOLS_CITIES --- 0004
+00012000: 00002406 :  				0c_CITIES --- 0876
+00BF7000: 0017EE08 :  					0f_SYMBOLS_ROADS --- 0360
+01196800: 00232D06 :  						0e_ROADS --- 10021
+0A6C6000: 014D8C08 :  							11_SYMBOLS_POI --- 0409
+0AD2A000: 015A5408 :  								10_POI --- 5198
+0FCC8000: 01F99008 :  	08_SCALE_ALMANAC --- 0017
+0FD08800: 01FA1101 :  		09_FOLDER_MAPS --- 1182
+0FF72000: 01FEE401 :  			06__POLI_1 --- 2646
+11533800: 022A6708 :  	08_SCALE_ALMANAC --- 0065
+11634000: 022C6801 :  		09_FOLDER_MAPS --- 4600
+11FD5800: 023FAB01 :  			00_0x00_DATA_ --- 49032
+22C39000: 04587201 :  				04_BIT_MASK --- 26562
+2773C000: 04EE7803 :  	08_SCALE_ALMANAC --- 0001
+2773D800: 04EE7B02 :  		09_FOLDER_MAPS --- 0036
+2776C000: 04EED801 :  			03__POLI_4 --- 3279
+28497000: 05092E03 :  	08_SCALE_ALMANAC --- 0001
+28498800: 05093101 :  		09_FOLDER_MAPS --- 0035
+284AE800: 05095D01 :  			02__POLI_3 --- 1057
+288C6000: 05118C01 :  	08_SCALE_ALMANAC --- 0001
+288C6800: 05118D02 :  		09_FOLDER_MAPS --- 0004
+288CC000: 05119801 :  			01__POLI_2 --- 0716
+
+28AA5000: 05154A03 :  	08_SCALE_ALMANAC --- 0001
+28AA6800: 05154D01 :  		09_FOLDER_MAPS --- 0040
+28AD2000: 0515A401 :  			16_MAP_POLI_7_k40 --- 4806
+2AEB9800: 055D7303 :  	08_SCALE_ALMANAC --- 0001
+2AEBB000: 055D7601 :  		09_FOLDER_MAPS --- 0043
+2AED6800: 055DAD01 :  			15_MAP_POLI_6_k80 --- 1065
+2B6B4000: 056D6803 :  	08_SCALE_ALMANAC --- 0001
+2B6B5800: 056D6B01 :  		09_FOLDER_MAPS --- 0054
+2B6D2800: 056DA501 :  			1c_MAP_POLI_9_k100 --- 0262
+2B873000: 0570E601 :  	08_SCALE_ALMANAC --- 0001
+2B873800: 0570E705 :  		09_FOLDER_MAPS --- 0001
+2B876000: 0570EC01 :  			14_MAP_POLI_5_k200 --- 0082
+2B8D4000: 0571A801 :  	08_SCALE_ALMANAC --- 0001
+2B8D4800: 0571A902 :  		09_FOLDER_MAPS --- 0001
+2B8D5800: 0571AB01 :  			1d_MAP_POLI_10_k400 --- 0099
+2B92F800: 05725F01 :  	08_SCALE_ALMANAC --- 0001
+2B930000: 05726001 :  		09_FOLDER_MAPS --- 0001
+2B930800: 05726101 :  			1e_MAP_POLI_11 --- 0042
+2B947000: 05728E01 :  	18_IDX_TERR_DIVISION --- 0001
+2B947800: 05728F08 :  		17_TERR_DIVISION --- 0142
+ /*
+ 
+/// find 0x04 files
+BigEndian(); 
+//#include "vdo_block.bt"
+
+local DWORD ptr, val, cnt_bl_types=0, cnt=1000000, cBlSize=0x800;
+local en_BL_DATA_TYPE type=_too_far, prev_type=_empty;
+
+
+//Printf ("%08X: %06X\t%08X\n", 0x800, ReadUInt(0x800) , (ReadUInt(0x800)>>8)*0x800 );
+cnt_bl_types = 1;
+
+//733470720 - EOF
+for(ptr=0; ptr< 733470720; ptr+=cBlSize){
+//for(ptr=0; ptr< ( cnt*cBlSize); ptr+=cBlSize){
+    if(FSeek(ptr) != 0){
+        Printf("seek\n"); break;}
+    val = ReadUInt(ptr);
+    if( ((val>>8)*cBlSize) == ptr){
+        //Printf ("%08X: %08X\n", ptr, val);
+        type = ReadByte(ptr+0x05);
+        
+        if( type != prev_type){
+            prev_type = type;
+            Printf (" --- %04i\n%08X: %08X :  %02x%s", 
+                 cnt_bl_types,
+                ptr,   val,
+                type, EnumToString(type) );
+            cnt_bl_types = 0;
+         }
+        cnt_bl_types ++;
+    }
+}
+Printf (" --- %04i\n", cnt_bl_types);
+ */

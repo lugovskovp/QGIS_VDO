@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+	"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+	baseProfile="full"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:ev="http://www.w3.org/2001/xml-events"
+	width="2048" height="2048">
+
+	<rect x="0" y="0" name="background" width="2048" height="2048"
+		fill="#f8daa4" stroke="black" stroke-width="1px" stroke-opacity="0.5"/>
+
+	<g name="en_WATER-0x01" fill="#89d5c5" fill-opacity="0.8" stroke="#80BBDB" stroke-width="0.5px" >
+		<polygon name="mediterranean seao" id="0x4008F749" 
+			  points=" 922,622 954,575 1059,538 1349,544 1427,444 1539,419 1543,409 1638,409 1638,661 1638,661 1588,650 1561,675 1537,666 1374,759 1344,758 1254,754 1244,714 1203,744 1143,734 1030,752 932,689 925,650">
+			<title>mediterranean seao</title></polygon>
+		<polygon name="atlantic ocean" id="0x401F5649" 
+			  points=" 452,409 453,442 429,498 480,484 543,492 577,506 642,478 783,513 829,613 888,638 922,622 925,650 845,665 690,921 483,1003 303,1245 303,1476 0,1661 0,409">
+			<title>atlantic ocean</title></polygon>
+	</g>
+
+	<g name="en_CITY-0x05" fill="#e2cdcc" fill-opacity="0.9" stroke="#c2adac" stroke-width="2px" >
+		<polygon name="gibraltar" id="0x0000FCC0" 
+			  points=" 920,618 920,617 920,618">
+			<title>gibraltar</title></polygon>
+		<polygon name="" id="0x00000000" 
+			  points="">
+			<title></title></polygon>
+	</g>
+
+	<g name="en_BORDER-0x67" fill="#f8daa4" fill-opacity="0" stroke="green" stroke-width="5px" stroke-dasharray="10, 5">
+		<polyline name="" id="0x0000E658" 
+			  points=" 640,409 629,428 642,478">
+			<title></title></polyline>
+	</g>
+
+</svg>

@@ -1,0 +1,86 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Script File
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+//   History: 
+//------------------------------------------------
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+// ee_map.txt
+//local DWORD ptr, ptrStart = 0x2B930800, ptrEnd = 0x2B930801, constBlSize=0x800;
+local DWORD ptr, ptrStart, ptrEnd ;
+
+local DWORD val;
+local byte sizeUnpacked, cnt_types, end_offs;
+local WORD inner_offset <format=hex>;
+local DWORD ch_sea1 , ch_sea2;
+
+local DWORD pdat;
+local WORD wa0, wa1, blockSize, max_val=0;
+local DWORD word0, word1, word2, word3, word4, word5;
+local DWORD warc0, warc1, warc2, warc3, warc4;
+local byte bl_type, isarc, seg_cnt, seg_cnt_unarc;
+
+
+Printf("\n\nfile name: %s\n", FileNameGetBase( GetFileName() ));
+blockSize = ReadUShort(0x2c); //0x2c - offset 4 this val
+Printf("BlockSize = 0x%02X\t FileSize = 0x%02X\n", 
+    blockSize, FileSize());
+
+ptrStart = 0x0E1DE800;
+ptrEnd = FileSize();
+for(ptr=ptrStart; ptr<ptrEnd; ptr+=blockSize){
+    if(FSeek(ptr) != 0){
+        Printf("0x%08X EOF!\n", ptr); break;}
+
+    val = ReadUInt(ptr);
+    // is this block start?
+    if( ((val>>8)*blockSize) == ptr){
+        isarc = ReadUByte(ptr+0x06);
+        bl_type = ReadUByte(ptr+0x05);
+        seg_cnt_unarc = ReadUByte(ptr+0x07);
+        seg_cnt = ReadUByte(ptr+0x03);
+        // all file if (max_val < seg_cnt_unarc) {max_val = seg_cnt_unarc;}
+          //  arc bmw_max = 0060 ee_max = 0008 bnl_max = 0008 ru_max = 001A
+          //unarc bmw_max = 0060 ee_max = 0008 bnl_max = 0008 ru_max = 0
+        // archivated 0x16 0x1d
+        //if (isarc == 1 && bl_type == 0x16){
+        if (isarc == 1 ){ // bmw
+            // if (max_val < seg_cnt_unarc) {max_val = seg_cnt_unarc;} //archives
+            // four first words
+            word0 = ReadUInt(ptr+8);
+            word1 = ReadUInt(ptr+0xc);
+            word2 = ReadUInt(ptr+0x10);
+            word3 = ReadUInt(ptr+0x14);
+            word4 = ReadUInt(ptr+0x18);
+            word5 = ReadUInt(ptr+0x1c);
+            Printf("0x%08X : %02X (%02X/%02X) : %08X %08X %08X %08X %08X %08X ... ", 
+                    ptr, bl_type, seg_cnt, seg_cnt_unarc, 
+                    word0, word1, word2, word3, word4, word5);
+            pdat = ptr + 0x34;
+            warc0 = ReadUInt(pdat);
+            wa0 = ReadUShort(pdat);
+            wa1 = ReadUShort(pdat+2);
+            warc1 = ReadUInt(pdat+4);
+            warc2 = ReadUInt(pdat+8);
+            warc3 = ReadUInt(pdat+0xc);
+            warc4 = ReadUInt(pdat+0x10);
+            Printf("%04X %04X : %08X %08X %08X %08X\n", 
+                    wa0, wa1, warc1, warc2, warc3, warc4);
+        /*
+            inner_offset = ReadUShort(ptr + 8);
+            cnt_types = ReadByte(ptr + 0xb);
+            end_offs = ReadByte(ptr + 0xd);
+            ch_sea1 = ReadUInt( ptr + inner_offset);
+            ch_sea2 = ReadUInt( ptr + inner_offset + 4);
+            //Printf("0x%08X :%02X %02X :  %08X %08X\n", ptr, cnt_types, end_offs,  ch_sea1, ch_sea2); 
+          */           
+        }
+    }
+}
+Printf("offset:type (segcnt/arcsegcnt):Types Shapes Plines   Vertexes \n");
+Printf(" max = %04X\n", max_val);

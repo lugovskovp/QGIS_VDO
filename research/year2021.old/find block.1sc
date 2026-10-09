@@ -1,0 +1,47 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File:  Find block by type and length
+
+
+/*
+
+*/
+
+
+
+BigEndian(); 
+
+// ee_map.txt
+// - 2B6D2800: 056DA501 :  			1c_MAP_POLI_9_k100 --- 0262
+//   2B873000: 0570E601 :  	08_SCALE_ALMANAC --- 0001
+local DWORD ptr, ptrStart = 0x2B6D2800, ptrEnd = 0x2B873000, constBlSize=0x800;
+local DWORD val;
+local byte sizeUnpacked, cnt_types, end_offs;
+local WORD inner_offset <format=hex>;
+local DWORD ch_sea1 , ch_sea2;
+
+for(ptr=ptrStart; ptr<ptrEnd; ptr+=constBlSize){
+    if(FSeek(ptr) != 0){
+        Printf("0x%08X EOF!\n", ptr); break;}
+    val = ReadUInt(ptr);
+    // is this block start?
+    if( ((val>>8)*constBlSize) == ptr){
+        sizeUnpacked = ReadByte(ptr+0x07);
+        if(sizeUnpacked == 5){
+            // 2- smallest
+            inner_offset = ReadUShort(ptr + 8);
+            cnt_types = ReadByte(ptr + 0xb);
+            end_offs = ReadByte(ptr + 0xd);
+            ch_sea1 = ReadUInt( ptr + inner_offset);
+            ch_sea2 = ReadUInt( ptr + inner_offset + 4);
+            Printf("0x%08X :%02X %02X :  %08X %08X\n", ptr, cnt_types, end_offs,  ch_sea1, ch_sea2); 
+                
+            //break;
+        }
+    }
+}
+//
+
+
+return;

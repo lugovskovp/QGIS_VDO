@@ -1,0 +1,57 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+// 0x13 - _FILE_INFORMATION = 13h,
+#include "vdo_inc.bt"
+
+typedef struct {
+    PTR_CNT data;
+    jmp(data);
+        LON_LAT x111222 <comment="DWORD   dec111111111, dec222222222">;
+        LON_LAT x333444 <comment="DWORD   dec333333333, dec444444444;">; 
+        CONST_WORD hex0001(1);
+        CONST_WORD hex0001(1);
+        WORD db_ver <comment="=bibliogr.DB-REL  (30/34) ex unkn_1Eh_or_22h", bgcolor=cLtBlue, fgcolor=cYellow>;			// =bibliogr.DB-REL  (30/34) ex unkn_1Eh_or_22h;
+        PTR_CNT   str_full_text_info;
+        ZERO_WORD   last_w;
+    ret();
+    jmp(str_full_text_info);
+        char full_text_info[str_full_text_info.Cnt] <bgcolor=cLtGreen, fgcolor=cBlue>;
+    ret();   
+}addinfo_lo12la34;
+
+
+typedef struct{
+    CONST_WORD hex0001(1);
+    WORD db_ver <comment="=bibliogr.DB-REL  (30/34) ex unkn_1Eh_or_22h", bgcolor=cLtBlue, fgcolor=cYellow>;
+    PTR_CNT   str_label_info;           //  label 
+    jmp(str_label_info);
+        char str_label[str_label_info.Cnt] <bgcolor=cLtGreen, fgcolor=cBlue>;
+    ret();
+    PTR_CNT   str_description_info;     //  description 
+    jmp(str_description_info);
+        char str_description[str_description_info.Cnt] <bgcolor=cLtGreen, fgcolor=cBlue>;
+    ret();
+}main_data_label_descr;
+
+//------------------------}BLOCK_TYPE_0x13;
+typedef struct{
+//header start
+    BL_HEADER               block;
+    addinfo_lo12la34        addinfo;
+    main_data_label_descr   label_descr;
+// fill data
+}BLOCK_TYPE_0x13;
+
+
+//----------------------------------------------------------
+
+/*
+// -- begin data
+if( isFullFileCarindb() != 0 ){
+    // this file is not 'carindb'
+    BLOCK_TYPE_0x13   info;
+}else{
+    // this is full carindb file
+    //FSeek(0x800);
+}
+*/

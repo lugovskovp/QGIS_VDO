@@ -1,0 +1,18 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+//   History: 
+//------------------------------------------------
+//#include "vdo_block.bt"
+BigEndian(); 
+
+// bl_addr(0x0570d601);
+
+FSeek(0x0570d701);
+//DWORD assa;
+

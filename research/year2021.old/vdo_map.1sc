@@ -1,0 +1,43 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File: Create blocks map on carinet|carindb files
+
+//
+#include "vdo_block.bt"
+
+
+print_carin_map();
+
+void print_carin_map(){
+    BigEndian(); 
+
+    local DWORD ptr=0, val, cnt_bl_types, cBlSize=0x800;   
+    //
+local en_BL_DATA_TYPE type=0xfe, prev_type=0xff;
+    
+    
+    do{
+        FSeek(ptr);
+        if(FEof()){
+            Printf (" cnt- %04i\n", 
+                 cnt_bl_types);
+            break;
+        }
+    
+        val = ReadUInt(ptr);
+        if( ((val>>8)*cBlSize) == ptr){
+            type = ReadByte(ptr+0x05);
+            if( type != prev_type){
+                prev_type = type;
+                Printf (" cnt- %04i\n%08X: %08X :  %02x%s", 
+                     cnt_bl_types, ptr,   val,
+                    type, EnumToString(type) );
+                cnt_bl_types = 0;
+             }
+            cnt_bl_types ++;
+        }
+        ptr += cBlSize;
+    }while(!FEof());
+}
+

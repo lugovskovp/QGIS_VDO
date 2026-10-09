@@ -1,0 +1,113 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#include "vdo_inc.bt";
+
+
+// pointer to data and data 
+// in carinds ee and bnl both ARRAYs[92] is equal
+// but in rus - differs from ee and bnl starting from [22] item
+// in all 3 - last (??) 3 items - not by ordered
+typedef struct{
+    WORD   num <format = hex>;
+    WORD   val <format = hex, fgcolor=cDkGreen>;
+}BTYPE_FORMAT <read=Read_BTYPE_FORMAT>;
+string Read_BTYPE_FORMAT(BTYPE_FORMAT &a){
+    local string s;
+    SPrintf(s, "(%i)%02X - %02X", a.num-1, a.num, a.val);
+    return s;
+}
+
+
+
+typedef struct{
+//bnl 4801800h - 00 90 03: 08 exist, type 08 only one rec 
+// bnl 4901800h - 00 92 03: 04 exist - 00 - 01 08 - crypted
+// bnl 9006000h - 01 20 0c:03 exist -00- 0105 crypted Fg:Fg:0xFFFFE0 Bg:0xFF8080
+    en_BL_DATA_TYPE    seems_like_block_data_type;// <format=hex, fgcolor=0xFFFFE0, bgcolor=0xFF8080>;
+    ZERO_WORD    zero_value <fgcolor=cGray>; //, hidden=true
+    BL_ADDR almanac_idxidx08;    //bnl 4801800h - 00 90 03: 08 exist, type 08 only one rec 
+    BL_ADDR first_block_data;    // bnl 4901800h - 00 92 03: 04 exist - 00 - 01 08 - crypted
+    BL_ADDR last_block_data;    // bnl 9006000h - 01 20 0c:03 exist -00- 0105 crypted
+//  08/03/03 1e;  ||||10/10 11; 11/11 12; 12/12 13; 13/13 17;  17/17 18; 18/18 00;
+}whereBlocksByType<read=Read_mb_how_crypt>;
+string Read_mb_how_crypt(whereBlocksByType &a){
+    local string s;
+    SPrintf(s, "from 0x%06X to 0x%06X - %02X%s (idx: 0x%06X)", 
+        a.first_block_data.hex, a.last_block_data.far_hex,  
+        a.seems_like_block_data_type, EnumToString(a.seems_like_block_data_type),
+        a.almanac_idxidx08.far_hex);
+    return s;
+}
+
+
+
+typedef struct{
+    local DWORD l_tmpPtr <format=hex,hidden=true> = FTell(); 
+    PTR_CNT types;
+    jmp(types);
+        en_BL_DATA_TYPE mb_bl_types [ types.Cnt ]<format=hex, fgcolor=cBlue>;
+    ret();
+}knownBlockTypes;
+
+typedef struct{
+    local DWORD l_tmpPtr <format=hex,hidden=true> = FTell(); 
+    PTR_CNT askii_list;
+    jmp(askii_list);
+        BTYPE_FORMAT  itms[ askii_list.Cnt ]<format=hex, fgcolor=cBlue>;
+    ret();
+}like_askii_list;
+
+
+typedef struct{
+    local DWORD l_tmpPtr <format=hex,hidden=true> = FTell(); 
+    PTR_CNT map_items_list;
+    jmp(map_items_list);
+        whereBlocksByType items[map_items_list.Cnt] <optimize=false>;
+    ret();
+}whereBlocksByTypesList;
+
+//---------------------------------------BLOCK_TYPE_0x12;
+typedef struct{
+//header start
+    BL_HEADER       block;  // block.data -  far ptr to - 07_LST_WORLD_SCALES
+    FAR_PTR_CNT     _0B_chars_countries;    //tmpNextBL_ADDRType = 0x0B;
+    FAR_PTR_CNT     _13_carindb_info;       //tmpNextBL_ADDRType = 0x13;
+    CONST_DWORD     mb_qty_scales_in_0x07(0x0c);
+    CONST_DWORD     unkn_next_array_type_data_may_be(0x00010008);  // 00 01 00 08 - next ARRAY_WORD
+    knownBlockTypes bl_types_list;       // except: 5, 1f, 
+    like_askii_list askii_list;    
+    // 02 - no coords and addinfo
+    DWORD    add_info_if_1 <fgcolor=cRed, comment="or mb_block_types_list types?">;
+    ZERO_DWORD unknown; //UNKN  zero_values;
+    if (add_info_if_1 == 0x8000001){  //8000001h - 13_14 years files
+        LON_LAT corner_bott_left, corner_upper_right;
+// bnl 49,45N 1.5E - 55.25N 7.22E
+// ee  41.26N 12.1E - 59.89N 29.7E
+        FAR_PTR_CNT     _0B_chars_countries_again;
+        //p_arr_sl_how_crypt cr;
+        whereBlocksByTypesList     CD_offsets_map;
+        LON_LAT     corn_bott_left, corn_upper_right;
+    }
+    //main info - _07_geo_list_maps_and_poi
+    FAR_PTR_CNT _07_scales_almanac;
+// header end
+
+// data
+    if (add_info_if_1 == 0x8000001){
+        //
+        //jmp(crypt_list);
+        //    whereBlocksByType crypt_data [ crypt_list.Cnt ]<format=hex, fgcolor=cBlue, optimize=false>;
+        //ret();
+    }
+}BLOCK_TYPE_0x12<read=readBl0x12>;
+string readBl0x12(BLOCK_TYPE_0x12 &a){
+    return "table_FULL_MAP_CONTENTS";
+}
+//------------------------------------
+
+//https://ru.wikipedia.org/wiki/OS-9
+//BLOCK_TYPE_0x12 table_FULL_MAP_CONTENTS;
+
+
+

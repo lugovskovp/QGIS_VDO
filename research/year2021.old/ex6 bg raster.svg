@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="1000px" height="1000px" version="1.1" viewBox="0 0 1000 1000" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<style type="text/css">
+<![CDATA[
+
+.red{fill:#B1302A}
+
+]]>
+</style>
+</defs>
+
+<image id="backgroundimage" href="https://madeinthemoon.co.uk/wp-content/uploads/2018/04/blank-baby-grow.png" x="0" y="0" height="1000px" width="1000px"></image>
+
+<circle id="design" class="red" cx="500" cy="500" r="100"/>
+
+</svg>

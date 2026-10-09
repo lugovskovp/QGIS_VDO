@@ -1,0 +1,146 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File:  Find block by type and length
+/*
+Find only non-copressed block with size > 3
+*/
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+
+// ee_map.txt
+// - 2B6D2800: 056DA501 :  			1c_MAP_POLI_9_k100 --- 0262
+//   2B873000: 0570E601 :  	08_SCALE_ALMANAC --- 0001
+//      local DWORD ptr, ptrStart = 0x2B6D2800, ptrEnd = 0x2B873000, constBlSize=0x800;
+local DWORD ptr, ptrStart, ptrEnd, constBlSize=0x800;
+local DWORD val;
+local byte blockType, FlagCompressed, cnt_types, end_offs;
+
+local DWORD buffer, off;
+
+
+local unsigned WORD i,j,k=0, tmp_w;
+local unsigned DWORD tmp_a, add_shift=0;
+local unsigned byte flag_read_half = 1;
+
+// ee 28AD2000: 0515A401 :  			16_MAP_POLI_7_k40 --- 4806
+ptrStart = 0x28AD2000; ptrEnd = 0x2B947000;//ee
+// bnl 0B6BE000: 016D7C01 :  			16_MAP_POLI_7_k40 cnt- 0838
+//ptrStart = 0x0B6BE000; ptrEnd=0x0C05F000;//bnl
+
+//Printf("bl_addr :cnt_types poliline_offs :  DW_1 DW_2\n"); 
+for(ptr=ptrStart; ptr<ptrEnd; ptr+=constBlSize){
+    if(FSeek(ptr) != 0){    // EOF -> exit
+        Printf("0x%08X EOF!\n", ptr); return;}
+
+    val = ReadUInt(ptr);
+    // is this block start?
+    if( ((val>>8)*constBlSize) == ptr){
+        // check block type\
+        blockType = ReadByte(ptr+0x05);
+        //Printf("%01X    \n", blockType);
+        if( !( (blockType == 0x16 ) || (blockType == 0x15 ) || (blockType == 0x1c )
+            || (blockType == 0x14 ) || (blockType == 0x1d ) || (blockType == 0x1e ) ) )
+            continue;
+
+        // is this block compressed?
+        if(ReadByte(ptr+0x06) == 1){
+            // continue;
+        }else{  //block not compressed
+            continue;
+        }
+
+ /*       // cnt types 0bh
+        if(ReadByte(ptr+0x0b) != 3) {
+            continue;
+        }
+*/
+
+        // read key dword , 0e 14 08 00
+// 0E140800 === cb<<7=6580=6501;1dc<<1  = 03b8
+        if(ReadUInt(ptr+0x34) != 0x0e140800){
+            continue;
+        }
+
+//only 3 times
+if(k++ > 2) return;
+
+        FlagCompressed = ReadByte(ptr+0x06);
+        if(FlagCompressed == 1){
+            // 2- smallest
+
+            if(ReadUInt(ptr+0x34) == 0x0e140800){   // 0E 14 08 00 === cb<<7=6580=6501;1dc<<1  = 03b8
+                Printf("\n\n bl_offset( 0x%08X ); // 0x0e140800 [t:%04X]\n", ptr, ReadUShort(ptr+0ah) );
+                //
+                buffer = ReadUInt(ptr+0x38);
+                off = ptr+0x38+4; //next byte
+                
+                flag_read_half = 0;
+                add_shift = 0;
+
+                
+Printf("\n%08X ", buffer);
+if (){
+    Printf(" :%s ", get_type_addr(buffer >>12) );
+    add_shift=1;
+}
+
+if(add_shift){
+
+}else{
+    Printf(" :%s ", get_type_addr(buffer >>12) );
+}
+//#load next
+buffer <<=20;
+if(flag_read_half == 1){
+    buffer |= ReadUInt(off)>>8;
+    off+=3;
+    flag_read_half = 0;
+}else{
+    buffer |= ReadUInt(off)>>12;
+    off+=2;
+    flag_read_half = 1;
+}
+
+                for(i=0; i<4; i++){
+
+Printf("\n%08X ", buffer);
+Printf(" :%s ", get_type_addr(buffer >>12) );
+
+//#load next
+buffer <<=20;
+if(flag_read_half == 1){
+    buffer |= ReadUInt(off)>>8;
+    off+=3;
+    flag_read_half = 0;
+}else{
+    buffer |= ReadUInt(off)>>12;
+    off+=2;
+    flag_read_half = 1;
+}
+
+
+                }//for i
+            }
+
+        }
+    }
+}
+//--------------------------------------------------
+
+
+return;
+
+string get_type_addr(DWORD buf){
+    // ### 1 type
+    local WORD val = (buf >> 12) <<7; 
+    val = (val & 0xff00) | (val & 0x00FF)>>7;
+    Printf(" :%04X", val );
+    // ### 2 addr
+    val = (buf &0x00000FFF) <<1;
+    //val <<=1;
+    Printf(" %04X", val );
+    if(val == 0) Printf("<---");
+
+return "/";
+}

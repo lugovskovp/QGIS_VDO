@@ -1,0 +1,128 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#ifndef H_VDO_0x0C_INC_INCLUDED
+#define H_VDO_0x0C_INC_INCLUDED
+#include "__place.bt"
+
+/*
+addinfo 
+GEO_INFO_CITY 0x0a = size 14 DWORD 
+*/
+
+typedef struct{
+    CONST_WORD unknown(0x0100)<optimize=false>;
+}_x0C_STRANGE <bgcolor=cLtYellow>;
+
+// GEO_INFO_CITY
+// (block.type == 0x0C) size 14 DWORD 
+typedef struct{
+
+    // PLACE.p_info -> here
+    FAR_PTR_CNT fp_ch_list;  // p_ch_list -  = 0 in CITYanytime, but =val in country;
+//p_ch_list - in CITY - far poiner to _ROADS=0Eh items (?=1)_SYMBOLS_ROADS   = 0Fh,    
+    PTR_CNT     p_symb_poi;   
+    BL_ADDR     MB_p_data_0x00;   //0a -CONST_DWORD hex01f4012c(0x01f4012c) <hidden=true>;
+    //DWORD   hex03e801f4; //(0x03e801f4) <hidden=true>;
+    PTR     p_in_p_data_0x00;  // 
+    ZERO_WORD   a2;
+// 0x0100 - types of POI???
+PTR_CNT   p__x0C_STRANGE; 
+    // rec end
+//fill data
+local DWORD l_tmp <hidden=true> = FTell();
+    //if(fp_ch_list.offset){   //p_ch_list - NOT NULL
+    if(fp_ch_list.far_data.Cnt){   //p_ch_list - NOT NULL
+        FSeek(fp_ch_list.offset);
+        SYMBOL __ch_list[fp_ch_list.far_data.Cnt] <optimize=false>;
+    }
+
+    if(MB_p_data_0x00.offset){
+        //FSeek(p_data_0x00.offset + p_in_p_data_0x00.Ptr+8);
+        //LON_LAT __coord;
+    }
+    if(p__x0C_STRANGE.Ptr){
+        FSeek(p__x0C_STRANGE.offset);
+            _x0C_STRANGE  strange[p__x0C_STRANGE.Cnt]<optimize=false>;
+    }
+    
+FSeek(l_tmp);break;
+
+    local DWORD l_tmp <hidden=true> = FTell();
+    FSeek(p_ch_list.offset);
+        SYMBOL ch_list[p_ch_list.far_data.Cnt] <optimize=false>;
+//SYMBOL symbols_array[p_ch_list.far_data.Cnt] <optimize=false>;
+    
+    FSeek(p_symb_poi.offset);
+        BL_ADDR bl_symp_POI;
+   FSeek(l_tmp);
+//        pCH_INDEX ch_idx;
+}GEO_INFO_CITY;/* <read = Read_GEO_INFO_COUNTRY>;
+string Read_GEO_INFO_COUNTRY(GEO_INFO_COUNTRY &a){
+    local string s;
+//    SPrintf(s, "%s", a.alpha_2_ISO3166_1);
+    return s;
+};*/
+
+
+// --- GEO_PLACE
+// main data of 0A.
+typedef struct{
+    GEO place;
+    //
+    local DWORD l_geo_tmp <hidden=true> =FTell();
+    FSeek(place.p_geo_info.offset);
+        GEO_INFO_CITY  geo_info;
+
+    FSeek(l_geo_tmp);
+//break;
+//}GEO_PLACE  <read = Read_GEO_PLACE, optimize=false>; //,  comment=Comment_GEO_PLACE>;
+}GEO_CITY  <read = Read_GEO_CITY>; //,  comment=Comment_GEO_PLACE>;
+string Read_GEO_CITY(GEO_CITY &a){
+    local string s;
+    SPrintf(s, "%02X-%02X (%s) %s ", a.place.type_obj, a.place.en_country, 
+             a.place.parent_name, a.place.name);
+    return s;
+}
+ 
+
+//-----------------------------------------------------
+typedef struct{
+//header start
+    BL_HEADER  block;
+    PTR_CNT     p_geo_info; // 0A->_0D_ch_idx_files 
+// WAS add_info
+    ZERO_DWORD  blank0;
+    PTR_CNT     p_ch_POI;   //p_list_idx_0x11 c 0x5800 0x0c block, notBL_ADDR
+    ZERO_DWORD  blank01;
+    PTR_CNT     MB_coordinates <comment="0x0A=0">;//1F84h
+    BL_ADDR      try_neightboard <comment="zero 0x0A, ee0x0C 000024=0">; // 00 13 07 -9800h - 0C_regionList
+    UNKN  blank03 <comment="zero 0x0A, ee0x0C=0 ru0C=5f48 03c2">;
+    BL_ADDR     next_0c; // <comment="zero 0x0A, ee0x0C 000024=0x2a08">;
+    BL_ADDR     prev_0c;  //bl_a_0c_0c
+    //
+    struct {
+        GEO_CITY   place[block.data.Cnt] <optimize=false>;
+    } places;
+    //
+    struct {
+        GEO_INFO_CITY geo_info[p_geo_info.Cnt] <optimize=false>;
+    } geo_info;
+//if p_ch_POI
+struct {
+    struct{
+        FAR_PTR_CNT bl_ch_poi;
+        UNKNw unkn;
+        PTR begin_str_vals <bgcolor=cLtGreen>;
+    }list_ch_poi [p_ch_POI.Cnt] <optimize=false>;
+}symbols_POI;
+
+}BLOCK_TYPE_0x0C <comment=Comment_block0x0C >;
+string Comment_block0x0C(BLOCK_TYPE_0x0C &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+
+
+
+
+#endif//H_VDO_0x0C_INC_INCLUDED

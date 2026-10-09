@@ -1,0 +1,454 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+#ifndef H_VDO_geo_INC_INCLUDED
+#define H_VDO_geo_INC_INCLUDED
+
+
+typedef enum <WORD>{
+//!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!
+//TODO - remade: bl_offset(2000h); <- block oAh countries with first byte <-> country name
+
+    __country     = 0x0600, //0600  - espana
+    __island      = 0x0100,   //  100 - santa cruz de tenerife
+
+    __NotFromMap      = 0xFF00,  //FF00  - byelarus
+    __street       = 0xFF08,    // FF08  - 1 ya poselikoya ulitsa
+
+
+    __poligone      = 0x0200,
+    __poliline      = 0x0010
+}en_GEO_OBJ_STR <format=hex, bgcolor=cBlue, fgcolor=cAqua>;
+
+typedef enum <byte>{
+    en_POLIGON = 0,
+    en_POLILINE = 1
+}en_MAP_SHAPE_TYPE < bgcolor=cBlue, fgcolor=cAqua>;
+
+typedef enum <byte>{
+// 03->05->06->08->01->00
+    en_FOREST   = 0x3,
+    en_CITY     = 0x5,
+    en_INDUSTRIAL     = 0x6,  // cemetery? hospital? 'masokombinat'  ex en_LAKE
+    en_ISLAND   = 0x8,
+    en_WATER    = 0x1,
+    en_empty_tail  = 0,          
+
+//https://wiki.openstreetmap.org/wiki/RU:Highway_classification
+    en_RIVER    = 0x65,
+	en_RAILWAY  = 0x66,
+    en_BORDER   = 0x67,
+    en_ROAD_trunk   = 0x68, //ex en_ROAD_E
+    en_ROAD_primary   = 0x69,   //ex en_ROAD_A
+    en_ROAD_secondary   = 0x6a
+}en_GEO_OBJ_TYPE <format=hex, bgcolor=cBlue, fgcolor=cAqua>;
+
+/*
+none
+Airport
+Bus station
+Car park
+Car repair
+Cinema
+City centre
+Council office
+Education
+Eerxxxxxxx
+Golf course
+Hire car company
+Hospital
+Hotel
+Indastrial estate
+Marina
+Monumen
+Museum
+Park
+Park + Ride
+Petrol station
+Railway station
+Restaurant
+Service
+Shopping centre
+Tourist attraction
+Tourist information
+Tourist site
+
+
+*/
+
+//GEO_VERTEX
+typedef struct{
+    WORD x;
+    WORD y;
+}GEO_VERTEX <read=Read_GEO_VERTEX, bgcolor=cLtBlue, fgcolor=cYellow>;
+string Read_GEO_VERTEX(GEO_VERTEX &a){
+    string s;
+    SPrintf(s, "%04X %04X", a.x, a.y);
+    return s;
+}
+
+
+// --- LON_LAT      - DWORD  = DWORD hex longtityde / 0x54C56D - 30;
+//                              | DWORD hex latatude
+typedef struct{
+//DWORD   hlat <hidden=true>, hlon <hidden=true>;
+//Longitude - dolgota  0 - 180 E/W kld: 20e
+//latitude - shirota 0 - 90° N/S kld: 55n
+int   hlon <format=hex, fgcolor=cLtGreen, bgcolor=cDkAqua>;
+int   hlat  <format=hex, fgcolor=cLtGray, bgcolor=cDkAqua>;
+    //coordinates
+    local double lo=10.0f, la=10.0f;
+        //la = hlat2double(hlat);
+        //lo = hlon2double(hlon);
+        lo = 1.0f * hlon / 0x54C56D - 30;
+        la = 1.0f * hlat / 0x54C56D;
+        //la = la % 360.0;
+        //lo = lo % 360.0;
+}LON_LAT <read=Read_LON_LAT>;
+string Read_LON_LAT(LON_LAT &a) {
+    local string s;
+    SPrintf( s, "%06f %s, %06f %s", 
+    Abs(a.la), (a.la>0)?"N":"S",
+    Abs(a.lo), ((a.lo>=0)?"E":"W") );
+    return s;
+}
+
+DWORD double2hlat(double &lat){
+    //lat = lat % 360.0;  //   Printf("\n%lf.0 lat\n", lat);
+    return (lat * 0x54C56D);
+}
+double hlat2double(DWORD hlat){
+    local double lat = 10.0f;
+//Printf("%d\n", lat);
+    lat = 1.0f * hlat / 0x54C56D;
+    //lat = lat % 360.0;
+    return lat;
+}
+DWORD double2hlon(double lon){
+    //lon = lon % 360.0;
+    return ((lon + 30.0) * 0x54C56D);
+}
+double hlon2double(DWORD hlon){
+    local double lon = ((1.0f * hlon )/ 0x54C56D) - 30.0;
+    //lon = lon % 360.0;
+    return lon;
+}
+
+//geo_area
+typedef struct{
+    local DWORD h_size <format=hex, hidden=false>;
+    local DWORD v_size <format=hex>;
+    local DWORD scale <format=hex>;
+    LON_LAT     bottom_left, top_right;
+    h_size = top_right.hlon - bottom_left.hlon;
+    v_size = top_right.hlat - bottom_left.hlat;
+    scale = h_size / 0xA000;    // ?????????? sure? allways??? 1d, 03, ect
+}geo_area<read=ReadGeoArea>;
+string ReadGeoArea(geo_area &a){
+    string s;
+    SPrintf(s, "area [%04Xx%04X]h scale 0x%04X", a.h_size, a.v_size, a.scale);
+    return s;
+}
+
+
+
+//GEO_OBJ_STR
+typedef struct{
+    //local DWORD t_ptr <hidden=true> = FTell();
+    PTR p_str_name  <bgcolor=cLtGreen>;
+    en_GEO_OBJ_STR type; 
+
+    local DWORD t_g_ptr<hidden=true>;
+    if(p_str_name.Ptr){
+        t_g_ptr = FTell();
+        FSeek(p_str_name.offset);
+            string name <bgcolor=cLtGreen>;
+        FSeek(t_g_ptr);
+    }else{
+        local string name="";
+    }
+}GEO_OBJ_STR<read=Read_GEO_OBJ_STR>;
+string Read_GEO_OBJ_STR(GEO_OBJ_STR &a){
+    local string s;
+    SPrintf(s, "%04X %s - %s", a.type,
+        EnumToString(a.type), a.name);
+    return s;
+}
+
+// GEO_PLINE see GEO_SHAPE
+typedef struct{
+    local string name = "";
+    local en_GEO_OBJ_TYPE     type; //need fill after create
+    local DWORD  offset = FTell();
+    local DWORD p_gs_tptr <hidden=true>;
+    PTR         p_str_name <bgcolor=cGreen>;
+    PTR         p_vertexes_obj;
+        local WORD vertex_cnt <format=hex> = 0;
+            // ReadUInt(FTell() = 0 in last
+        if( ReadUInt( FTell() ) ) vertex_cnt = (ReadUShort(FTell()+0eh) - p_vertexes_obj.Ptr )/4;
+    DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
+    // LON_LAT     THIS_NOT_coord; // THIS_NOT_coord    bl_offset( 0x293B9000 );
+    PTR   p_line_sign; // Or start pstr
+    WORD  b_or_c; 
+    PTR   p_p_str_name; // ptr to GEO_OBJ_STR
+    WORD   or_38_or_0_b_country;
+
+    local string pline_name;
+//
+// name 
+    if (p_str_name.Ptr){name = ReadString(p_str_name.offset);}
+// vertexes
+    // only valid objects, id>0
+    if(id){
+        if(p_vertexes_obj.Ptr){
+            p_gs_tptr = FTell();
+            FSeek(p_vertexes_obj.offset);
+            struct{
+                DWORD vertx [vertex_cnt] <optimize = true>;
+            }vertexes;
+            FSeek(p_gs_tptr);
+        }
+        if(p_p_str_name.Ptr){
+            p_gs_tptr = FTell();
+            FSeek(p_p_str_name.offset);
+                GEO_OBJ_STR p_line_name;
+                pline_name = p_line_name.name;
+            FSeek(p_gs_tptr);
+        }
+    }
+}GEO_PLINE <read=Read_GEO_PLINE>;
+string Read_GEO_PLINE(GEO_PLINE &a){
+    local string s="";
+    //SPrintf(s,"0x%02X%02X %s \t%s", a.type, a.is_line, EnumToString(a.type), s);
+    SPrintf(s,"%s [%i]\t '%s' \"%s\"",  EnumToString(a.type), a.vertex_cnt, a.name, a.pline_name );
+    return s;
+};
+
+// C_GEO_PLINE c_ = compressed
+typedef struct{
+    local string name = "";
+    local en_GEO_OBJ_TYPE     type; //need fill after create
+    local DWORD  offset = FTell();
+    local DWORD p_gs_tptr <hidden=true>;
+    local PTR         p_str_name <bgcolor=cGreen>;
+    local PTR         p_vertexes_obj;
+        local WORD vertex_cnt <format=hex> = 0;
+            // ReadUInt(FTell() = 0 in last
+        //if( ReadUInt( FTell() ) ) vertex_cnt = (ReadUShort(FTell()+0eh) - p_vertexes_obj.Ptr )/4;
+    local DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
+    local LON_LAT     NOOOOT_coord;
+
+// name 
+
+// vertexes
+    // only valid objects, id>0
+    if(id){
+        /*if(p_vertexes_obj.Ptr){
+            p_gs_tptr = FTell();
+            FSeek(p_vertexes_obj.offset);
+            struct{
+                DWORD vertx [vertex_cnt] <optimize = true>;
+            }vertexes;
+            FSeek(p_gs_tptr);
+        }*/
+    }
+}C_GEO_PLINE <read=Read_C_GEO_PLINE>;
+string Read_C_GEO_PLINE(C_GEO_PLINE &a){
+    local string s="";
+    //SPrintf(s,"0x%02X%02X %s \t%s", a.type, a.is_line, EnumToString(a.type), s);
+    SPrintf(s,"%s [%i]\t '%s'",  EnumToString(a.type), a.vertex_cnt, a.name );
+    return s;
+};
+
+
+
+
+//{GEO_SHAPE
+typedef struct{
+    local DWORD p_gs_tptr <hidden=true>;
+    local WORD  vertex_cnt;
+    local DWORD  offset = FTell();
+    local en_GEO_OBJ_TYPE     type; //need fill after create
+    local string name = "";
+    PTR         p_str_name <bgcolor=cGreen>;
+    PTR         p_vertexes_obj;   
+    DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
+    LON_LAT     coord;
+ZERO_WORD   aligment;
+    PTR         p_table_name <bgcolor=cLtGreen>;
+//
+// name /0-ended string
+    if (p_str_name.Ptr !=0 ){name = ReadString(p_str_name.offset);}
+
+    // only valid objects, id>0
+    if(id){
+        if(p_vertexes_obj.Ptr){
+            p_gs_tptr = FTell();
+            FSeek(FTell()+2); // for bl_type_0x1c
+                PTR p_vertexes_next_obj <format=hex>;
+                //local DWORD offset_vertexes_next_obj  <format=hex>
+                //            = p_vertexes_next_obj + block.offset;
+            FSeek(p_vertexes_obj.offset);
+            vertex_cnt = (p_vertexes_next_obj.offset - p_vertexes_obj.offset) / 4;
+            struct{
+                DWORD vertx [vertex_cnt] <optimize = true>;
+            }vertexes;
+
+            FSeek(p_gs_tptr);
+        }
+    }
+}GEO_SHAPE <read=Read_GEO_SHAPE>;
+string Read_GEO_SHAPE(GEO_SHAPE &a){
+    local string s="";
+    SPrintf(s,"%s '%s'\t[%i];  ", EnumToString(a.type), a.name,  a.vertex_cnt);
+    return s;
+};
+//C_GEO_SHAPE - compressed
+typedef struct{
+/*    shape
+2h - ptr2str/0; 
+2h - ptr2vertexes (first=first vert)
+4h - id [0000 7685]
+8h - LON_LAT
+2h = 00 00 - aligment
+2h - ptr2 list strPtr
+*/
+    local WORD  vertex_cnt;
+local DWORD  offset;
+    local en_GEO_OBJ_TYPE     type; //need fill after create
+local string name = "";
+    local PTR         p_str_name <bgcolor=cGreen>;
+    local PTR         p_vertexes_obj;   
+    local DWORD       id<format=hex, fgcolor=cBlue, bgcolor=cLtYellow>;
+    local LON_LAT     coord;
+    local ZERO_WORD   aligment;
+    local PTR         p_table_name <bgcolor=cLtGreen>;
+//
+/*
+// name /0-ended string
+    if (p_str_name.Ptr !=0 ){name = ReadString(p_str_name.offset);}
+
+    // only valid objects, id>0
+    if(id){
+        if(p_vertexes_obj.Ptr){
+            p_gs_tptr = FTell();
+            FSeek(FTell()+2); // for bl_type_0x1c
+                PTR p_vertexes_next_obj <format=hex>;
+                //local DWORD offset_vertexes_next_obj  <format=hex>
+                //            = p_vertexes_next_obj + block.offset;
+            FSeek(p_vertexes_obj.offset);
+            vertex_cnt = (p_vertexes_next_obj.offset - p_vertexes_obj.offset) / 4;
+            struct{
+                DWORD vertx [vertex_cnt] <optimize = true>;
+            }vertexes;
+
+            FSeek(p_gs_tptr);
+        }
+    }
+*/
+}C_GEO_SHAPE <read=Read_C_GEO_SHAPE>;
+string Read_C_GEO_SHAPE(C_GEO_SHAPE &a){
+    local string s="";
+    SPrintf(s,"%s '%s'\t[%i];  ", EnumToString(a.type), a.name,  a.vertex_cnt);
+    return s;
+};
+
+//------------------------------------
+// GEO_TYPE
+typedef struct{
+    //local DWORD         p_gt_tptr <hidden=true>;
+    local DWORD         size_place <hidden=true>;
+    local WORD          obj_cnt <format = hex> = 0;
+    en_GEO_OBJ_TYPE     type;
+    en_MAP_SHAPE_TYPE   is_line;
+    PTR                 p_type_obj;
+    local PTR           p_next_type_obj;
+
+    // calc obj count
+    if(type != 0){
+        p_next_type_obj.Ptr = ReadUShort(FTell()+2);
+        if(is_line){
+            obj_cnt = ( p_next_type_obj.Ptr - p_type_obj.Ptr ) / 10h;
+        }else{
+            obj_cnt = ( p_next_type_obj.Ptr - p_type_obj.Ptr ) / 14h;
+        }
+    }else{
+    // this is last - tail
+    // obj_cnt = 0;
+    }
+
+//obj_cnt = ReadUShort(p_type_obj.offset+2);
+/*
+    // is this element not last in list?
+    if(type != 0){
+        // FTell - begin next type
+        size_place = ReadUShort(FTell()+2) - p_type_obj.Ptr;
+        p_gt_tptr = FTell();
+        FSeek(p_type_obj.offset);
+        if(is_line){
+            obj_cnt = size_place / 10h;
+            GEO_PLINE object[obj_cnt]<optimize=true>;
+        }else{
+            obj_cnt = size_place / 14h;
+            GEO_SHAPE object[obj_cnt] <optimize=true>;
+        }
+        FSeek(p_gt_tptr);
+    }else{
+    // this is last - tail
+    // obj_cnt = 0;
+    }
+*/
+}GEO_TYPE<read=Read_GEO_TYPE>;
+string Read_GEO_TYPE(GEO_TYPE &a){
+    local string s="", temp_s="sttart_valu";// = Read_GEO_SHAPE(a.object[0]);
+    local unsigned byte cnt_list = 0;
+    local WORD i=0;
+    if(a.type != 0){
+        SPrintf(s,"0x%02X%02X %s;\t[%02i]: \t\t%s", a.type, a.is_line, 
+            EnumToString(a.type), a.obj_cnt, s);
+    }else{
+        s = "_tail_";
+    }
+    return s;
+};
+
+// C_GEO_TYPE - compressed
+typedef struct{
+    //local DWORD         p_gt_tptr <hidden=true>;
+    local DWORD         size_place <hidden=true>;
+    local WORD          obj_cnt <format = hex> = 0;
+    en_GEO_OBJ_TYPE     type;
+    en_MAP_SHAPE_TYPE   is_line;
+    local PTR           p_type_obj;
+    local PTR           p_next_type_obj;
+
+    // calc obj count
+    if(type != 0){
+        if(is_line){
+            obj_cnt = ( p_next_type_obj.Ptr - p_type_obj.Ptr ) / 10h;
+        }else{
+            obj_cnt = ( p_next_type_obj.Ptr - p_type_obj.Ptr ) / 14h;
+        }
+    }else{
+    // this is last - tail
+    // obj_cnt = 0;
+    }
+}C_GEO_TYPE<read=Read_C_GEO_TYPE>;
+string Read_C_GEO_TYPE(C_GEO_TYPE &a){
+    local string s="", temp_s="sttart_valu";// = Read_GEO_SHAPE(a.object[0]);
+    local unsigned byte cnt_list = 0;
+    local WORD i=0;
+    if(a.type != 0){
+        SPrintf(s,"0x%02X%02X %s;\t[%02i]: \t\t%04X-%04X", a.type, a.is_line, 
+            EnumToString(a.type), a.obj_cnt, a.p_type_obj.Ptr, a.p_next_type_obj.Ptr);
+    }else{
+        s = "_tail_";
+    }
+    return s;
+};
+
+
+//===========================================================
+
+
+#endif //H_VDO_geo_INC_INCLUDED

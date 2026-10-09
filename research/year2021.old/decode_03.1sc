@@ -1,0 +1,186 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+//   History: 
+//------------------------------------------------
+/*
+05000800 0200F000 14236C00 -> 01 00 00 3C  00 00 00 A0  ... 
+ 14236C00 = 10100001000110110110000000000
+ A0       = 10100000
+05160900 0A00F000 C822E400 -> 0x 0y 00 3C  00 00 06 40  ... // x != 1, x?=5 y - only poliLINE???
+    C822E400 = 11001000001000101110010000000000
+    06 40    = 11001000000
+05000900 0200F000 25A01000 -> 01 00 00 3C  00 00 01 2C  ... 
+    25A01000 = 100101101000000001
+    12c =      100101100
+05000800 0200F000 1BA11400 -> 01 00 00 3C  00 00 00 DC  ... 
+  1BA11400 = 11011101000010001010000000000
+  00dc     = 11011100
+05000800 0200F000 19230400 -> 01 00 00 3C  00 00 00 C8  ... 
+
+05000900 0200F000 3C20A800 -> 01 00 00 3C  00 00 01 E0  ... 
+    3C20A800 = 111100001000001010100000000000
+    01 E0    = 111100000
+*/
+local DWORD key = 0x05000800;
+local DWORD val = 0x0200F000; //0x0200F000;
+local DWORD val_a = 0x14236C00;
+
+//key = 0x0c1c0a00; // addr(0x0570d006);
+//val = 0x06015050;
+//val_a = 0x0A00F000;
+
+local byte a_key[4];
+a_key[0] = ( key>>24 ) & 0xff;
+a_key[1] = ( key>>16 ) & 0xff;
+a_key[2] = ( key>>8  ) & 0xff;
+a_key[3] = key & 0xff;
+
+local byte vals[8] <format=hex>;
+vals[0] = ( val>>24 ) & 0xff;
+vals[1] = ( val>>16 ) & 0xff;
+vals[2] = ( val>>8  ) & 0xff;
+vals[3] = val & 0xff;
+vals[4] = ( val_a>>24 ) & 0xff;
+vals[5] = ( val_a>>16 ) & 0xff;
+vals[6] = ( val_a>>8  ) & 0xff;
+vals[7] =  val_a & 0xff;
+
+//----------------
+local byte i=0;
+
+local byte b_tmp, b_out;
+local WORD  w_tmp;
+
+b_tmp = vals[i]<<4;
+
+b_tmp = b_tmp >> a_key[0];
+
+p(b_tmp);
+
+return;
+//-----
+Printf("\n\nin: 0x%08X\n", val);
+
+val >>=1;  //first byte value 
+Printf(" 0x%08X\n", val);
+de(val);        //::: 01
+
+//Printf("n 0x%08X\n", val);
+
+//val>>=1; Printf("0x%08X\n", val);
+val>>=1;
+val = val | (val_a>>24); //n 0x00780025
+de(val);    // ::: 00 00 
+
+
+
+val = val | (val_a>>16); //n 0x00780025
+de(val);    // ::: 3c
+//
+
+//
+val>>=1;
+val = val | (val_a>>8); 
+// Printf(" 0x%08X\n", val);
+de(val);    // 00 00
+
+
+//
+val>>=1;
+val>>=4;
+de(val);    // 01
+
+Printf("\n\n -0x%08X\n", val);
+
+val>>=2;
+Printf("\n\n -0x%08X\n", val);
+
+return;
+
+
+// 
+void de(DWORD &v){
+        local byte r;
+    r = v>>24;
+
+    switch(r){
+        case 0:
+            pb(0); pb(0); v=v<<8; /*v = v || ( a>>24 ); a<<=8;*/ break;
+        case 1:
+            pb(1);v=v<<8; break;
+        default:
+            r=v>>24; pb(r); v=v<<8;  //v = v || ( a>>24 ); a<<=8;
+    }
+
+}
+
+    val = val>>1;
+Printf("\n\n 0x%08X\n", val);
+    b_tmp = val>>24;// 01
+    //b_out = get_b_nibble(b_tmp);
+    b_out = b_tmp;
+    pb(b_out);
+
+    b_tmp = ( val>>20 ) & 0x0f; //00
+    b_out = get_b_nibble(b_tmp);b_out = b_tmp;
+    pb(b_out);
+
+
+val = val>>1;
+Printf("\n\n 0x%08X\n", val);
+
+    b_tmp = ( val>>16 ); // 00
+    b_out = get_b_nibble(b_tmp);
+    pb(b_out);
+
+
+    b_tmp = ( val>>12 ); //3c
+    b_out = get_b_nibble(b_tmp);
+    pb(b_out);
+
+    b_tmp = ( val>>8 );   p(b_tmp);
+    b_out = get_b_nibble(b_tmp);
+    pb(b_out);
+
+val = val>>1;
+    b_tmp = ( val>>4 );
+    b_out = get_b_nibble(b_tmp);
+    pb(b_out);
+
+    b_tmp = ( val );
+    b_out = get_b_nibble(b_tmp);
+    pb(b_out);
+
+return;
+
+byte get_b_nibble(byte a){
+    local byte r;
+    a = 0x0f & a;
+    switch(a){
+        case 0:
+            r = 0; break;
+        case 1:
+            r = 1; break;
+        default:
+            r = 0xFF;
+    }
+    r = a;
+    return r;
+}
+
+//--------------------------
+void pb(byte a){
+
+   Printf("%02X\n", a); 
+}
+
+void p(byte a){
+
+   Printf("->%02X\n", a); 
+}

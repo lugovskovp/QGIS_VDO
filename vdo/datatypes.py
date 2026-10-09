@@ -57,6 +57,8 @@ OFFSET_DB_REVISION = 0x1a
 
 MAX_STR_LEN = 63    # 255
 
+struct_LIST = struct.Struct(">HH")
+
 
 def setup_known_types(blocks_dir: str | None = None) -> dict[int, str]:
     """
@@ -665,13 +667,15 @@ class BLADDR(BYTESTRUCT):
     b'\x01\x02\x03\x04' -> 0x010203 - number, 04 - len in blocks
     """
     # Фиксируем слоты. Базовый '_raw' уже унаследован, здесь пишем только новые поля
-    __slots__ = ('vdo',)
+    __slots__ = ('vdo', 'value')
     
     size: int = UINT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer, vdo: VDO_FILE | None = None) -> None:
         # Передаем буфер строго фиксированной длины в базовый класс
         super().__init__(buffer, size=UINT_BYTES_CNT)
+
+        self.value = struct_UINT.unpack_from(buffer, 0)[0]
         
         # Экономим память: создаем новый VDO_FILE() - singletone
         if vdo is None:
@@ -686,11 +690,11 @@ class BLADDR(BYTESTRUCT):
         """Быстрая проверка на нулевой dword без сравнения массивов байт"""
         return self.value == 0
     
-    @property
-    def value(self) -> int:
-        """Числовое значение всего dword (Big-Endian)"""
-        # Индекс [0] обязателен, если unpack_from возвращает кортеж (val,)
-        return struct_UINT.unpack_from(self._raw, 0)[0]
+    # @property
+    # def value(self) -> int:
+    #     """Числовое значение всего dword (Big-Endian)"""
+    #     # Индекс [0] обязателен, если unpack_from возвращает кортеж (val,)
+    #     return struct_UINT.unpack_from(self._raw, 0)[0]
 
     @property
     def blocknumber(self) -> int:
@@ -700,7 +704,7 @@ class BLADDR(BYTESTRUCT):
     @property
     def segcnt(self) -> int:
         """Размер в сегментах (последний 4-й байт)"""
-        return self._raw[3]
+        return self._raw[3]     # its faster self.value & 0xFF
     
     @property
     def sizeofblock(self) -> int:
@@ -797,27 +801,28 @@ class LIST(BYTESTRUCT):
     b'\x01\x02\x03\x04' -> near offset 0x102, counter items 0x304
     '''
     # Сохраняем оптимизацию памяти базового класса, запрещая создание __dict__
-    __slots__ = ()
+    __slots__ = ('ptr', 'cnt')
 
     size: int = 4       # UINT_BYTES_CNT
 
     def __init__(self, buffer: ReadableBuffer) -> None:
         # Жестко ограничиваем буфер размером структуры (4 байта)
         super().__init__(buffer, size=4)         # 4 - self.bytescnt
+        (self.ptr, self.cnt) = struct_LIST.unpack_from(buffer, 0)
 
     def __repr__(self):
         ''' View while debug value'''
         return f"{self.ptr:04X}:{self.cnt:04X} cnt:{self.cnt}"
         
-    @property
-    def ptr(self) -> int:
-        ''' Near ptr to begin list'''
-        return self.ushort(0)
+    # @property
+    # def ptr(self) -> int:
+    #     ''' Near ptr to begin list'''
+    #     return self.ushort(0)
 
-    @property
-    def cnt(self) -> int:
-        ''' List counter '''
-        return self.ushort(2)
+    # @property
+    # def cnt(self) -> int:
+    #     ''' List counter '''
+    #     return self.ushort(2)
  
 
 # ----

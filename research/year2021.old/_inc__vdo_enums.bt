@@ -1,0 +1,129 @@
+#ifndef H_VDO_INC_ENUMS_INCLUDED
+#define H_VDO_INC_ENUMS_INCLUDED
+
+/*
+ -------------------- ENUMS -------------------
+c tail of file - POI enums
+*/
+
+
+
+// Types of DATA BLOCKS
+//en_BL_DATA_TYPE
+typedef enum <WORD> { 
+    _0x00_DATA_     = 0h,       // ** examle: 0x10a01000 021402:09
+    
+    _LST_WORLD_SCALES   = 07h,
+    _SCALE_ALMANAC      = 08h,     //
+    _FOLDER_MAPS      = 09h,     //   list of 
+    //_MAP_POLI_number_in_0x07_scale_array
+    __POLI_1         = 06h,       // **
+    __POLI_2         = 1h,       // **
+    __POLI_3         = 2h,       // **
+    __POLI_4         = 3h,       // **
+    _MAP_POLI_5_k200    = 14h,     //**  k=200
+    _MAP_POLI_6_k80     = 15h,     //**  k=80
+    _MAP_POLI_7_k40     = 16h,     //**  k=40
+    _MAP_POLI_9_k100    = 1Ch,     //** k=100
+    _MAP_POLI_10_k400   = 1Dh,     //**  k=400
+    _MAP_POLI_11        = 1Eh,       // **
+/*
+In the car driver can chouse "Map scale"
+10m 20m 100m 200m 500m 1km 2km 5km 10km 50km 100km
+cnt=11
+*/    
+    _BIT_MASK        = 04h,
+
+    // string search POI 
+    _COUNTRYS           = 0Ah,
+    _COUNTRYS_ALPHABET  = 0Bh,      // _CH_IDX_COUNTR= 0Bh
+    _CITIES             = 0Ch,
+    _CITIES_ALPHABET    = 0Dh,      // _CH_IDX_= 0Ch
+    _ROADS              = 0Eh,
+    _ROADS_ALPHABET     = 0Fh,      // _CH_IDX_= 0Eh
+    _POI                = 10h,
+    _POI_ALPHABET       = 11h,  // ?_CH_arrPTR_COUNTR= 0Bh
+
+    _TABLE_OF_CONTENTS  = 12h,
+    _FILE_INFO          = 13h,
+
+    _TERR_DIVISION      = 17h,       // from 0x07 any countries
+    _IDX_TERR_DIVISION  = 18h, 
+
+    _CARINET_TOC        = 0x66,        //table of contents carinet
+    _CARINET_64_second  = 0x64,
+    _CARINET_NATIVE_LANG_MESSAGES  = 0x65,    
+    
+    _invalid            = 252,
+    _empty              =  253,
+    _unknown            = 254,
+    _too_far            = 255
+} en_BL_DATA_TYPE <format=hex, fgcolor=cLtGreen, bgcolor=cLtBlue>;
+
+
+// used in 0x13h block
+//en_DATA_UNIT_TYPE
+typedef enum <WORD>{
+    _22h_zero_ended_string  = 22h,
+    _1Eh_zero_ended_string  = 1eh
+}en_DATA_UNIT_TYPE <bgcolor=0xFF8080, fgcolor=cAqua>;
+
+// used in  0x0A, 10 file
+//en_GEO_TYPE
+typedef enum <uchar>{
+    place   = 0x00,
+    point   = 0x01,     //or building ect
+    village = 0x10,
+    __strange = 0xff
+    
+}en_GEO_TYPE <bgcolor=0xFF8080, fgcolor=cAqua>;
+
+
+//en_GEO_COUNTRY
+typedef enum <uchar>{
+    _germany    = 0x04,
+    _slovenija      = 0x17,      
+    _slovenska_republika = 0x14,
+    _hrvatska       = 0x1a,   
+    _ceska_republika= 0x13,
+    _latvija        = 0x1b,
+    _lietuva        = 0x18,
+    _polska         = 0x12,
+    _               = 0xff
+}en_GEO_COUNTRY ; //<fgcolor=0xFF8080, bgcolor=cLtRed>;
+
+
+//en_CARINET_LANGUAGE
+typedef enum <uchar>{
+    _holland    =   1,
+    _english    =   2,
+    _french     =   3,
+    _deutch     =   4,
+    _italian    =   5,
+    _hispain    =   6,
+    _svedian    =   7,
+_danian =   0xA,
+_katalanian =   0xB,
+_finnish    =   0xC,
+_danianTOO  =   0xE,    
+    _portugal   =   0xF,    //07FF: (nenhuma mensagem)  
+    _english_TOO   = 0x11
+}en_CARINET_LANGUAGE; // 0x66 0x65 0x64
+
+
+//
+// used in 0x0B file, __place
+//  type=1 - str - get interface str list for choice 
+//  type=0 - chrs - get keyboard with list accesible chars - char idx ( 0Dh,
+typedef enum <byte>{
+    user_intrf_keyboard   = 0,
+    user_intrf_str_list   = 1
+}en_interface_choice_type <bgcolor=0xFF8080, fgcolor=cAqua>;
+
+
+
+
+
+
+
+#endif  // include vdo_inc.bt only once

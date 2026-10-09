@@ -1,0 +1,12 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+#include "vdo_block.bt"
+
+
+//VDO_BLOCK bt_12(0);
+bl_offset(0);
+bl_addr(0x00000101);
+
+// 0x07 07_LIST_GEO_MAPS    // 00 00 02:01  - 
+bl_addr(0x00000201); 

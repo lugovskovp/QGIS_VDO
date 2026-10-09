@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" 
+	xml:space="preserve" 
+	width="2048px" 
+	height="2048px" 
+	version="1.1" 
+	viewBox="0 0 2048 2048" 
+	xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs>
+<style type="text/css">
+<![CDATA[
+
+.red{fill:#B1302A}
+
+.green{fill:green}
+
+.ruler{stroke:grey; stroke-width:2}
+.ruler-text{font-size:300; fill:black; stroke:grey; stroke-width:2}
+
+.rstr{stroke:red; stroke-width:100}
+
+]]>
+</style>
+</defs>
+
+<!-- backgroundimage -->
+<g transform="scale(2)">
+	<!--  -->
+	<image id="backgroundimage" href="itt_sq_768.jpg" x="0" y="0" height="1024px" width="1024px"></image>
+		<path d="M16 0 V1024 m256 -1024 V1024 m256 -1024 V1024 m256 -1024 V1024 " class="ruler" />
+	<text x="20" y="30" class="ruler-text">0x0000</text> <text x="20" y="1014" class="ruler-text">0x0000</text>
+	<text x="276" y="30" class="ruler-text">0x1000</text><text x="276" y="1014" class="ruler-text">0x1000</text>
+	<text x="532" y="30" class="ruler-text">0x2000</text><text x="532" y="1014" class="ruler-text">0x2000</text>
+	<text x="788" y="30" class="ruler-text">0x3000</text><text x="788" y="1014" class="ruler-text">0x3000</text>
+		<path d="M0 1023 H1024 m-1024 -256 H1024 m-1024 -256 H1024 m-1024 -256 H1024 " class="ruler" />
+	<text x="100" y="1014" font-size="20" class="ruler-text">0x0000</text><text x="900" y="1014" font-size="20" class="ruler-text">0x0000</text>
+	<text x="100" y="758" font-size="20" class="ruler-text">0x1000</text><text x="900" y="758" font-size="20" class="ruler-text">0x1000</text>
+	<text x="100" y="500" font-size="20" class="ruler-text">0x2000</text><text x="900" y="500" font-size="20" class="ruler-text">0x2000</text>
+	<text x="100" y="240" font-size="20" class="ruler-text">0x3000</text><text x="900" y="240" font-size="20" class="ruler-text">0x3000</text>
+	<!--<text x="276" y="30" class="ruler-text">-0x1000</text>
+	<text x="532" y="30" class="ruler-text">-0x2000</text>
+	<text x="788" y="30" class="ruler-text">-0x3000</text>-->
+	<!-- <path d="M256 0 V1024" class="rstr"/> 	 -->
+</g>
+
+<path d="M0 1024   h100 1256 100 v50 h100" fill="transparent" stroke="blue" stroke-width="20"/>
+
+
+<!--
+<g >
+	<circle id="design" class="red" cx="100" cy="256" r="50"/>
+	<path d="H 1256 1256" fill="transparent" stroke="blue"/>
+</g>
+-->
+
+<!-- transform="translate(0,<minY+maxY>) scale(1, -1)   // for flip Y -->
+<g transform="translate(0,2048) scale(1, -1) scale(0.125)">
+	<!-- <path d="M100 100 V100 0 t50,50 0,50" class="rstr"/> -->
+	<polgone stroke="blue" stroke-width="100" points="0,1024 300,1100 600,1200 1000,2000"/>
+	<circle id="design2" class="green" cx="1024" cy="4096" r="100"/>
+	<circle id="design2" class="red" cx="2048" cy="1024" r="100"/>
+	<polyline points="400 1400 300 12288 300,14800 1200 1400" fill="transparent" stroke="black" stroke-width="100"/>
+</g>
+
+
+
+
+</svg>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+	"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1"
+	baseProfile="full"
+	xmlns="http://www.w3.org/2000/svg"
+	xmlns:ev="http://www.w3.org/2001/xml-events"
+	width="2048" height="2048">
+
+	<rect x="0" y="0" name="background" width="2048" height="2048"
+		fill="#f8daa4" stroke="black" stroke-width="1px" stroke-opacity="0.5"/>
+
+	<g name="en_WATER-0x01" fill="#89d5c5" fill-opacity="0.8" stroke="#FF0000" stroke-width="0.5px" >
+		<polygon name="mediterranean seao stroke=80BBDB" id="0x4008F749" 
+		
+			  points="  2048,409 2047,409 2047,402 2024,401 2004,401 1988,397 1940,396 1922,391 1916,394 1877,380 1864,391 1826,392 1800,383 1800,380 1788,370 1767,361 1764,349 1753,345 1746,334 1722,320 1708,316 1685,312 1672,306 1664,293 1650,295 1637,290 1627,295 1617,299 1595,300 1583,306 1561,318 1549,322 1510,326 1498,324 1473,324 1460,326 1433,321 1415,313 1391,317 1382,317 1353,312 1331,309 1269,310 1245,307 1236,319 1219,319 1207,312 1196,319 1181,312 1150,309 1127,297 1117,286 1095,279 1104,274 1095,271 1095,284 1082,282 1075,273 1092,268 1103,256 1100,248 1111,229 1139,224 1146,223 1166,218 1180,215 1200,211 1206,209 1222,196 1252,169 1257,166 1290,157 1293,155 1295,141 1312,132 1332,115 1367,99 1388,93 1402,84 1429,76 1454,64 1491,42 1501,35 1518,20 1531,13 1538,5 1547,0 2048,0
+
+ 
+">
+			<title>mediterranean seao</title></polygon>
+		<circle cx="2048px" cy="000px" r="50px" fill="red"/>
+		<circle cx="200px" cy="200px" r="104px" fill="blue"/>
+	</g>
+
+</svg>
+

@@ -1,0 +1,196 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Script File
+//
+
+//#ifndef H_VDO_INC_BLOCK
+//#define H_VDO_INC_BLOCK
+
+
+
+#include "vdo_0x12.bt"  // first block
+#include "vdo_0x13.bt"	// info
+
+#include "vdo_0x04.bt"
+
+#include "vdo_0x0B.bt"  // TOC 0A -
+#include "vdo_0x0A.bt"  // country
+    #include "vdo_0x0D.bt"
+    #include "vdo_0x0C.bt"  // city 0C_CITIES
+        #include "vdo_0x0F.bt"
+        #include "vdo_0x0E.bt"  // road / street
+            #include "vdo_0x11.bt"//11_SYMBOLS_POI --- 0409
+            #include "vdo_0x10.bt"//10_POI --- 5198
+
+
+#include "vdo_0x00.bt"  // poi?  No addr?
+
+
+#include "vdo_0x07.bt"  // global maps list
+#include "vdo_0x18.bt"  //  idx territorial divisions countries
+#include "vdo_0x17.bt"  //  territorial divisions countries
+
+#include "vdo_0x08.bt"  // 08_SCALE_LST_MAPS
+#include "vdo_0x09.bt"  // 09_IDX_MAPS_POLI
+    #include "vdo_0x1d.bt"  // 1D_MAP_POLI_10_k400
+    #include "vdo_0x1c.bt"  // 1C_MAP_POLI_9_k100
+    #include "vdo_0x16.bt"  // 16_MAP_POLI_7_k40
+    #include "vdo_0x15.bt"  //  15_MAP_POLI_6_k80
+    #include "vdo_0x14.bt"  //  14_MAP_POLI_5_k200
+    #include "vdo_0x1e.bt"  // 1E_MAP_POLI_11 
+
+    #include "vdo_0x06.bt"  //  03_MAP_POLI_4
+	
+    #include "vdo_0x03.bt"  //  03_MAP_POLI_4
+	#include "vdo_0x02.bt"  //  02_MAP_POLI_3 same as 03_MAP_POLI_4
+	#include "vdo_0x01.bt"  //  01_MAP_POLI_2 same as 03_MAP_POLI_4
+
+#include "vdo_0x66.bt"  // CARINET HEAD, toc
+#include "vdo_0x64.bt"  // CARINET
+#include "vdo_0x65.bt"  // CARINET
+
+void bl_addr(DWORD bl_addr){
+    bl_offset( (bl_addr >> 8) * 0x800 );
+}
+
+void bl_offset(DWORD start_offset){
+    local WORD type <format = hex> = ReadUShort(start_offset + 4);
+    // check valid bl_addr???
+    FSeek(start_offset);
+    switch (type){
+        case 0x12:
+            BLOCK_TYPE_0x12     __bl_0x12 <comment="00 00 00 01 Contents">;
+            break;
+        case 0x13:
+            BLOCK_TYPE_0x13     __bl_0x13;  //00 00 01 01 File info
+            break;
+        case 0x04:
+            BLOCK_TYPE_0x04     __bl_0x04;  //??
+            break;
+
+        case 0x07:      //ALL MAP  SCALES
+            BLOCK_TYPE_0x07     __bl_0x07;  // 00 00 02:01 07_LIST_GEO_MAPS
+            break;
+        case 0x18:
+            BLOCK_TYPE_0x18     __bl_0x18;  // 0x17 list
+            break;
+        case 0x17:
+            BLOCK_TYPE_0x17     __bl_0x17;  // 
+            break;
+
+        case 0x08:       //  maps for choused SCALE - 
+            BLOCK_TYPE_0x08     __bl_0x08;  // 00 AB C0:08 08_IDX_IDX_GEO
+            break;
+        case 0x09:      //  idx maps poligons of map of scales
+            BLOCK_TYPE_0x09     __bl_0x09;  // 01 7E 12:01  - 09_IDX_GEO_DATA
+            break;
+ // maps polygons       
+        case 0x1d:      //   scale = 10, 1D_MAP_POLI_10_k400
+            BLOCK_TYPE_0x1d     __bl_0x1d;  // 
+            break;
+        case 0x1c:      // scale = 9, 1C_MAP_POLI_9_k100
+            BLOCK_TYPE_0x1c     __bl_0x1c;  //1C_MAP_POLI_9_k100
+            break;
+        case 0x16:      // scale = 7, _MAP_POLI_7_k40 len: 1
+            BLOCK_TYPE_0x16     __bl_0x16;  //16_MAP_POLI_7_k40 len: 1
+            break;
+        case 0x15:      // scale = 6,  15_MAP_POLI_6_k80
+            BLOCK_TYPE_0x15     __bl_0x15;  // 15_MAP_POLI_6_k80
+            break;
+        case 0x14:      // scale = 5,  14_MAP_POLI_5_k200
+            BLOCK_TYPE_0x14     __bl_0x14;  // 14_MAP_POLI_5_k200
+            break;
+        case 0x1e:      // scale = 11, 1C_MAP_POLI_9_k100
+            BLOCK_TYPE_0x1e     __bl_0x1e;  //1E_MAP_POLI_11
+            break;
+// ?????????????????????? 6 - poli4?????
+        case 0x06:      // scale = 4,  03__POLI_4
+            BLOCK_TYPE_0x06     __bl_0x06;  // 06_MAP_POLI_1
+            break;
+
+        case 0x03:      // scale = 4,  03__POLI_4
+            BLOCK_TYPE_0x03     __bl_0x03;  // 03_MAP_POLI_4
+            break;
+        case 0x02:      // scale = 4,  03__POLI_3
+            BLOCK_TYPE_0x02     __bl_0x02;  // 02_MAP_POLI_3
+            break;
+        case 0x01:      // scale = 4,  03__POLI_2
+            BLOCK_TYPE_0x01     __bl_0x01;  // 01_MAP_POLI_2
+            break;			
+			
+        case 0x0B:
+            BLOCK_TYPE_0x0B     __bl_0x0B;  //00 00 03:01 0B_SYMBOLS_COUNTR
+            break;
+        case 0x0A:  //COUNTRIES
+            BLOCK_TYPE_0x0A     __bl_0x0A;
+            break;
+        case 0x0D:
+            BLOCK_TYPE_0x0D     __bl_0x0D;
+            break;
+        case 0x0C:  // CITIES
+            BLOCK_TYPE_0x0C     __bl_0x0C;
+            break;
+        case 0x0F:
+            BLOCK_TYPE_0x0F     __bl_0x0F;
+            break;
+        case 0x0E:  // ROADS
+            BLOCK_TYPE_0x0E     __bl_0x0E;
+            break;
+        case 0x11:  // TOC POI
+            BLOCK_TYPE_0x11     __bl_0x11;
+            break;
+        case 0x10:  // POI
+            BLOCK_TYPE_0x10     __bl_0x10;
+            break;
+
+        case 0x00:  // 
+            BLOCK_TYPE_0x00     __bl_0x00;
+            break;
+
+//CARINET   
+        case 0x66:  // HEADER
+            BLOCK_TYPE_0x66     __bl_0x66;
+            break;    
+        case 0x64:  // 
+            BLOCK_TYPE_0x64     __bl_0x64;
+            break; 
+        case 0x65:  // 
+            BLOCK_TYPE_0x65     __bl_0x65;
+            break; 
+        
+        default:
+        BL_HEADER unknown_type;
+    }
+
+};
+
+
+
+int write_svg(BLOCK_TYPE_0x1d &a){
+    local int fout, i, j, res, cnt_ret=0;
+    local string s, filename;
+
+    fout = FileNew("Text", true);
+    Printf ("\n");
+    SPrintf(filename, "0x%02X %08X", a.block.type, a.block.addr.hex);
+    FPrintf (fout, "%s", getSVGHeader(filename));
+//FPrintf();
+    //local string stroke="#0000ff";
+    //local string fill="#2222ee";
+
+    do{
+        //Printf("%s\n", Read_GEO_TYPE(a.geo_type[i]) );
+        FPrintf (fout, "%s", get_strSWG_GEO_TYPE(a.geo_type[i]));
+    }while( exists(a.geo_type[++i]) );
+  
+
+    FPrintf (fout, "\n</svg>");
+    FileSelect(fout);
+    SPrintf( filename, "C:\\Work\\VDO_Dayton\\010_bt\\data%s.svg", filename);
+    FileSave( filename ); 
+    FileClose();
+
+    return res;
+return 0;
+}
+
+//#endif

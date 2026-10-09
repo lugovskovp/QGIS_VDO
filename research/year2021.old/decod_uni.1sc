@@ -1,0 +1,212 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Script File
+//
+//      File:  Find block by type and length
+/*
+Find only non-copressed block with size > 3
+*/
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+
+// ee_map.txt
+// - 2B6D2800: 056DA501 :  			1c_MAP_POLI_9_k100 --- 0262
+//   2B873000: 0570E601 :  	08_SCALE_ALMANAC --- 0001
+//      local DWORD ptr, ptrStart = 0x2B6D2800, ptrEnd = 0x2B873000, constBlSize=0x800;
+local DWORD ptr, ptrStart, ptrEnd, constBlSize=0x800;
+local DWORD val;
+local byte blockType, FlagCompressed, cnt_types, end_offs;
+
+local DWORD off;
+local unsigned QUAD  buffer, buf_t;
+
+local unsigned WORD i,j,k=0, tmp_w;
+local unsigned DWORD tmp_a, add_shift=0;
+local unsigned byte flag_read_half = 1;
+
+// ee 28AD2000: 0515A401 :  			16_MAP_POLI_7_k40 --- 4806
+ptrStart = 0x28AD2000; ptrEnd = 0x2B947000;//ee
+// bnl 0B6BE000: 016D7C01 :  			16_MAP_POLI_7_k40 cnt- 0838
+//ptrStart = 0x0B6BE000; ptrEnd=0x0C05F000;//bnl
+
+//Printf("bl_addr :cnt_types poliline_offs :  DW_1 DW_2\n"); 
+for(ptr=ptrStart; ptr<ptrEnd; ptr+=constBlSize){
+    if(FSeek(ptr) != 0){    // EOF -> exit
+        Printf("0x%08X EOF!\n", ptr); return;}
+
+    val = ReadUInt(ptr);
+    // is this block start?
+    if( ((val>>8)*constBlSize) == ptr){
+        // check block type\
+        blockType = ReadByte(ptr+0x05);
+        //Printf("%01X    \n", blockType);
+        if( !( (blockType == 0x16 ) || (blockType == 0x15 ) || (blockType == 0x1c )
+            || (blockType == 0x14 ) || (blockType == 0x1d ) || (blockType == 0x1e ) ) )
+            continue;
+
+        // is this block compressed?
+        if(ReadByte(ptr+0x06) == 1){
+            // continue;
+        }else{  //block not compressed
+            continue;
+        }
+
+ /*       // cnt types 0bh
+        if(ReadByte(ptr+0x0b) != 3) {
+            continue;
+        }
+*/
+
+        // read key dword , 0e 14 08 00
+// 0E140800 === cb<<7=6580=6501;1dc<<1  = 03b8
+        if(ReadUInt(ptr+0x34) != 0x0e140800){
+            //continue;
+        }
+
+//only 3 times
+if(k++ > 20) return;
+
+        FlagCompressed = ReadByte(ptr+0x06);
+        if(FlagCompressed == 1){
+            // 2- smallest
+            
+
+            if(ReadUInt(ptr+0x34) == 0x0e140800){   // 0E 14 08 00 === cb<<7=6580=6501;1dc<<1  = 03b8
+                //decode_types(ptr);
+                Printf("\n!!!\n");
+            }
+            decode_types(ptr);
+        }
+    }
+}
+//--------------------------------------------------
+
+
+return;
+
+void decode_types(DWORD block_offset){
+    local DWORD ptr = block_offset + 0x38; // ptr 2 coded Types
+    local unsigned QUAD buffer, buf_t;
+    local unsigned WORD d_len = 20, tmp_w;
+    local unsigned DWORD res;
+    
+    //
+    buffer = ReadUQuad(ptr); // 8 first coded Types
+    ptr += 8; //next packet of bytes
+                
+    //  Print_buf( buffer );
+
+    // #1 add_shift - qty bits for addr in type
+    tmp_w = buffer>> (64-20) & 0xff;    // first 5 nibbles - type and inner offset
+    //  Printf("\n addr first  %04X\n",( tmp_w ));
+   // if( tmp_w<<0 == ReadUShort(block_offset +0x0c) ) d_len = 19;
+    if( tmp_w<<1 == ReadUShort(block_offset +0x0c) ) d_len = 20;
+    if( tmp_w<<2 == ReadUShort(block_offset +0x0c) ) d_len = 21;
+   // if( tmp_w<<3 == ReadUShort(block_offset +0x0c) ) d_len = 22;
+    //  Printf(" data bits   %i\n",( d_len ));
+    Printf("\n\n bl_offset( 0x%08X ); // 0x%08X [%i types] %i\n", block_offset, ReadUInt(block_offset+0x34), 
+            ReadUShort(block_offset+0ah), d_len );
+
+    
+    //1,2
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+        tmp_w = res>>28; // in 3,4 - if is_line - need more shift
+    buf_t = ReadUQuad(ptr)>>(64 - d_len*2);
+    buffer |= buf_t;
+    //Print_buf( buf_t );
+    ptr+=5;
+    Printf("\n");
+    
+    
+    //3,4
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    //  bl_offset( 0x28D0C800 ); // 0x0E140800 [6 types] 20
+    if ( tmp_w > 0) {
+        buf_t = ReadUQuad(ptr)>>(64 - d_len*2);
+    }else{
+        buf_t = ReadUQuad(ptr) >>20;
+    }
+    //
+    buffer |= buf_t;
+    ptr+=5;
+    Printf("\n");
+    
+    //5,6
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    //buf_t = ReadUQuad(ptr)>>(64 - d_len*2);
+    buf_t = ReadUQuad(ptr) >>18;
+    buffer |= buf_t;
+    ptr+=5;
+    Printf("\n");
+    
+    //7,8
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    
+    buf_t = ReadUQuad(ptr)>>16;
+    buffer |= buf_t;
+    ptr+=5;
+    Printf("\n");
+    
+    //9,10
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    res = calc_type_addr(buffer >>(64-d_len), d_len);
+    buffer <<= d_len;
+    Printf (" %08X ", res);
+    
+    
+    buf_t = ReadUQuad(ptr)>>14;
+    buffer |= buf_t;
+    ptr+=5;
+    
+    Printf("\n");
+
+    return;
+}
+
+//----
+DWORD calc_type_addr(DWORD buf, WORD len){
+    local unsigned DWORD res;
+    // Printf(" :[%05X] \t", buf );
+        // ### 1 type: 8 first bits <<7 
+    local WORD type = (buf >> (len-8) ) <<7; 
+    type = (type & 0xff00) | (type & 0x00FF)>>7;
+//    Printf(" %04X", type );
+        // ### 2 addr
+    local WORD val = (buf &0x00000FFF) <<1;
+    //val <<=1;
+//    Printf(" %04X ", val );
+//    if(type == 0) Printf("<---\n"); // last, 0000 xxxx <-ptr2str-10h
+    res = type;
+    res <<= 16;
+    res |= val;
+//    Printf(" =%08X= ", res );
+    return res;
+}
+
+
+
+
+void Print_buf(QUAD b){
+    Printf(" %08X %08X ", b >>32, b & 0xffffffff);
+}

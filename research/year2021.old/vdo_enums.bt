@@ -1,0 +1,244 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: vdo_enums.bt
+//   Authors: P.Lugovskov
+//   Purpose: Include file for Illustrates for Habr (illustrate_4habr.bt)
+//     Using: #include "inc_common.bt"
+//------------------------------------------------
+#ifndef H_VDO_ENUMS_INCLUDED
+#define H_VDO_ENUMS_INCLUDED
+
+/*
+//en_GEO_COUNTRY
+typedef enum <uchar>{
+    _germany    = 0x04,
+	_slovenska_republika = 0x14,
+    _slovenija      = 0x17,      
+
+    _hrvatska       = 0x1a,   
+    _ceska_republika= 0x13,
+    _latvija        = 0x1b,
+    _lietuva        = 0x18,
+    _polska         = 0x12,
+    _               = 0xff
+}en_GEO_COUNTRY_____ex ; //<fgcolor=0xFF8080, bgcolor=cLtRed>;
+
+ -------------------- ENUMS -------------------
+c tail of file - POI enums
+en_BL_DATA_TYPE		Types of DATA BLOCKS
+en_CARINET_LANGUAGE	
+en_PLACE_CATEGORY
+en_GEO_COUNTRY  // ex en_ENG_COUNTRY_NAME
+en_GEO_TYPE
+en_interface_choice_type
+*/
+
+// Types of DATA BLOCKS
+//en_BL_DATA_TYPE
+typedef enum <WORD> { 
+    _0x00_DATA_     = 0h,       // ** examle: 0x10a01000 021402:09
+    _BIT_MASK        = 04h,   
+    _LST_WORLD_SCALES   = 07h,
+    _SCALE_ALMANAC      = 08h,     //
+    _FOLDER_MAPS      = 09h,     //   list of 
+    //_MAP_POLI_number_in_0x07_scale_array
+    __POLI_1         = 06h,       // **
+    __POLI_2         = 1h,       // **
+    __POLI_3         = 2h,       // **
+    __POLI_4         = 3h,       // **
+    _MAP_POLI_5_k200    = 14h,     //**  k=200
+    _MAP_POLI_6_k80     = 15h,     //**  k=80
+    _MAP_POLI_7_k40     = 16h,     //**  k=40
+    _MAP_POLI_9_k100    = 1Ch,     //** k=100
+    _MAP_POLI_10_k400   = 1Dh,     //**  k=400
+    _MAP_POLI_11        = 1Eh,       // **
+/*
+In the car driver can chouse "Map scale"
+10m 20m 100m 200m 500m 1km 2km 5km 10km 50km 100km
+cnt=11
+*/    
+    // string search POI 
+    _COUNTRYs           	= 0Ah,
+    _CH_country  		= 0Bh,      // fully parsed _CH_IDX_COUNTR= 0Bh
+    _CITIEs             = 0Ch,	    // fully parsed
+    _CH_cityes    		= 0Dh,      // fully parsed _CH_IDX_= 0Ch
+    _ROADs            	= 0Eh,		//
+    _CH_road     		= 0Fh,      // fully parsed _CH_IDX_= 0Eh
+    _POIs                = 10h,		// fully parsed
+    _CH_poi       		= 11h,  	// fully parsed ?_CH_arrPTR_COUNTR= 0Bh
+
+    _ABSTRACT		  	= 12h,
+    _FILE_INFO           = 13h,		// fully parsed
+
+    _TERR_DIVISION      = 17h,       // from 0x07 any countries
+    _IDX_TERR_DIVISION  = 18h, 
+
+    _CARINET_TOC        = 0x66,        //table of contents carinet
+    _CARINET_64_second  = 0x64,
+    _CARINET_NATIVE_LANG_MESSAGES  = 0x65,    
+    
+    _invalid            = 252,
+    _empty              =  253,
+    _unknown            = 254,
+    _too_far            = 255
+} en_BL_DATA_TYPE <format=hex, fgcolor=cYellow, bgcolor=cLtBlue>;
+
+//en_CARINET_LANGUAGE 
+typedef enum <uchar>{
+	_Nederlands =   1,		//01 (1) 	 nederland, belgie - Dutch 
+	_English    =   2,  	//02 (2) 	 united kingdom, eire
+	_French     =   3,  	//03 (3) 	 france, luxembourg
+	_Deutch     =   4,  	//04 (4) 	 deutschland oesterreich osterreich schweiz
+	_Italian    =   5,  	//05 (5) 	 italia
+	_Hispain    =   6,  	//06 (6) 	 espana
+	_Svedian    =   7,  	//07 (7) 	 sverige
+	__unk_08	=	8,
+	__unk_09	=	9,
+	_Danian 	=   0xA, 	//0A (10) 	 danmark
+	_Catalan 	=   0xB, 	//0B (11) 	 andorra
+	_Finnish    =   0xC, 	//0C (12) 	 suomen tasavalta
+	__unk_0d	=	0xd,
+	_Norvegian  =   0xE, 	//0E (14) 	 norge    
+	_Portugal   =   0xF, 	//0F (15) 	 portugal  //07FF: (nenhuma mensagem)  
+	__unk_10	=	0x10,		// _english_TOO
+	__eng_TOO   =   0x11,
+	_Polish     =   0x12, 	//12 (18) 	 polska
+	_Czech      =   0x13, 	//13 (19) 	 ceska republika
+	_Slovak     =   0x14, 	//14 (20) 	 slovenska republika
+	_Croatian	=	0x1A,	//1A (26) 	 hrvatska
+	_Latvian	=	0x1B,	//1B (27) 	 latvija
+	_Lithuanian	=	0x18,	//18 (24) 	 lietuva
+	_Slovene	=	0x17,	//17 (23) 	 slovenija
+	_UNK_lng  = 0xFF
+}en_CARINET_LANGUAGE  <bgcolor=cGreen, fgcolor=cDkGreen>; // 0x66 0x65 0x64
+
+
+
+
+//{en_PLACE_CATEGORY	 0xA 0xC blocks
+typedef enum <ushort>{
+    Car_repair  = 0xB,
+    Gas_station = 0xC,
+    CarRent     = 0xD,
+    Parking     = 0xE,
+    ParkAndRide = 0xF, // park and ride, intercept parking, parkuj i jedz metro marymont
+
+    RestingPlace= 0x10, //  mop olesnica mala,  mop jonas polnoc, mop jonas poludnie
+	Intresting  = 0x14,
+    Hotel       = 0x15,
+    Restaurant  = 0x16,
+    Bank        = 0x17,
+    Culture     = 0x18,
+    Library     = 0x19,
+    Court       = 0x1a,
+    Embassy     = 0x1D,
+    BankomatATM = 0x1E,
+    Tourist_info= 0x1F,
+
+	Museum	    = 0x20,	//musee d'art moderne, musee de l'armee, musee des sciences Naturelles
+    Theater     = 0x21,
+    Sport       = 0x23,  //automotodrom brno, o2 arena, ski areal jasna, o2 arena
+    Church      = 0x24,
+	Architecture = 0x25,	//
+	Fun_park    = 0x26,	//boudewijn seapark, bruparck
+	Nature_park = 0x27,	//het zwin, nationale plantentuin
+    UN_United_Nations = 0x28,
+    Hospital    = 0x29,
+    Police      = 0x2A,
+    Goverment   = 0x2B,
+    Post        = 0x2C,
+    Clinic      = 0x2D,
+    Aphoteca    = 0x2E,
+    Shop        = 0x2F, // supermarket?
+
+	City	    = 0x30,	//russian map
+    Cinema      = 0x31,
+    __golf_club = 0x32, //first warsaw golf country club
+    RailStation = 0x33,
+	Border_point= 0x34, //
+	Seaport     = 0x35,  // oostende ramsgate (tonnel), zeebrugge (port), need mode exmpls
+    BusStation  = 0x36,
+    Pier        = 0x37, // przystan kortowska-> Piers, Dock
+    Shcool      = 0x38,
+    Winery      = 0x39, // lanson caves, champagne krug, moet et chandon, ruinart caves
+	Aeroport    = 0x3a,	//brussel nationaal, brussels airport; , luchthaven brussel
+    __bmw_motorbike_service = 0x3B,
+    Business    = 0x3D    // Olsztyn, Poland https://en.wikipedia.org/wiki/Michelin_Polska
+
+}en_PLACE_CATEGORY	<format=hex, bgcolor=cDkGreen, fgcolor=cAqua>;
+
+//en_ENG_COUNTRY_NAME
+typedef enum <ushort>{
+    Albania	=	2,
+    Andorra	=	5,
+    Austria	=	14,
+    Azerbaijan	=	15,
+    Belarus	=	20,		//_slovenska_republika = 0x14,
+    Belgium	=	21,
+    Bosnia_and_Herzegovina	=	27,
+    Bulgaria	=	33,
+    Croatia	=	53,
+    Cyprus	=	55,
+    Czech_Republic	=	56,
+    Denmark	=	57,
+    Estonia	=	67,
+    Finland	=	72,
+    France	=	73,
+    Georgia	=	80,
+    Germany	=	81,
+    Gibraltar = 83,
+    Greece	=	84,
+    Hungary	=	97,
+    Iceland	=	98,
+    Ireland	=	103,
+    Italy	=	105,
+    Latvia	=	117,
+    Liechtenstein = 122,
+    Lithuania	=	123,
+    Luxembourg	=	124,
+    North_Macedonia	=	126,
+    Moldova_Republic_of	=	140,
+    Monaco      = 141,
+    Netherlands	=	150,
+    Norway	=	160,
+    Poland	=	171,
+    Portugal	=	172,
+    Romania	=	176,
+    Russian_Federation	=	177,
+    San_Marino  = 183,
+    Slovakia_Slovak_Republic	=	190,
+    Slovenia	= 191,
+    Spain	=	196,
+    Sweden	=	204,
+    Switzerland	=	205,
+    Turkey	=	216,
+    Ukraine	=	221,
+    United_Kingdom	=	223,
+    Vatican_City = 229,
+    Serbia_and_Montenegro	=	241
+}  en_GEO_COUNTRY <bgcolor=cGreen, fgcolor=cDkGreen>;	// ex en_ENG_COUNTRY_NAME
+
+
+
+
+// used in  0x0A, 10 file
+//en_GEO_TYPE
+typedef enum <uchar>{
+    place   = 0x00,
+    point   = 0x01,     //or building ect []0A - use 1 as altername
+    village = 0x10,
+    __strange = 0xff
+    
+}en_GEO_TYPE <bgcolor=0xFF8080, fgcolor=cAqua>;
+
+
+// used in 0x0B file, __place
+//  type=1 - str - get interface str list for choice 
+//  type=0 - chrs - get keyboard with list accesible chars - char idx ( 0Dh,
+typedef enum <byte>{
+    user_intrf_keyboard   = 0,
+    user_intrf_str_list   = 1
+}en_interface_choice_type <bgcolor=0xFF8080, fgcolor=cAqua>;
+
+#endif  // include vdo_enums.bt only once

@@ -1,0 +1,68 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: carindb_rus
+//   Authors: P.Lugovskov
+//   Version: 0.1
+//   Purpose: Illustrates for Habr 
+//   History: 
+//------------------------------------------------
+
+#include "vdo_block.bt"
+
+bl_offset(0);
+bl_addr(0x101);
+bl_addr(0x201);
+bl_addr(0x301);
+bl_addr(0x401);
+
+    //bl_addr(0x480f0c);  //bl_addr(0x920304);
+// bl_offset(0x1000);
+    //bl_addr(0x01200f02);    //0x0161fd01
+//
+//bl_addr(0x0161a601); //
+//bl_addr(0x0161a702);
+
+//bl_addr(0x0161a902);
+bl_addr(0x0161ab01);    bl_addr(0x011f6001); bl_addr(0x016a3005); //NOT CRYARCH
+
+bl_addr(0x01800001); bl_addr(0x01800102);
+bl_addr(0x01800301);
+bl_addr(0x01800401);
+bl_addr(0x01800501);
+//bl_addr(0x0161ad02);
+//bl_addr(0x0161af01); //bl_addr(0x0161b001);
+//bl_addr(0x0161b001);
+//bl_addr(0x0161b101);
+
+
+
+bl_addr(0x011f580);
+
+Printf("wtf 0x%x\n", 15);
+
+local DWORD i, val, p;
+local uchar t;
+
+/*
+Printf("File size:%0x\n\n",FileSize());
+
+const DWORD blcnt = FileSize() >> 11;
+Printf("File size bl:%0x\n\n", blcnt);
+
+//for (i=0; i< (0x800*10); i+=0x800){
+for (i=0; i<blcnt; i++){
+    p = i*0x800;
+    FSeek(p);
+    val = ReadUInt();
+    if(val>>8 == i){
+        FSeek(p+5);t = ReadUByte();
+        //if( t == 0x04){
+            //Printf("bl 0x%x\t\t0x%06x\t0x%08x\n", i,i>>7,val);
+            //Printf("0x%06x\t0x%06x\t0x%02x\t 0x%08x\n", i>>11, val>>8, t, val);  
+            Printf("0x%08x\t 0x%06x\t0x%02x\t 0x%08x\n", p, i,t, val);     
+        //}
+    }
+
+}
+*/

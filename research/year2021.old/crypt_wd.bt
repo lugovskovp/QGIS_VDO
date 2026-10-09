@@ -1,0 +1,26 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+#include "vdo_block.bt"
+
+
+bl_addr(0x00000001);
+
+
+bl_addr(0x00920304); // CRYPT 0108
+bl_addr(0x01200C03); // crypt 0105
+
+//04
+bl_addr(0x01200f02);    // first 0x04 ?
+  
+bl_addr(0x0161fd01);    // last 0x04 ?
+    bl_addr(0x0161fa01);    // in 0x01200502 0000 0104 block
+        bl_addr(0x01200502);
+    bl_addr(0x0161fb02);
+ 
+
+
+/*
+0x01200f02  0x0161fd01
+
+*/

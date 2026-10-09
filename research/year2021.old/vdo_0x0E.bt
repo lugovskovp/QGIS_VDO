@@ -1,0 +1,110 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#ifndef H_VDO_0x0E_INC_INCLUDED
+#define H_VDO_0x0E_INC_INCLUDED
+#include "__place.bt"
+
+/*
+addinfo 
+GEO_INFO_ROAD 0x0e = size xxxxxx DWORD 
+*/
+
+
+typedef struct{
+    CONST_WORD unknown(0x0100)<optimize=false>;
+}__0e_x0C_STRANGE <bgcolor=cLtYellow>;
+
+
+typedef struct{
+    LON_LAT road_coord;
+    CONST_DWORD   _2_7fff7fff(0x7fff7fff)[2]<optimize=false>;
+    FAR_PTR_CNT   p_0x00_data;
+} MAP_DATA_ROAD <read = Read_MAP_DATA_ROAD>;
+string Read_MAP_DATA_ROAD(MAP_DATA_ROAD &a){
+    return Read_LON_LAT(a.road_coord);
+    local string s;
+    SPrintf( s, "%06f N, %06f E", a.road_coord.la, a.road_coord.lo);
+    return s;
+}
+
+// GEO_INFO_ROAD
+// (block.type == 0x0E) size .... DWORD 
+typedef struct{
+    // PLACE.p_geo_info -> here
+PTR   p_map_data;
+uchar cnt;        // 0100 0200 0300 0600 
+uchar unkn;
+ZERO_WORD a3;
+
+// fill data
+    local DWORD l_tmp <hidden=true> = FTell();
+    if(p_map_data.offset){   // 6 DWORD
+        FSeek(p_map_data.offset);
+        MAP_DATA_ROAD map_data[cnt] <optimize=false>;
+    }
+FSeek(l_tmp);break;
+
+    // rec end
+}GEO_INFO_ROAD <read = Read_GEO_INFO_ROAD>;
+string Read_GEO_INFO_ROAD(GEO_INFO_ROAD &a){
+    local string s;
+    SPrintf(s, "%i", a.cnt);
+    return s;
+};
+
+
+// --- GEO_PLACE
+// main data of 0A.
+typedef struct{
+    GEO place;
+    //
+    local DWORD l_geo_tmp <hidden=true> =FTell();
+    FSeek(place.p_geo_info.offset);
+        GEO_INFO_ROAD  geo_info;
+    FSeek(l_geo_tmp);
+}GEO_ROAD  <read = Read_GEO_ROAD>; //,  comment=Comment_GEO_PLACE>;
+string Read_GEO_ROAD(GEO_ROAD &a){
+    local string s;
+    SPrintf(s, "%02X - %02X (%s) %s ", a.place.type_obj, a.place.subtype, 
+             a.place.parent_name, a.place.name);
+    return s;
+}
+ 
+
+//-----------------------------------------------------
+typedef struct{
+//header start
+    BL_HEADER  block;
+    PTR_CNT     p_geo_info; // add_info
+    PTR_CNT     p_map_data_roads;//ZERO_DWORD  blank0;
+    PTR_CNT     p_ch_POI <comment="0x0E=0">;;   //p_list_idx_0x11 c 0x5800 0x0c block, notBL_ADDR
+    ZERO_DWORD  blank01;
+    PTR_CNT     MB_coordinates <comment="0x0E=0">;//1F84h
+    BL_ADDR      try_neightboard <comment="0x0E=0">;
+    ZERO_DWORD  blank03 <comment="0x0E=0">;
+    BL_ADDR     next_0e; // <comment="zero 0x0A, ee0x0C 000024=0x2a08">;
+    BL_ADDR     prev_0e;  //bl_a_0c_0c
+
+//fill data
+    //
+    struct {
+        GEO_ROAD   place[block.data.Cnt] <optimize=false>;
+    } __places;
+    //
+    struct {
+        GEO_INFO_ROAD geo_info[p_geo_info.Cnt] <optimize=false>;
+    } __add_info;
+WORD _zero;
+    struct {
+        MAP_DATA_ROAD map_road_info[p_map_data_roads.Cnt] <optimize=false>;
+    } __map_info;
+uchar string_begin;
+
+}BLOCK_TYPE_0x0E <comment=Comment_block0x0E >;
+string Comment_block0x0E(BLOCK_TYPE_0x0E &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+
+
+#endif//H_VDO_0x0E_INC_INCLUDED

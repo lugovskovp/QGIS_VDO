@@ -1,0 +1,229 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+#ifndef H_VDO_0x03_INC_INCLUDED
+#define H_VDO_0x03_INC_INCLUDED
+
+#include "vdo_inc.bt"
+
+
+/*
+GEO_TYPE
+    GEO_SHAPE
+        GEO_VERTEX
+*/
+
+
+
+//BLOCK_TYPE_0x03 - same 0x01, 0x02
+// __POLI_4
+typedef struct{
+//header start
+    BL_HEADER   block;
+    PTR_CNT     p_add_info;
+    PTR_CNT   p_info_10;
+    PTR_CNT   p_info_14;
+    PTR_CNT   p_info_18;
+    PTR_CNT   p_info_1c;
+
+    PTR_CNT     p_20_vertexes <bgcolor=cLtYellow>;//PTR_CNT   p_info_20;
+    PTR_CNT   p_info_24;
+
+PTR   p__all_geo_str; ZERO_WORD blank;  //dword: PTR, char,char
+    PTR_CNT     p_far_some_0x00;
+PTR   p__all_geo_str; ZERO_WORD blank;
+PTR   p__all_geo_str; ZERO_WORD blank;
+PTR   p__all_geo_str; ZERO_WORD blank;
+PTR   p__all_geo_str; ZERO_WORD blank;
+        PTR_CNT     p_all_geo_str <bgcolor=cLtYellow>;
+        // LON_LAT     bot_left_corner, top_right_corner;
+        geo_area    map_area;
+        BL_ADDR  bl_crypt_bit_mask; // block.crypted.zero = 0104
+    BL_ADDR     _bl234_higher_scale;  // 03->__02_MAP_POLI_3;
+
+ZERO_DWORD  blank01; // in 03 CONST_DWORD bl_h__tr_h(top_right.hlat - bottom_left.hlat); //(0x00280000);
+DWORD xx4[4];
+ZERO_DWORD blank_last;
+// header end
+
+
+jmp(p_20_vertexes);
+    GEO_VERTEX  all_p20_vertexes[p_20_vertexes.Cnt];
+
+
+//jmp(block.data);
+struct{
+    WORD    wo1[4] <format=hex>;
+    WORD x0 <bgcolor=cBlue, fgcolor=cYellow>;
+}__main_data[block.data.Cnt] <bgcolor=cLtGreen>;
+if( ((block.data.Cnt>>1)<<1) != block.data.Cnt )
+    WORD    __ZERO_ODD;
+
+struct{
+    WORD  wo2[4] <bgcolor=cYellow>;
+    WORD x0 <fgcolor=cLtAqua>;
+} __add_info[p_add_info.Cnt];
+
+
+
+
+jmp(p_info_10);
+struct{
+    WORD p_str <fgcolor=cDkGreen>;
+    WORD  wo2[2];
+PTR     try_ptr0 <bgcolor=cLtGreen>;;
+    WORD x0 <bgcolor=cBlue, fgcolor=cYellow>;
+    local DWORD l_tmpPtr <hidden=true> =FTell(); 
+    if(try_ptr0.Ptr){
+        FSeek( ReadUShort(try_ptr0.offset) + curBlockOffset);
+        string __str_val <fgcolor=cGreen> ;
+    }
+    FSeek(l_tmpPtr);
+} __info_10[p_info_10.Cnt]<optimize=false>;
+
+
+
+jmp(p_info_14);
+struct{
+    struct{
+        PT     try_ptr0 <bgcolor=cLtGreen>;;
+        WORD x0 <bgcolor=cBlue, fgcolor=cYellow>;
+    } __info_14[p_info_14.Cnt] <optimize=false>;
+    struct{
+        PT     try_ptr0 <bgcolor=cLtGreen>;;
+        WORD x0 <bgcolor=cBlue, fgcolor=cYellow>;
+    } __info_14_;
+}info_14;
+
+
+
+
+
+
+
+
+/*
+
+
+jmp(p_far_some_0x00);
+struct{
+    BL_ADDR some_0x00_data;
+    WORD MB_scale <bgcolor=cLtYellow>;
+    WORD x2;
+}__far_some_0x00[p_far_some_0x00.Cnt]<optimize=false>;
+/*
+jmp(p_all_geo_str);
+struct{
+    PTR p_str;
+    uchar MB_scale;     // ?? counter of calling? 01, 02, 03.
+    en_POI_TYPE type;  
+
+    local DWORD l_tmpPtr <hidden=true> =FTell(); FSeek(p_str.offset);
+        string __str_val <bgcolor=cLtGreen>;
+    FSeek(l_tmpPtr);
+}__array_p_str[p_array_p_str.Cnt]<optimize=false>;
+
+
+
+jmp(p_all_geo_str);
+struct{
+    GEO_OBJ_STR all_geo_str[p_all_geo_str.Cnt]<optimize=false>;
+}__array_p_str;
+// subtype? 00 - reg, 02 - alter name, 08 - street, 11 - highway?(p115, vitebsk)
+
+
+
+
+
+
+
+struct {
+    WORD    val_0;
+    WORD    val_1;
+}c12_info[c12.Cnt];
+DWORD lasc_c12 <bgcolor=cPurple>;
+
+
+struct {
+    DWORD    val[12];
+    DWORD   last <bgcolor=cLtAqua>;
+}c13_info[c13.Cnt] <optimize=false>;
+
+
+struct{
+    DWORD _a000075a;
+    DWORD _00d02500;
+    BL_ADDR wtf;
+    DWORD _23a80000;
+} c21_info[c21.Cnt] <optimize=false>;
+
+struct{
+    DWORD _a000075a;
+    DWORD _00d02500;
+    BL_ADDR wtf;
+    DWORD _23a80000 <bgcolor=cLtAqua>;
+} c22_info[c22.Cnt] <optimize=false>;
+
+//BL_ADDR type_0x00_from _c23;
+BL_ADDR type_0x00;
+
+*/
+
+
+
+
+/*
+// fill data
+    GEO_TYPE geo_type[block.data.Cnt]<optimize=false>;
+    //GEO_TYPE 
+    DWORD blank__last_GEO_TYPE <fgcolor=cWhite, bgcolor=cLtGray>;
+    //DWORD fake_last_GEO_TYPE<fgcolor=cWhite, bgcolor=cLtGray>;
+    struct{
+        if(p_all_poligons.Ptr){
+            GEO_SHAPE   __geo_poligons[p_all_poligons.Cnt]<optimize=false>;
+            GEO_SHAPE   blank__last_POLIGON <fgcolor=cWhite, bgcolor=cLtGray>;
+        }
+        if(p_all_lines.Ptr){
+            GEO_SHAPE   __geo_lines[p_all_lines.Cnt]<optimize=false>;
+            GEO_SHAPE   blank__last_LINE <fgcolor=cWhite, bgcolor=cLtGray>;
+        }
+        GEO_VERTEX  point[p_all_vertexes.Cnt];
+        GEO_OBJ_STR geo_oblect[p_all_geo_str.Cnt] <optimize=false>;
+    } __all_data_parts;
+*/
+}BLOCK_TYPE_0x03<read=Read_BLOCK_TYPE_0x03>;
+string Read_BLOCK_TYPE_0x03(BLOCK_TYPE_0x03 &a){
+    local string s;
+    if(a.block.crypted.zero == 0 ) {
+    SPrintf(s,"%04X x %04X (scale: 0x%04X); %s", 
+//SPrintf(s,"0x%04X (scale: 0x%04X); %i types, %i shapes, %i lines, \tfirst: '%s'...", 
+        //a.mb_NumNextLevel, 
+        a.map_area.v_size, a.map_area.h_size, a.map_area.scale,
+        EnumToString(a.block.type)
+        //a.block.data.Cnt, 
+        //a.p_all_poligons.Cnt, a.p_all_lines.Cnt, 
+        //a.geo_type[0].object[0].name
+        );
+    }else{
+        SPrintf(s, "cr: 0x%04X", a.block.crypted.zero);
+    }
+    return s;
+}  
+
+/*< read=Read_BLOCK_TYPE_0x03, 
+    comment=Comment_block0x03 >;
+string Comment_block0x03(BLOCK_TYPE_0x03 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x03(BLOCK_TYPE_0x03 &a){
+    local string s;
+  
+    SPrintf(s,"0x%04X (0x%04X); %i types, %i shapes, %i lines, \tfirst: '%s'...", 
+        a.mb_NumNextLevel, 
+(a.top_right.hlon - a.bottom_left.hlon) / 0xA000,
+        a.block.data.Cnt, 
+        a.p_all_poligons.Cnt, a.p_all_lines.Cnt, 
+        a.geo_type[0].object[0].name);
+    return s;
+}*/
+
+#endif //H_VDO_0x03_INC_INCLUDED

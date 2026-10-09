@@ -1,0 +1,182 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#ifndef H_VDO_svg_INC_INCLUDED
+#define H_VDO_svg_INC_INCLUDED
+
+
+//https://www.w3.org/TR/SVG11/expanded-toc.html
+//https://webplatform.github.io/docs/svg/tutorials/smarter_svg_shapes/
+//https://developer.mozilla.org/en-US/docs/Web/SVG/Element/polygon
+//https://developer.mozilla.org/ru/docs/Web/CSS/position
+
+
+
+
+string get_swgGelement(en_GEO_OBJ_TYPE type){
+    local string s, s_stroke, s_fill, s_stroke_width, s_fill_opacity="0", s_add_attr="";
+
+//  #F3CF9B  Lig. Yellowich orange	36	243, 207, 155
+//	#F9E999  Light yellow	3	249, 233, 153
+//  #CC8E69    Nougat	18	204, 142, 105
+
+//https://htmlcolorcodes.com/roblox-color-codes/
+local string cwBackground = "#f8daa4"; 
+local string cwSea         = "#89d5c5";        //Deep blue #2154B9 
+local string cwCity         = "#e2cdcc";    //Terra Cotta	338	190, 104, 98#BE6862
+local string cwRailway    = "black";
+local string cwRoadA      = "#FFB000";   //Deep orange	1005	255, 176, 0 #FFB000
+local string cwRoadE      = "#ce5c3c";   //Bright red	21	196, 40, 28 #C4281C
+local string cwRiver      = "#79c5b5";
+//#1F801D Forest green	313	31, 128, 29
+/*
+forest 72845a
+road num bgcolor eeca52
+road num square 392002
+
+*/
+
+    switch(type){  
+    case 1: //en_SEA
+        s_stroke = "#80BBDB";  //Pastel Blue	11	128, 187, 219 #80BBDB
+        s_fill = cwSea;
+        s_stroke_width = "0.5px";
+        s_fill_opacity = "0.8";
+        break;
+    case 5: //en_CITY
+        s_stroke = "#c2adac";
+        s_fill = cwCity;
+        s_stroke_width = "2px";
+        s_fill_opacity = "0.9";
+        break;
+    case 8: //en_ISLAND
+        s_stroke = "yellow";
+        s_fill = cwBackground;
+        s_stroke_width = "1px";
+        s_fill_opacity = "1";
+        break;
+
+    case 0x65:  // en_RIVER    = 0x65,
+        s_stroke = cwRiver;
+        s_fill = cwBackground;
+        s_stroke_width = "3px";
+        s_fill_opacity = "0";
+        break;
+    case 0x67:  //en_BORDER   = 0x67,
+        s_stroke = "green";       // red-green
+        s_fill = cwBackground;
+        s_stroke_width = "5px";
+        s_fill_opacity = "0";
+        s_add_attr = "stroke-dasharray=\"10, 5\"";
+        break;
+    case 0x66:  //en_RAILWAY  = 0x66
+        s_stroke = cwRailway;     // black-white
+        s_fill = cwBackground;
+        s_stroke_width = "4px";
+        s_fill_opacity = "0";
+        s_add_attr = "stroke-dasharray=\"16, 8\"";
+        break;
+    case 0x68:  //en_ROAD_E   = 0x68,
+        s_stroke = cwRoadE;
+        s_fill = cwBackground;
+        s_stroke_width = "4px";
+        s_fill_opacity = "0";
+        break;
+    case 0x69:  //en_ROAD_A   = 0x69,
+        s_stroke = cwRoadA;
+        s_fill = cwBackground;
+        s_stroke_width = "2px";
+        s_fill_opacity = "0";
+        break;
+    default:
+        s_stroke = "red";
+        s_fill = s_stroke;
+        s_stroke_width = "7px";
+        s_fill_opacity = "0.5";
+    }
+
+    SPrintf(s, "\n\t<g name=\"%s-0x%02X\" fill=\"%s\" fill-opacity=\"%s\" stroke=\"%s\" stroke-width=\"%s\" %s>\n",
+        EnumToString(type), type, s_fill, s_fill_opacity, s_stroke, s_stroke_width, s_add_attr);
+
+    return s;
+}
+
+
+
+
+
+string get_strASCII(string &s){
+    local string s_res=s;
+    local int i=0;
+    while(s_res[i]){
+        s_res[i] = s[i] & 0x7f;
+        i++;
+    }
+    return s_res;
+}
+
+string get_strSWG_GEO_TYPE(GEO_TYPE &a){
+    local int i = 0, j;
+    local string s, elementsName;
+
+
+const WORD cVertexMaxX = 0xa000;
+const WORD cScaleCoeff4Export = 20;
+
+    s = get_swgGelement(a.type);
+    elementsName = (a.is_line)? "polyline" : "polygon";
+
+    do{
+        SPrintf(s, "%s\t\t<%s name=\"%s\" id=\"0x%08X\" \n", s, elementsName,
+                get_strASCII(a.object[i].name), a.object[i].id );
+        SPrintf(s, "%s\t\t\t  points=\"", s);
+        
+        for(j=0; j < a.object[i].vertex_cnt; j++){
+            SPrintf(s, "%s %i,%i", s, 
+                a.object[i].vertex[j].x/cScaleCoeff4Export ,
+                (cVertexMaxX - a.object[i].vertex[j].y)/cScaleCoeff4Export);
+        }
+        SPrintf(s, "%s\">\n\t\t\t<title>%s</title></%s>\n", s, get_strASCII(a.object[i].name), elementsName);
+    }while( exists(a.object[++i]) );
+    SPrintf(s, "%s\t</g>\n", s);
+    //Printf("%s", s);
+    return s;
+};
+
+
+/*
+
+
+*/
+
+
+string getSVGHeader(string filename){
+
+const WORD cVertexMaxX = 0xa000;
+const WORD cScaleCoeff4Export = 20;
+local string cwBackground = "#f8daa4"; 
+
+    local string s;
+    SPrintf(s, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
+    SPrintf(s, "%s<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\"\n", s);
+    SPrintf(s, "%s\t\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n", s);
+    SPrintf(s, "%s<svg version=\"1.1\"\n\tbaseProfile=\"full\"\n\t", s);
+    SPrintf(s, "%sxmlns=\"http://www.w3.org/2000/svg\"\n\txmlns:ev=\"http://www.w3.org/2001/xml-events\"\n\t", s);
+    //SPrintf(s, "%swidth=\"100\%\" height=\"100\%\">\n\n", s);
+    SPrintf(s, "%swidth=\"%i\" height=\"%i\">\n\n", s, 
+        cVertexMaxX/cScaleCoeff4Export, cVertexMaxX/cScaleCoeff4Export);
+    SPrintf(s, "%s\t<rect x=\"0\" y=\"0\" name=\"background\" width=\"%i\" height=\"%i\"",
+        s, cVertexMaxX/cScaleCoeff4Export, cVertexMaxX/cScaleCoeff4Export);
+    SPrintf(s, "%s\n\t\tfill=\"%s\" stroke=\"%s\" stroke-width=\"1px\" stroke-opacity=\"0.5\"/>\n",
+        s, cwBackground, "black");
+
+    return s;
+}
+
+
+//===================
+
+
+
+
+#endif //H_VDO_svg_INC_INCLUDED

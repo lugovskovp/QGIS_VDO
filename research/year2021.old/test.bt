@@ -1,0 +1,19 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: 00 + 04 types
+
+//------------------------------------------------
+#include "vdo_block.bt"
+
+BigEndian(); 
+Printf("\n\nfile name: %s\n\n", FileNameGetBase( GetFileName() ));
+//return;
+
+bl_addr(1);
+bl_offset(0x400);
+
+//
+//bl_addr(0x04587101);    // Narva!!
+//bl_offset(0x22C39000); //04587201
+//bl_addr(0x023fb303);

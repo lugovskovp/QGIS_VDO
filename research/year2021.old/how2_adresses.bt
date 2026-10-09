@@ -1,0 +1,60 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+    //------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#include "vdo_block.bt"
+
+//VDO_BLOCK bt_12(0);
+bl_offset(0);
+
+/*
+bl_offset(0x800);
+
+// bl_offset(0x1000);
+bl_addr(0x00000301);    //0x0B - Symbols Countries
+
+//belarus
+bl_addr(0x00000402);    // 0x0A - Countries
+
+//'b'
+bl_addr(0x0000060c);    //0x0d - Symbols Cities
+
+// brest 0x3600h  
+bl_addr(0x0000ae10);    //0c - Cities
+*/
+// place [17] -  (vitsyebsk) bjahoml' ; add_info.p_ch_list - 03cc 001
+// place [23] -  (mahilyow) bjalynicy ; add_info.p_ch_list - 03cc 001
+    //'m' 'm4', 'p' 'p1'
+bl_addr(0x00256c10);    //0x0F - Symbols Roads
+
+// symbol[9]
+//'a' [4] | aksanovskaya ulitsa | armee ulitsa 39 th | artilleriyskaya ulitsa 1 ya | artilleriyskaya ulitsa 2 ya |
+//bl_addr(0x0040c106);    // 0x0E - Roads
+bl_addr(0x0040c706);    // 0x0E - Roads
+
+
+// vitebsk
+//  2063928h place[31] () pereyulok shorsa 55.215034 N, 30.184433 E
+// 
+bl_addr(0x0188f50b);    //0x00 data
+
+
+bl_addr(0x01890b02);
+
+bl_addr(0x0188bb09);
+/* 0x00
+0x0188bb09
+0x01890b02
+0x0188d809
+0x01890d05
+0x0189000b
+0x03
+026d7402
+*/
+//bl_addr(0x144f7804);
+
+//   bl_addr(0x0004ac0f); // 0c
+//bl_addr(0x01f4012c); - const in 0a addinfo
+return;

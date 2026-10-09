@@ -1,0 +1,105 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: 
+
+#include "vdo_block.bt"
+
+bl_offset( 0x2aedb000 ); 
+
+/*
+not compressed
+    bl_offset( 0x28E61800 );
+    bl_offset( 0x2934B800 );
+    bl_offset( 0x293B9000 );
+*/
+bl_offset( 0x28AD3000 );    //05000700
+//bl_offset( 0x28ad5800 );    //05000800
+//--- all polilines
+                /*    poliline
+                2h - ptr2str/0;   may be 0
+                2h - ptr2vertexes (first=first vert)
+                4h - id [0000 7685]
+                8h - LON_LAT
+                */
+/*
+pull_bits(buff, 32);
+pbn(buff);
+pull_bits(buff, 4);
+pbn(buff);
+Printf("after 2 %04X \n", pull_bits(buff, 14) );
+pbn(buff);
+Printf("id %08X \n", pull_bits(buff, 32) );
+pbn(buff);
+Printf("wtf %08X \n", pull_bits(buff, 32) );
+Printf("wtf %08X \n", pull_bits(buff, 9) );
+pbn(buff);
+
+        tmp_start_ptr = buff.ptr;
+        struct{
+            for(i=0; i < head.p_all_lines.Cnt+1; i++){
+    
+                local struct C_GEO_PLINE pline;
+    
+            }
+        } all_polilines;
+*/
+
+local WORD i, tmp_val, max_x=0, max_y=0, qty_delta;
+local DWORD tmp_ptr, curr_x, curr_y;
+
+//struct BLOCK_TYPE_0x16 __bl_0x16
+
+pbn(__bl_0x16.buff);
+
+tmp_val = __bl_0x16.head.vrtx_max_x;
+do{
+    max_x++;
+}while(tmp_val >>=1);
+tmp_val = __bl_0x16.head.vrtx_max_y;
+do{
+    max_y++;
+}while(tmp_val >>=1);
+Printf("max_x=0x%X max_y=0x%X \n", max_x, max_y);
+
+qty_delta = 9;
+pull_bits(__bl_0x16.buff, 32);
+// 0
+
+//curr_x = pull_bits(__bl_0x16.buff, max_x);
+//curr_y = pull_bits(__bl_0x16.buff, max_y);
+//Printf("%i  x=0x%04X y=0x%04X ", i, curr_x, curr_y);
+i++;
+pbn(__bl_0x16.buff);
+
+for(i=0; i < 18; i++){
+// 1
+    if( show_bits(__bl_0x16.buff, 1) == 0 )
+        curr_x = pull_bits(__bl_0x16.buff, max_x);
+    else{
+        pull_bits(__bl_0x16.buff, 1);
+        curr_x += pull_bits(__bl_0x16.buff, qty_delta);
+    }
+    
+    if( show_bits(__bl_0x16.buff, 1) == 0 )
+        curr_y = pull_bits(__bl_0x16.buff, max_y);
+    else{
+        pull_bits(__bl_0x16.buff, 1);
+        curr_y += pull_bits(__bl_0x16.buff, qty_delta);
+    }
+    Printf("%i  x=0x%04X y=0x%04X ", i, curr_x, curr_y);
+
+    pbn(__bl_0x16.buff);
+}
+
+
+/*
+//for(i=0; i < head.p_all_lines.Cnt+1; i++){
+for(i=0; i < 10; i++){
+
+    local struct C_GEO_PLINE pline;
+
+}
+*/
+
+

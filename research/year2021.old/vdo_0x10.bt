@@ -1,0 +1,130 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+
+#ifndef H_VDO_0x10_INC_INCLUDED
+#define H_VDO_0x10_INC_INCLUDED
+#include "__place.bt"
+
+// from 07 - scale_1 - 0x06 - here
+
+
+
+typedef struct{
+        LON_LAT     coord;
+        PTR_CNT     p_data_x5_0x00;
+        if(p_data_x5_0x00.Ptr){
+            jmp(p_data_x5_0x00);
+            struct{
+                        BL_ADDR addr_0x00_block_01;
+                        PTR_CNT _mb_data_addr_0x00_block_01;
+//111111111 NEED STOP IF BL_ADDR == 0
+                        BL_ADDR addr_0x00_block_02;
+                        PTR_CNT _mb_data_addr_0x00_block_02;
+                        BL_ADDR addr_0x00_block_03;
+                        PTR_CNT _mb_data_addr_0x00_block_03;
+                        BL_ADDR addr_0x00_block_04;
+                        PTR_CNT _mb_data_addr_0x00_block_04;
+                        BL_ADDR addr_0x00_block_05;
+                        PTR_CNT _mb_data_addr_0x00_block_05;
+            }_data_x5_0x00_blocks;      //[p_data_x5_0x00.Cnt]<optimize=true>;
+    //!!!!!!!!!!!!
+            ret();
+        }
+ZERO_WORD blank;
+        PTR_string  p_post_addr_street;
+        PTR_string  p_post_addr_city;
+        PTR_string  p_post_addr_region;
+        PTR_string  p_post_addr_country;
+CONST_WORD  const_0x01_mb_has__valid_data(1);   // on end of array = 0x0, twice
+ZERO_WORD  blank2;
+        PTR_string  p_post_addr_building;
+WORD unk0_mb_id <bgcolor=cYellow, fgcolor=cBlue>;
+WORD unk1_mb_id <bgcolor=cYellow, fgcolor=cBlue>;
+// 3c - balgaria, 21+3d - hrvatska       
+        PTR_string  p_post_addr_phone;
+        PTR_string  p_post_addr_index;
+ZERO_DWORD blank4;
+}ADDINFO_0x10;// [p_all_addinfo_bl_0x10_type.Cnt] <optimize = false>;//   [p_place_all_geo_str.Cnt] <optimize = false>;
+
+
+
+
+
+typedef struct {
+    GEO geo;
+    if(geo.p_geo_info.offset){
+        local DWORD t_ptr <hidden=true> = FTell();
+        FSeek(geo.p_geo_info.offset);
+            ADDINFO_0x10 info;
+        FSeek(t_ptr);
+    }
+}PLACE <read = Read_PLACE>;
+string Read_PLACE(PLACE &a){
+    local string s;
+    SPrintf(s, "%s, %s, %s %s %s %s", 
+        Read_GEO(a.geo), Read_LON_LAT(a.info.coord),
+        a.info.p_post_addr_street.str, a.info.p_post_addr_city.str,
+        a.info.p_post_addr_region.str, a.info.p_post_addr_country.str 
+    );
+    return s;
+}
+
+
+
+typedef struct {
+// header start
+    BL_HEADER   block;
+    PTR_CNT     p_all_addinfo_bl_0x10_type; // a, c, e p_geo_info
+
+PTR_CNT     zero_p_map_data; // e-roads; a,c =0
+PTR_CNT     zero_p_ch_poi;   // c, a -poi; e-0
+    PTR_CNT     p_all_data_x5_0x00;    // a,c, e = 0
+PTR_CNT     zero_p_NEED_TO_SEE;     //c - PTR_CNT MB_coordinates, a, e -0
+PTR_CNT     zero_p_20;
+PTR_CNT     zero_p_24;
+    BL_ADDR     next_bl_this_type;
+    BL_ADDR     prev_bl_this_type;
+// header end, size = 30h
+
+// fill data
+//
+struct{
+    PLACE place[block.data.Cnt] <optimize=false>;
+// [153] weimar () _germany, place, 50.982216 N, 11.325027 E, karl liebknecht strasse weimar weimar deutschland
+}data;
+
+
+///all data parts
+FSeek(block.offset + 0x30);
+struct{
+// block.data
+    struct{
+        GEO __place[block.data.Cnt] <optimize = false>;
+    }places;
+
+//p_all_addinfo_bl_0x10_type
+    struct{
+        ADDINFO_0x10 __addinfo[p_all_addinfo_bl_0x10_type.Cnt] <optimize = false>;
+    }all_adinfo;  
+//p_all_data_x5_0x00
+    struct{
+        FAR_PTR_CNT all_data_0x00[  p_all_data_x5_0x00.Cnt ] <optimize = false>;
+    }all_data_0x00;
+}__all_data_parts;
+
+
+
+
+
+
+//WORD end <bgcolor=cPurple>;
+uchar last <bgcolor=cPurple>;
+
+
+}BLOCK_TYPE_0x10 <comment=Comment_block0x10 >;
+string Comment_block0x10(BLOCK_TYPE_0x10 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+
+
+#endif//H_VDO_0x10_INC_INCLUDED

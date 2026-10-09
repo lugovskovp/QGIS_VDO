@@ -1,0 +1,78 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+#ifndef H_VDO_0x08_INC_INCLUDED
+#define H_VDO_0x08_INC_INCLUDED
+
+#include "vdo_inc.bt"
+
+/*
+ptr 0c:
+2800 0000 - all world, 1 08ind /121 degrees for 1
+1400 0000 - ? 4x08 2x2 ind / 60 degrees for 1
+0500 0000 - ? 64x08 8x8 ind 40h=64 / 15 degrees for 1
+0140 0000 -  /1024 32x32 / 3,77 degrees for 1
+0280 0000 - 100h 256 16x16 / 7,55 degrees
+00a0 0000 - /1,89 degrees for 1
+0028 0000 -
+*/
+
+//folder_side_size
+
+typedef struct{
+    local DWORD map_side_size <format=hex> = 0;
+    local DWORD offset <hidden=true> = 0, hex <hidden=true> = 0;
+    local WORD  qty_maps_overall <format=hex>  = 0, qty_maps_valid <format=hex> = 0;
+    local WORD  qty_maps_folder_side <format=hex>  = 0;
+    BL_ADDR   bl_folder;      // 0x09
+    if(bl_folder.offset){
+        qty_maps_overall = ReadUShort(bl_folder.offset + 0x0A);
+        qty_maps_valid   = ReadUShort(bl_folder.offset + 0x0E);
+        map_side_size    = ReadUInt(bl_folder.offset + 0x10);
+        qty_maps_folder_side = parentof(this).folder_side_size / map_side_size;
+        parentof(this).qty_valid_folders++;
+        offset = bl_folder.offset;
+        hex = bl_folder.hex;
+    }
+}FOLDER_MAPS <read=Read_FOLDER_MAPS>;
+string Read_FOLDER_MAPS(FOLDER_MAPS &a){
+    local string s="";
+    if(a.map_side_size){
+        SPrintf(s, "side: 0x%04X\t [%ix%i] maps: %i of %i (0x%02X); \tbl_folder: %08X ", 
+            a.map_side_size, a.qty_maps_folder_side, a.qty_maps_folder_side,
+            a.qty_maps_valid, a.qty_maps_overall, 
+            a.qty_maps_overall, a.bl_folder.hex);
+    }else{
+        s = "empty folder";
+    }
+    return s;
+}
+
+
+
+typedef struct{
+// only here i find different between 0A addinfo fields count
+// 1 - new, 2 - old, non-crypted
+//local WORD file_version = ReadUShort(0x2e);
+    local WORD  qty_valid_folders  <hidden=true> =0;
+
+//header start
+    BL_HEADER       block;
+// header end, last = 0Ch -1 
+   DWORD folder_side_size <format=hex, fgcolor=cYellow,bgcolor=cDkGreen>; //was side_one_square_almanac
+    
+   FOLDER_MAPS folder[block.data.Cnt] <optimize=false>; 
+
+}BLOCK_TYPE_0x08 < read=Read_BLOCK_TYPE_0x08, comment=Comment_block0x08 >;
+string Comment_block0x08(BLOCK_TYPE_0x08 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+string Read_BLOCK_TYPE_0x08(BLOCK_TYPE_0x08 &a){
+    local string s;
+    SPrintf(s, "one folder side: 0x%08X; folders %i of %i [0x%02X]", 
+        a.folder_side_size, a.qty_valid_folders,
+        a.block.data.Cnt, a.block.data.Cnt);
+
+    return s;
+}
+
+#endif //H_VDO_0x08_INC_INCLUDED

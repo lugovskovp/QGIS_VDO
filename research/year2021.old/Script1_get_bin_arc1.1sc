@@ -1,0 +1,31 @@
+//------------------------------------------------
+//--- 010 Editor v14.0 Script File
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+//   History: 
+//------------------------------------------------
+
+BigEndian(); 
+local WORD blockSize;
+Printf("\n\nfile name: %s\n", FileNameGetBase( GetFileName() ));
+blockSize = ReadUShort(0x2c); //0x2c - offset 4 this val
+Printf("BlockSize = 0x%02X\t FileSize = 0x%02X\n", 
+    blockSize, FileSize());
+	
+local DWORD ptr, ptrStart, ptrEnd;
+// local int i,j;
+local DWORD dwarc;
+
+ptrStart = 	0x0E292E00;
+FSeek(ptrStart);
+ptr = ptrStart + 0x38;
+ptrEnd = ptr + 2*4;
+for(ptr; ptr < ptrEnd; ptr += 4){
+	dwarc = ReadUInt(ptr);
+	Printf("%08X ", dwarc);
+}
+Printf("\n");

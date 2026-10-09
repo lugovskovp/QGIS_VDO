@@ -1,0 +1,179 @@
+//------------------------------------------------
+//--- 010 Editor v8.0.1 Binary Template
+//
+
+#ifndef H_VDO_0x00_INC_INCLUDED
+#define H_VDO_0x00_INC_INCLUDED
+
+#include "__place.bt"
+
+
+typedef enum <CHAR> { 
+    poi_COUNTR = 00,
+    poi_CITY    = 0x01,
+    poi_REG     = 0x02,
+    poi_STREET  = 0x08,   
+    poi_ROAD    = 0x10,
+    poi_HIGHWAY = 0x11,
+    poi_ALL     = 0xff,
+} en_POI_TYPE  <bgcolor=0xFF8080, fgcolor=cAqua>;
+// subtype? 00 - reg, 02 - alter name, 08 - street, 11 - highway?(p115, vitebsk)
+
+/*
+        PTR_CNT     p_all_poligons; // <bgcolor=cLtYellow>;
+        PTR_CNT     p_all_lines; //   <bgcolor=cLtYellow>;;
+        PTR_CNT     p_all_vertexes; //  <bgcolor=cLtYellow>;
+    PTR_CNT  blank2; // in 0x1c only???
+        PTR_CNT     p_all_geo_str; //  <bgcolor=cLtYellow>;
+        QWORD     bottom_left, top_right;
+    UNKNw       unkn_eq_1;  
+        WORD        mb_NumNextLevel <format=hex, fgcolor=cRed>;//, bgcolor=cDkGreen>; 
+*/
+
+// BLOCK_TYPE_0x00
+typedef struct{
+    BL_HEADER   block;
+    PTR_CNT     p_add_info;
+    PTR_CNT   p_info_10_all_streets;
+    PTR_CNT   p_info_14;
+    PTR_CNT   p_info_18;
+    PTR_CNT   p_info_1c;
+
+    PTR_CNT   p_info_20;
+    PTR_CNT   p_info_24;
+
+    PTR   p__all_geo_str; ZERO_WORD blank;  //dword: PTR, char,char
+    PTR_CNT     p_far_some_0x00;
+    PTR   p__all_geo_str; ZERO_WORD blank;
+    PTR   p__all_geo_str; ZERO_WORD blank;
+    PTR   p__all_geo_str; ZERO_WORD blank;
+    PTR   p__all_geo_str; ZERO_WORD blank;
+        PTR_CNT     p_all_geo_str <bgcolor=cLtYellow>;
+        LON_LAT     bot_left_corner, top_right_corner;
+        BL_ADDR  bl_crypt_bit_mask; // block.crypted.zero = 0104
+    BL_ADDR     addr_0x03;  // 03->__02_MAP_POLI_3;
+ZERO_DWORD  blank01; // in 03 CONST_DWORD bl_h__tr_h(top_right.hlat - bottom_left.hlat); //(0x00280000);
+DWORD xx4[4];
+ZERO_DWORD blank_last;
+// header end
+
+
+if(!block.crypted.zero){
+// fill data
+//FSeek(block.data.Ptr);
+//
+//jmp(block.data);
+struct{   
+    local DWORD t_ptr <hidden=true>;
+    PTR     p_name <bgcolor=cGreen>;
+    local string str_name="";
+    if(p_name.Ptr){
+        str_name = ReadString(p_name.offset);};
+    WORD     mb_id ; //<bgcolor=cLtGreen>;
+    
+   /* 
+    }*/
+    PTR    p_str_name2 <bgcolor=cLtGreen>;;
+    if(p_str_name2.Ptr){
+        t_ptr = FTell();
+        FSeek(p_str_name2.offset);
+            GEO_OBJ_STR name2;
+        FSeek(t_ptr);
+    }
+    PTR mb_id1, mb_id2;    //, fgcolor=cRed, bgcolor=cLtYellow>;
+}__main_data[block.data.Cnt]<optimize=false>;
+
+if( ((block.data.Cnt>>1)<<1) != block.data.Cnt )
+    PTR    __ZERO_ODD <bgcolor=cLtRed>;
+
+//jmp(p_add_info);
+struct{
+    PTR     p_name <bgcolor=cGreen>;
+    PTR     p_name2 <bgcolor=cGreen>;
+    local string name="", name2="";
+    if(p_name.Ptr){
+        name = ReadString(p_name.offset);
+    };
+
+    if(p_name.Ptr){
+        name2 = ReadString(p_name2.offset);
+    };
+    PTR     p_parent_country_object <bgcolor=cLtAqua>;
+    PTR     p_str_name <bgcolor=cLtGreen>;
+    local DWORD t_ptr <hidden=true>;
+    if(p_str_name.Ptr){
+        t_ptr = FTell();
+        FSeek(p_str_name.offset);
+            GEO_OBJ_STR name;
+        FSeek(t_ptr);
+    }
+    PTR     point_end<fgcolor=cRed>;
+} __add_info[p_add_info.Cnt]<optimize=false>;
+
+//if( ((block.data.Cnt>>1)<<1) != block.data.Cnt )
+//    PTR    __ZERO_ODD <bgcolor=cLtRed>;
+
+//jmp(p_info_10_all_streets);
+struct{
+    PTR p_name <fgcolor=cDkGreen>;
+    local string name="";
+    if(p_name.Ptr) name = ReadString(p_name.offset);
+
+WORD  wo2;
+    PTR     parent_obj <bgcolor=cLtAqua>;
+    PTR     p_str_name <bgcolor=cLtGreen>;
+    WORD m_b_4_is_street_type <bgcolor=cLtBlue, fgcolor=cYellow>;
+    if(p_str_name.Ptr){
+        local DWORD t_ptr  <hidden=true> = FTell();
+        FSeek(p_str_name.offset);
+            GEO_OBJ_STR name;
+        FSeek(t_ptr);
+    }
+//    FSeek(l_tmpPtr);
+} ___10_street_list[p_info_10_all_streets.Cnt]<optimize=false>;
+
+break;
+
+jmp(p_info_14);
+UNKN info_14;
+
+jmp(p_far_some_0x00);
+struct{
+    BL_ADDR some_0x00_data;
+    WORD MB_scale <bgcolor=cLtYellow>;
+    WORD x2;
+}__far_some_0x00[p_far_some_0x00.Cnt]<optimize=false>;
+/*
+jmp(p_all_geo_str);
+struct{
+    PTR p_str;
+    uchar MB_scale;     // ?? counter of calling? 01, 02, 03.
+    en_POI_TYPE type;  
+
+    local DWORD l_tmpPtr <hidden=true> =FTell(); FSeek(p_str.offset);
+        string __str_val <bgcolor=cLtGreen>;
+    FSeek(l_tmpPtr);
+}__array_p_str[p_array_p_str.Cnt]<optimize=false>;
+*/
+jmp(p_all_geo_str);
+struct{
+    GEO_OBJ_STR all_geo_str[p_all_geo_str.Cnt]<optimize=false>;
+}__array_p_str;
+// subtype? 00 - reg, 02 - alter name, 08 - street, 11 - highway?(p115, vitebsk)
+
+
+ret();
+
+//FSeek(addata.Ptr);
+//DWORD addata;
+    }else{
+    //---IF DATA CRYPTED, block.crypted.zero != 0
+    }
+
+}BLOCK_TYPE_0x00 <comment=Comment_block0x00 >;
+string Comment_block0x00(BLOCK_TYPE_0x00 &a){
+    return Comment_BL_ADDR(a.block.addr);
+}
+
+
+#endif  //H_VDO_0x00_INC_INCLUDED

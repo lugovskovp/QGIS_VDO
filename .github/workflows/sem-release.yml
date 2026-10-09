@@ -57,15 +57,25 @@ jobs:
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
         run: |
+          # 1. Фиксируем имя папки плагина
           PLUGIN_NAME="QGIS_VDO"
-          mkdir -p build_dir/\$PLUGIN_NAME
+          
+          # 2. Создаем структуру
+          mkdir -p build_dir/$PLUGIN_NAME
+          
+          # 3. Запускаем сборку sdist через Hatch
           hatch build --target sdist
-          tar -xzf dist/*.tar.gz -C build_dir/\$PLUGIN_NAME --strip-components=1
-          rm -f build_dir/\$PLUGIN_NAME/PKG-INFO
+          
+          # 4. Распаковываем файлы и удаляем мусорный PKG-INFO
+          tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
+          rm -f build_dir/$PLUGIN_NAME/PKG-INFO
+          
+          # 5. Упаковываем в чистый ZIP
           cd build_dir
-          zip -r "../dist/\({PLUGIN_NAME}.zip" "\)PLUGIN_NAME"
+          zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
           cd ..
-          echo "ZIP package successfully created at dist/\${PLUGIN_NAME}.zip"
+          
+          echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
 
 
       - name: Upload Artifact to GitHub Release
@@ -75,7 +85,7 @@ jobs:
           script: |
             const fs = require('fs');
             const path = 'dist/QGIS_VDO.zip';
-            const tagName = "\${{ steps.release.outputs.tag }}";
+            const tagName = "${{ steps.release.outputs.tag }}";
             
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,

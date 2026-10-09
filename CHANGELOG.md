@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.12 (2026-10-09)
+
+### Bug Fixes
+
+- Включаем нативный генератор заметок GitHub
+  ([`248225c`](https://github.com/lugovskovp/QGIS_VDO/commit/248225c3c326ea41973db13a25dfc0b96445a4bf))
+
+
 ## v1.0.0-dev.11 (2026-10-09)
 
 ### Bug Fixes

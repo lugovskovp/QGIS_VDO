@@ -64,6 +64,11 @@ exclude = [
   "/.gigacode_vsc",
 ]
 
+[tool.hatch.build.targets.sdist.rewriters]
+# Этот хук автоматически заменит версию в metadata.txt прямо во время команды hatch build
+"metadata.txt" = [{ search = "version=1.0.0-dev.4", replace = "{version}" }]
+
+
 [tool.hatch.build.targets.wheel]
 bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
 
@@ -72,10 +77,10 @@ version_toml = ["pyproject.toml:project.version"]
 version_variables = ["vdo/__about__.py:__version__"]
 
 # Настройка автозамены в метаданных QGIS
-[[tool.semantic_release.text_replacements]]
-path = "metadata.txt"
-search = "version={version}"
-replace = "version={new_version}"
+# [[tool.semantic_release.text_replacements]]
+# path = "metadata.txt"
+# search = "version={version}"
+# replace = "version={new_version}"
 
 # Настройка поведения веток: main - релиз, dev - пререлиз
 [tool.semantic_release.branches.main]
@@ -83,7 +88,8 @@ match = "main"
 prerelease = false
 
 [tool.semantic_release.branches.dev]
-match = "(dev|104-hatch-вместо-setuptools)" # Сработает для dev и для вашей текущей ветки
+match = "dev" # Сработает для dev и для вашей текущей ветки
+# match = "(dev|104-hatch-вместо-setuptools)" # Сработает для dev и для вашей текущей ветки
 prerelease = true
 prerelease_token = "dev" # Версия будет вида X.Y.Z-dev.1
 

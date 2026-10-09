@@ -44,14 +44,28 @@ jobs:
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
         run: |
+          # 1. Задаем имя папки плагина внутри архива
           PLUGIN_NAME="QGIS_VDO"
-          mkdir -p build_dir/\$PLUGIN_NAME
+          
+          # 2. Создаем чистую временную структуру сборки
+          mkdir -p build_dir/$PLUGIN_NAME
+          
+          # 3. Собираем исходники через Hatch (sdist)
           hatch build --target sdist
-          tar -xzf dist/*.tar.gz -C build_dir/\$PLUGIN_NAME --strip-components=1
+          
+          # 4. Распаковываем созданный .tar.gz архив во временную папку
+          tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
+          
+          # --- ДОБАВЛЕНО: Удаляем лишние файлы метаданных Python пакета ---
+          rm -f build_dir/$PLUGIN_NAME/PKG-INFO
+          
+          # 5. Упаковываем очищенную структуру в финальный ZIP-архив
           cd build_dir
-          zip -r "../dist/\({PLUGIN_NAME}.zip" "\)PLUGIN_NAME"
+          zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
           cd ..
-          echo "ZIP package successfully created at dist/\${PLUGIN_NAME}.zip"
+          
+          echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
+
 
       # Используем официальный нативный шаг релиза от самого GitHub (вместо стороннего softprops)
       # Он гарантированно работает на актуальной версии Node.js

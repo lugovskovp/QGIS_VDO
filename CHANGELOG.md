@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.7 (2026-10-09)
+
+### Bug Fixes
+
+- Еще одна проверка autorewrite
+  ([`4b4ddaf`](https://github.com/lugovskovp/QGIS_VDO/commit/4b4ddaf911ba239228dc76346d499cbc75649643))
+
+
 ## v1.0.0-dev.6 (2026-10-09)
 
 ### Bug Fixes

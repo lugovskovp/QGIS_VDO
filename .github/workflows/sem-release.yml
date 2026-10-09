@@ -43,37 +43,31 @@ jobs:
           # --- ИСПРАВЛЕНО: добавляем флаг --no-vcs-release ---
           # Это запретит PSR создавать релиз через API, но он успешно сделает 
           # локальный коммит с обновленными metadata.txt и __about__.py
-          semantic-release version --no-vcs-release
+          semantic-release version --no-push
+        #   semantic-release version --no-vcs-release
+
+        # Принудительно пушим созданный коммит и тег в GitHub, чтобы шаг релиза их увидел
+      - name: Push Changes & Tags to GitHub
+        if: steps.release.outputs.released == 'true'
+        run: |
+          git push origin HEAD
+          git push origin --tags
 
 
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
         run: |
-          # 1. Задаем имя папки плагина внутри архива
           PLUGIN_NAME="QGIS_VDO"
-          
-          # 2. Создаем чистую временную структуру сборки
-          mkdir -p build_dir/$PLUGIN_NAME
-          
-          # 3. Собираем исходники через Hatch (sdist)
+          mkdir -p build_dir/\$PLUGIN_NAME
           hatch build --target sdist
-          
-          # 4. Распаковываем созданный .tar.gz архив во временную папку
-          tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
-          
-          # --- ДОБАВЛЕНО: Удаляем лишние файлы метаданных Python пакета ---
-          rm -f build_dir/$PLUGIN_NAME/PKG-INFO
-          
-          # 5. Упаковываем очищенную структуру в финальный ZIP-архив
+          tar -xzf dist/*.tar.gz -C build_dir/\$PLUGIN_NAME --strip-components=1
+          rm -f build_dir/\$PLUGIN_NAME/PKG-INFO
           cd build_dir
-          zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
+          zip -r "../dist/\({PLUGIN_NAME}.zip" "\)PLUGIN_NAME"
           cd ..
-          
-          echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
+          echo "ZIP package successfully created at dist/\${PLUGIN_NAME}.zip"
 
 
-      # Используем официальный нативный шаг релиза от самого GitHub (вместо стороннего softprops)
-      # Он гарантированно работает на актуальной версии Node.js
       - name: Upload Artifact to GitHub Release
         if: steps.release.outputs.released == 'true'
         uses: actions/github-script@v7
@@ -81,21 +75,17 @@ jobs:
           script: |
             const fs = require('fs');
             const path = 'dist/QGIS_VDO.zip';
-            
-            // Получаем информацию о созданном теге
             const tagName = "\${{ steps.release.outputs.tag }}";
             
-            // Создаем или находим релиз
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tagName,
               name: `Release ${tagName}`,
               draft: false,
-              prerelease: tagName.includes('-dev') // автоматически ставит флаг пререлиза для dev-веток
+              prerelease: tagName.includes('-dev')
             });
             
-            // Загружаем наш ZIP архив в релиз
             await github.rest.repos.uploadReleaseAsset({
               owner: context.repo.owner,
               repo: context.repo.repo,

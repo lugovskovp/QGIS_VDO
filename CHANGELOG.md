@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.9 (2026-10-09)
+
+### Bug Fixes
+
+- ChangelogBody
+  ([`1390ba9`](https://github.com/lugovskovp/QGIS_VDO/commit/1390ba92879f808b8a61a235622d37d9b1b7c9c9))
+
+
 ## v1.0.0-dev.8 (2026-10-09)
 
 ### Bug Fixes

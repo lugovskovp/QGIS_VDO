@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.8 (2026-10-09)
+
+### Bug Fixes
+
+- Semver not rewrite metadata.txt
+  ([`ddd7c03`](https://github.com/lugovskovp/QGIS_VDO/commit/ddd7c03020978958a1a1fe35d2aaf3107636d786))
+
+
 ## v1.0.0-dev.7 (2026-10-09)
 
 ### Bug Fixes

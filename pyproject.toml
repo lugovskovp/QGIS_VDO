@@ -1,15 +1,98 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "QGIS_VDO"
-version = "0.1.0"
-dependencies = [
-    "bitarray",
+dynamic = ["version"]
+description = 'Viewing cartographic information from Carindb VDO car navigation files in QGIS.'
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPLv3"
+keywords = ["qgis", "pyqgis", "gis", "plugin"]
+authors = [{ name = "Paul Lugovskov", email = "p.lugovskov@gmail.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",                              # фокус смещен на исправление багов и тестирование
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",                      # Если ориентируетесь на QGIS 3.34+
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: End Users/Desktop",
+  "Topic :: Scientific/Engineering :: GIS",                      # Обязательный тег для ГИС-сообщества
+]
+# "Development Status :: 5 - Production/Stable" для версий 1.0.0 и выше
+# "Development Status :: 6 - Mature" Изменения вносятся крайне редко
+# "Development Status :: 7 - Inactive"  заброшен автором или устарел. Код больше не поддерживается
+dependencies = ["bitarray"]
+
+[project.urls]
+Documentation = "https://github.com/lugovskovp/QGIS_VDO#readme"
+Issues = "https://github.com/lugovskovp/QGIS_VDO/issues"
+Source = "https://github.com/lugovskovp/QGIS_VDO"
+
+[tool.hatch.version]
+path = "vdo/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = ["mypy>=1.0.0"]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:vdo tests}"
+
+[tool.hatch.build.targets.sdist]
+# Исключаем файлы и папки из архива исходного кода (.tar.gz)
+exclude = [
+  "/.env",
+  "/.pre-commit-config.yaml",
+  "/tests",
+  "/.github",
+  "/.vscode",
 ]
 
-# ХАК ДЛЯ АВТООБНАРУЖЕНИЯ МОДУЛЕЙ ПЛАГИНА В КОРНЕ
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["vdo*", "ui_files*", "i18n*", "research*", "resources*"]
+[tool.hatch.build.targets.wheel]
+# Исключаем файлы из собранного пакета (.whl)
+exclude = ["/.env", "/.pre-commit-config.yaml", "/tests"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+pythonpath = "."
+testpaths = ["tests"]
+norecursedirs = [".git", ".pytest_cache", "build", "dist", "ext_libs"]
+addopts = ["-v", "--tb=short", "--strict-markers"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+  "slow: Длинные или интеграционные тесты.",
+  "smoke: Быстрые тесты базовой работоспособности.",
+]
+
+[tool.coverage.run]
+source_pkgs = ["vdo"] # ["vdo", "tests"]
+branch = true
+parallel = true
+omit = [
+  "vdo/__about__.py",
+  "d01 keys for dict.py",
+  "d04-createPOI.py",
+  "ext_libs/*",
+]
+
+[tool.coverage.paths]
+vdo = ["vdo", "*/QGIS_VDO/vdo"]
+# tests = ["tests", "*/QGIS_VDO/tests"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "pragma: no cover",
+  "__repr__",
+  "if __name__ == .__main__:",
+  "if __name__ == \"__main__\":",
+  "if __name__ == '__main__':",
+  "raise NotImplementedError",
+  "no cov",
+  "if TYPE_CHECKING:",
+]

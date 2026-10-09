@@ -1,15 +1,120 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "QGIS_VDO"
-version = "0.1.0"
-dependencies = [
-    "bitarray",
+dynamic = ["version"]
+description = 'Viewing cartographic information from Carindb VDO car navigation files in QGIS.'
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+keywords = ["qgis", "pyqgis", "gis", "plugin"]
+authors = [{ name = "Paul Lugovskov", email = "p.lugovskov@gmail.com" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: End Users/Desktop",
+  "Topic :: Scientific/Engineering :: GIS",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
+dependencies = ["bitarray"]
+
+[project.urls]
+Documentation = "https://github.com"
+Issues = "https://github.com"
+Source = "https://github.com/lugovskovp/QGIS_VDO"
+
+# --- Настройка версии для Hatch (из __about__.py) ---
+[tool.hatch.version]
+path = "vdo/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = ["mypy>=1.0.0"]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:vdo tests}"
+
+# --- Корректный File Selection для sdist (включая ресурсы плагина) ---
+[tool.hatch.build.targets.sdist]
+include = [
+  "/*.py",
+  "/metadata.txt",
+  "/README.md",
+  "/LICENSE",
+  "/vdo/",
+  "/ui_files/",
+  "/i18n/",
+  "/resources/",
+]
+exclude = [
+  "/.env",
+  "/.pre-commit-config.yaml",
+  "/tests",
+  "/.github",
+  "/.vscode",
+  "/.gigacode_vsc",
+]
+bypass = false
+
+[tool.hatch.build.targets.wheel]
+bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
+
+# --- НАСТРОЙКА PYTHON-SEMANTIC-RELEASE ДЛЯ ОБНОВЛЕНИЯ ОБОИХ ФАЙЛОВ ---
+[tool.semantic_release]
+# 1. Автоматически обновляет __version__ внутри vdo/__about__.py
+version_variables = ["vdo/__about__.py:__version__"]
+version_toml = ["pyproject.toml:project.version"]
+
+
+# 2. Через автозамену обновляет версию в metadata.txt для QGIS
+[[tool.semantic_release.text_replacements]]
+path = "metadata.txt"
+search = "version={version}"
+replace = "version={new_version}"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+pythonpath = "."
+testpaths = ["tests"]
+norecursedirs = [".git", ".pytest_cache", "build", "dist", "ext_libs"]
+addopts = ["-v", "--tb=short", "--strict-markers"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+  "slow: Длинные или интеграционные тесты.",
+  "smoke: Быстрые тесты базовой работоспособности.",
 ]
 
-# ХАК ДЛЯ АВТООБНАРУЖЕНИЯ МОДУЛЕЙ ПЛАГИНА В КОРНЕ
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["vdo*", "ui_files*", "i18n*", "research*", "resources*"]
+[tool.coverage.run]
+source_pkgs = ["vdo"]
+branch = true
+parallel = true
+omit = ["vdo/__about__.py", "ext_libs/*"]
+
+[tool.coverage.paths]
+vdo = ["vdo", "*/QGIS_VDO/vdo"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+  "pragma: no cover",
+  "__repr__",
+  "if __name__ == .__main__:",
+  "if __name__ == \"__main__\":",
+  "if __name__ == '__main__':",
+  "raise NotImplementedError",
+  "no cov",
+  "if TYPE_CHECKING:",
+]
+
+[tool.hatch.envs.default]
+type = "system"
+detached = true
+skip-install = true

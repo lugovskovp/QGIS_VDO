@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.6 (2026-10-09)
+
+### Bug Fixes
+
+- Metadata.txt, rewriters
+  ([`be3e0de`](https://github.com/lugovskovp/QGIS_VDO/commit/be3e0de8e0e0805d12a2eda3cfc2b4be7131b1f5))
+
+
 ## v1.0.0-dev.5 (2026-10-09)
 
 ### Bug Fixes

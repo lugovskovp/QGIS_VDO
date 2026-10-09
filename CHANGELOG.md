@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.3 (2026-10-09)
+
+### Bug Fixes
+
+- Semantic-release version --no-push
+  ([`a91a05f`](https://github.com/lugovskovp/QGIS_VDO/commit/a91a05fbdfc097a7ee0edfc85e45f2ffdda5452a))
+
+
 ## v1.0.0-dev.2 (2026-10-09)
 
 ### Bug Fixes

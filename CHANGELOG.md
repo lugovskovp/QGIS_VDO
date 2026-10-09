@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.5 (2026-10-09)
+
+### Bug Fixes
+
+- Version in metadata
+  ([`7542de6`](https://github.com/lugovskovp/QGIS_VDO/commit/7542de652ebd02bd488891491cd5a0b78d96587d))
+
+
 ## v1.0.0-dev.4 (2026-10-09)
 
 

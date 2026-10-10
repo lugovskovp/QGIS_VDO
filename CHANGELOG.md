@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.13 (2026-10-10)
+
+### Bug Fixes
+
+- Настроить semantic-release — добавить commit_parser, allowed_tags и version mapping
+  ([`f092612`](https://github.com/lugovskovp/QGIS_VDO/commit/f092612525f142c69244df69c0d48c24ea9ca0e8))
+
+### Documentation
+
+- Добавить бейджи в README
+  ([`74e2425`](https://github.com/lugovskovp/QGIS_VDO/commit/74e242554def4b2542cbe125c300dd1c26147a16))
+
+
 ## v1.0.0-dev.12 (2026-10-09)
 
 ### Bug Fixes

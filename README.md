@@ -1,6 +1,12 @@
 <!-- Pytest Coverage Comment:Begin -->
 <!-- Pytest Coverage Comment:End -->
 
+[![Python 3.9+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
+[![GitHub License](https://img.shields.io/github/license/lugovskovp/QGIS_VDO)](#)
+[![Format: CARINdb](https://img.shields.io/badge/format-CARiN%20%2F%20CarinDB-orange.svg)](https://github.com/fdemusso/OpenCarin)
+
+
+
 # About
 Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for view/explore a digital road map database for the CARiN- and VDODayton navigation compatible systems
 

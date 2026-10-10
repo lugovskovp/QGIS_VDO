@@ -8,9 +8,6 @@ bitstream - class wrapper for bitarray
 
 from __future__ import annotations
 
-from bitarray import bitarray
-from bitarray.util import ba2int
-
 from QGIS_VDO.vdo.geotypes import (
     GEO_CATEGORY,
     GEO_SHAPE,
@@ -36,14 +33,10 @@ from QGIS_VDO.vdo.block_base import block_base
 
 BITS_IN_CATEGORY_TYPE = BITS_IN_BYTE - 1   # packed cat type len = 7 bit
 
-OFFSET_PACKED_DATA = 0x34  # ТИПЫ БЛОКОВ archived type_1_vdo_pack
-                            # bmw ee bnl:  00 14 15 16 1c 1d 1e # noqa: 00 +sc4-11
-                            # в них незапакованы первые 0х34 # noqa: E116
-
-CONST_BA_11 = bitarray([1, 1])
-CONST_BA_10 = bitarray([1, 0])
-CONST_BA_01 = bitarray([0, 1])
-CONST_BA_00 = bitarray([0, 0])
+OFFSET_PACKED_DATA = 0x34
+# ТИПЫ БЛОКОВ archived type_1_vdo_pack
+# bmw ee bnl:  00 14 15 16 1c 1d 1e # noqa: 00 +sc4-11
+# в них незапакованы первые 0х34 # noqa: E116
 
 
 # --------- bitstream - Class wrapper for bitarray
@@ -130,7 +123,8 @@ class bitstream():
             arc = arc[:-int(CUT_ZERO_BYTES_CNT / 2)]
 
         # в буффер - запакованную часть блока, далее self.unpack полностью распакует
-        self.buffer = bitarray(buffer=arc, endian='big').copy()    # copy - else read only memory # noqa
+        self._buf_bytes = bytes(arc)
+        self._buf_idx = 0
 
         # ----------------------------------------- 070CF805 0014 01 07 [14:MAP__05k200] id_line_if_0 = 0???
         # debug raises - временно для отладки, потом вообще закомментировать эти проверки
@@ -222,10 +216,10 @@ class bitstream():
         self.__fill_lin_PASS_23()
         
         # >>>>>>>>>>>>>>>>
-        if self.pop(1) == bitarray([1]):
+        if self.pop(1):
             self.__unpack_text()
         # что? второй вызов? ДА! from FW
-        if self.pop(1) == bitarray([1]):
+        if self.pop(1):
             self.__unpack_text()
 
         # >>>>>>>>>>>>>>>>
@@ -246,7 +240,7 @@ class bitstream():
         offset = self.li_lin.ptr + 0x0E
         prev = None
         for k in range(self.li_lin.cnt + 1):
-            if self.pop(1) == bitarray([1]):
+            if self.pop(1):
                 prev = self._unpack_short(BITS_IN_WORD)
             elif prev is None:
                 raise ValueError(f"S2 GEO_LINE record at {offset - 0x0E}: first record inherits +0x0e")
@@ -279,7 +273,7 @@ class bitstream():
         for _ in range(self.li_poi.cnt):
             # from fw
             for f in range(3):
-                if self.pop(1) == bitarray([1]):
+                if self.pop(1):
                     width = BITS_IN_WORD
                 else:
                     width = w5[2 + f]
@@ -325,7 +319,7 @@ class bitstream():
         offset = self.li_lin.ptr + 8        # ptr_linesign
         for _ in range(self.li_lin.cnt + 1):
             self.unpacked[offset:offset + 2] = self._unpack_short(self.max_bits_in_ptr - 1, 1)
-            if self.pop(1) == bitarray([1]):
+            if self.pop(1):
                 ptr2poi = self._unpack_short(BITS_IN_WORD)
             else:
                 ptr2poi = self._unpack_short(w5[1])
@@ -432,7 +426,7 @@ class bitstream():
     
             # /2/  dword, id
             #id - если следующий бит = 1, ЕСТЬ 32бит ID, иначе bits_to_unpack_then_zero
-            qty = BITS_IN_UINT if self.pop(1)[0] else self.max_bits_id_shape_if_0
+            qty = BITS_IN_UINT if self.pop(1) else self.max_bits_id_shape_if_0
             # int_id = ba2int(self.pop(qty))
             # id = struct_4BYTES.pack(int_id)
             id = self._unpack_uint(qty)
@@ -483,7 +477,7 @@ class bitstream():
             ptr2firstObjVertex = self._unpack_vrtx_ptr()
 
             # /2/ > DWORD id ?? (полный ли DWORD? если нет, то сколько бит грузить?)
-            if self.pop(1) == bitarray([1]):
+            if self.pop(1):
                 id = self._unpack_uint(BITS_IN_UINT)
             else:
                 id = self._unpack_uint(self.max_bits_id_line_if_0)    # bits_to_unpack_then_zero
@@ -518,8 +512,8 @@ class bitstream():
             return                  # pragma: no cover imposibry
 
         # первые2 значения - рассматриваем, как xy начальных точек.
-        prev_x = ba2int(self.pop(16))
-        prev_y = ba2int(self.pop(16))
+        prev_x = self.pop(16)
+        prev_y = self.pop(16)
         # упаковываем to VRTX
         bin_vrtx = struct_WORD.pack(prev_x) + struct_WORD.pack(prev_y)
         # a_hex = bin_vrtx.hex()
@@ -546,12 +540,12 @@ class bitstream():
         Returns:
            расчитанное значение
         """
-        if self.pop(1) == bitarray([0]):       # 0
-            val = ba2int(self.pop(self.max_bits_in_vertex_delta))
-        elif self.pop(1) == bitarray([0]):           # 10
-            val = -ba2int(self.pop(self.max_bits_in_vertex_delta))
+        if not self.pop(1):       # 0
+            val = self.pop(self.max_bits_in_vertex_delta)
+        elif not self.pop(1):           # 10
+            val = -self.pop(self.max_bits_in_vertex_delta)
         else:                                # 11
-            return ba2int(self.pop(BITS_IN_WORD))
+            return self.pop(BITS_IN_WORD)
         return prev + val
 
     def __unpack_text(self) -> None:
@@ -563,15 +557,15 @@ class bitstream():
             "e0e1e2e3e4e5e7e8e9eaebecedeeeff1f2f3f4f5f6f8f9fafbfcfdac"
         )
         # ^^^ первыми запакованы 2 ptr - начало и окончание блока строк
-        ptr_start = ba2int(self.pop(self.max_bits_in_ptr))
-        ptr_end = ba2int(self.pop(self.max_bits_in_ptr))
+        ptr_start = self.pop(self.max_bits_in_ptr)
+        ptr_end = self.pop(self.max_bits_in_ptr)
         if ptr_start == 0 and ptr_end == 0:
             return b''  # а вот так в FW реализовано.
         # strings_length = ptr_end - ptr_start
 
         words = []
         for _ in range(6):
-            n = ba2int(self.pop(5))
+            n = self.pop(5)
             bbb = b''
             for _ in range(n):
                 bbb += self._unpack_byte(7)
@@ -582,14 +576,14 @@ class bitstream():
         p = ptr_start
         while p <= ptr_end:      # and p < strings_length:
             code = self.pop(2)
-            if code == CONST_BA_00:
-                v = CHARMAP[ba2int(self.pop(1))]
-            elif code == CONST_BA_01:
-                v = CHARMAP[2 + ba2int(self.pop(2))]
-            elif code == CONST_BA_10:
-                v = CHARMAP[6 + ba2int(self.pop(3))]
+            if code == 0:
+                v = CHARMAP[self.pop(1)]
+            elif code == 1:
+                v = CHARMAP[2 + self.pop(2)]
+            elif code == 2:
+                v = CHARMAP[6 + self.pop(3)]
             else:
-                v = ba2int(self.pop(7))
+                v = self.pop(7)
                 if v <= 0x26:
                     if v > 0x1B:
                         w = words[v - 0x21]
@@ -617,10 +611,10 @@ class bitstream():
         :preambula:  - хранит 6 сочетаний
         :ascii: Если символ ни там, ни там - win1250, причем, если ascii до ' ' - то = ascii + 0xe0
         """
-       
+        
         # ^^^ первыми запакованы 2 ptr - начало и окончание блока строк
-        ptr_start = ba2int(self.pop(self.max_bits_in_ptr))
-        ptr_end = ba2int(self.pop(self.max_bits_in_ptr))
+        ptr_start = self.pop(self.max_bits_in_ptr)
+        ptr_end = self.pop(self.max_bits_in_ptr)
         if ptr_start == 0 and ptr_end == 0:
             return b''  # а вот так в FW реализовано.
         strings_length = ptr_end - ptr_start
@@ -634,20 +628,20 @@ class bitstream():
         preambula = {}
         for k in range(0b0100001, 0b0100111):
             # первые 3 бита = 000
-            if beg_marker := ba2int(self.pop(3)):             # val.to01() != '000':
+            if beg_marker := self.pop(3):             # val.to01() != '000':
                 raise ValueError(f"WTF? В начале строк преамбулы ожидалось 000, а не '{beg_marker:3b}'")    # noqa
 
             # затем 2 бита - количество ascii chars для чтения
-            if not (n := ba2int(self.pop(2))):         #  11 и 01 точно да, а остальные варианты - хз.  # noqa
+            if not (n := self.pop(2)):         #  11 и 01 точно да, а остальные варианты - хз.  # noqa
                 # Вроде 00 не может быть - иначе зачем 6 шт где не кодируется ничего?
                 raise ValueError(f"WTF? В количестве ch преамбулы не ожидалось 00, а тут '{n:2b}'")    # noqa
             #теперь загрузить n chars
             val = b''
             for _ in range(n):
                 # и грузятся ascii коды по 7 бит
-                iso_ch = ba2int(self.pop(BITS_IN_ASCII))
+                iso_ch = self.pop(BITS_IN_ASCII)
                 val += bytes((iso_ch,))          # короче и быстрее
-            preambula[f"{k:07b}"] = val
+            preambula[k] = val
 
         #   ^^^  и вот только теперь пошли буквы, закодированные ....эммм.
         # .. как бы хафманом, но с нюансами
@@ -655,38 +649,38 @@ class bitstream():
         # for _ in range(strings_length):  b'rolvs\xf5!stjern\xf5!$l\xf5!mager\xf5!seiland\x00s\xf5r\xf5'
         while len(bin_str) < strings_length:
             prefix = self.pop(2)
-            if prefix == CONST_BA_11:           # prefix.to01() == '11':
+            if prefix == 3:           # prefix.to01() == '11':
                 ba = self.pop(BITS_IN_ASCII)
-                if ba.to01() in preambula:
+                if ba in preambula:
                     # о, сокращённенькое из преамбулы
-                    pre_chars = preambula[ba.to01()]
+                    pre_chars = preambula[ba]
                     # но если из преамбулы возвращается А
                     if pre_chars == b'A':
-                        bin_str += bytes((ba2int(ba),))    # просто добавить байт
+                        bin_str += bytes((ba,))    # просто добавить байт
                     else:
                         bin_str += pre_chars
-                elif ba2int(ba) < 32:       # похоже загрузить ascii до ' '
+                elif ba < 32:       # похоже загрузить ascii до ' '
                     """
                     ISO 8859-2 xor win1250?
                     ISO-8859-1 / Latin-1
                     """
                     # а это 1250
-                    ascii = 0xe0 + ba2int(ba)  # угу, эмпирическое волшебное число 0xE0
+                    ascii = 0xe0 + ba  # угу, эмпирическое волшебное число 0xE0
                     # ascii = ascii.to_bytes(1, byteorder='big')
-                    bin_str += bytes((ascii,))   # w1250 0xF5 символ ő 
+                    bin_str += bytes((ascii,))   # w1250 0xF5 символ ő
                 else:
                     # или ascii код буквы
-                    # ascii = ba2int(ba)
-                    bin_str += bytes((ba2int(ba),))   # bin_str += ba2int(ba).to_bytes(1, byteorder='big')
+                    # ascii = ba
+                    bin_str += bytes((ba,))   # bin_str += ba.to_bytes(1, byteorder='big')
                 continue        # всё, данные итерации загружены
-            elif prefix == CONST_BA_00:         # prefix.to01() == '00':
+            elif prefix == 0:         # prefix.to01() == '00':
                 prefix += self.pop(1)
-            elif prefix == CONST_BA_01:         # prefix.to01() == '01':
+            elif prefix == 1:         # prefix.to01() == '01':
                 prefix += self.pop(2)
             else:                               # elif prefix.to01() == '10':
                 prefix += self.pop(3)
             # вытаскиваем, что получилось, из дерева и добавляем к результату
-            bin_str += LOOKUP_CHAR_BYTES[prefix.to01()]
+            bin_str += LOOKUP_CHAR_BYTES[prefix]
 
         # всё, упакованные буквы окончились
         self.unpacked[ptr_start:ptr_end] = bin_str
@@ -739,17 +733,17 @@ class bitstream():
             #     if self.pop(1) == bytearray(1):
 
             # load or reuse ptr
-            if ba2int(self.pop(1)):
+            if self.pop(1):
                 # read ptr
                 short_ptr = self._unpack_short(self.max_bits_in_ptr)
             # else:       # use prev value tstr_ptr
             # language
-            if ba2int(self.pop(1)):
+            if self.pop(1):
                 # read lang
                 byte_lang = self._unpack_byte(8)
             # else:   # use prev language
             # type
-            if ba2int(self.pop(1)):         # 07155F03 001E 01 04 [1E:MAP__11k_11] non-empty bitarray expected
+            if self.pop(1):         # 07155F03 001E 01 04 [1E:MAP__11k_11] non-empty bitarray expected
                 # read type
                 byte_type = self._unpack_byte(5)
             # else:   # use prev type
@@ -766,12 +760,22 @@ class bitstream():
     # ----------------------------
     # ------------ ФУНКЦИИ РАСПАКОВКИ ПРИМИТИВОВ - byte, short, uint, vrtx_nums -----------
 
-    def pop(self, qty_bits: int) -> bitarray:
-        '''POP qty_bits from begin (left) buffer qty bites'''
+    def pop(self, qty_bits: int) -> int:
+        '''Извлечь qty_bits из начала буфера, вернуть int. O(n) на вызов.'''
         if qty_bits == 0:
-            return bitarray(0)
-        val = self.buffer[:qty_bits]   # взять первые qty_bits бит
-        self.buffer = self.buffer[qty_bits:]      # удалить qty_bits из начала
+            return 0
+        
+        byte_idx = self._buf_idx >> 3
+        bit_off = self._buf_idx & 7
+        self._buf_idx += qty_bits
+        
+        n_bytes = (bit_off + qty_bits + 7) >> 3
+        raw = self._buf_bytes[byte_idx : byte_idx + n_bytes]
+        
+        val = int.from_bytes(raw, 'big')
+        val >>= (n_bytes * 8 - qty_bits)
+        val &= (1 << qty_bits) - 1
+        
         return val
 
     def _flag_or(self, width: int) -> int:
@@ -780,18 +784,24 @@ class bitstream():
         getbits(1) ? getbits(16) : getbits(width) — used by passes 0x14
         return ctx.g(16) if ctx.g(1) else ctx.g(width)
         """
-        if self.pop(1) == bitarray([1]):
+        if self.pop(1):
             width = 16
 
-        width = min(width, len(self.buffer))
-        return ba2int(self.pop(width))
+        width = min(width, len(self._buf_bytes) * 8 - self._buf_idx)
+        return self.pop(width)
 
-    def touch(self, qty_bits: int, start: int = 0) -> bitarray:
+    def touch(self, qty_bits: int, start: int = 0) -> int:
         '''Return qty bits from start W/o(!) deleting'''
-        val = self.buffer[start:start + qty_bits].copy()
+        byte_idx = start >> 3
+        bit_off = start & 7
+        n_bytes = (bit_off + qty_bits + 7) >> 3
+        raw = self._buf_bytes[byte_idx : byte_idx + n_bytes]
+        val = int.from_bytes(raw, 'big')
+        val >>= (n_bytes * 8 - qty_bits)
+        val &= (1 << qty_bits) - 1
         return val
   
-    def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> bytes:
+    def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> int:
         """
         Unpack one byte from bit_compressed to byte
 
@@ -799,25 +809,23 @@ class bitstream():
             bit_compressed:  Количество бит для интерпретации, как байт
             left_shift:      сдвиг влево после распаковки
         Returns:
-            byte - один байт
+            int - один байт
         Raises:
             Value Error При bit_compressed более чем 8 бита
         """
         if bit_compressed > BITS_IN_BYTE:
             raise NotImplementedError(bit_compressed, f"Значение больше {BITS_IN_BYTE}, _unpack_byte")
         
-        res: bitarray = self.pop(bit_compressed)
+        val = self.pop(bit_compressed)
         # добавить справа нолей на к-во сдвига
-        res.extend(bitarray([0]) * left_shift)  # самый быстрый путь добавить справа
+        val <<= left_shift
         # оставить только 8 правых бит
-        res = res[-BITS_IN_BYTE:]
+        val &= 0xFF
         # выровнять до word
-        from_left = BITS_IN_BYTE - len(res)
-        res = (bitarray([0]) * from_left) + res    # выровнять до word
-        # br = res.tobytes()
-        return res.tobytes()
+        val &= 0xFF
+        return val
 
-    def _unpack_short(self, bit_compressed: int, left_shift: int = 0) -> bytes:
+    def _unpack_short(self, bit_compressed: int, left_shift: int = 0) -> int:
         """
         Unpack two bytes from bit_compressed bits
         
@@ -825,28 +833,24 @@ class bitstream():
             bit_compressed:  Количество бит для интерпретации, как word
             left_shift:      сдвиг влево после распаковки
         Returns:
-            bytes
+            int
         Raises:
             Value Error При bit_compressed более чем 16 бита
         """
         if not bit_compressed:
-            return b'\x00\x00'
+            return 0
         
         if bit_compressed > BITS_IN_WORD:
             raise ValueError(bit_compressed, f"Значение bit больше {BITS_IN_WORD}, _unpack_short")
         
-        res: bitarray = self.pop(bit_compressed)
+        val = self.pop(bit_compressed)
         # добавить справа нолей на к-во сдвига
-        res.extend(bitarray([0]) * left_shift)  # самый быстрый путь добавить справа
+        val <<= left_shift
         # оставить только 16 правых бит
-        res = res[-BITS_IN_WORD:]
-        # выровнять до word
-        from_left = BITS_IN_WORD - len(res)
-        res = (bitarray([0]) * from_left) + res
-        # br = res.tobytes()
-        return res.tobytes()
+        val &= 0xFFFF
+        return val
     
-    def _unpack_uint(self, bit_compressed: int, left_shift: int = 0) -> bytes:
+    def _unpack_uint(self, bit_compressed: int, left_shift: int = 0) -> int:
         """
         Unpack four bytes from bit_compressed bits
 
@@ -854,23 +858,19 @@ class bitstream():
             bit_compressed:  Количество бит для интерпретации, как word
             left_shift:      сдвиг влево после распаковки
         Returns:
-            bytes
+            int
         Raises:
         Value Error При bit_compressed более чем 32 бита
         """
         if bit_compressed > BITS_IN_UINT:
             raise ValueError(bit_compressed, f"Значение больше {BITS_IN_UINT}, _unpack_uint")
         
-        res: bitarray = self.pop(bit_compressed)
+        val = self.pop(bit_compressed)
         # добавить справа нолей на к-во сдвига
-        res.extend(bitarray([0]) * left_shift)  # самый быстрый путь добавить справа
+        val <<= left_shift
         # оставить только 32 правых бит
-        res = res[-BITS_IN_UINT:]
-        # выровнять до word
-        from_left = BITS_IN_UINT - len(res)
-        res = (bitarray([0]) * from_left) + res
-        # br = res.tobytes()
-        return res.tobytes()
+        val &= 0xFFFFFFFF
+        return val
 
     def _unpack_vrtx_ptr(self) -> bytes:
         """
@@ -878,7 +878,7 @@ class bitstream():
         бонус - надо в 4 раза меньше бит, чтобы сохранить
         ptr vrtx - выравнивается по WORD, кратен 4 -> self.max_PTR_bits - 2 (по факту нет, но порядок да)
         """
-        num_vrtx = ba2int(self.pop(self.max_bits_in_vrtxnum))   # номер 0-го vrtx для распаковываемого объекта
+        num_vrtx = self.pop(self.max_bits_in_vrtxnum)   # номер 0-го vrtx для распаковываемого объекта
         # offset = от первого li_vrtx.ptr + num_vrtx * size вертекса
         vrtx_offset = self.li_vrtx.ptr + VERTEX.size * num_vrtx
         # однако надо 2 bytes, а не int

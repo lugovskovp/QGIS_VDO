@@ -75,6 +75,8 @@ exclude = [
 bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
 
 [tool.semantic_release]
+# Указываем парсер (angular используется по умолчанию)
+commit_parser = "angular"
 # Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
 version_toml = []
 version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
@@ -84,6 +86,26 @@ version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 # path = "metadata.txt"
 # search = "version={version}"
 # replace = "version={new_version}"
+
+
+[tool.semantic_release.commit_parser_options]
+# Список префиксов, которые будут увеличивать MINOR версию (новые фичи)
+allowed_tags = [
+  "feat",
+  "fix",
+  "perf",
+  "docs",
+  "style",
+  "refactor",
+  "test",
+  "chore",
+  "build",    # Изменение системы сборки, зависимостей, пакетов	build
+  "revert",   #	Откат предыдущего коммита
+]
+
+# Связываем префиксы с типами изменений (major, minor, patch)
+minor_tags = ["feat", "revert"]
+patch_tags = ["fix", "perf", "build", "refactor"]
 
 # Настройка поведения веток: main - релиз, dev - пререлиз
 [tool.semantic_release.branches.main]

@@ -568,7 +568,7 @@ class BYTESTRUCT:
 
     memoryview — нулевое копирование буфера
     __slots__ = ("_raw",) — только один слот
-    Методы: read(), read_str() (cp1250, 0-terminated), uchar(), ushort(), uint()
+    Методы: read(), read_str() 0(~cp1250~ latin-1, 0-terminated), uchar(), ushort(), uint()
     hex — отладочный дамп памяти по 16 байт
     """
 
@@ -641,7 +641,7 @@ class BYTESTRUCT:
             sub_view = sub_view[:null_idx]
 
         # Строгое декодирование. Падает при нарушении структуры данных.
-        return bytes(sub_view).decode("cp1250")
+        return bytes(sub_view).decode("latin-1")
     #  UnicodeDecodeError       (note: full exception trace is shown but execution is paused at: run)
     # 'charmap' codec can't decode byte 0x81 in position 1: character maps to <undefined>  , errors="ignore"
 
@@ -933,11 +933,11 @@ class CH_IDX(BYTESTRUCT):
     
     @property
     def ch(self) -> str:
-        """Декодированная буква (байт 4) с поддержкой расширенной таблицы cp1250"""
+        """Декодированная буква (байт 4) с поддержкой расширенной таблицы ~cp1250~ latin-1"""
         raw_byte = self._raw[4]
         if raw_byte < 128:
             return chr(raw_byte)
-        return bytes([raw_byte]).decode('cp1250')
+        return bytes([raw_byte]).decode('latin-1')
 
     @property
     def is_out(self) -> bool:

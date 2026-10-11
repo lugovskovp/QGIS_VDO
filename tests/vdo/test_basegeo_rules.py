@@ -32,6 +32,12 @@ GEO_DICT = {
         "scale": 5,
         "descr": "произвольный блок"
     },
+    # 'GER_p_16_0x68AADB05.bin': {
+    #     'name': "@ 04AADB05 0016 01 08 [16:MAP__07k40]",
+    #     'segsize': 200,
+    #     "scale": 7,
+    #     "descr": "Nohra"
+    # },
 }
 
 
@@ -44,9 +50,11 @@ def geoblock_fixture(request):
     Генератор реальных блоков и проверяемых метрик
     """
     blpath = FIXTURES_DIR / request.param
-
-    block = VDO_FILE().load_single_block(blpath, dbrev=34, segsize=0x200)
     metrics = GEO_DICT[request.param]
+
+    ss = metrics.get('segsize', 0x200)
+    block = VDO_FILE().load_single_block(blpath, dbrev=34, segsize=ss)
+    
     return (block, metrics)
 
 
@@ -123,7 +131,7 @@ def test_valid_categories(geoblock_fixture):
     pass
 
 
-def testof_valid_shapes(geoblock_fixture):
+def test_valid_shapes(geoblock_fixture):
     """Пророверка валидности полей полигонов"""
     block: block_basegeo
     block, metrics = geoblock_fixture

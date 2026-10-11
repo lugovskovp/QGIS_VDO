@@ -2,6 +2,19 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.15 (2026-10-11)
+
+### Bug Fixes
+
+- Bytes.decode ~cp1250~ -> latin-1
+  ([`b7a553e`](https://github.com/lugovskovp/QGIS_VDO/commit/b7a553e6f618f764c82a892c944fc1152bac8af8))
+
+### Features
+
+- Add debug mode bitarray
+  ([`8d0a8da`](https://github.com/lugovskovp/QGIS_VDO/commit/8d0a8dac4e6b888a85fd58d78134a787fa12f9f1))
+
+
 ## v1.0.0-dev.14 (2026-10-11)
 
 ### Refactoring

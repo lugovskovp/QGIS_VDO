@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.14 (2026-10-11)
+
+### Refactoring
+
+- Заменить bitarray на int в bitstream для упрощения декодирования
+  ([`602931f`](https://github.com/lugovskovp/QGIS_VDO/commit/602931ff2879435967b8e25e0ffcad65da6d5d28))
+
+
 ## v1.0.0-dev.13 (2026-10-10)
 
 ### Bug Fixes

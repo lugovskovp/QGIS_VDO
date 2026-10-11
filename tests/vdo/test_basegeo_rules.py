@@ -123,7 +123,7 @@ def test_valid_categories(geoblock_fixture):
     pass
 
 
-def test_valid_shapes(geoblock_fixture):
+def testof_valid_shapes(geoblock_fixture):
     """Пророверка валидности полей полигонов"""
     block: block_basegeo
     block, metrics = geoblock_fixture

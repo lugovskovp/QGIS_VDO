@@ -91,7 +91,7 @@ def test_isgeoblock(geoblock_fixture):
     """Проверка, что все блоки фикстуры являются геоблокам"""
     block: block_basegeo
     block, metrics = geoblock_fixture
-    
+
     assert block.head.arch_type == 1    # carindb - packed
     assert block.is_unpacked is True     # was unpacked
     assert block.type in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]   # in geoblocks 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e
@@ -117,7 +117,7 @@ def test_valid_categories(geoblock_fixture):
         assert all_categories[0].ptr == block.li_lin.ptr
     else:
         # нет ни shp ни lin
-        pytest.skip("Шейпов нет, полилиний нет, пропускаем тест")
+        pytest.skip("Шейпов нет, полилиний нет, пропускаем тест")  # no cov
 
     # ссылка в последней категории - на начало элемента, за которым начинаются vertexы
     if block.li_lin.cnt:
@@ -272,9 +272,3 @@ def test_valid_lines(geoblock_fixture):
         assert ptr2poi == 0
         # assert ptr2tstr == 0    # assert 4 == 0  0x070e8503
         assert shrtEnd == 0
-
-
-"""
-
-
-"""

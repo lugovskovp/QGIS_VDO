@@ -25,7 +25,6 @@ from QGIS_VDO.vdo.consts import (
     BITS_IN_WORD,
     BITS_IN_UINT,
     LOOKUP_CHAR_BYTES,
-    bits_needed,
 )
 
 from QGIS_VDO.vdo.block_base import block_base
@@ -39,7 +38,7 @@ OFFSET_PACKED_DATA = 0x34
 # в них незапакованы первые 0х34 # noqa: E116
 
 
-DEBUG_MODE = True    # посмотреть, что за биты на подходе
+DEBUG_MODE = False    # посмотреть, что за биты на подходе
 
 # --------- bitstream - Class wrapper for bitarray
 
@@ -78,8 +77,8 @@ class bitstream():
         self.dbrev = archived_bock.dbrev
 
         # Максимальная длинна указателя в битах (по размеру распакованного блока, если на 1 меньше - word wrap align)
-        # self._const_segsize * self.unarc_segcn Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
-        self.max_bits_in_ptr = bits_needed(archived_bock.head.sizeofblock)    # max possible bits in near offset
+        # self._const_segsize * self.unarc_segcn Максимально возможное значение адреса; 2 -> 0x800 * 2-1 = 0xfff
+        self.max_bits_in_ptr = archived_bock.ptr_bits_needed()      # max possible bits in near offset
 
         # упакованы НОМЕРА вертексов, а не offs на них
         self.max_bits_in_vrtxnum = len(f"{(archived_bock.li_vrtx.cnt - 1):b}")
@@ -134,32 +133,32 @@ class bitstream():
         # if self.max_bits_in_vertex_delta not in [0, 7, 8, 9, 0x0a, 0xb, 0xc]:
         #     raise ValueError(self.max_bits_in_vertex_delta, f"0x{self.max_bits_in_vertex_delta:X} .max_bits_in_vertex_delta")  # noqa
         #     # bmw 07157901 001E 01 02 [1E:MAP__11k_11] = 0!! bits
-        if unkn_zero not in [0]:        # unk_0 = 60 in _0x1d_0x07151504
+        if unkn_zero not in [0]:        # no cov unk_0 = 60 in _0x1d_0x07151504
             raise ValueError(unkn_zero, f"0x{unkn_zero} .unkn_zero")
         pass
 
         # 0x00, 0x0e и 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e упакованы по-разному
         if archived_bock.type in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+            if DEBUG_MODE:  # no cov
+                # в буффер - запакованную часть блока, далее self.unpack полностью распакует
+                from bitarray import bitarray
+                self._bitarray_view = bitarray(buffer=arc, endian='big')
+        
             # оставляем незапакованное начало
             self.unpacked = bytearray(archived_bock._raw[:OFFSET_PACKED_DATA])
             # чтобы после распаковки нормально работал блок - добиваем размер нулями 10110001
             self.unpacked += b'\x00' * (self.head.sizeofblock - len(self.unpacked))
-
-            if DEBUG_MODE:
-                # в буффер - запакованную часть блока, далее self.unpack полностью распакует
-                from bitarray import bitarray
-                self._bitarray_view = bitarray(buffer=arc, endian='big')
             
             self._unpack14()
         else:
             raise TypeError(f"Block type {archived_bock.head.bltype} cant be packed CF=1")
 
     @property
-    def ba_(self):      # ba_current
+    def ba_(self):      # no cov ba_current
         """
         В режиме отладки смотреть, какие биты следующие ДОЛЖНЫ быть
         """
-        if not DEBUG_MODE:
+        if not DEBUG_MODE:      # no cov
             return "Should DEBUG_MODE on"
         return self._bitarray_view[self._buf_idx:self._buf_idx + 20]
 
@@ -172,7 +171,7 @@ class bitstream():
         для блоков типов 14 15 16 1c 1d 1e в архивах CF=1
         """
         # from FW
-        self.floor = self._sections_end()
+        floor = self._sections_end()
 
         # <<<<<<<<<< 1 GEO_CATEGORY     # S0 (T[0x3b]=4)
         # cat = self.__S0_unpack_categories()
@@ -192,10 +191,10 @@ class bitstream():
         
         # <<<<<<<<<< 5 ZERO ENDED STRINGS unpack, but add to self.res only after TSTRrs e4 (T[0x15]=6)
         # floor = sections_end(ctx)
-        self.__unpack_text()
+        self.__unpack_text(floor)
         # self.__unpack_all_strings()
 
-        if self.dbrev < 0x14:   # from FW
+        if self.dbrev < 0x14:   # no cov from FW
             return
         
         #  w5 = bytes(ctx.g(8) for _ in range(5))
@@ -218,7 +217,7 @@ class bitstream():
         # _section(ctx, 2, t[T_REC_S2_141516], KIND_S2, PASS_20, st)
         self.__fill_lin_PASS_20(w5)
 
-        if self.dbrev < 0x17:                                      # FW +0x4f00
+        if self.dbrev < 0x17:                                      # no cov FW +0x4f00
             return
         
         # <<<<<<<<<< TSTRs  - # далее в архиве запакованы собственно TSTR
@@ -236,10 +235,10 @@ class bitstream():
         
         # >>>>>>>>>>>>>>>>
         if self.pop(1):
-            self.__unpack_text()
+            self.__unpack_text(floor)
         # что? второй вызов? ДА! from FW
         if self.pop(1):
-            self.__unpack_text()
+            self.__unpack_text(floor)
 
         # >>>>>>>>>>>>>>>>
         if self.dbrev > 0x17:        # seen on DB-REL 34; not read by RR 0101 (see _s2_tail)
@@ -262,7 +261,7 @@ class bitstream():
             if self.pop(1):
                 self._unpack_write_short(BITS_IN_WORD, offset=offset)
                 prev = offset
-            elif prev is None:
+            elif prev is None:  # no cov
                 raise ValueError(f"S2 GEO_LINE record at {offset - 0x0E}: first record inherits +0x0e")
             offset += GEO_LINE.size
             
@@ -404,7 +403,7 @@ class bitstream():
         1: BYTE  0poligon_1poliline en_DRAW_TYPE   <--- 1 bit
         2: WORD  ptr_to_category PTR               <--- max_PTR_bits-1 bits
         """
-        if not self.li_cat.cnt:
+        if not self.li_cat.cnt:     # no coverage
             return
         # <<<<<<<<<< GEO_CATEGORY
         # Для каждой геокатегории - лишнее, нелогично паковать без категорий
@@ -531,35 +530,21 @@ class bitstream():
 
         # первые2 значения - рассматриваем, как xy начальных точек.
         # упаковываем to VRTX — напрямую, т.к. это уже готовые значения
-        # beg = self.ba[self._buf_idx:self._buf_idx + 120]
         prev_x = self._unpack_write_short(BITS_IN_WORD, offset=self.li_vrtx.ptr, is_return_int=True)
         prev_y = self._unpack_write_short(BITS_IN_WORD, offset=self.li_vrtx.ptr + 2, is_return_int=True)
 
-        # prev_x = self.pop(BITS_IN_WORD)
-        # prev_y = self.pop(BITS_IN_WORD)
-        # # упаковываем to VRTX — напрямую, т.к. это уже готовые значения
-        # # self._unpack_write_short(BITS_IN_WORD, offset=self.li_vrtx.ptr)
-        # # перезаписываем unpacked[ptr:ptr+2] правильным значением prev_x
-        # self.unpacked[self.li_vrtx.ptr:self.li_vrtx.ptr + 2] = prev_x.to_bytes(2, 'big')
-        # self.unpacked[self.li_vrtx.ptr + 2:self.li_vrtx.ptr + 4] = prev_y.to_bytes(2, 'big')
-        # # a_hex = bin_vrtx.hex()
-        
         # распаковка дельта-кодированных локальных координат
         for vrtx_idx in range(self.li_vrtx.cnt - 1):     # minus 1st xy
             # beg = self.ba[self._buf_idx:self._buf_idx + 120]
             prev_x = self._unpack_half(prev_x)      # x
             prev_y = self._unpack_half(prev_y)      # y
-            if prev_x < 0 or prev_y < 0:
+            if prev_x < 0 or prev_y < 0:            # no coverage
                 raise ValueError(f"idx:{vrtx_idx} prev_x: {prev_x}, prev_y:{prev_y}")
-            # assert prev_x > 0
-            # assert prev_y > 0
 
             # упаковка в vertex
             offset = self.li_vrtx.ptr + (vrtx_idx + 1) * VERTEX.size
             self.unpacked[offset:offset + 2] = prev_x.to_bytes(2, 'big')
             self.unpacked[offset + 2:offset + 4] = prev_y.to_bytes(2, 'big')
-            # a_hex = vrtx.hex()
-            # print(vrtx.hex())
 
         return
 
@@ -580,7 +565,7 @@ class bitstream():
                 return prev - self.pop(self.max_bits_in_vertex_delta)
         return prev + self.pop(self.max_bits_in_vertex_delta)   # 0
 
-    def __unpack_text(self) -> None:
+    def __unpack_text(self, floor: int = None) -> None:
         """
         FW-like реализация распаковки строк
         pbp+0x4862 — blob dei nomi, codice a prefisso + dizionario di blocco.
@@ -617,10 +602,10 @@ class bitstream():
             for w_idx in range(n):
                 wbuf[w_idx] = self._unpack_byte(7)
             words.append(bytes(wbuf))
-        # if floor is None:
-        #     floor = _sections_end(ctx)
+        if floor is None:
+            floor = self._sections_end()
         # ok = start <= end < len(ctx.dst) and start >= floor
-        ok = ptr_start <= ptr_end and ptr_start >= self.floor
+        ok = ptr_start <= ptr_end and ptr_start >= floor
         p = ptr_start
         while p <= ptr_end:      # while p <= end and p < len(ctx.dst):
             code = self.pop(2)

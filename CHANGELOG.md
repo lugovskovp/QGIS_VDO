@@ -2,6 +2,22 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.16 (2026-10-12)
+
+### Documentation
+
+- Обновил AGENTS.md — инструкции по настройке и conventions
+  ([`c30512f`](https://github.com/lugovskovp/QGIS_VDO/commit/c30512fbc4ca9ac869f8393577af91e7f7c62e69))
+
+- Улучшил AGENTS.md — добавил секцию запуска тестов с командами для PowerShell, CMD и VSCode
+  ([`24754f0`](https://github.com/lugovskovp/QGIS_VDO/commit/24754f009f5f646964c82ddf0c0d016a6f9ef644))
+
+### Refactoring
+
+- Перенёс bits_needed в block_base.ptr_bits_needed, убрал отладочный код, добавил # no cov
+  ([`afec4a4`](https://github.com/lugovskovp/QGIS_VDO/commit/afec4a44e754d56640793b97a03a0c12f1cb2b6b))
+
+
 ## v1.0.0-dev.15 (2026-10-11)
 
 ### Bug Fixes

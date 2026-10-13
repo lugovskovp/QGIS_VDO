@@ -22,7 +22,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: GIS",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-# dependencies = ["bitarray"]   # need only for development debug mode
+dependencies = ["bitarray"] # need only for development debug mode
 
 [project.urls]
 Documentation = "https://github.com/lugovskovp/QGIS_VDO/tree/main/doc"

@@ -4,7 +4,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
 [![GitHub License](https://img.shields.io/github/license/lugovskovp/QGIS_VDO)](#)
 [![Format: CARINdb](https://img.shields.io/badge/format-CARiN%20%2F%20CarinDB-orange.svg)](https://github.com/fdemusso/OpenCarin)
-
+![Coverage](https://shields.io)
 
 
 # About

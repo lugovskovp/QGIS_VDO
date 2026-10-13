@@ -10,7 +10,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     # Используем официальный образ тестирования QGIS
-    container: qgis/qgis:release-3_34  # Укажите нужную вам версию
+
+    # container: qgis/qgis:release-3_34
     concurrency: release
     permissions:
       contents: write
@@ -22,31 +23,47 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
+
+      - name: Install QGIS and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg software-properties-common
+          # Добавляем официальный репозиторий QGIS (необязательно, если подходит старая версия из штатного репозитория Ubuntu)
+          sudo mkdir -m755 -p /etc/apt/keyrings
+          sudo wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://qgis.org/qgis-archive-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/qgis-archive-keyring.gpg] https://qgis.org/ubuntu qgis-ltr $(lsb_release -c -s) main" | sudo tee /etc/apt/sources.list.d/qgis.list
+          sudo apt-get update
+          
+          # Установка QGIS и Python-библиотек
+          sudo apt-get install -y qgis python3-qgis
 
       # Добавили pytest и pytest-cov в установку зависимостей
       - name: Install Dependencies
         run: |
           pip install python-semantic-release hatch pytest pytest-cov bitarray
 
+
       # НОВЫЙ ШАГ: Запуск тестов и сбор покрытия
-      - name: Run Tests & Calculate Coverage
+      - name: Run Tests with Python Path & Calculate Coverage
         id: coverage
         run: |
           # Запускаем pytest и сохраняем его код выхода (exit code)
           # Использование set -o pipefail гарантирует, что pipe (|) вернет ошибку pytest, а не tee
           set -o pipefail
+          # Указываем Python, где искать библиотеки QGIS
+          export PYTHONPATH=/usr/share/qgis/python:/usr/lib/python3/dist-packages
+          export LD_LIBRARY_PATH=/usr/lib
           # Запускаем тесты, выводим только общий процент и сохраняем его в переменную
-          # Замените 'tests/' на ваш путь к тестам, если он отличается
           pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
 
           # Проверяем, успешно ли завершился pytest
-          if [ $PYTEST_EXIT -ne 0 ]; then
-            echo "Pytest failed with exit code $PYTEST_EXIT"
-            exit $PYTEST_EXIT
+          if [ $? -ne 0 ]; then
+            echo "Pytest failed with exit code $?"
+            exit $?
           fi
           
           # Парсим финальный процент из вывода pytest

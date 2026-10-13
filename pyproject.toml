@@ -134,7 +134,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source_pkgs = ["vdo"]
+# source_pkgs = ["vdo"]
 branch = true
 parallel = true
 omit = [

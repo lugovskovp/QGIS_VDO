@@ -126,6 +126,7 @@ jobs:
 
       - name: Run Semantic Release (Determine version & update files)
         id: release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -138,14 +139,9 @@ jobs:
           # semantic-release version --no-push
           # python3 -m semantic_release version --no-push
 
-          # 3. Находим, какую версию Python использует Docker-контейнер QGIS (3.10, 3.12 или др.)
-          PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+          export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
 
-          # 4. Временный PYTHONPATH, объединяющий PyQGIS и локальные pip-пакеты (включая semantic-release)
-          export PYTHONPATH="$PYTHONPATH:/root/.local/lib/python$PY_VER/site-packages"
-
-          # 5. Запуск через исполняемый бинарный файл, который pip положил в .local/bin
-          /root/.local/bin/semantic-release version --no-push
+          /usr/local/bin/semantic-release version --no-push
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
       - name: Push Changes & Tags to GitHub

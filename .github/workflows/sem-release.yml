@@ -28,18 +28,32 @@ jobs:
       #   with:
       #     python-version: "3.12"
 
-      - name: Install QGIS and dependencies
+      - name: Install QGIS 3.44 (LTR) and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gnupg software-properties-common
-          # Добавляем официальный репозиторий QGIS (необязательно, если подходит старая версия из штатного репозитория Ubuntu)
+          sudo apt-get install -y gnupg software-properties-common wget
+
+          # 1. Скачиваем официальный GPG-ключ QGIS
           sudo mkdir -m755 -p /etc/apt/keyrings
-          sudo wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://qgis.org/qgis-archive-keyring.gpg
-          echo "deb [signed-by=/etc/apt/keyrings/qgis-archive-keyring.gpg] https://qgis.org/ubuntu qgis-ltr $(lsb_release -c -s) main" | sudo tee /etc/apt/sources.list.d/qgis.list
-          sudo apt-get update
+          sudo wget -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://qgis.org
+
+          # 2. Добавляем репозиторий, зафиксированный на версии LTR (3.44)
+          # Используем современный формат .sources (DEB822)
+          CODENAME=$(lsb_release -c -s)
           
-          # Установка QGIS и Python-библиотек
+          sudo tee /etc/apt/sources.list.d/qgis.sources <<EOF
+          Types: deb deb-src
+          URIs: https://qgis.org/ubuntu-ltr
+          Suites: $CODENAME
+          Architectures: amd64
+          Components: main
+          Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
+          EOF
+
+          # 3. Обновляем кэш apt и принудительно устанавливаем QGIS из нового репозитория
+          sudo apt-get update
           sudo apt-get install -y qgis python3-qgis
+
 
       # Добавили pytest и pytest-cov в установку зависимостей
       - name: Install Dependencies
@@ -58,7 +72,8 @@ jobs:
           export PYTHONPATH=/usr/share/qgis/python:/usr/lib/python3/dist-packages
           export LD_LIBRARY_PATH=/usr/lib
           # Запускаем тесты, выводим только общий процент и сохраняем его в переменную
-          pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
+          # pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
+          pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
 
           # Проверяем, успешно ли завершился pytest
           if [ $? -ne 0 ]; then

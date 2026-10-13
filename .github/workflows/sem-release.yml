@@ -33,26 +33,27 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gnupg software-properties-common wget
 
-          # 1. Создаем папку под ключи
+          # 1. Создаем директорию для ключей apt
           sudo mkdir -m755 -p /etc/apt/keyrings
 
-          # 2. Скачиваем официальный публичный ключ QGIS напрямую с сервера ключей Ubuntu,
-          # чтобы избежать проблем со скачиванием HTML-файлов по wget.
-          sudo gpg --no-default-keyring --keyring /etc/apt/keyrings/qgis-archive-keyring.gpg --keyserver keyserver.ubuntu.com --recv-keys D155B8E6A419C5BE
+          # 2. Скачиваем ПРЯМОЙ файл gpg-ключа с официального CDN загрузок QGIS
+          # Опция --clobber перезапишет старый битый файл, если он там остался
+          sudo wget --clobber -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://qgis.org
 
-          # 3. Настраиваем репозиторий QGIS LTR под Ubuntu 24.04 (Noble) в формате DEB822
+          # 3. Настраиваем официальный LTR репозиторий QGIS (версия 3.44) в формате DEB822
           sudo tee /etc/apt/sources.list.d/qgis.sources <<EOF
           Types: deb deb-src
-          URIs: https://qgis.org/ubuntu-ltr
+          URIs: https://qgis.org
           Suites: noble
           Architectures: amd64
           Components: main
           Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
           EOF
 
-          # 4. Обновляем apt и устанавливаем пакеты
+          # 4. Обновляем кэш репозиториев и устанавливаем QGIS и PyQGIS
           sudo apt-get update
           sudo apt-get install -y qgis python3-qgis
+
 
 
       # Добавили pytest и pytest-cov в установку зависимостей

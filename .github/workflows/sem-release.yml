@@ -23,7 +23,7 @@ jobs:
     env:
       # стандартные пути QGIS. Локальные импорты теперь завязаны на относительные пути Python
       PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages
-
+      LD_LIBRARY_PATH: /usr/lib
       QT_QPA_PLATFORM: offscreen
       PIP_ROOT_USER_ACTION: ignore
 
@@ -67,6 +67,13 @@ jobs:
       - name: Fix home directory ownership for caching
         run: chown -R root:root /github/home
 
+      # Добавили pytest и pytest-cov в установку зависимостей
+      - name: Install Dependencies
+        run: |
+          apt-get update && apt-get install -y zip
+          # pip install python-semantic-release hatch pytest pytest-cov bitarray
+          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
+
       # - name: Cache pip packages
       #   uses: actions/cache@v5
       #   with:
@@ -74,12 +81,6 @@ jobs:
       #     key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test-coverage.yml') }}
       #     restore-keys: |
       #       ${{ runner.os }}-pip-docker-
-
-      # Добавили pytest и pytest-cov в установку зависимостей
-      - name: Install Dependencies
-        run: |
-          # pip install python-semantic-release hatch pytest pytest-cov bitarray
-          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
 
 
       # Запуск тестов и сбор покрытия
@@ -98,13 +99,15 @@ jobs:
 
           # Проверяем, успешно ли завершился pytest
           if [ $PYTEST_EXIT -ne 0 ]; then
-            echo "Pytest failed with exit code $PYTEST_EXIT"
+            echo "❌Pytest failed with exit code $PYTEST_EXIT"
             exit $PYTEST_EXIT
           fi
           
           # Парсим финальный процент из вывода pytest
           PERCENT=$(grep -i "TOTAL" pytest_output.txt | awk '{print $NF}' | tr -d '%')
-          echo "TOTAL_COVERAGE=$PERCENT" >> GITHUB_ENV
+          # Защита от пустой строки (например, если тесты прошли, но TOTAL не найден)
+          if [ -z "$PERCENT" ]; then PERCENT="0"; fi
+          echo "TOTAL_COVERAGE=$PERCENT" >> $GITHUB_ENV
           echo "Extracted coverage: $PERCENT%"
         shell: bash
 

@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.17 (2026-10-13)
+
+### Refactoring
+
+- Обновил фикстуры, coverage и bitstream — fixes #48, #52, #42, affects #62, #100
+  ([`6b3bc9b`](https://github.com/lugovskovp/QGIS_VDO/commit/6b3bc9bbf2816dd5a5cb116635b6e3cab1396ce4))
+
+
 ## v1.0.0-dev.16 (2026-10-12)
 
 ### Documentation

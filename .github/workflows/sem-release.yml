@@ -140,7 +140,8 @@ jobs:
           REAL_PATH=$(which semantic-release)
           echo "Found semantic-release at: $REAL_PATH"
 
-          $REAL_PATH version --no-push
+          $REAL_PATH -v version --no-push
+
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
       - name: Push Changes & Tags to GitHub

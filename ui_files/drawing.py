@@ -196,8 +196,6 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_id, item.id)
         if field_idx_block != -1:
             feature.setAttribute(field_idx_block, item.block)
-        if field_idx_block != -1:
-            feature.setAttribute(field_idx_block, item.block)
         if field_idx_render_order != -1:
             feature.setAttribute(field_idx_render_order, str(item.cat.value))
 
@@ -379,7 +377,6 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
     field_variant_index = layer.fields().indexOf('variant')
     if field_name_index == -1:
         raise AttributeError("Ошибка: В слое отсутствует обязательное поле 'name'")
-        return
     if field_variant_index == -1:
         raise AttributeError("Ошибка: В слое отсутствует обязательное поле 'variant'")
 

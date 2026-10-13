@@ -30,7 +30,7 @@ jobs:
       # Добавили pytest и pytest-cov в установку зависимостей
       - name: Install Dependencies
         run: |
-          pip install python-semantic-release hatch pytest pytest-cov
+          pip install python-semantic-release hatch pytest pytest-cov bitarray
 
       # НОВЫЙ ШАГ: Запуск тестов и сбор покрытия
       - name: Run Tests & Calculate Coverage

@@ -211,13 +211,12 @@ def test_block_base_init_corrupted_zlib(real_vdo_fixture):
     #     block = block_base(addr)
     #     assert block.is_unpacked is False
 
-# хрень - в CI ubunu test падает, или в винде. Пока заглушен
-# def test_block_base_write_raw(real_base_block):
-#     """Тестирование записи дампа блока на диск без реального создания файла."""
-#     with patch("builtins.open", mock_open()) as mock_file:
-#         real_base_block.write_raw("test_dump_block.bin")
-#         mock_file.assert_called_once_with("test_dump_block.bin", "wb")
-#         mock_file().write.assert_called_once()
+
+def test_block_base_write_raw(real_base_block, tmp_path):
+    """Тестирование записи дампа блока на диск."""
+    test_file = tmp_path / "test_dump_block.bin"
+    real_base_block.write_raw(str(test_file))
+    assert test_file.exists()
 
 
 #  --- 5. Тесты для покрытия ошибок декомпрессии

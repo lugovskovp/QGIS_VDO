@@ -2,7 +2,7 @@
 
 
 """
-import os
+from pathlib import Path
 
 import zlib             # распаковка архивов типа 2 и 3
 
@@ -220,9 +220,10 @@ class block_base(BYTESTRUCT):
             # бизнес-логика гасит ошибку и безопасно отдает пустую строку
             raise TypeError("TypeError read_str")
 
-    def write_raw(self, name: str = "c:/temp/_base_block.bin") -> None:    # no cov
-        if not os.path.dirname(name):           #
+    def write_raw(self, name: str = "_base_block.bin") -> None:    # no cov
+        if not Path(name).parent.exists():
             return
+
         try:
             with open(name, "wb") as f:
                 f.write(self._raw)

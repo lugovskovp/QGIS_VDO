@@ -9,6 +9,8 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Используем официальный образ тестирования QGIS
+    container: qgis/qgis:release-3_34  # Укажите нужную вам версию
     concurrency: release
     permissions:
       contents: write

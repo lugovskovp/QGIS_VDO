@@ -36,14 +36,24 @@ jobs:
       - name: Run Tests & Calculate Coverage
         id: coverage
         run: |
+          # Запускаем pytest и сохраняем его код выхода (exit code)
+          # Использование set -o pipefail гарантирует, что pipe (|) вернет ошибку pytest, а не tee
+          set -o pipefail
           # Запускаем тесты, выводим только общий процент и сохраняем его в переменную
           # Замените 'tests/' на ваш путь к тестам, если он отличается
-          pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
+          pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
+
+          # Проверяем, успешно ли завершился pytest
+          if [ $PYTEST_EXIT -ne 0 ]; then
+            echo "Pytest failed with exit code $PYTEST_EXIT"
+            exit $PYTEST_EXIT
+          fi
           
           # Парсим финальный процент из вывода pytest
           PERCENT=$(grep -i "TOTAL" pytest_output.txt | awk '{print $NF}' | tr -d '%')
           echo "TOTAL_COVERAGE=$PERCENT" >> GITHUB_ENV
           echo "Extracted coverage: $PERCENT%"
+        shell: bash
 
       # НОВЫЙ ШАГ: Генерация JSON для Shields.io и отправка в Gist
       - name: Create/Update Coverage Badge

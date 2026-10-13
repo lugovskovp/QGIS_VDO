@@ -272,7 +272,10 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
     # Оптимизированный сбор существующих блоков в слое
     if field_idx_block != -1:
         # Экранируем одинарные кавычки для SQL
-        safe_block_str = ", ".join(f"'{str(block).replace("'", "''")}'" for block in packet_blocks)
+        # safe_block_str = ", ".join(f"'{str(block).replace("'", "''")}'" for block in packet_blocks)
+        blocks_escaped = [str(b).replace("'", "''") for b in packet_blocks]
+        safe_block_str = ", ".join(f"'{b}'" for b in blocks_escaped)
+
         exist_expression = f"\"block\" in ({safe_block_str})"
         
         # Запрашиваем только поле block для максимальной скорости

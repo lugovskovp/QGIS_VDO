@@ -44,7 +44,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt
+          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
 
       # СОЗДАЕМ ВИРТУАЛЬНОЕ ОКРУЖЕНИЕ ДЛЯ ИМПОРТОВ QGIS_VDO
       - name: Create plugin structure link

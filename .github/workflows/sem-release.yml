@@ -113,11 +113,11 @@ jobs:
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
-          gistID: ВАШ_ID_GIST  # <--- Вставьте сюда ID вашего Gist
+          gistID: d73b601c90fe3a20bf364ee079c4a5c3  # <--- Вставьте сюда ID вашего Gist
           filename: qgis_vdo_coverage.json
           label: coverage
           message: ${{ env.TOTAL_COVERAGE }}%
-          valColorRange: ${{ env.TOTAL_COVERAGE }}
+          valColorRange: ${{ env.TOTAL_COVERAGE || '0' }}
           maxColorRange: 100
           minColorRange: 0
 

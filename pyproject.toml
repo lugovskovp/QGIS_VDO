@@ -76,10 +76,10 @@ bypass = true # Защита от багов Windows/OSGeo4W окружения 
 
 [tool.semantic_release]
 # Указываем парсер (angular используется по умолчанию)
-commit_parser = "angular"
+commit_parser = "scipy"
 # Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
 version_toml = []
-version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
+version_variable = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 
 # Настройка автозамены в метаданных QGIS
 # [[tool.semantic_release.text_replacements]]
@@ -113,8 +113,7 @@ match = "main"
 prerelease = false
 
 [tool.semantic_release.branches.dev]
-match = "dev" # Сработает для dev и для вашей текущей ветки
-# match = "(dev|104-hatch-вместо-setuptools)" # Сработает для dev и для вашей текущей ветки
+match = "dev"            # Сработает для dev и для вашей текущей ветки
 prerelease = true
 prerelease_token = "dev" # Версия будет вида X.Y.Z-dev.1
 

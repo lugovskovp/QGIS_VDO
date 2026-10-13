@@ -132,12 +132,8 @@ jobs:
         run: |
           # Разрешаем Git доверять текущей рабочей директории в контейнере
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # semantic-release version --no-push
-          # python3 -m semantic_release version --no-push
 
           export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
 

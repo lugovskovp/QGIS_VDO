@@ -141,7 +141,10 @@ jobs:
 
           export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
 
-          /usr/local/bin/semantic-release version --no-push
+          REAL_PATH=$(which semantic-release)
+          echo "Found semantic-release at: $REAL_PATH"
+
+          $REAL_PATH version --no-push
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
       - name: Push Changes & Tags to GitHub

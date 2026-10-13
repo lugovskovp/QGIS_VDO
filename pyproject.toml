@@ -22,11 +22,11 @@ classifiers = [
   "Topic :: Scientific/Engineering :: GIS",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-dependencies = ["bitarray"]
+# dependencies = ["bitarray"]   # need only for development debug mode
 
 [project.urls]
-Documentation = "https://github.com"
-Issues = "https://github.com"
+Documentation = "https://github.com/lugovskovp/QGIS_VDO/tree/main/doc"
+Issues = "https://github.com/lugovskovp/QGIS_VDO/issues"
 Source = "https://github.com/lugovskovp/QGIS_VDO"
 
 # --- Настройка версии для Hatch (из __about__.py) ---
@@ -87,7 +87,6 @@ version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 # search = "version={version}"
 # replace = "version={new_version}"
 
-
 [tool.semantic_release.commit_parser_options]
 # Список префиксов, которые будут увеличивать MINOR версию (новые фичи)
 allowed_tags = [
@@ -138,7 +137,12 @@ markers = [
 source_pkgs = ["vdo"]
 branch = true
 parallel = true
-omit = ["vdo/__about__.py", "ext_libs/*"]
+omit = [
+  "vdo/__about__.py",
+  "ext_libs/*",
+  "tests/*",
+  "vdo/blocks/fixtures_vdo.py",
+]
 
 [tool.coverage.paths]
 vdo = ["vdo", "*/QGIS_VDO/vdo"]
@@ -155,6 +159,7 @@ exclude_lines = [
   "raise NotImplementedError",
   "no cov",
   "if TYPE_CHECKING:",
+  "if DEBUG_MODE:",
 ]
 
 [tool.hatch.envs.default]

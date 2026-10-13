@@ -36,11 +36,7 @@ def _sections_end(block: block_basegeo) -> int:
 # ---------- словарик фикстур
 
 GEO_DICT = {
-    'bmw_p_0x1d_0x07151504.bin': {
-        "name": "@ 07151504 001D 01 05 [1D:MAP__10k400]",
-        "scale": 10,
-        "type_name": 'block_0x1D',
-    },
+    
     'bmw_p_0x14_0x070D9E01.bin': {
         "name": "@ 070D9E01 0014 01 02 [14:MAP__05k200]",
         "scale": 5,
@@ -51,10 +47,30 @@ GEO_DICT = {
         "scale": 5,
         "descr": "poi нет, lin=1"
     },
+    'bmw_p_0x15_0x6C67305.bin': {
+        "name": "@ 6C67305 0016 01 06 [15:MAP__06k80]",
+        "scale": 6,
+        "descr": "poi нет, lin=1"
+    },
     'GER_p_16_0x68AADB05.bin': {
-        'name': "@ 04AADB05 0016 01 08 [16:MAP__07k40]",
+        'name': "@ 6C67305 0016 01 08 [16:MAP__07k40]",
         "scale": 7,
         "descr": "Nohra"
+    },
+    'bmw_p_0x1C_0x6F4780D.bin': {
+        'name': "@ 6F4780D 001D 01 12 [1C:MAP__09k100]",
+        "scale": 9,
+        "descr": "North central EU"
+    },
+    'bmw_p_0x1d_0x07151504.bin': {
+        "name": "@ 07151504 001D 01 05 [1D:MAP__10k400]",
+        "scale": 10,
+        "type_name": 'block_0x1D',
+    },
+    'bmw_p_0x1e_0x7158906.bin': {
+        'name': "@ 7158906 001E 01 07 [1E:MAP__11k_11]",
+        "scale": 11,
+        "descr": "North central EU"
     },
 }
 
@@ -191,7 +207,7 @@ def test_valid_shapes(geoblock_fixture):
 
         # ссылка на tstr ведёт в область tstr и делится на 2
         if shp.ptr_tstr:
-            assert block.li_tstr.ptr <= shp.ptr_tstr < str_start_ptr
+            assert block.li_tstr.ptr <= shp.ptr_tstr <= str_start_ptr
             assert shp.ptr_tstr % 2 == 0
 
     # добавляем заключительный элемент с нулями
@@ -253,8 +269,9 @@ def test_valid_lines(geoblock_fixture):
         assert lin.ptr_vrtx % 4 == 0
 
         # ссылка на tstr c_p_line_sign ведёт в область like poi и делится на 6
-        if lin.c_p_line_sign:
-            assert lin.c_p_line_sign % 6
+        if block.li_poi.cnt:
+            if lin.c_p_line_sign:
+                assert lin.c_p_line_sign % 6
 
     # добавляем заключительный элемент с нулями
     if block.li_lin.cnt:

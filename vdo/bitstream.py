@@ -150,7 +150,11 @@ class bitstream():
             self.unpacked += b'\x00' * (self.head.sizeofblock - len(self.unpacked))
             
             self._unpack14()
-        else:
+        elif archived_bock.type == 0x00:
+            raise NotImplementedError(f"Распаковка блоков типа {archived_bock.head.bltype} не реализована")
+        elif archived_bock.type == 0x0E:
+            raise NotImplementedError(f"Распаковка блоков типа {archived_bock.head.bltype} не реализована")
+        else:       # no coverage : FW не работает с иными блоками
             raise TypeError(f"Block type {archived_bock.head.bltype} cant be packed CF=1")
 
     @property
@@ -201,7 +205,8 @@ class bitstream():
         # Параметры распаковки from FW
         # w5 = self.pop(8 * 5).tobytes()
         w5 = self.pop(BITS_IN_BYTE * 5).to_bytes(5, 'big')
-        print(w5.hex())
+        if DEBUG_MODE:
+            print(w5.hex())
         
         # >>>>>>>>>>>>>>>> PASS_20 fill shp and lin values and remove_zeroes
         

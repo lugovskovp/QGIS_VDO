@@ -135,11 +135,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
-          semantic-release version --no-push
+          # semantic-release version --no-push
+          python3 -m semantic_release version --no-push
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
       - name: Push Changes & Tags to GitHub
         if: steps.release.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git push origin HEAD
           git push origin --tags --force

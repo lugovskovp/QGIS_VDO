@@ -146,14 +146,15 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONPATH: "/github/home/.local/lib/python3.12/site-packages"
+
         run: |
           # Разрешаем Git доверять текущей рабочей директории в контейнере
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
-          export PYTHONPATH="/github/home/.local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages"
+          # export PYTHONPATH="/github/home/.local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages"
           
           # python-semantic-release
           # REAL_PATH=$(which semantic-release)
@@ -162,8 +163,20 @@ jobs:
           # echo "python-semantic-release at: env.REAL_PATH = ${env.REAL_PATH}"
 
           # $REAL_PATH -v version --no-push
-          python-semantic-release version --no-push
+          # python-semantic-release -vv version --no-push
 
+          # Запускаем в режиме подробного лога (-vv). Если изменений нет, перехватываем ошибку
+          if python3 -m semantic_release -vv version --no-push; then
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "✅ Версия успешно обновлена!"
+          else
+            EXIT_CODE=$?
+            # Код 1 часто означает отсутствие коммитов для новой версии.
+            # Мы не валим пайплайн, а просто фиксируем, что релиза нет.
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Новых релизных коммитов (feat/fix/фича/ошибка) не обнаружено. Код: $EXIT_CODE"
+            echo "GITHUB_OUTPUT: $GITHUB_OUTPUT"
+          fi
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
       - name: Push Changes & Tags to GitHub

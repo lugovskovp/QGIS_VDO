@@ -1,10 +1,12 @@
-<!-- Pytest Coverage Comment:Begin -->
-<!-- Pytest Coverage Comment:End -->
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
 [![GitHub License](https://img.shields.io/github/license/lugovskovp/QGIS_VDO)](#)
 [![Format: CARINdb](https://img.shields.io/badge/format-CARiN%20%2F%20CarinDB-orange.svg)](https://github.com/fdemusso/OpenCarin)
-![Coverage](https://shields.io)
+![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Flugovskovp%2Fd73b601c90fe3a20bf364ee079c4a5c3%2Fraw%2Fqgis_vdo_coverage.json)
+![GitHub Issues](https://img.shields.io/github/issues/lugovskovp/QGIS_VDO)
+![GitHub Release](https://img.shields.io/github/v/release/lugovskovp/QGIS_VDO?link=https%3A%2F%2Fgithub.com%2Flugovskovp%2FQGIS_VDO%2Freleases%2Flatest)
+
+
 
 
 

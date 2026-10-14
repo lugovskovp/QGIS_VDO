@@ -196,12 +196,18 @@ jobs:
         shell: bash
         run: |
           export PATH="/github/home/.local/bin:$PATH"
+          python3 -m pip install --user --break-system-packages --upgrade pip packaging
+
           PLUGIN_NAME="QGIS_VDO"
           mkdir -p build_dir/$PLUGIN_NAME
-          hatch build --target sdist
+
+          # hatch build --target sdist
+          hatch build --target sdist --no-isolation
+
           tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
           rm -f build_dir/$PLUGIN_NAME/PKG-INFO
           cd build_dir
+          
           zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
           cd ..
           echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"

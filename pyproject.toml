@@ -82,7 +82,7 @@ commit_parser = "conventional"
 
 # Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
 version_toml = []
-version_variable = ["metadata.txt:version", "vdo/__about__.py:__version__"]
+version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 # version_variable = "vdo/__about__.py:__version__"
 
 

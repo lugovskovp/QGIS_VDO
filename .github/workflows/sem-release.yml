@@ -94,6 +94,7 @@ jobs:
 
       # Запуск тестов и сбор покрытия
       - name: Run Tests with Python Path & Calculate Coverage
+        if: github.ref == 'refs/heads/main'
         id: coverage
         # env:
         #   PYTHONPATH: /usr/local/lib/python3.12/site-packages:/usr/local/lib/python3/dist-packages
@@ -130,6 +131,7 @@ jobs:
 
       # Генерация JSON для Shields.io и отправка в Gist
       - name: Create/Update Coverage Badge
+        if: github.ref == 'refs/heads/main'
         uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.GIST_SECRET }}

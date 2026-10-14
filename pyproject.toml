@@ -91,6 +91,10 @@ version_variable = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 # search = "version={version}"
 # replace = "version={new_version}"
 
+[tool.semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+
+
 [tool.semantic_release.commit_parser_options]
 # Список префиксов, которые будут увеличивать MINOR версию (новые фичи)
 allowed_tags = [
@@ -106,15 +110,18 @@ allowed_tags = [
   "revert",   #	Откат предыдущего коммита
 ]
 
+
 # Связываем префиксы с типами изменений (major, minor, patch)
 minor_tags = ["feat", "revert"]
 patch_tags = ["fix", "perf", "build", "refactor"]
+
 
 # Настройка поведения веток: main - релиз, dev - пререлиз
 [tool.semantic_release.branches.main]
 # Указываем PSR точечно менять строки по регексам в обоих файлах
 match = "main"
 prerelease = false
+
 
 [tool.semantic_release.branches.dev]
 match = "dev"            # Сработает для dev и для вашей текущей ветки

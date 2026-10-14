@@ -180,18 +180,22 @@ jobs:
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
       - name: Push Changes & Tags to GitHub
         if: steps.release.outputs.released == 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Добавляем путь к новым бинарникам pip (~/.local/bin) в PATH
-          PATH: "/github/home/.local/bin:$PATH"
-          
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
+
+          echo "🚀 Отправка локального коммита релиза и тегов в GitHub..."
           git push origin HEAD
           git push origin --tags --force
 
+
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
+        shell: bash
         run: |
+          export PATH="/github/home/.local/bin:$PATH"
           PLUGIN_NAME="QGIS_VDO"
           mkdir -p build_dir/$PLUGIN_NAME
           hatch build --target sdist

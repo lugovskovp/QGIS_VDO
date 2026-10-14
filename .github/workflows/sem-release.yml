@@ -73,7 +73,10 @@ jobs:
           apt-get update && apt-get install -y zip
           # pip install python-semantic-release hatch pytest pytest-cov bitarray
           # python3 -m pip install --break-system-packages pytest hatch python-semantic-release pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
-          python3 -m pip install --break-system-packages --ignore-installed python-semantic-release hatch pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
+          # python3 -m pip install --break-system-packages --ignore-installed python-semantic-release hatch pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
+          python3 -m pip install --break-system-packages python-semantic-release pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
+          python3 -m pip install --break-system-packages --ignore-installed hatch
+          
 
       # - name: Cache pip packages
       #   uses: actions/cache@v5

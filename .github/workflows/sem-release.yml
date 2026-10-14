@@ -139,7 +139,7 @@ jobs:
           filename: qgis_vdo_coverage.json
           label: coverage
           message: ${{ env.TOTAL_COVERAGE }}%
-          valColorRange: ${{ env.TOTAL_COVERAGE || '0' }}
+          valColorRange: ${{ env.TOTAL_COVERAGE || '0' }}  # 
           maxColorRange: 100
           minColorRange: 0
 

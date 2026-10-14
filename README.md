@@ -1,13 +1,14 @@
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
 [![GitHub License](https://img.shields.io/github/license/lugovskovp/QGIS_VDO)](#)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
 [![Format: CARINdb](https://img.shields.io/badge/format-CARiN%20%2F%20CarinDB-orange.svg)](https://github.com/fdemusso/OpenCarin)
 ![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Flugovskovp%2Fd73b601c90fe3a20bf364ee079c4a5c3%2Fraw%2Fqgis_vdo_coverage.json)
 ![GitHub Issues](https://img.shields.io/github/issues/lugovskovp/QGIS_VDO)
 ![GitHub Release](https://img.shields.io/github/v/release/lugovskovp/QGIS_VDO?link=https%3A%2F%2Fgithub.com%2Flugovskovp%2FQGIS_VDO%2Freleases%2Flatest)
 
 
-
+> [!IMPORTANT]  
+> Плагин в процессе разработки, релиз v.1 фактически beta, **рекомендуется** ожидать версии 2.x.x.
 
 
 # About
@@ -16,26 +17,16 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 Плагин для просмотра в QGIS данных файлов навигационных систем VDO Dayton CD, устанавливавшихся на Citroen, Pegout, BMW, Mercedes, Fiat ect с начала 2000 годов.
 Формат карт для CARiN называется CDF (CARiN Database Format).
 
-> [!IMPORTANT]  
-> Плагин в процессе разработки, релиз v.1 по факту beta, рекомендуется ожидать версии 2.x.x.
 
 [![image](https://github.com/user-attachments/assets/7869eaa4-c747-43bc-b7ad-f6657638ce1f)](https://github.com/user-attachments/assets/7869eaa4-c747-43bc-b7ad-f6657638ce1f)
 
-# Версии ПО
-Оригинальная ОС система автонавигатора OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
-1991 - 2005 SiemensVDO Automotive AG
- 
-- QGIS 3.44.10 ltr
-- VDO Dayton CD Carindb v.30
-- VDO Dayton CD Carindb v.34
 
-- ~pip install bitarray~ - только для дебага и разработки
 
 
 # Функциональность
 - [x] Выбор файла. Вывод инфо о файле (файлах). Запоминание настроек.
-- Выбор страны, города, дороги, точки интереса вводом адреса
-- Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
+- [ ] Выбор страны, города, дороги, точки интереса вводом адреса
+- [ ] Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
 - [x] Отображение картографического слоя по масштабам
 - [x] Работа с несколькими carindb
 - [x] Отображение в пользовательской СК "WGS 84 / Custom Pacific Split -80" - линия разрыва в атлантике, 80W
@@ -59,3 +50,12 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 
+# Версии ПО
+Оригинальная ОС система автонавигатора OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
+1991 - 2005 SiemensVDO Automotive AG
+ 
+- QGIS 3.44.10 ltr
+- VDO Dayton CD Carindb v.30
+- VDO Dayton CD Carindb v.34
+
+- ~pip install bitarray~ - только для дебага и разработки

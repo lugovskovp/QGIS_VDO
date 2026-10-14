@@ -156,11 +156,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # export PYTHONPATH="/github/home/.local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages"
-          
-          # python-semantic-release
           # Запускаем утилиту, сохраняя логи в файл, а чистую версию — в переменную
-          # Отключаем завершение шага при ошибке 'set -e' на время вызова PSR
           set +e
           NEW_VERSION=$(python3 -m semantic_release -v version --no-push 2>psr_stderr.log)
           EXIT_CODE=$?
@@ -169,14 +165,21 @@ jobs:
           # Выводим логи отладки в консоль GitHub Actions, чтобы видеть ход работы
           cat psr_stderr.log
 
-          # Проверяем, вернула ли утилита валидный номер версии (строка не должна быть пустой)
-          if [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "No change detected" ]; then
-            echo "released=true" >> $GITHUB_OUTPUT
-            echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
-            echo "✅ Вычислена новая версия проекта: $NEW_VERSION"
-          else
+          # Проверяем, содержит ли лог сообщение о том, что версия уже была выпущена
+          if grep -q "already been released" psr_stderr.log; then
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Версия $NEW_VERSION уже существует на GitHub. Сборка и публикация пропускаются."
+          
+          # Проверяем стандартное текстовое отсутствие изменений или пустую строку
+          elif [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" = "No change detected" ]; then
             echo "released=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Изменений для изменения версии не обнаружено."
+          
+          # Если версия действительно НОВАЯ
+          else
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "✅ Вычислена НОВАЯ версия проекта: $NEW_VERSION"
           fi
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub

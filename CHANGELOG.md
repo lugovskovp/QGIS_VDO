@@ -2,6 +2,44 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.19 (2026-10-14)
+
+### Bug Fixes
+
+- --ignore-installed
+  ([`d16cc2a`](https://github.com/lugovskovp/QGIS_VDO/commit/d16cc2abc2774741dedf0aff085d2553d2c3bdec))
+
+- 2 strings
+  ([`e3a60d7`](https://github.com/lugovskovp/QGIS_VDO/commit/e3a60d767d2ef408989c358a96d444180516299f))
+
+- Changelog_file = "CHANGELOG.md"
+  ([`0042b00`](https://github.com/lugovskovp/QGIS_VDO/commit/0042b00519d0b8b296f90e9f0b7e5247bafe7932))
+
+- Del pytest-qgis
+  ([`819eace`](https://github.com/lugovskovp/QGIS_VDO/commit/819eacefe7d983df27425577ef010ae1ec4678fe))
+
+- Env pythonpath
+  ([`c14bfdf`](https://github.com/lugovskovp/QGIS_VDO/commit/c14bfdfdf778762fb3f85ed601132f8ec6638a20))
+
+- Export path, $PATH_EXIT
+  ([`18b87f6`](https://github.com/lugovskovp/QGIS_VDO/commit/18b87f6372b724692c64f88d83d5e37bcd4b1388))
+
+- Export PATH=
+  ([`b780a9d`](https://github.com/lugovskovp/QGIS_VDO/commit/b780a9dc0306810d9a7a30c53412f035d30cfe99))
+
+- Python-semantic-release
+  ([`5bdbfc4`](https://github.com/lugovskovp/QGIS_VDO/commit/5bdbfc40fca8b6eae68d91b039a1ffb91bcaa769))
+
+- PYTHONPATH=/usr/local
+  ([`df66548`](https://github.com/lugovskovp/QGIS_VDO/commit/df6654848025584bad9e996d078131c3144424af))
+
+- Rem REAL_PATH
+  ([`7e12c02`](https://github.com/lugovskovp/QGIS_VDO/commit/7e12c0266cd0b9c599c7724708eaad7a5c62e889))
+
+- Сначала новые пакеты из pip (/usr/local),
+  ([`e69715d`](https://github.com/lugovskovp/QGIS_VDO/commit/e69715d150dfe0cea4c493cc2a8cdc255482f348))
+
+
 ## v1.0.0-dev.18 (2026-10-14)
 
 ### Bug Fixes

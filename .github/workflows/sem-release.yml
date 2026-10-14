@@ -79,6 +79,7 @@ jobs:
           # python3 -m pip install --break-system-packages --ignore-installed hatch
 
           # Устанавливаем все пакеты в пользовательский глобальный профиль (~/.local)
+          export PATH="/github/home/.local/bin:$PATH"
           python3 -m pip install --user --break-system-packages \
             python-semantic-release hatch pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
 
@@ -111,8 +112,8 @@ jobs:
           # Запускаем тесты, выводим только общий процент и сохраняем его в переменную
           # pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
           pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
+          PYTEST_EXIT=${PIPESTATUS[0]}
 
-          $PYTEST_EXIT=${PIPESTATUS[0]}
           # Проверяем, успешно ли завершился pytest
           if [ $PYTEST_EXIT -ne 0 ]; then
             echo "❌Pytest failed with exit code $PYTEST_EXIT"

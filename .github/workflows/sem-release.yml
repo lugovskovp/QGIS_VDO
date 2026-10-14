@@ -193,6 +193,8 @@ jobs:
 
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
+        env:
+          PYTHONPATH: "/github/home/.local/lib/python3.12/site-packages"
         shell: bash
         run: |
           export PATH="/github/home/.local/bin:$PATH"

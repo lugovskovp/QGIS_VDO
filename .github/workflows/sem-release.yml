@@ -157,25 +157,24 @@ jobs:
           # export PYTHONPATH="/github/home/.local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages"
           
           # python-semantic-release
-          # REAL_PATH=$(which semantic-release)
-          # REAL_PATH=$(which python-semantic-release)
-          # echo "python-semantic-release at: $REAL_PATH = ${REAL_PATH}"
-          # echo "python-semantic-release at: env.REAL_PATH = ${env.REAL_PATH}"
+          # Запускаем утилиту, сохраняя логи в файл, а чистую версию — в переменную
+          # Отключаем завершение шага при ошибке 'set -e' на время вызова PSR
+          set +e
+          NEW_VERSION=$(python3 -m semantic_release -v version --no-push 2>psr_stderr.log)
+          EXIT_CODE=$?
+          set -e
 
-          # $REAL_PATH -v version --no-push
-          # python-semantic-release -vv version --no-push
+          # Выводим логи отладки в консоль GitHub Actions, чтобы видеть ход работы
+          cat psr_stderr.log
 
-          # Запускаем в режиме подробного лога (-vv). Если изменений нет, перехватываем ошибку
-          if python3 -m semantic_release -vv version --no-push; then
+          # Проверяем, вернула ли утилита валидный номер версии (строка не должна быть пустой)
+          if [ -n "$NEW_VERSION" ] && [ "$NEW_VERSION" != "No change detected" ]; then
             echo "released=true" >> $GITHUB_OUTPUT
-            echo "✅ Версия успешно обновлена!"
+            echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "✅ Вычислена новая версия проекта: $NEW_VERSION"
           else
-            EXIT_CODE=$?
-            # Код 1 часто означает отсутствие коммитов для новой версии.
-            # Мы не валим пайплайн, а просто фиксируем, что релиза нет.
             echo "released=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ Новых релизных коммитов (feat/fix/фича/ошибка) не обнаружено. Код: $EXIT_CODE"
-            echo "GH_OUTPUT=$GITHUB_OUTPUT" >> $GITHUB_ENV
+            echo "ℹ️ Изменений для изменения версии не обнаружено."
           fi
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub

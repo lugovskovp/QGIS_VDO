@@ -158,7 +158,7 @@ jobs:
           
           # python-semantic-release
           # REAL_PATH=$(which semantic-release)
-          REAL_PATH=$(which python-semantic-release)
+          # REAL_PATH=$(which python-semantic-release)
           # echo "python-semantic-release at: $REAL_PATH = ${REAL_PATH}"
           # echo "python-semantic-release at: env.REAL_PATH = ${env.REAL_PATH}"
 
@@ -175,7 +175,7 @@ jobs:
             # Мы не валим пайплайн, а просто фиксируем, что релиза нет.
             echo "released=false" >> $GITHUB_OUTPUT
             echo "ℹ️ Новых релизных коммитов (feat/fix/фича/ошибка) не обнаружено. Код: $EXIT_CODE"
-            echo "GITHUB_OUTPUT: $GITHUB_OUTPUT"
+            echo "GH_OUTPUT=$GITHUB_OUTPUT" >> $GITHUB_ENV
           fi
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub

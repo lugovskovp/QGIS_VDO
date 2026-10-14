@@ -76,19 +76,20 @@ bypass = true # Защита от багов Windows/OSGeo4W окружения 
 
 [tool.semantic_release]
 # Указываем парсер (angular используется по умолчанию)
-commit_parser = "scipy"
+commit_parser = "angular"
+# commit_parser = "scipy"
 
 # Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
 version_toml = []
-# version_variable = ["metadata.txt:version", "vdo/__about__.py:__version__"]
-version_variable = "vdo/__about__.py:__version__"
+version_variable = ["metadata.txt:version", "vdo/__about__.py:__version__"]
+# version_variable = "vdo/__about__.py:__version__"
 
 
-# Настройка автозамены в метаданных QGIS
-[tool.semantic_release.text_replacements]
-path = "metadata.txt"
-search = "version={version}"
-replace = "version={new_version}"
+# # Настройка автозамены в метаданных QGIS
+# [tool.semantic_release.text_replacements]
+# path = "metadata.txt"
+# search = "version={version}"
+# replace = "version={new_version}"
 
 [tool.semantic_release.commit_parser_options]
 # Список префиксов, которые будут увеличивать MINOR версию (новые фичи)

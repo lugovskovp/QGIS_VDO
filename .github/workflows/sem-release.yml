@@ -72,7 +72,7 @@ jobs:
         run: |
           apt-get update && apt-get install -y zip
           # pip install python-semantic-release hatch pytest pytest-cov bitarray
-          python3 -m pip install --break-system-packages pytest pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
+          python3 -m pip install --break-system-packages pytest  python-semantic-release pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
 
       # - name: Cache pip packages
       #   uses: actions/cache@v5
@@ -136,9 +136,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
-
-          REAL_PATH=$(which semantic-release)
-          echo "Found semantic-release at: $REAL_PATH"
+          # python-semantic-release
+          # REAL_PATH=$(which semantic-release)
+          REAL_PATH=$(which python-semantic-release)
+          echo "python-semantic-release at: $REAL_PATH = ${REAL_PATH}"
 
           $REAL_PATH -v version --no-push
 

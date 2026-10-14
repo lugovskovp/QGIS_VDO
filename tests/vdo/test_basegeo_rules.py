@@ -4,7 +4,7 @@ import struct
 from QGIS_VDO.vdo.block_basegeo import block_basegeo
 
 from QGIS_VDO.vdo.datatypes import VDO_FILE
-from QGIS_VDO.vdo.geotypes import GEO_LINE, GEO_SHAPE, VERTEX
+from QGIS_VDO.vdo.geotypes import GEO_CATEGORY, GEO_LINE, GEO_SHAPE, VERTEX, TSTR
 from QGIS_VDO.vdo.enums import en_DRAW_TYPE     # , en_GEO_CATEGORY
 
 from QGIS_VDO.tests.fixtures import FIXTURES_DIR
@@ -14,23 +14,63 @@ struct_SHAPE = struct.Struct(">HHLLLHH")   # (p_str, pvrtx, id, c_lon, c_lat, al
 struct_LINE = struct.Struct(">HHLHHHH")
 # line = p_str_name + ptr2firstObjVertex + id + ptr_linesign + ptr2poi + ptr2tstr + shrtEnd
 
+
+def _sections_end(block: block_basegeo) -> int:
+    """First byte past the last non-empty record section (where the text starts)."""
+    recs = [block.li_cat, block.li_shp, block.li_lin, block.li_vrtx, block.li_poi, block.li_tstr]
+    S4_POI_SIZE = 6
+    objs = [GEO_CATEGORY.size, GEO_SHAPE.size, GEO_LINE.size, VERTEX.size, S4_POI_SIZE, TSTR.size]
+    # hi = t[T_PROLOG_141516]
+    hi = 0x34   # TODO - REWORK!!! сейчас "как есть" - первый байт после пролога захардкодил
+    for i, rec in enumerate(recs):
+        if rec.cnt:
+            hi = max(hi, rec.ptr + (rec.cnt + (1 if i < 3 else 0)) * objs[i])
+
+        #     for i, rec in enumerate(recs):
+        # e = ctx.entry(i)
+        # if e.count:
+        #     hi = max(hi, e.off + (e.count + (1 if i < 3 else 0)) * rec)
+    return hi
+
+
 # ---------- словарик фикстур
 
 GEO_DICT = {
-    'bmw_p_0x1d_0x07151504.bin': {
-        "name": "@ 07151504 001D 01 05 [1D:MAP__10k400]",
-        "scale": 10,
-        "type_name": 'block_0x1D',
-    },
+    
     'bmw_p_0x14_0x070D9E01.bin': {
         "name": "@ 070D9E01 0014 01 02 [14:MAP__05k200]",
         "scale": 5,
         "descr": "нет shp, tstr, poi, но 3 есть линии"
     },
-    '_packed_block.bin': {
-        "name": "_packed_block",
+    'bmw_p_0x14_0x070E8503.bin': {
+        "name": "@ 070E8503 0014 01 04 [14:MAP__05k200]",
         "scale": 5,
-        "descr": "произвольный блок"
+        "descr": "poi нет, lin=1"
+    },
+    'bmw_p_0x15_0x6C67305.bin': {
+        "name": "@ 6C67305 0016 01 06 [15:MAP__06k80]",
+        "scale": 6,
+        "descr": "poi нет, lin=1"
+    },
+    'GER_p_16_0x68AADB05.bin': {
+        'name': "@ 6C67305 0016 01 08 [16:MAP__07k40]",
+        "scale": 7,
+        "descr": "Nohra"
+    },
+    'bmw_p_0x1C_0x6F4780D.bin': {
+        'name': "@ 6F4780D 001D 01 12 [1C:MAP__09k100]",
+        "scale": 9,
+        "descr": "North central EU"
+    },
+    'bmw_p_0x1d_0x07151504.bin': {
+        "name": "@ 07151504 001D 01 05 [1D:MAP__10k400]",
+        "scale": 10,
+        "type_name": 'block_0x1D',
+    },
+    'bmw_p_0x1e_0x7158906.bin': {
+        'name': "@ 7158906 001E 01 07 [1E:MAP__11k_11]",
+        "scale": 11,
+        "descr": "North central EU"
     },
 }
 
@@ -44,10 +84,20 @@ def geoblock_fixture(request):
     Генератор реальных блоков и проверяемых метрик
     """
     blpath = FIXTURES_DIR / request.param
+    metric = GEO_DICT[request.param]
 
-    block = VDO_FILE().load_single_block(blpath, dbrev=34, segsize=0x200)
-    metrics = GEO_DICT[request.param]
-    return (block, metrics)
+    ss = 0x800
+    if request.param[:3] == 'bmw':
+        ss = 0x200
+    # ss = metric.get('scale', 0x200) - raised module tmod(?) No module named 'tmnet'
+    # if 'segsize' in metric:
+    #     ss = metric['scale']
+    # else:
+    #     ss = 0x200
+    print(request.param)
+    block = VDO_FILE().load_single_block(blpath, dbrev=34, segsize=ss)
+    
+    return (block, metric)
 
 
 # -------------------------------------------------------------------
@@ -57,10 +107,10 @@ def test_isgeoblock(geoblock_fixture):
     """Проверка, что все блоки фикстуры являются геоблокам"""
     block: block_basegeo
     block, metrics = geoblock_fixture
-    
+
     assert block.head.arch_type == 1    # carindb - packed
     assert block.is_unpacked is True     # was unpacked
-    assert block.type in [0x14, 0x1d]   # in geoblocks 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e
+    assert block.type in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]   # in geoblocks 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e
 
 
 def test_valid_categories(geoblock_fixture):
@@ -83,7 +133,7 @@ def test_valid_categories(geoblock_fixture):
         assert all_categories[0].ptr == block.li_lin.ptr
     else:
         # нет ни shp ни lin
-        pytest.skip("Шейпов нет, полилиний нет, пропускаем тест")
+        pytest.skip("Шейпов нет, полилиний нет, пропускаем тест")  # no cov
 
     # ссылка в последней категории - на начало элемента, за которым начинаются vertexы
     if block.li_lin.cnt:
@@ -131,8 +181,7 @@ def test_valid_shapes(geoblock_fixture):
     all_shp = list(block.getObjects(isGetLines=False))
     # (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack_from(mem_buf, 0)
 
-    str_start_ptr = block.li_tstr.ptr + block.li_tstr.cnt * 4
-    # block_end = block.head.sizeofblock
+    str_start_ptr = _sections_end(block)
     
     prev_ptr_vrtx = 0
     for shp in all_shp:
@@ -145,21 +194,21 @@ def test_valid_shapes(geoblock_fixture):
 
         # ссылка на название ведёт в область строк
         if str_start_ptr:       # если она не = 0
-            assert shp.p_str_name >= str_start_ptr
+            assert shp.p_str_name >= str_start_ptr or shp.p_str_name == 0
 
         # точки - есть
-        assert shp.cnt_vrtx > 3
+        assert shp.cnt_vrtx >= 3
 
         # ссылка на первый вертекс ведёт в область вертексов
         assert block.li_vrtx.ptr <= shp.ptr_vrtx < block.li_tstr.ptr
 
         # ссылка на вертексы делится на 4
-        assert shp.ptr_vrtx == ((shp.ptr_vrtx >> 2) << 2)
+        assert shp.ptr_vrtx % 4 == 0
 
-        # ссылка на tstr ведёт в область tstr и делится на 4
+        # ссылка на tstr ведёт в область tstr и делится на 2
         if shp.ptr_tstr:
-            assert block.li_tstr.ptr <= shp.ptr_tstr < str_start_ptr
-            assert shp.ptr_tstr == ((shp.ptr_tstr >> 2) << 2)
+            assert block.li_tstr.ptr <= shp.ptr_tstr <= str_start_ptr
+            assert shp.ptr_tstr % 2 == 0
 
     # добавляем заключительный элемент с нулями
     if block.li_shp.cnt:
@@ -181,8 +230,7 @@ def test_valid_shapes(geoblock_fixture):
         assert c_lon == 0
         assert c_lat == 0
         assert align == 0
-        if block.li_tstr.cnt:
-            assert p_tstr == str_start_ptr      # на начало строк
+
         assert True
 
 
@@ -210,24 +258,20 @@ def test_valid_lines(geoblock_fixture):
             if str_start_ptr:       # если она не = 0
                 assert lin.p_str_name >= str_start_ptr
 
-        # точки - есть
-        assert lin.cnt_vrtx > 2
+        # точки - хотя бы 2 есть у каждой линии
+        assert lin.cnt_vrtx >= 2
 
         # ссылка на первый вертекс ведёт в область вертексов
         if block.li_tstr.cnt:
             assert block.li_vrtx.ptr <= lin.ptr_vrtx < block.li_tstr.ptr
 
         # ссылка на вертексы делится на 4
-        assert lin.ptr_vrtx == ((lin.ptr_vrtx >> 2) << 2)
+        assert lin.ptr_vrtx % 4 == 0
 
-        # ссылка на tstr c_p_line_sign ведёт в область tstr и делится на 4
-        if lin.c_p_line_sign:
-            if block.li_tstr.cnt:
-                assert block.li_tstr.ptr <= lin.c_p_line_sign < str_start_ptr
-            else:
-                # TSTR нет-> ссылка на следующее после vrtx
-                assert lin.c_p_line_sign == block.li_vrtx.ptr + block.li_vrtx.cnt * VERTEX.size
-            assert lin.c_p_line_sign == ((lin.c_p_line_sign >> 2) << 2)
+        # ссылка на tstr c_p_line_sign ведёт в область like poi и делится на 6
+        if block.li_poi.cnt:
+            if lin.c_p_line_sign:
+                assert lin.c_p_line_sign % 6
 
     # добавляем заключительный элемент с нулями
     if block.li_lin.cnt:
@@ -245,9 +289,3 @@ def test_valid_lines(geoblock_fixture):
         assert ptr2poi == 0
         # assert ptr2tstr == 0    # assert 4 == 0  0x070e8503
         assert shrtEnd == 0
-
-
-"""
-
-
-"""

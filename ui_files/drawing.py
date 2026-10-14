@@ -196,8 +196,6 @@ def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
             feature.setAttribute(field_idx_id, item.id)
         if field_idx_block != -1:
             feature.setAttribute(field_idx_block, item.block)
-        if field_idx_block != -1:
-            feature.setAttribute(field_idx_block, item.block)
         if field_idx_render_order != -1:
             feature.setAttribute(field_idx_render_order, str(item.cat.value))
 
@@ -274,7 +272,10 @@ def DrawPacketShapes(shapes_packet: list, layer: QgsVectorLayer) -> None:   # no
     # Оптимизированный сбор существующих блоков в слое
     if field_idx_block != -1:
         # Экранируем одинарные кавычки для SQL
-        safe_block_str = ", ".join(f"'{str(block).replace("'", "''")}'" for block in packet_blocks)
+        # safe_block_str = ", ".join(f"'{str(block).replace("'", "''")}'" for block in packet_blocks)
+        blocks_escaped = [str(b).replace("'", "''") for b in packet_blocks]
+        safe_block_str = ", ".join(f"'{b}'" for b in blocks_escaped)
+
         exist_expression = f"\"block\" in ({safe_block_str})"
         
         # Запрашиваем только поле block для максимальной скорости
@@ -379,7 +380,6 @@ def _DrawPacketAreas(areas_packet: list, layer: QgsVectorLayer) -> None:
     field_variant_index = layer.fields().indexOf('variant')
     if field_name_index == -1:
         raise AttributeError("Ошибка: В слое отсутствует обязательное поле 'name'")
-        return
     if field_variant_index == -1:
         raise AttributeError("Ошибка: В слое отсутствует обязательное поле 'variant'")
 

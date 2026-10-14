@@ -2,6 +2,7 @@
 
 
 """
+from pathlib import Path
 
 import zlib             # распаковка архивов типа 2 и 3
 
@@ -142,6 +143,23 @@ class block_base(BYTESTRUCT):
         packed = '@ ' if self.head.arch_type else ''
         return f"{packed}{repr(self.head)}"
 
+    def ptr_bits_needed(self) -> int:
+        """
+        tnx fdemusso: numero di bit per rappresentare 0..n-1, aritmetica a 16 bit.
+        Максимальная длинна указателя в битах (по размеру распакованного блока, если на 1 меньше - word wrap align)
+        self._const_segsize * self.unarc_segcn Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
+        """
+        n = self.head.sizeofblock
+        v = n & 0xFFFF
+        if v == 1:          # no cov: Если РАЗМЕР БЛОКА в байтах равен единице )))))
+            return 1
+        v = (v - 1) & 0xFFFF
+        out = 0
+        while v:
+            v >>= 1
+            out += 1
+        return out
+
     def offset_next(self) -> Union[int, None]:
         if self.vdo.is_single:
             # Для одиночного файла следующего блока в рамках структуры просто не существует
@@ -202,7 +220,10 @@ class block_base(BYTESTRUCT):
             # бизнес-логика гасит ошибку и безопасно отдает пустую строку
             raise TypeError("TypeError read_str")
 
-    def write_raw(self, name: str = "c:/temp/_base_block.bin") -> None:
+    def write_raw(self, name: str = "_base_block.bin") -> None:    # no cov
+        if not Path(name).parent.exists():
+            return
+
         try:
             with open(name, "wb") as f:
                 f.write(self._raw)

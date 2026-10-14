@@ -95,36 +95,9 @@ class block_basegeo(block_base):
             unpacker = bitstream(self)
             self._raw = memoryview(unpacker.decode())
             self.is_unpacked = True
-            # tail = ba2int()
-            # if unpacker.tail is not None:
-            #     # что-то нераспакованное осталось
-            #     print(f"0x{unpacker.head.bladdr.value:X}:tail: {unpacker.tail.to01()}")
-            #     pass
-            # if unpacker.tail_cutted_after_str is not None:
-            #     # что-то нераспакованное осталось
-            #     print(f"0x{unpacker.head.bladdr.value:X}:cute: {unpacker.tail_cutted_after_str.to01()}")
-            #     pass
-            # _raw.hex()
-            pass
             # сразу записать - на случай если при разборке упадёт
             self.write_raw(name="c:/temp/_base_block.bin")
-        
-            if not self.is_unpacked:
-                print(f"Save tail into tail_{self.head.bladdr}.bin")
-                try:
-                    with open(f"tail_{self.head.bladdr}.bin", "bw") as f:
-                        f.write(self.bit_tail.buffer.tobytes())
-                except PermissionError:
-                    print(f"Permission error Save tail into tail_{self.head.bladdr}.bin")
-                print(f"Save unpacked into raw_{self.head.bladdr}.bin")
-                try:
-                    with open(f"raw_{self.head.bladdr}.bin", "bw") as f:
-                        f.write(self._raw)
-                except PermissionError:
-                    print(f"Permission error Save unpacked into raw_{self.head.bladdr}.bin")
 
-        #0x070A240f - lzw
-        
         # ---------------------------------------------------
         self.toc = toc()        # new TOC   TODO: 4del
         self.___setup_toc()        # toc - table of contents   TODO: 4del
@@ -135,12 +108,12 @@ class block_basegeo(block_base):
 
         pass
     
-    @property
-    def data_size(self) -> int:
-        """
-        Размер уже распакованных данных, начиная с 0
-        """
-        return len(self._raw)
+    # @property
+    # def data_size(self) -> int:
+    #     """
+    #     Размер уже распакованных данных, начиная с 0
+    #     """
+    #     return len(self._raw)
 
     def max_bounds(self):
         x_b = self.max_x()
@@ -149,57 +122,40 @@ class block_basegeo(block_base):
 
     def max_x(self):
         """ максимально возможное значение x """
-        delta = self.map.right_top._hlat - self.map.left_bottom._hlat
-        delta = delta >> self.shift_scale
-        return delta
+        max_x = self.map.right_top._hlat - self.map.left_bottom._hlat
+        max_x = max_x >> self.shift_scale
+        return max_x
 
     def max_y(self):
         """ максимально возможное значение x """
-        delta = self.map.right_top._hlon - self.map.left_bottom._hlon
-        delta = delta >> self.shift_scale
-        return delta
-        
-    def max_PTR_bits(self):
-        '''
-        Max число значащих бит в near offs в блоке из seg_cnt сегментов размером по seg_size
-        Максимальная длинна указателя в битах (по размеру блока, на 1 меньше - word wrap)
+        max_y = self.map.right_top._hlon - self.map.left_bottom._hlon
+        max_y = max_y >> self.shift_scale
+        return max_y
 
-        преобразовывать строчную букву в прописную путём вычитания 32 из её кода,
-        а прописную — в строчную путём добавления 32
-        '''
-        # Максимально возможное значение адреса; 2 -> 0x800*2-1=0xfff
-        max_addr = self.head.sizeofblock - 1    # self.size = self._const_segsize * self.unarc_segcn
-        # max_adr_bin = "{:b}".format(max_addr)
-        max_ptr_bits = len("{:b}".format(max_addr))  # bin(0xfff)="0b111111111111", w|o '0b' len=12
-        if max_ptr_bits > 16:
-            max_ptr_bits = 16   # ptr is WORD, max 16 bit - FFFF
-            raise ValueError(f"max_ptr_bits > 16: {max_ptr_bits}")      # DEBUG - а такое вообще хоть бывает???
-        return max_ptr_bits
-
-    def show_main_info(self) -> None:
-        """
-        debug function for printing main information
-        """
-        print(f"\n{self.vdo.file_path}\n{self.head.bladdr}  {self.head.bltype}: 0x{self.head.bltype.value:02x}")
-        end = f"\tnext ptr: {(self.toc.li_cat.cnt + 1) * 4 + self.toc.li_cat.ptr:04X}" if self.toc.li_cat.cnt else ""  # noqa
-        print(f"cat {self.toc.li_cat} {end}")
-        end = f"\tnext ptr: {(self.toc.li_shp.cnt + 1) * 0x14 + self.toc.li_shp.ptr:04X}" if self.toc.li_shp.cnt else ""  # noqa
-        print(f"shp {self.toc.li_shp} {end}")
-        end = f"\tnext ptr: {(self.toc.li_lin.cnt + 1) * 0x10 + self.toc.li_lin.ptr:04X}" if self.toc.li_lin.cnt else ""  # noqa
-        print(f"lin {self.toc.li_lin} {end}")
-        # size poi = 6, poi got after vrtx. There are no zero poi
-        end = f"\tnext ptr: {(self.toc.li_poi.cnt) * 6 + self.toc.li_poi.ptr:04X}" if self.toc.li_poi.cnt else ""  # noqa
-        print(f"poi {self.toc.li_poi} {end}")
-        end = f"\tnext ptr: {(self.toc.li_vrtx.cnt) * 4 + self.toc.li_vrtx.ptr:04X}" if self.toc.li_vrtx.cnt else ""  # noqa
-        print(f"vrt {self.toc.li_vrtx} {end}")
-        end = f"\tnext ptr: {(self.toc.li_tstr.cnt) * 4 + self.toc.li_tstr.ptr:04X}" if self.toc.li_tstr.cnt else ""  # noqa
-        print(f"tst {self.toc.li_tstr} {end}")
-        print(f"   strs from {self.toc.START_TXT:04X}")
-        print(f"Map_hex: {self.map.hex}")
-        print(f"{self.map}")
-        print(f"Максимальные Х и У: {self.max_bounds()} \n")
-        print(f"\nMax PTR bites: {self.max_PTR_bits()}")
-        pass
+    # def show_main_info(self) -> None:
+    #     """
+    #     debug function for printing main information
+    #     """
+    #     print(f"\n{self.vdo.file_path}\n{self.head.bladdr}  {self.head.bltype}: 0x{self.head.bltype.value:02x}")
+    #     end = f"\tnext ptr: {(self.toc.li_cat.cnt + 1) * 4 + self.toc.li_cat.ptr:04X}" if self.toc.li_cat.cnt else ""  # noqa
+    #     print(f"cat {self.toc.li_cat} {end}")
+    #     end = f"\tnext ptr: {(self.toc.li_shp.cnt + 1) * 0x14 + self.toc.li_shp.ptr:04X}" if self.toc.li_shp.cnt else ""  # noqa
+    #     print(f"shp {self.toc.li_shp} {end}")
+    #     end = f"\tnext ptr: {(self.toc.li_lin.cnt + 1) * 0x10 + self.toc.li_lin.ptr:04X}" if self.toc.li_lin.cnt else ""  # noqa
+    #     print(f"lin {self.toc.li_lin} {end}")
+    #     # size poi = 6, poi got after vrtx. There are no zero poi
+    #     end = f"\tnext ptr: {(self.toc.li_poi.cnt) * 6 + self.toc.li_poi.ptr:04X}" if self.toc.li_poi.cnt else ""  # noqa
+    #     print(f"poi {self.toc.li_poi} {end}")
+    #     end = f"\tnext ptr: {(self.toc.li_vrtx.cnt) * 4 + self.toc.li_vrtx.ptr:04X}" if self.toc.li_vrtx.cnt else ""  # noqa
+    #     print(f"vrt {self.toc.li_vrtx} {end}")
+    #     end = f"\tnext ptr: {(self.toc.li_tstr.cnt) * 4 + self.toc.li_tstr.ptr:04X}" if self.toc.li_tstr.cnt else ""  # noqa
+    #     print(f"tst {self.toc.li_tstr} {end}")
+    #     print(f"   strs from {self.toc.START_TXT:04X}")
+    #     print(f"Map_hex: {self.map.hex}")
+    #     print(f"{self.map}")
+    #     print(f"Максимальные Х и У: {self.max_bounds()} \n")
+    #     print(f"\nMax PTR bites: {self.max_PTR_bits()}")
+    #     pass
 
     def ___setup_toc(self) -> None:
         """
@@ -214,32 +170,32 @@ class block_basegeo(block_base):
         self.toc.li_tstr = self.read_list(OFFSET_LI_TSTR)
         self.toc.START_TXT = self.toc.li_tstr.ptr + TSTR.size * self.toc.li_tstr.cnt
 
-    def ___setup_objects(self) -> None:
-        """
-        4del it
-        """
-        # every cat
-        pc = self.toc.li_cat.ptr
-        for i in range(self.toc.li_cat.cnt):
-            curr_cat = self.read_category(pc)
-            pc += GEO_CATEGORY.size
-            print(curr_cat)
-            self.arr_shapes.append(curr_cat)
-            geos = []
-            obj_ptr = curr_cat.ptr
-            if curr_cat.draw == en_DRAW_TYPE.SHAPE:
-                obj_size = GEO_SHAPE.size
-                func = self.read_shape
-            else:
-                obj_size = GEO_LINE.size
-                func = self.read_line
-            for j in range(curr_cat.cnt):
-                ob = func(obj_ptr, curr_cat)
-                obj_ptr += obj_size
-                geos.append(ob)
+    # def ___setup_objects(self) -> None:
+    #     """
+    #     4del it
+    #     """
+    #     # every cat
+    #     pc = self.toc.li_cat.ptr
+    #     for i in range(self.toc.li_cat.cnt):
+    #         curr_cat = self.read_category(pc)
+    #         pc += GEO_CATEGORY.size
+    #         print(curr_cat)
+    #         self.arr_shapes.append(curr_cat)
+    #         geos = []
+    #         obj_ptr = curr_cat.ptr
+    #         if curr_cat.draw == en_DRAW_TYPE.SHAPE:
+    #             obj_size = GEO_SHAPE.size
+    #             func = self.read_shape
+    #         else:
+    #             obj_size = GEO_LINE.size
+    #             func = self.read_line
+    #         for j in range(curr_cat.cnt):
+    #             ob = func(obj_ptr, curr_cat)
+    #             obj_ptr += obj_size
+    #             geos.append(ob)
 
-            self.categ[curr_cat] = geos
-        return
+    #         self.categ[curr_cat] = geos
+    #     return
 
     def read_category(self, offset: int) -> GEO_CATEGORY:
         """
@@ -436,7 +392,7 @@ if __name__ == '__main__':
     # noqa tail: 000000000000000000000000001000000000000000000000000000000000101001000010100100001010010000000000010000000010000000010001000000000000000000000000000000000000000000000
     # lzw_14 = vdo.get_block(bla)
 
-    # bla = vdo.get_bladdr(0x07151504)   # 1d
+    bla = vdo.get_bladdr(0x07151504)   # 1d
 
     # bla = vdo.get_bladdr(0x070D9E01)   # 14
 

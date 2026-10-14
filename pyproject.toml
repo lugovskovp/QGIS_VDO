@@ -22,16 +22,18 @@ classifiers = [
   "Topic :: Scientific/Engineering :: GIS",
   "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 ]
-dependencies = ["bitarray"]
+dependencies = ["bitarray"] # need only for development debug mode
 
 [project.urls]
-Documentation = "https://github.com"
-Issues = "https://github.com"
+Documentation = "https://github.com/lugovskovp/QGIS_VDO/tree/main/doc"
+Issues = "https://github.com/lugovskovp/QGIS_VDO/issues"
 Source = "https://github.com/lugovskovp/QGIS_VDO"
 
 # --- Настройка версии для Hatch (из __about__.py) ---
 [tool.hatch.version]
-path = "vdo/__about__.py"
+source = "regex"
+path = "metadata.txt"
+pattern = '^version\s*=\s*(?P<version>[^\s]+)'
 
 [tool.hatch.envs.types]
 extra-dependencies = ["mypy>=1.0.0"]
@@ -41,16 +43,20 @@ check = "mypy --install-types --non-interactive {args:vdo tests}"
 
 # --- Корректный File Selection для sdist (включая ресурсы плагина) ---
 [tool.hatch.build.targets.sdist]
+# Перечисляем только то, что ДОЛЖНО уйти клиенту/на сервер
 include = [
-  "/*.py",
+  "/__init__.py",
   "/metadata.txt",
   "/README.md",
-  "/LICENSE",
-  "/vdo/",
-  "/ui_files/",
-  "/i18n/",
-  "/resources/",
+  "/settings.py",
+  "/vdo_explorer.py",
+  "/vdo_threading.py",
+  "/resources",
+  "/ui_files",
+  "/vdo",
+  "/vdo/__about__.py",
 ]
+# Исключаем файлы и папки из архива исходного кода (.tar.gz)
 exclude = [
   "/.env",
   "/.pre-commit-config.yaml",
@@ -59,23 +65,68 @@ exclude = [
   "/.vscode",
   "/.gigacode_vsc",
 ]
-bypass = false
+
+[tool.hatch.build.targets.sdist.rewriters]
+# Этот хук автоматически заменит версию в metadata.txt прямо во время команды hatch build
+"metadata.txt" = [{ search = "version=1.0.0-dev.4", replace = "{version}" }]
+
 
 [tool.hatch.build.targets.wheel]
 bypass = true # Защита от багов Windows/OSGeo4W окружения при сборке
 
-# --- НАСТРОЙКА PYTHON-SEMANTIC-RELEASE ДЛЯ ОБНОВЛЕНИЯ ОБОИХ ФАЙЛОВ ---
 [tool.semantic_release]
-# 1. Автоматически обновляет __version__ внутри vdo/__about__.py
-version_variables = ["vdo/__about__.py:__version__"]
-version_toml = ["pyproject.toml:project.version"]
+commit_parser = "conventional"
+# set GIT_PYTHON_GIT_EXECUTABLE=c:\progra~1\git\bin\git.exe
+# set GIT_PYTHON_REFRESH
+
+# Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
+version_toml = []
+version_variables = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 
 
-# 2. Через автозамену обновляет версию в metadata.txt для QGIS
-[[tool.semantic_release.text_replacements]]
-path = "metadata.txt"
-search = "version={version}"
-replace = "version={new_version}"
+# # Настройка автозамены в метаданных QGIS
+# [tool.semantic_release.text_replacements]
+# path = "metadata.txt"
+# search = "version={version}"
+# replace = "version={new_version}"
+
+[changelog.default_templates.changelog_file]
+changelog_file = "CHANGELOG.md"
+
+
+[tool.semantic_release.commit_parser_options]
+# Список префиксов, которые будут увеличивать MINOR версию (новые фичи)
+allowed_tags = [
+  "feat",
+  "fix",
+  "perf",
+  "docs",
+  "style",
+  "refactor",
+  "test",
+  "chore",
+  "build",    # Изменение системы сборки, зависимостей, пакетов	build
+  "revert",   #	Откат предыдущего коммита
+]
+
+
+# Связываем префиксы с типами изменений (major, minor, patch)
+minor_tags = ["feat", "revert"]
+patch_tags = ["fix", "perf", "build", "refactor"]
+
+
+# Настройка поведения веток: main - релиз, dev - пререлиз
+[tool.semantic_release.branches.main]
+# Указываем PSR точечно менять строки по регексам в обоих файлах
+match = "main"
+prerelease = false
+
+
+[tool.semantic_release.branches.dev]
+match = "dev"            # Сработает для dev и для вашей текущей ветки
+prerelease = true
+prerelease_token = "dev" # Версия будет вида X.Y.Z-dev.1
+
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -92,10 +143,15 @@ markers = [
 ]
 
 [tool.coverage.run]
-source_pkgs = ["vdo"]
+# source_pkgs = ["vdo"]
 branch = true
 parallel = true
-omit = ["vdo/__about__.py", "ext_libs/*"]
+omit = [
+  "vdo/__about__.py",
+  "ext_libs/*",
+  "tests/*",
+  "vdo/blocks/fixtures_vdo.py",
+]
 
 [tool.coverage.paths]
 vdo = ["vdo", "*/QGIS_VDO/vdo"]
@@ -112,6 +168,7 @@ exclude_lines = [
   "raise NotImplementedError",
   "no cov",
   "if TYPE_CHECKING:",
+  "if DEBUG_MODE:",
 ]
 
 [tool.hatch.envs.default]

@@ -31,21 +31,23 @@ ZERO_DWORD = b'\x00' * 4
 EMPTY_BUFFER = b''
 
 # Дерево хаффмана для сжатого текста, Таблица декодирования: битовый ключ -> декодированный байт
-LOOKUP_CHAR_BYTES = {'000': b'a',
-                     '001': b'e',
-                     '0100': b's',
-                     '0101': b't',
-                     '0110': b'r',
-                     '0111': b'\x00',
-                     '10000': b' ',
-                     '10001': b'd',
-                     '10010': b'g',
-                     '10011': b'h',
-                     '10100': b'i',
-                     '10101': b'l',
-                     '10110': b'n',
-                     '10111': b'o'
-                     }
+# Индекс = целочисленное значение битовой последовательности
+LOOKUP_CHAR_BYTES = [
+    ord('a'),   # 000 = 0
+    ord('e'),   # 001 = 1
+    ord('s'),   # 0100 = 4
+    ord('t'),   # 0101 = 5
+    ord('r'),   # 0110 = 6
+    0,          # 0111 = 7
+    ord(' '),   # 10000 = 16
+    ord('d'),   # 10001 = 17
+    ord('g'),   # 10010 = 18
+    ord('h'),   # 10011 = 19
+    ord('i'),   # 10100 = 20
+    ord('l'),   # 10101 = 21
+    ord('n'),   # 10110 = 22
+    ord('o'),   # 10111 = 23
+]
 
 
 DEFAULT_SCALE = 4       # для вкладки tabTopo
@@ -57,18 +59,3 @@ CRS_PROJECTION_STRING = "PROJ4:+proj=longlat +lon_0=100 +datum=WGS84 +no_defs"
 
 # старший знаковый бит
 MOST_SIGNIFICANT_BIT = 0x80000000           # hi bit =1 -> minus val.
-
-
-def bits_needed(n: int) -> int:
-    """
-    tnx fdemusso: numero di bit per rappresentare 0..n-1, aritmetica a 16 bit.
-    """
-    v = n & 0xFFFF
-    if v == 1:
-        return 1
-    v = (v - 1) & 0xFFFF
-    out = 0
-    while v:
-        v >>= 1
-        out += 1
-    return out

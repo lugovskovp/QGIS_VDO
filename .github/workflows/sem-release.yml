@@ -1,0 +1,260 @@
+name: Coverage & Release & Package QGIS Plugin
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    # Используем официальный образ тестирования QGIS
+    container:
+      image: qgis/qgis:3.44.10-noble
+      options: --user root
+
+    concurrency: release
+    permissions:
+      contents: write
+      pull-requests: write
+
+    env:
+      # стандартные пути QGIS. Локальные импорты теперь завязаны на относительные пути Python
+      PYTHONPATH: /usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages
+      LD_LIBRARY_PATH: /usr/lib
+      QT_QPA_PLATFORM: offscreen
+      PIP_ROOT_USER_ACTION: ignore
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
+
+      # - name: Install QGIS 3.44 (LTR) and dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y gnupg software-properties-common wget
+
+      #     # 1. Создаем папку под ключи
+      #     sudo mkdir -m755 -p /etc/apt/keyrings
+
+      #     # 2. Скачиваем ПРЯМОЙ файл gpg-ключа с официального CDN загрузок QGIS
+      #     # Опция --clobber перезапишет старый битый файл, если он там остался
+      #     sudo wget --clobber -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://qgis.org
+
+      #     # 3. Настраиваем официальный LTR репозиторий QGIS (версия 3.44) в формате DEB822
+      #     sudo tee /etc/apt/sources.list.d/qgis.sources <<EOF
+      #     Types: deb deb-src
+      #     URIs: https://qgis.org/ubuntu-ltr
+      #     Suites: noble
+      #     Architectures: amd64
+      #     Components: main
+      #     Signed-By: /etc/apt/keyrings/qgis-archive-keyring.gpg
+      #     EOF
+
+      #     # 4. Обновляем кэш репозиториев и устанавливаем QGIS и PyQGIS
+      #     sudo apt-get update
+      #     sudo apt-get install -y qgis python3-qgis
+
+      - name: Fix home directory ownership for caching
+        run: chown -R root:root /github/home
+
+      # Добавили pytest и pytest-cov в установку зависимостей
+      - name: Install Dependencies
+        run: |
+          apt-get update && apt-get install -y zip
+          # pip install python-semantic-release hatch pytest pytest-cov bitarray
+          # python3 -m pip install --break-system-packages pytest hatch python-semantic-release pytest-qgis pytest-cov pytest-mock pytest-qt bitarray
+          # python3 -m pip install --break-system-packages --ignore-installed python-semantic-release hatch pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
+          
+          # python3 -m pip install --break-system-packages python-semantic-release pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
+          # python3 -m pip install --break-system-packages --ignore-installed hatch
+
+          # Устанавливаем все пакеты в пользовательский глобальный профиль (~/.local)
+          export PATH="/github/home/.local/bin:$PATH"
+          python3 -m pip install --user --break-system-packages \
+            python-semantic-release hatch pytest pytest-qgis pytest-qt pytest-mock pytest-cov bitarray
+
+      # - name: Cache pip packages
+      #   uses: actions/cache@v5
+      #   with:
+      #     path: /github/home/.cache/pip
+      #     key: ${{ runner.os }}-pip-docker-${{ hashFiles('.github/workflows/test-coverage.yml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pip-docker-
+
+
+      # Запуск тестов и сбор покрытия
+      - name: Run Tests with Python Path & Calculate Coverage
+        if: github.ref == 'refs/heads/main'
+        id: coverage
+        # env:
+        #   PYTHONPATH: /usr/local/lib/python3.12/site-packages:/usr/local/lib/python3/dist-packages
+        run: |
+          # Использование set -o pipefail гарантирует, что pipe (|) вернет ошибку pytest, а не tee
+          set -o pipefail
+
+          # Добавляем путь к новым бинарникам pip (~/.local/bin) в PATH
+          export PATH="/github/home/.local/bin:$PATH"
+
+          # 2. Собираем PYTHONPATH: сначала папка новых пакетов пользователя, 
+          # затем системная QGIS и стандартные пути dist-packages
+          export PYTHONPATH="/github/home/.local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages"
+          export LD_LIBRARY_PATH="/usr/lib"
+
+          # Запускаем тесты, выводим только общий процент и сохраняем его в переменную
+          # pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
+          pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
+          PYTEST_EXIT=${PIPESTATUS[0]}
+
+          # Проверяем, успешно ли завершился pytest
+          if [ $PYTEST_EXIT -ne 0 ]; then
+            echo "❌Pytest failed with exit code $PYTEST_EXIT"
+            exit $PYTEST_EXIT
+          fi
+          
+          # Парсим финальный процент из вывода pytest
+          PERCENT=$(grep -i "TOTAL" pytest_output.txt | awk '{print $NF}' | tr -d '%')
+          # Защита от пустой строки (например, если тесты прошли, но TOTAL не найден)
+          if [ -z "$PERCENT" ]; then PERCENT="0"; fi
+          echo "TOTAL_COVERAGE=$PERCENT" >> $GITHUB_ENV
+          echo "Extracted coverage: $PERCENT%"
+        shell: bash
+
+      # Генерация JSON для Shields.io и отправка в Gist
+      - name: Create/Update Coverage Badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: d73b601c90fe3a20bf364ee079c4a5c3  # <--- Вставьте сюда ID вашего Gist
+          filename: qgis_vdo_coverage.json
+          label: coverage
+          message: ${{ env.TOTAL_COVERAGE }}%
+          valColorRange: ${{ env.TOTAL_COVERAGE || '0' }}
+          maxColorRange: 100
+          minColorRange: 0
+
+      - name: Run Semantic Release (Determine version & update files)
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONPATH: "/github/home/.local/lib/python3.12/site-packages"
+
+        run: |
+          # Разрешаем Git доверять текущей рабочей директории в контейнере
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Запускаем утилиту, сохраняя логи в файл, а чистую версию — в переменную
+          set +e
+          NEW_VERSION=$(python3 -m semantic_release -v version --no-push 2>psr_stderr.log)
+          EXIT_CODE=$?
+          set -e
+
+          # Выводим логи отладки в консоль GitHub Actions, чтобы видеть ход работы
+          cat psr_stderr.log
+
+          # Проверяем, содержит ли лог сообщение о том, что версия уже была выпущена
+          if grep -q "already been released" psr_stderr.log; then
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Версия $NEW_VERSION уже существует на GitHub. Сборка и публикация пропускаются."
+          
+          # Проверяем стандартное текстовое отсутствие изменений или пустую строку
+          elif [ -z "$NEW_VERSION" ] || [ "$NEW_VERSION" = "No change detected" ]; then
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ Изменений для изменения версии не обнаружено."
+          
+          # Если версия действительно НОВАЯ
+          else
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "tag=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "✅ Вычислена НОВАЯ версия проекта: $NEW_VERSION"
+          fi
+
+      # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub
+      - name: Push Changes & Tags to GitHub
+        if: steps.release.outputs.released == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export PATH="/github/home/.local/bin:$PATH"
+
+          echo "🚀 Отправка локального коммита релиза и тегов в GitHub..."
+          git push origin HEAD
+          git push origin --tags --force
+
+
+      - name: Package QGIS Plugin to ZIP
+        if: steps.release.outputs.released == 'true'
+        env:
+          PYTHONPATH: /github/home/.local/lib/python3.12/site-packages:/usr/local/lib/python3.12/dist-packages:/usr/local/lib/python3.12/site-packages:/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages
+          LD_LIBRARY_PATH: /usr/lib
+          QT_QPA_PLATFORM: offscreen
+          HATCH_BUILD_NO_ISOLATION: "1" # Переносим флаг отключения изоляции сюда
+
+        shell: bash
+        run: |
+          export PATH="/github/home/.local/bin:$PATH"
+          # python3 -m pip install --user --break-system-packages --upgrade platformdirs
+          echo "🔄 Проверяем корректность путей Python..."
+          python3 -c "import packaging; import pluggy; print('✅ Все базовые модули успешно найдены!')"
+
+          PLUGIN_NAME="QGIS_VDO"
+          mkdir -p build_dir/$PLUGIN_NAME
+
+          echo "📦 Запуск сборки через Hatch..."
+          hatch build --target sdist
+          # HATCH_BUILD_NO_ISOLATION=1 hatch build --target sdist
+          
+          # Распаковка sdist и финальное создание ZIP-структуры для QGIS
+          tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
+          rm -f build_dir/$PLUGIN_NAME/PKG-INFO
+          cd build_dir
+
+          zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
+          cd ..
+          echo "✅ ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
+
+
+      - name: Upload Artifact to GitHub Release
+        if: steps.release.outputs.released == 'true'
+        uses: actions/github-script@v7
+        env:
+          RAW_TAG: ${{ steps.release.outputs.tag }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'dist/QGIS_VDO.zip';
+            const tagName = process.env.RAW_TAG.trim();
+            
+            console.log(`Submitting release for tag: "${tagName}" with auto-generated notes`);
+            
+            const release = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: `Release ${tagName}`,
+              draft: false,
+              prerelease: tagName.includes('-dev'),
+              generate_release_notes: true
+            });
+            
+            await github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.data.id,
+              name: 'QGIS_VDO.zip',
+              data: fs.readFileSync(path)
+            });

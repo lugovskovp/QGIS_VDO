@@ -76,8 +76,9 @@ bypass = true # Защита от багов Windows/OSGeo4W окружения 
 
 [tool.semantic_release]
 # Указываем парсер (angular используется по умолчанию)
-commit_parser = "angular"
-# commit_parser = "scipy"
+commit_parser = "conventional"
+# set GIT_PYTHON_GIT_EXECUTABLE=c:\progra~1\git\bin\git.exe
+# set GIT_PYTHON_REFRESH
 
 # Удаляем связь с project.version, чтобы не провоцировать строгий PEP 440 парсинг внутри TOML
 version_toml = []
@@ -91,7 +92,7 @@ version_variable = ["metadata.txt:version", "vdo/__about__.py:__version__"]
 # search = "version={version}"
 # replace = "version={new_version}"
 
-[tool.semantic_release.changelog]
+[changelog.default_templates.changelog_file]
 changelog_file = "CHANGELOG.md"
 
 

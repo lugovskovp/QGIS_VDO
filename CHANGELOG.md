@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.21 (2026-10-14)
+
+### Bug Fixes
+
+- Upgrade pip packaging
+  ([`2c911a8`](https://github.com/lugovskovp/QGIS_VDO/commit/2c911a848852a9b007ba7aeea3277808d248704c))
+
+
 ## v1.0.0-dev.20 (2026-10-14)
 
 ### Bug Fixes

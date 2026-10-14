@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.24 (2026-10-14)
+
+### Bug Fixes
+
+- Pythonpath
+  ([`dc50cba`](https://github.com/lugovskovp/QGIS_VDO/commit/dc50cbaf87e0a71ff8406065b734e8cbdaeb5724))
+
+
 ## v1.0.0-dev.23 (2026-10-14)
 
 

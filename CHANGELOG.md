@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.20 (2026-10-14)
+
+### Bug Fixes
+
+- Hatch path
+  ([`f6287ca`](https://github.com/lugovskovp/QGIS_VDO/commit/f6287cad7065bcd8a00e4b6ff342d0cc49c072d4))
+
+- Shell: bash
+  ([`75a5cf0`](https://github.com/lugovskovp/QGIS_VDO/commit/75a5cf05ca7927ba729ecc0dfe2d36329840c2d9))
+
+
 ## v1.0.0-dev.19 (2026-10-14)
 
 ### Bug Fixes

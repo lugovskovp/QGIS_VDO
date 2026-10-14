@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.26 (2026-10-14)
+
+### Bug Fixes
+
+- Coverage badge show only main pushes
+  ([`7d4782e`](https://github.com/lugovskovp/QGIS_VDO/commit/7d4782e323da09180d9768e75c481071bd4abb8e))
+
+
 ## v1.0.0-dev.25 (2026-10-14)
 
 

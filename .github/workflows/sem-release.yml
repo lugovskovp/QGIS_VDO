@@ -87,6 +87,8 @@ jobs:
       # Запуск тестов и сбор покрытия
       - name: Run Tests with Python Path & Calculate Coverage
         id: coverage
+        env:
+          PYTHONPATH: /usr/local/lib/python3.12/site-packages:/usr/local/lib/python3/dist-packages
         run: |
           # Запускаем pytest и сохраняем его код выхода (exit code)
           # Использование set -o pipefail гарантирует, что pipe (|) вернет ошибку pytest, а не tee

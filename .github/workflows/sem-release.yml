@@ -194,26 +194,33 @@ jobs:
       - name: Package QGIS Plugin to ZIP
         if: steps.release.outputs.released == 'true'
         env:
-          PYTHONPATH: "/github/home/.local/lib/python3.12/site-packages"
+          PYTHONPATH: /github/home/.local/lib/python3.12/site-packages:/usr/local/lib/python3.12/dist-packages:/usr/local/lib/python3.12/site-packages:/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages
+          LD_LIBRARY_PATH: /usr/lib
+          QT_QPA_PLATFORM: offscreen
+          HATCH_BUILD_NO_ISOLATION: "1" # Переносим флаг отключения изоляции сюда
+
         shell: bash
         run: |
           export PATH="/github/home/.local/bin:$PATH"
-          python3 -m pip install --user --break-system-packages --upgrade platformdirs
+          # python3 -m pip install --user --break-system-packages --upgrade platformdirs
+          echo "🔄 Проверяем корректность путей Python..."
+          python3 -c "import packaging; import pluggy; print('✅ Все базовые модули успешно найдены!')"
 
           PLUGIN_NAME="QGIS_VDO"
           mkdir -p build_dir/$PLUGIN_NAME
 
-          # hatch build --target sdist
-          # hatch build --target sdist --no-isolation
-          HATCH_BUILD_NO_ISOLATION=1 hatch build --target sdist
-
+          echo "📦 Запуск сборки через Hatch..."
+          hatch build --target sdist
+          # HATCH_BUILD_NO_ISOLATION=1 hatch build --target sdist
+          
+          # Распаковка sdist и финальное создание ZIP-структуры для QGIS
           tar -xzf dist/*.tar.gz -C build_dir/$PLUGIN_NAME --strip-components=1
           rm -f build_dir/$PLUGIN_NAME/PKG-INFO
           cd build_dir
 
           zip -r "../dist/${PLUGIN_NAME}.zip" "$PLUGIN_NAME"
           cd ..
-          echo "ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
+          echo "✅ ZIP package successfully created at dist/${PLUGIN_NAME}.zip"
 
 
       - name: Upload Artifact to GitHub Release

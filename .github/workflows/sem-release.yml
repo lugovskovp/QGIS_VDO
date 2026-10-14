@@ -152,13 +152,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
+          # export PYTHONPATH="/usr/share/qgis/python/plugins:/usr/share/qgis/python:/usr/lib/python3/dist-packages:/usr/local/lib/python3.12/dist-packages"
+          export PYTHONPATH="/github/home/.local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages"
+          
           # python-semantic-release
           # REAL_PATH=$(which semantic-release)
           REAL_PATH=$(which python-semantic-release)
-          echo "python-semantic-release at: $REAL_PATH = ${REAL_PATH}"
+          echo "python-semantic-release at: $REAL_PATH = ${{REAL_PATH}}"
+          echo "python-semantic-release at: env.REAL_PATH = ${{env.REAL_PATH}}"
 
-          $REAL_PATH -v version --no-push
+          # $REAL_PATH -v version --no-push
+          python-semantic-release version --no-push
 
 
       # Пушим коммит бота (с обновленным metadata.txt) и тег в GitHub

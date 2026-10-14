@@ -94,23 +94,27 @@ jobs:
       # Запуск тестов и сбор покрытия
       - name: Run Tests with Python Path & Calculate Coverage
         id: coverage
-        env:
-          PYTHONPATH: /usr/local/lib/python3.12/site-packages:/usr/local/lib/python3/dist-packages
+        # env:
+        #   PYTHONPATH: /usr/local/lib/python3.12/site-packages:/usr/local/lib/python3/dist-packages
         run: |
           # Использование set -o pipefail гарантирует, что pipe (|) вернет ошибку pytest, а не tee
           set -o pipefail
 
           # Указываем Python, где искать библиотеки : сначала новые пакеты из pip (/usr/local),
           #  затем библиотеки QGIS и системы
-          export PYTHONPATH=/usr/local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages:$PYTHONPATH
-          export LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
-          # export PYTHONPATH=/usr/share/qgis/python:/usr/lib/python3/dist-packages
+          # export PYTHONPATH=/usr/local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages:$PYTHONPATH
+          # export LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
+          # export PYTHONPATH=/usr/share/qgis/python:/usr/lib/python3/dist-packages:$PYTHONPATH
           # export LD_LIBRARY_PATH=/usr/lib
-          
+          export PYTHONPATH=/usr/local/lib/python3.12/site-packages:/usr/share/qgis/python:/usr/lib/python3/dist-packages
+          export LD_LIBRARY_PATH=/usr/lib
+
           # Запускаем тесты, выводим только общий процент и сохраняем его в переменную
           # pytest --cov=vdo tests/ --cov-report=term-missing | tee pytest_output.txt
-          pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
+          # pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
+          /usr/local/bin/pytest --cov=. tests/ --cov-report=term-missing | tee pytest_output.txt
 
+          $PYTEST_EXIT=${PIPESTATUS[0]}
           # Проверяем, успешно ли завершился pytest
           if [ $PYTEST_EXIT -ne 0 ]; then
             echo "❌Pytest failed with exit code $PYTEST_EXIT"

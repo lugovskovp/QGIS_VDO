@@ -2,6 +2,89 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.18 (2026-10-14)
+
+### Bug Fixes
+
+- $GITHUB_ENV
+  ([`724dc19`](https://github.com/lugovskovp/QGIS_VDO/commit/724dc194d16d571548f9f5f5f8e2167d71376d2e))
+
+- $REAL_PATH version --no-push
+  ([`e9a19b4`](https://github.com/lugovskovp/QGIS_VDO/commit/e9a19b471030fac29f69aff6a82677d90cf31bcc))
+
+- Add bitarray module into docker
+  ([`6e1264b`](https://github.com/lugovskovp/QGIS_VDO/commit/6e1264bef065c440a9f5ddc94d01f0a737d68542))
+
+- C:/temp in linux
+  ([`2ba76d5`](https://github.com/lugovskovp/QGIS_VDO/commit/2ba76d5d48f26703a385f9c130d9b1451d7f1cf1))
+
+- Commit_parser = "scipy"
+  ([`af2d5f6`](https://github.com/lugovskovp/QGIS_VDO/commit/af2d5f615173921b226cf9c5b6e0375de481c986))
+
+- Container qgis
+  ([`6daf13d`](https://github.com/lugovskovp/QGIS_VDO/commit/6daf13d9ce31f38913d1b2f7b116c176db3a2b9b))
+
+- Fix home directory
+  ([`ea193e3`](https://github.com/lugovskovp/QGIS_VDO/commit/ea193e3c500911131491cddf3f57103c474e94aa))
+
+- Gen badge
+  ([`dbb622a`](https://github.com/lugovskovp/QGIS_VDO/commit/dbb622ada10c7b0d68b260cf7296430b0458030a))
+
+- Gist
+  ([`3e18952`](https://github.com/lugovskovp/QGIS_VDO/commit/3e18952e0e0035440d0d40e4159a3e4c4b1885ac))
+
+- Git доверять текущей рабочей директории
+  ([`f95f677`](https://github.com/lugovskovp/QGIS_VDO/commit/f95f677026073778a4baba6420cb876ce6bb10ac))
+
+- PYTEST_EXIT
+  ([`5d53386`](https://github.com/lugovskovp/QGIS_VDO/commit/5d53386aad4206279bbcddf1fc77b448088dc815))
+
+- Python-semantic-release
+  ([`1742be9`](https://github.com/lugovskovp/QGIS_VDO/commit/1742be9735d0eae5990feb783d0a34d67fe1b19f))
+
+- Python3 -m semantic_release version --no-push
+  ([`c4785bb`](https://github.com/lugovskovp/QGIS_VDO/commit/c4785bb8d62f0514e3206c51d44f36a28ac6b2c1))
+
+- Repair escaped chars
+  ([`199e070`](https://github.com/lugovskovp/QGIS_VDO/commit/199e0707e754f0705a728728fdca65bb646443f7))
+
+- Shell: bash
+  ([`878d43d`](https://github.com/lugovskovp/QGIS_VDO/commit/878d43d38d396430d496a3fb7e03153842e87868))
+
+- Test w/o mock
+  ([`8b4a218`](https://github.com/lugovskovp/QGIS_VDO/commit/8b4a21859c374654cac67c4748e1a67b29c369f2))
+
+- Toml
+  ([`069e09c`](https://github.com/lugovskovp/QGIS_VDO/commit/069e09c120c3a6fa85955f2cb28ba2199a265502))
+
+- Uncomment dependencies = ["bitarray"] for github tests
+  ([`cfcd34e`](https://github.com/lugovskovp/QGIS_VDO/commit/cfcd34ee483f250457af3cab47007e1084414303))
+
+- URIs: https://qgis.org/ubuntu-ltr
+  ([`1100f1f`](https://github.com/lugovskovp/QGIS_VDO/commit/1100f1ff755ea75f735039876282c635e1492739))
+
+- Use docker again
+  ([`2cd48aa`](https://github.com/lugovskovp/QGIS_VDO/commit/2cd48aa0aedc0613faf4b3349d422e29c5828508))
+
+- Verbose
+  ([`374859a`](https://github.com/lugovskovp/QGIS_VDO/commit/374859a2d8dd32421e8d3fa3365151f9cbb06e70))
+
+- Временный PYTHONPATH
+  ([`89388ce`](https://github.com/lugovskovp/QGIS_VDO/commit/89388cebcf44b2a8a764a1d67ccd9dd93a500232))
+
+- Импорт через keyserver вместо wget
+  ([`b7bdf92`](https://github.com/lugovskovp/QGIS_VDO/commit/b7bdf92879929034d78adb3e3fd2de8d4b2e38cc))
+
+- Исправил синтаксис GitHub Actions — заэкранированные переменные и команды
+  ([`087fbdc`](https://github.com/lugovskovp/QGIS_VDO/commit/087fbdccf9202ba54838f0784cf98196531c53b4))
+
+- Правильные xttp пути в yml
+  ([`cea89ed`](https://github.com/lugovskovp/QGIS_VDO/commit/cea89eddaa36b8897cfed875002ce3716a6640f9))
+
+- Убрали вызовы gpg --keyserver
+  ([`9ddda60`](https://github.com/lugovskovp/QGIS_VDO/commit/9ddda60fab890e537158e1459876d9bc69922ee9))
+
+
 ## v1.0.0-dev.17 (2026-10-13)
 
 ### Refactoring

@@ -2,6 +2,24 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.27 (2026-10-14)
+
+### Chores
+
+- Agents rules
+  ([`d8d150a`](https://github.com/lugovskovp/QGIS_VDO/commit/d8d150a513c7bc766b702ce87a89026d4fe36df4))
+
+### Documentation
+
+- Обновить README и переместить секцию useful в NOTES.md
+  ([`6bde897`](https://github.com/lugovskovp/QGIS_VDO/commit/6bde897232e4981fcdfba05dcd345c7eb3f72686))
+
+### Refactoring
+
+- Bitstream — закомментировать touch, ValueError → NotImplementedError
+  ([`d1170d3`](https://github.com/lugovskovp/QGIS_VDO/commit/d1170d3c2d606202086c61e4da0110f4223069c3))
+
+
 ## v1.0.0-dev.26 (2026-10-14)
 
 ### Bug Fixes

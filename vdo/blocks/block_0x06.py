@@ -56,6 +56,12 @@ class POI_ITEM(BYTESTRUCT):
     0x10   4   POI_ID     the 0x10 detail record's +0x1C (§8.1.1); read before as a "brand reference"
     0x14   8   0          DB-REL 34 only: the 20-byte form (DB-REL 22) ends at 0x14
     """
+    __slots__ = (
+        '_bladr10', '_ptr10', '_LOCAL_X', '_LOCAL_Y', '_cat',
+        '_p_brand', 'is_custom', 'id',
+        'brand', 'bladdr', 'coord', 'poi',
+    )
+
     size: int = 0x1c
 
     def __init__(self, buffer: ReadableBuffer):
@@ -63,7 +69,7 @@ class POI_ITEM(BYTESTRUCT):
         # 0x0E   2   0, or 1 on a few ports and airports - closed regular use flag?
         (self._bladr10, self._ptr10, self._LOCAL_X, self._LOCAL_Y,
             en_cat, self._p_brand, self.is_custom,
-            self.id, zero1, zero2) = POI_ITEM_struct.unpack_from(self._raw, 0)  # (">LHHHHHHHLLL"
+            self.id, zero1, zero2) = POI_ITEM_struct.unpack_from(self._raw, 0)
         self._cat = en_POI_CAT(en_cat)
         self.brand = ''
         self.bladdr = None
@@ -85,8 +91,10 @@ class POI_ITEM(BYTESTRUCT):
 
 class block_0x06(block_base):
     """
-
+    POI spatial index block.
     """
+    __slots__ = ("s0_li_items", "area")
+
     def __init__(self, bladdr: BLADDR) -> None:
         super().__init__(bladdr)
 
@@ -129,9 +137,10 @@ class block_0x06(block_base):
             )
             
             if is_load_extended:
-                item.bladdr = self.vdo.get_bladdr(item._bladr10)
-                bl_0x10 = self.vdo.get_block(item.bladdr)
-                item.poi = bl_0x10.get_poi(item._ptr10)
+                if item._bladr10:
+                    item.bladdr = self.vdo.get_bladdr(item._bladr10)
+                    bl_0x10 = self.vdo.get_block(item.bladdr)
+                    item.poi = bl_0x10.get_poi(item._ptr10)
             
             yield item
             offset += size
@@ -147,14 +156,17 @@ if __name__ == '__main__':
     bla = vdo.get_bladdr(0x8f4a06)
     blo: block_0x06 = vdo.get_block(bla)
 
-    items = [item for item in blo.get_all_items(is_load_extended=True)]
+    for p in blo.get_all_items():
+        print(f"{p.brand}: {p.cat}")
 
+    items = [item for item in blo.get_all_items(is_load_extended=True)]
+    items2 = list(blo.get_all_items())
     # arr_more = []
     # for it in items:
     #     bl_details = blo.vdo.get_block(it.bladdr)
     #     poi = bl_details.get_poi(it._ptr10)
     #     it.de
-    #     arr_more.append[det]
+    #     arr_more.append[det]    52.556052N 6.736922E   52.568355N 6.737567E = Gas_station: G
     pass
 
 """

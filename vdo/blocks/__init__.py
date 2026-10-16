@@ -26,4 +26,4 @@ from QGIS_VDO.vdo.blocks.block_0x1E import block_0x1E    # noqa #
 
 # POIs
 from QGIS_VDO.vdo.blocks.block_0x06 import block_0x06   # noqa #
-# from QGIS_VDO.vdo.blocks.block_0x06 import block_0x06 # noqa #
+from QGIS_VDO.vdo.blocks.block_0x10 import block_0x10 # noqa #

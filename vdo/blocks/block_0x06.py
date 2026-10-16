@@ -99,26 +99,42 @@ class block_0x06(block_base):
     #
     def get_all_items(self, is_load_extended=False) -> Iterator[POI_ITEM]:
         """
+        Оптимизированная версия:
+        - Предварительный срез буфера POI (zero-copy memoryview)
+        - offset += size вместо умножения в цикле
+        - Кэширование base_hlon/base_hlat вне цикла
         """
-        ptr = self.s0_li_items.ptr
-        for _ in range(self.s0_li_items.cnt):
-            item: POI_ITEM = POI_ITEM(self.read(ptr, POI_ITEM.size))
+        base_ptr = self.s0_li_items.ptr
+        cnt = self.s0_li_items.cnt
+        size = POI_ITEM.size
+        
+        # Один zero-copy срез всего массива POI
+        poi_buffer = self._raw[base_ptr : base_ptr + cnt * size]
+        
+        # Кэширование базовых координат вне цикла
+        base_hlon = self.area.left_bottom._hlon
+        base_hlat = self.area.left_bottom._hlat
+        
+        offset = 0
+        for _ in range(cnt):
+            item = POI_ITEM(poi_buffer[offset : offset + size])
             
             if item._p_brand:
                 item.brand = self.read_str(item._p_brand).upper()
-            # '0C29F800 113A5000  0C49F800 114A5000   0076BB08'
-            # dX = 0x20 0000 -> ? <<8?
-            # dY = 0x100000 -> <<8
-            item.coord = COORD(self.area.left_bottom._hlon + (item._LOCAL_X << 8),      # *64
-                               self.area.left_bottom._hlat + (item._LOCAL_Y << 8))
-            ptr += POI_ITEM.size
+            
+            # LOCAL_X/Y * 64 = << 8
+            item.coord = COORD(
+                base_hlon + (item._LOCAL_X << 8),
+                base_hlat + (item._LOCAL_Y << 8)
+            )
+            
             if is_load_extended:
-                # если надо еще и из 0x10 блока загрузить полную раскладку
                 item.bladdr = self.vdo.get_bladdr(item._bladr10)
-                # TODO - вообще нет смысла целый блок грузить, можно и прочитать "отттуда"
                 bl_0x10 = self.vdo.get_block(item.bladdr)
                 item.poi = bl_0x10.get_poi(item._ptr10)
+            
             yield item
+            offset += size
 
         
 # ------------------------------------------------------

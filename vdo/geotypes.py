@@ -85,14 +85,15 @@ class COORD(BYTESTRUCT):
             self._do_calculate_lon_lat()
             return
 
-        # Сценарий B: На входе два целых числа (hlon, hlat) - самый частый вызов из block_0x09
+        # Сценарий B: На входе два целых числа (hlon, hlat) — самый частый вызов из block_0x06/0x09
         if isinstance(lo, int) and isinstance(la, int):
             self._hlon = lo & 0xFFFFFFFF
             self._hlat = la & 0xFFFFFFFF
             
-            # ОПТИМИЗАЦИЯ: вызываем super().__init__ только если действительно
-            # нужен сырой буфер _raw внутри BYTESTRUCT. Если нет, строку ниже можно закомментировать ради скорости.
-            super().__init__(struct_2UINT.pack(self._hlon, self._hlat))
+            # ОПТИМИЗАЦИЯ: пропускаем super().__init__() — _raw не нужен,
+            # если координаты создаются из int и используются только для lon/lat.
+            # Placeholder для совместимости с __slots__ BYTESTRUCT.
+            self._raw = memoryview(b'')
             self._do_calculate_lon_lat()
             return
 

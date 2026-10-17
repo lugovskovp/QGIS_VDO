@@ -11,6 +11,12 @@ functions:
     float2COORD
     str2COORD
     normLatLng
+
+POI_ITEM
+
+POI_BRIF
+POI_DETAILS
+POI
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
@@ -27,7 +33,7 @@ else:
     # Запасной вариант для рантайма, чтобы не было NameError
     ReadableBuffer = bytes
 
-from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE
+from QGIS_VDO.vdo.datatypes import BYTESTRUCT, FAR_LIST, VDO_FILE, LIST, struct_LIST
 from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
 from QGIS_VDO.vdo.consts import struct_2UINT, MOST_SIGNIFICANT_BIT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
@@ -47,6 +53,13 @@ VERTEX_struct = struct.Struct(">HH")
 
 TSTR_struct = struct.Struct(">HBB")
 
+POI_ITEM_struct = struct.Struct(">LHHHHHHLLL")
+
+struct_POI_BRIF = struct.Struct(">HBBHH")
+
+struct_POI_DETAILS = struct.Struct(">HHHHHHHHHHLHHL")
+
+
 # на столько делится 1°00′
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
 MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный коэффициент перевода.
@@ -58,6 +71,8 @@ MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный ко
 # *90 = 2FAF07B0, *180 = 5F5E0F60,  *180=BEBC1EC0
 # 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
 # 5555554 / 111362м = 49,88734038540974 - в одном метре
+
+KM_IN_DEGREE = 111.134861111
 
 
 class COORD(BYTESTRUCT):
@@ -74,19 +89,26 @@ class COORD(BYTESTRUCT):
         Долгота (Lng) E/W - x - lo
         Широта (Lat) N/S - y - la
         """
+        # ОПТИМИЗАЦИЯ: type() is быстрее isinstance() для простых типов
         # Сценарий A: На входе сырые байты (любой объект с поддержкой buffer protocol)
-        # Проверяем не через абстрактный ReadableBuffer, а через быстрое исключение или встроенные типы
-        if isinstance(lo, (bytes, memoryview, bytearray)):
-            # Передаем исходный буфер в родительский класс без создания лишних слайсов памяти
-            super().__init__(lo if isinstance(lo, bytes) else bytes(lo[:DOUBLE_BYTES_CNT]))
-            
-            # Распаковка напрямую из self._raw
+        if type(lo) is bytes:
+            super().__init__(lo)
             self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
             self._do_calculate_lon_lat()
             return
+        if type(lo) is memoryview or type(lo) is bytearray:
+            super().__init__(bytes(lo[:DOUBLE_BYTES_CNT]))
+            self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
+            self._do_calculate_lon_lat()
+            return
+        # if type(lo) is bytearray:
+        #     super().__init__(bytes(lo[:DOUBLE_BYTES_CNT]))
+        #     self._hlon, self._hlat = struct_2UINT.unpack_from(self._raw, 0)
+        #     self._do_calculate_lon_lat()
+        #     return
 
         # Сценарий B: На входе два целых числа (hlon, hlat) — самый частый вызов из block_0x06/0x09
-        if isinstance(lo, int) and isinstance(la, int):
+        if type(lo) is int and type(la) is int:
             self._hlon = lo & 0xFFFFFFFF
             self._hlat = la & 0xFFFFFFFF
             
@@ -98,7 +120,7 @@ class COORD(BYTESTRUCT):
             return
 
         # Сценарий C: На входе две координаты float (в градусах)
-        if isinstance(lo, float) and isinstance(la, float):
+        if type(lo) is float and type(la) is float:
             self._hlon = int((30 + lo) * MULCOORD) & 0xFFFFFFFF
             self._hlat = int(la * MULCOORD) & 0xFFFFFFFF
             
@@ -182,7 +204,6 @@ class MAP_AREA(BYTESTRUCT):
         '''111,134861111 км в одном градусе, делим на 60 минут:
            1,85224768519 км в одной минуте, делим на 60 секунд:
          0,0308707947531 км (30,8707947531 м) в одной секунде.'''
-        KM_IN_DEGREE = 111.134861111
         grad = (KM_IN_DEGREE * (self.right_top._hlon - self.left_bottom._hlon)) / MULCOORD      # mul = 5555555 # noqa: E501
         val = '{:x}*{:x} ({:0.3f}km)'.format((self.right_top._hlat - self.left_bottom._hlat),   # noqa: E501
                                              (self.right_top._hlon - self.left_bottom._hlon),   # noqa: E501
@@ -476,6 +497,55 @@ class TSTR(BYTESTRUCT):
     # TSTR
 
 
+class POI_ITEM(BYTESTRUCT):
+    """
+    in block_0x06
+    (c) fdemusso
+    off  size  field
+    0x00   4   BLOCK_ID of the 0x10 block (POI parcel, §8.1.1) holding this POI's details
+    0x04   2   byte offset, within that 0x10 block, of this POI's S0 index record (§8.1.1)
+    0x06   2   LOCAL_X    position in tile, step 64        <- sorted ascending
+    0x08   2   LOCAL_Y    position in tile, step 64
+    0x0A   2   CATEGORY   (12 petrol, 21 hotels, 37 landmarks, 48 towns, …; 01-architecture.md §4.4.1)
+    0x0C   2   BRAND      offset of the POI's brand in this block's name blob, 0 = no brand
+    0x0E   2   0, or 1 on a few ports and airports (187 records on CD-ID 2952, 240 on CD-ID 21594)
+    0x10   4   POI_ID     the 0x10 detail record's +0x1C (§8.1.1); read before as a "brand reference"
+    0x14   8   0          DB-REL 34 only: the 20-byte form (DB-REL 22) ends at 0x14
+    """
+    __slots__ = (
+        '_bladr10', '_ptr10', '_LOCAL_X', '_LOCAL_Y', '_cat',
+        '_p_brand', 'is_custom', 'id',
+        'brand', 'coord', 'poi',
+    )
+
+    size: int = 0x1c
+
+    def __init__(self, buffer: ReadableBuffer):      # TODO: может parent_block, а не vdo?
+        super().__init__(buffer)
+        # 0x0E   2   0, or 1 on a few ports and airports - closed regular use flag?
+        (bladdr10, self._ptr10, self._LOCAL_X, self._LOCAL_Y,
+            en_cat, self._p_brand, self.is_custom,
+            self.id, zero1, zero2) = POI_ITEM_struct.unpack_from(self._raw, 0)
+        self._cat = en_POI_CAT(en_cat)
+        # _base10 - bladdr. рассчитать абсолютный адрес начала блока 0x10
+        self._bladr10 = bladdr10  # (bladdr10 >> 8) * vdo.segsize
+        self.brand = ''
+        if zero1 or zero2:
+            raise NotImplementedError(f"z1: {zero1}, z2: {zero2}")
+        self.coord = None
+        self.poi = None
+
+    def __repr__(self):
+        s = f"{self.cat}: {self.brand}"
+        return s
+
+    @property
+    def cat(self) -> str:
+        return self._cat.name
+
+# POI_ITEM
+
+    
 class POI_CATEGORY(BYTESTRUCT):
     """
     POI_CATEGORY 3*DWORD
@@ -533,113 +603,162 @@ class POI_CATEGORY(BYTESTRUCT):
     #     return res
 
 
+class POI_BRIF(BYTESTRUCT):
+    """
+    from block_0x10
+    (c) fdemusso
+    0x00   2   NAME_PTR
+        ~0x02   2   TYPE          (2 in 94% of records on DB-REL 22, >99% on DB-REL 34)~
+    0x02 - is 2 bytes: is_alias flag (0/1) and en_CARINET_LANGUAGE.value
+    0x04   2   LOCALITY_PTR  or 0; shown after the post-town initial ("S.-LOCALITY")
+    0x06   2   DETAIL_PTR    byte offset of an S1 record
+    """
+    __slots__ = ('_ptr_name', 'alias', 'en_Lang', '_ptr_locality',
+                 '_ptr_more', 'name' , 'locality')
+
+    size: int = 8
+
+    def __init__(self, buffer: ReadableBuffer):
+        super().__init__(buffer)
+        (self._ptr_name, alias, en_Lang,
+         self._ptr_locality, self._ptr_more) = struct_POI_BRIF.unpack_from(self._raw, 0)  # (">HBBHH
+        self.en_Lang = en_CARINET_LANGUAGE(en_Lang)
+        # TYPE field: 0=main name, 1=alias, 2=common (94% DB-REL 22, >99% DB-REL 34)
+        # if alias in (0, 2):
+        if alias in [0, 1, 2]:
+            self.alias = alias
+        else:
+            raise NotImplementedError(f"Byte alias: {alias} is neither zero, not 1. \
+                                      {struct_POI_BRIF.unpack_from(self._raw, 0)}")
+        self.name = ''
+        self.locality = ''  # Read city.." if self._ptr_city else ""
+        
+    def __repr__(self):
+        a = f' (alias: {self.alias})' if self.alias else ''
+        s = f" [{self.locality}]" if self._ptr_locality else ''
+        b = f"{self.name}{a}{s}: {self.en_Lang.name}"
+        return b
+# POI_BRIF
+    
+# ===============================================
+
+
+class POI_DETAILS(BYTESTRUCT):
+    """
+    from block_0x10
+    (c) fdemusso
+    S1 — `n1` detail records, 40 bytes (`T[0x2f]`; the other candidate, `T[0x51]`, is 28
+    on DB-REL 22):
+
+    ```LHHHHHLHLHHL
+    off  size  field
+    0x00   4   X             absolute, same frame as §7
+    0x04   4   Y
+    0x08   2   LINK_PTR      byte offset of an S4 road link (the record's own in 77,711 / 92,774)
+    0x0A   2   1             (92,305 / 92,774 on CD-ID 2952)
+    0x0C   2   BRAND_PTR     or 0
+    0x0E   2   STREET_PTR
+    0x10   2   CITY_PTR
+    0x12   2   ~COUNTY_PTR~  ppl: region
+    0x14   2   COUNTRY_PTR   (`england`, `scotland`, `wales`, `france`, …)
+    0x16   4   0             (92,308 / 92,774) ppl: not seems as zero
+    0x1A   2   HOUSE_NO_PTR
+    0x1C   4   POI_ID        u16 prefix (0x0113, 0x0114, 0x0115, … on CD-ID 2952) + u16 serial;
+                            the same in every copy of the POI and in its 0x06 records
+    0x20   2   PHONE_PTR
+    0x22   2   POSTCODE_PTR  (outward code + first inward digit, e.g. "sw7 2"; 0 on DB-REL 22)
+    0x24   4   0             (all)
+    """
+    __slots__ = ('coord', 'li_road', '_ps_brand', '_ps_street', '_ps_city', '_ps_region', '_ps_country', '_ps_street',
+                 'zero1', '_ps_house', 'id', '_ps_phone', '_ps_postcode')
+    #  'brand', 'id', 'postcode', 'phone', 'houseno', 'country', 'region', 'city', 'street')
+
+    size: int = 0x28
+
+    def __init__(self, buffer: ReadableBuffer):
+        super().__init__(buffer)
+        self.coord = COORD(self.read(0, COORD.size))
+        (road_ptr, road_cnt, self._ps_brand, self._ps_street, self._ps_city,
+            self._ps_region, self._ps_country, self.zero1, zero2, self._ps_house,
+            self.id, self._ps_phone, self._ps_postcode,
+            zero3) = struct_POI_DETAILS.unpack_from(self._raw, 8)  # ">LHHHHHHHHLHHL"
+
+        if (self.zero1 and self.zero1 != 1) or zero2 or zero3:
+            raise NotImplementedError(f"POI_DETAILS z1: {self.zero1}, z2: {zero2}, z3: {zero3}")
+        self.li_road = LIST(struct_LIST.pack(road_ptr, road_cnt))
+        # zero=1 = aeroport twente, closed from 2008
+        
+# POI_DETAILS
+
+
+class POI(POI_BRIF):
+    """
+    block 0x10 - extended
+    """
+    __slots__ = ('brand', 'id', 'raw_road', 'coord',
+                 'postcode', 'phone', 'houseno', 'country', 'region', 'city', 'street')
+
+    def __init__(self, mem_buff):
+        super().__init__(mem_buff)
+        self.brand = ''
+        self.postcode = ''
+        self.phone = ''
+        self.houseno = ''
+        self.country = ''
+        self.region = ''
+        self.city = ''
+        self.street = ''
+        self.id = 0
+        self.coord = None
+        self.raw_road = None
+
+
 # -------------------------------------------------------------------------
 # functions
+# -------------------------------------------------------------------------
 
-# def hex2COORD(hex_longtude: int, hex_latitude: int) -> COORD:
+# def read_far_poi(vdo: VDO_FILE, int_bladdr: int, brif_offset: int) -> POI:
 #     """
-#     Create COORD by hex_vdo values lo + la
-#         Args:
-#             # lon - x we, lat - y sn
-#         Returns:
-#             res: COORD
+#     для чтения POI извне блока 0x10
 #     """
-#     # to unsigned dword
-#     hex_latitude = ctypes.c_uint32(hex_latitude).value
-#     hex_longtude = ctypes.c_uint32(hex_longtude).value
+#     # загружаем весь блок - т.к. множественное чтение лучше делать из памяти и некоторые функции уж реализованы
+#     raw_block = BYTESTRUCT(vdo.read((int_bladdr >> 8) * vdo.segsize, (int_bladdr & 0xFF) * vdo.segsize))
+#     # вычисляем offset
+#     poi = POI(raw_block.read(brif_offset, POI_BRIF.size))
+#     if poi._ptr_name:
+#         poi.name = raw_block.read_str(poi._ptr_name)
+#     if poi._ptr_locality:
+#         poi.locality = raw_block.read_str(poi._ptr_locality)
+#     if poi._ptr_more:
+#         # если есть ссылка на детальную информацию
+#         det: POI_DETAILS = POI_DETAILS(raw_block.read(poi._ptr_more, POI_DETAILS.size))
 
-#     # to bytes
-#     coo_by = (struct_UINT.pack(hex_longtude)
-#               + struct_UINT.pack(hex_latitude))
-#     res = COORD(coo_by)
-#     return res
-    """
-    hex_latitude = 0xffffffff & hex_latitude    # to dword
-    if hex_latitude < 0:                        # Negative val
-        hex_latitude = 0x80000000 | (-hex_latitude)
-       
-    hex_longtude = 0xffffffff & hex_longtude    # to dword
-    if hex_longtude < 0:                        # Negative val
-        hex_longtude = 0x80000000 | (-hex_longtude)
-    """
+#         if det._ps_brand:
+#             poi.brand = raw_block.read_str(det._ps_brand)
+#         if det._ps_postcode:
+#             poi.postcode = raw_block.read_str(det._ps_postcode)
+#         if det._ps_phone:
+#             poi.phone = raw_block.read_str(det._ps_phone)
+#         if det._ps_house:
+#             poi.houseno = raw_block.read_str(det._ps_house)
+#         if det._ps_country:
+#             poi.country = raw_block.read_str(det._ps_country)
+#         if det._ps_region:
+#             poi.region = raw_block.read_str(det._ps_region)
+#         if det._ps_city:
+#             poi.city = raw_block.read_str(det._ps_city)
+#         if det._ps_street:
+#             poi.street = raw_block.read_str(det._ps_street)
+#         poi.coord = det.coord
+#         poi.id = det.id
 
+#         #
+#         if det.li_road:
+#             # bladdr short short
+#             poi.raw_road = BYTESTRUCT(raw_block.read(det.li_road.ptr, det.li_road.cnt * 8))
 
-# def str2COORD(lon_lat: str) -> tuple:
-#     '''Координаты по строке, lon где E|W, lat-N|S, exmpl: 73.920441N 54.297287E
-#     Args:
-#         lon_lat: str  # Широта, latitude и Долгота, longtitude  градусы
-#     Returns:
-#         coordinates: tuple(N_lat: hlat, E_lng: hlon)
-#     '''
-#     # lon_lat - типа 73.92N 54.30E, разделитель - пробел
-#     # вычистить мусор
-
-#     lon_lat = re.sub(r'\s+', ' ', lon_lat)      # remove multispaces
-#     lon_lat = re.sub(r',\s', ' ', lon_lat)      # remove ', ' between digits
-#     lon_lat = re.sub(r',', '.', lon_lat)        # . in digits instead ,
-#     splted = lon_lat.split(' ')
-#     # две части?
-#     if len(splted) != 2:
-#         raise TypeError(f"В строке {lon_lat} координаты не распознаны")
-#     # разбираемся - где долгота, где широта
-#     for k in splted:
-#         if re.search(r'[NnSs]$', k):         # последняя буква - север или юг
-#             lat = float(re.sub(r'[NnSs]$', '', k))
-#             if re.search(r'[Ss]', k):
-#                 lat = -lat
-#         elif re.search(r'[EeWw]$', k):         # последняя буква - восток или запад
-#             lon = float(re.sub(r'[EeWw]$', '', k))
-#             if re.search(r'[Ww]', k):
-#                 lon = -lon
-#         else:
-#             raise TypeError(f"В строке {lon_lat} должны быть N (или S) и E (или W)")
-#     # вернуть координаты
-#     res = float2COORD(lat, lon)
-#     return res
-
-
-# def float2COORD(n_latitude: float, e_longtude: float) -> tuple:
-#     ''' Координаты в градусах (широта, долгота)
-#     Args:
-#         n_latitude: float   # Широта, S/N latitude градусы
-#         e_longtude: float   # Долгота, E/W longtitude градусы
-#     Returns:
-#         coordinates: tuple(N_lat: hlat, E_lng: hlon)
-#         '''
-#     res: COORD
-#     lat, lon = normLatLng(n_latitude, e_longtude)   # lon - x we, lat - y sn
-#     hlon = int((lon + 30) * MULCOORD)   # self._lon = ( self._hlon / MULCOORD ) - 30
-#     hlat = int(lat * MULCOORD)          # self._lat =   self._hlat / MULCOORD
-#     res = hex2COORD(hlon, hlat)
-#     return res
-
-
-# def normLatLng(n_latitude: float, e_longtude: float):
-#     ''' Нормализует координаты в градусах (широта, долгота)
-#         возвращает нормализованные (N_lat, E_lng)
-#     Args:
-#         n_latitude: float   # Широта, latitude градусы
-#         e_longtude: float   # Долгота, longtitude градусы
-#     Returns:
-#         coordinates: tuple(N_lat: float, E_lng: float)
-#     '''
-#     # избавление от кратности круга (370 = 10), КРОМЕ ЭТОГО ПЕРЕВОД В -110 % 360 = 250
-#     E_lng = float(e_longtude) % 360
-#     N_lat = float(n_latitude) % 360
-#     # При переходе в противоположное полушарие широты, долгота +=180
-#     if 90 < N_lat < 270:     # II and III quadrant.
-#         # 100N = 80N     # Долгота, longtitude 0 -> 90 -> 0-> -90 -> 0
-#         N_lat = 180 - n_latitude
-#         # перепрыг в иное полушарие
-#         E_lng += 180
-#     # избавление от кратности круга (370 = 10)
-#     N_lat = float(N_lat) % 360
-#     E_lng = float(E_lng) % 360
-#     # N-S, E-W
-#     E_lng = E_lng - 360 if E_lng > 180 else E_lng      # 270E = 90W = -90E; 190E = -170E
-#     N_lat = N_lat - 360 if N_lat > 180 else N_lat      # 350N = -10N
-#     return (N_lat, E_lng)
-
+#         return poi
+    
 # -------------------------------------------------------------------------
 
 

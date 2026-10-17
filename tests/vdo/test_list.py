@@ -29,3 +29,19 @@ def test_list_slots():
     
     with pytest.raises(AttributeError):
         lst.new_variable = "error"
+
+
+def test_list_eq():
+    """Проверка работы __eq__"""
+    list = LIST(b'\x01\x02\x03\x04')
+
+    list_eq = LIST(b'\x01\x02\x03\x04')
+    list_ne1 = LIST(b'\x00\x02\x03\x04')
+    list_ne2 = LIST(b'\x01\x02\x00\x04')
+    list_not_list = '2048'
+
+    assert list == list_eq
+    assert list != list_ne1
+    assert list != list_ne2
+    with pytest.raises(TypeError):
+        list == list_not_list

@@ -17,7 +17,7 @@ def test_poi_brif_slots():
     raw = bytes(8)
     brif = POI_BRIF(raw)
     assert not hasattr(brif, '__dict__')
-    assert set(POI_BRIF.__slots__) == {'_ptr_name', 'is_alias', 'en_Lang', '_ptr_locality',
+    assert set(POI_BRIF.__slots__) == {'_ptr_name', 'alias', 'en_Lang', '_ptr_locality',
                                        '_ptr_more', 'name', 'locality'}
 
 
@@ -31,7 +31,7 @@ def test_poi_brif_init_with_bytes():
                  0x00, 0x00])  # _ptr_more = 0
     brif = POI_BRIF(raw)
     assert brif._ptr_name == 1
-    assert brif.is_alias is False
+    assert brif.alias == 0
     assert brif.en_Lang.value == 1
     assert brif._ptr_locality == 0
     assert brif._ptr_more == 0
@@ -49,7 +49,7 @@ def test_poi_brif_init_with_alias():
     """4.5 POI_BRIF с is_alias=1"""
     raw = bytes([0x00, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00])
     brif = POI_BRIF(raw)
-    assert brif.is_alias is True
+    assert brif.alias == 1
 
 
 def test_poi_brif_repr():

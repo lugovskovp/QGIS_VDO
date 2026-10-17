@@ -12,7 +12,7 @@ from QGIS_VDO.tests.fixtures import FIXTURES_DIR
 
 
 BLOCK_DICT = {
-    'bnl_06_0x8f4a06.bin': {
+    '0x06_bnl_0x8f4a06.bin': {
         'name': 'BNL34 0x800 type 0x06',
         'segsize': 0x800,
         'dbrev': 34,
@@ -31,7 +31,7 @@ BLOCK_DICT = {
             'coord': '52.556052N 6.736922E',
         },
     },
-    'ru30_06_0x9e8601.bin': {
+    '0x06_ru30_0x9e8601.bin': {
         'name': 'RUS30 0x800 type 0x06',
         'segsize': 0x800,
         'dbrev': 30,
@@ -49,7 +49,7 @@ BLOCK_DICT = {
             'coord': '60.380991N 29.486025E',
         },
     },
-    'ru34_06z_01ac7e01.bin': {
+    '0x06z_ru34_01ac7e01.bin': {
         'name': 'RUS34 0x200 type 0x06 lzw packed',
         'segsize': 0x200,
         'dbrev': 34,
@@ -128,7 +128,7 @@ def test_poi_item_unpack(block_06_fixture):
     assert item.is_custom == expected['is_custom']
     assert item.id == expected['id']
     assert item.brand == expected['brand']
-    assert item.bladdr is None
+    # assert item.bladdr is None
     assert repr(item.coord) == expected['coord']
     assert item.poi is None
 
@@ -148,7 +148,7 @@ def test_poi_item_coord_calculation(block_06_fixture):
     assert len(items) > 0
 
     assert second.coord is not None
-    assert second.brand is not None  # == metrix['s_brand']
+    assert second.brand == metrix['s_brand']
     
     # Вычисляем ожидаемую координату
     base_hlon = block.area.left_bottom._hlon

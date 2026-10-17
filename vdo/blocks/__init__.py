@@ -12,6 +12,8 @@ from QGIS_VDO.vdo.blocks.block_0x0B import block_0x0B   # noqa # ch_idx country
 from QGIS_VDO.vdo.blocks.block_0x0A import block_0x0A   # noqa # country   
 from QGIS_VDO.vdo.blocks.block_0x0D import block_0x0D   # noqa # ch_idx city   
 # from QGIS_VDO.vdo.blocks.block_0x0C import block_0x0C  # noqa # city    
+# from QGIS_VDO.vdo.blocks.block_0x0C import block_0x0F  # noqa # ch_idx streets   
+# from QGIS_VDO.vdo.blocks.block_0x0C import block_0x0E  # noqa # street
 
 # base_geotypes
 from QGIS_VDO.vdo.blocks.block_0x14 import block_0x14    # noqa #
@@ -26,4 +28,4 @@ from QGIS_VDO.vdo.blocks.block_0x1E import block_0x1E    # noqa #
 
 # POIs
 from QGIS_VDO.vdo.blocks.block_0x06 import block_0x06   # noqa #
-from QGIS_VDO.vdo.blocks.block_0x10 import block_0x10 # noqa #
+from QGIS_VDO.vdo.blocks.block_0x10 import block_0x10   # noqa #

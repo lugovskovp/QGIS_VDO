@@ -101,7 +101,7 @@ def test_poi_item_slots_are_effective(poi_item):
     expected_slots = (
         '_bladr10', '_ptr10', '_LOCAL_X', '_LOCAL_Y', '_cat',
         '_p_brand', 'is_custom', 'id',
-        'brand', 'bladdr', 'coord', 'poi',
+        'brand', 'coord', 'poi',
     )
     assert POI_ITEM.__slots__ == expected_slots
 
@@ -183,11 +183,6 @@ def test_poi_item_unpack_poi_id(poi_item):
 def test_poi_item_initial_brand_value(poi_item):
     """Проверяем начальное значение brand — пустая строка."""
     assert poi_item.brand == ''
-
-
-def test_poi_item_initial_bladdr_value(poi_item):
-    """Проверяем начальное значение bladdr — None."""
-    assert poi_item.bladdr is None
 
 
 def test_poi_item_initial_coord_value(poi_item):

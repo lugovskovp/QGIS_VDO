@@ -82,7 +82,7 @@ class block_0x06(block_base):
         size = POI_ITEM.size
         
         # Один zero-copy срез всего массива POI
-        poi_buffer = self._raw[base_ptr : base_ptr + cnt * size]
+        poi_buffer = memoryview(self._raw[base_ptr : base_ptr + cnt * size])
         
         # Кэширование базовых координат вне цикла
         base_hlon = self.area.left_bottom._hlon

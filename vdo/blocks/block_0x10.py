@@ -71,42 +71,39 @@ class block_0x10(block_base):
         # TODO: li_road after 0x00 block
 
         poi = POI(self._raw[offset:offset + POI_BRIF.size])
-        if poi._ptr_name:
-            poi.name = self.read_str(poi._ptr_name)
-        if poi._ptr_locality:
-            poi.locality = self.read_str(poi._ptr_locality)
-        if poi._ptr_more:
-            # если есть ссылка на детальную информацию
-            det: POI_DETAILS = POI_DETAILS(self._raw[poi._ptr_more: poi._ptr_more + POI_DETAILS.size])
 
-            if det._ps_brand:
-                poi.brand = self.read_str(det._ps_brand)
-            if det._ps_postcode:
-                poi.postcode = self.read_str(det._ps_postcode)
-            if det._ps_phone:
-                poi.phone = self.read_str(det._ps_phone)
-            if det._ps_house:
-                poi.houseno = self.read_str(det._ps_house)
-            if det._ps_country:
-                poi.country = self.read_str(det._ps_country)
-            if det._ps_region:
-                poi.region = self.read_str(det._ps_region)
-            if det._ps_city:
-                poi.city = self.read_str(det._ps_city)
-            if det._ps_street:
-                poi.street = self.read_str(det._ps_street)
-            poi.coord = det.coord
-            poi.id = det.id
-            poi.zero1 = det.zero1
+        poi.name = self.read_str(poi._ptr_name).upper()
+        poi.locality = self.read_str(poi._ptr_locality).upper()
 
-            #
-            if det.li_road:
-                # bladdr short short
-                poi.raw_road = BYTESTRUCT(self.read(det.li_road.ptr, det.li_road.cnt * 8))
-                if det.li_road.cnt > 1:
-                    raise NotImplementedError("if det.li_road.cnt > 1:")
-            return poi
-        return
+        if not poi._ptr_more:
+            raise NotImplementedError(f"poi._ptr_more: {poi._ptr_more}")
+        # если есть ссылка на детальную информацию
+        det: POI_DETAILS = POI_DETAILS(self._raw[poi._ptr_more: poi._ptr_more + POI_DETAILS.size])
+
+        poi.brand = self.read_str(det._ps_brand).upper()
+        poi.postcode = self.read_str(det._ps_postcode)
+        poi.phone = self.read_str(det._ps_phone)
+        poi.houseno = self.read_str(det._ps_house)
+        poi.country = self.read_str(det._ps_country).upper()
+        poi.region = self.read_str(det._ps_region).upper()
+        poi.city = self.read_str(det._ps_city).upper()
+        poi.street = self.read_str(det._ps_street).upper()
+        poi.coord = det.coord
+        poi.id = det.id
+        poi._zero1 = det.zero1
+
+        #
+        ptr = det.li_road.ptr
+        for i in range(det.li_road.cnt):
+            raw = BYTESTRUCT(memoryview(self._raw[ptr:ptr + 8]))
+            poi.raw_road.append(raw)
+
+        # if det.li_road.cnt > 0:
+        #     # bladdr short short
+        #     poi.raw_road = BYTESTRUCT(self.read(det.li_road.ptr, det.li_road.cnt * 8))
+        #     if det.li_road.cnt > 1:
+        #         raise NotImplementedError("if det.li_road.cnt > 1:")
+        return poi
     
     # def get_poi_far(self, offset: int) -> POI_BRIF:
     #     """
@@ -173,11 +170,9 @@ class block_0x10(block_base):
         """
         ptr = self.s0_li_brif.ptr
         for _ in range(self.s0_li_brif.cnt):
-            brif = POI_BRIF(self.read(ptr, POI_BRIF.size))
-            if brif._ptr_name:
-                brif.name = self.read_str(brif._ptr_name)
-            if brif._ptr_locality:
-                brif.locality = self.read_str(brif._ptr_locality)
+            brif = POI_BRIF(self._raw[ptr: ptr + POI_BRIF.size])
+            brif.name = self.read_str(brif._ptr_name)
+            brif.locality = self.read_str(brif._ptr_locality)
             ptr += POI_BRIF.size
             yield brif
 

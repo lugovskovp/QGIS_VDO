@@ -3,7 +3,7 @@ import pytest   # type: ignore
 # import struct
 
 from QGIS_VDO.vdo.blocks import block_0x10
-from QGIS_VDO.vdo.blocks.block_0x10 import OFFSET_S0_BRIFS
+# from QGIS_VDO.vdo.blocks.block_0x10 import OFFSET_S0_BRIFS
 from QGIS_VDO.vdo.datatypes import VDO_FILE, LIST
 from QGIS_VDO.vdo.geotypes import POI, POI_BRIF     # , POI_DETAILS
 from QGIS_VDO.vdo.enums import en_CARINET_LANGUAGE
@@ -20,6 +20,14 @@ BLOCK_DICT = {
         'dbrev': 34,
         's1_li_more': LIST(bytes.fromhex('060000B9')),
         's4_li_far': LIST(bytes.fromhex('22E800B9')),
+        'poi94': {
+            'locality': '', 'brand': 'VOLKSWAGEN',
+            'id': 0x3F16AEEF, 'coord': '52.157045N 6.749363E',
+            'name': 'HUISKES KOKKELER AUTOMOBIELBEDR. VOLKSWAGEN', 'brand': 'VOLKSWAGEN',
+            'country': 'NEDERLAND', 'region': 'OVERIJSSEL',
+            'city': 'HAAKSBERGEN', 'street': 'ENSCHEDESESTRAAT',
+            'houseno': '47', 'postcode': '7481', 'phone': '+31535721345', '_zero1': 0x0
+        }
     },
     '0x10_ru30_0x6BC70C.bin': {
         'name': 'RUS30 0x800 type 0x10',
@@ -27,6 +35,14 @@ BLOCK_DICT = {
         'dbrev': 30,
         's1_li_more': LIST(bytes.fromhex('0BA8016F')),
         's4_li_far': LIST(bytes.fromhex('4500016F')),
+        'poi94': {
+            'locality': '', 'brand': '',
+            'id': 0x0, 'coord': '59.054912N 28.727318E',
+            'name': 'OVSISCHE', 'brand': '',
+            'country': 'ROSSIYA', 'region': 'LENINGRAD',
+            'city': 'OVSISCHE', 'street': '',
+            'houseno': '', 'postcode': '', 'phone': '', '_zero1': 0x1,
+        }
     },
     '0x10z_ru34_df002e.bin': {
         'name': 'RUS34 0x200 type 0x10 lzw packed',
@@ -34,6 +50,14 @@ BLOCK_DICT = {
         'dbrev': 34,
         's1_li_more': LIST(bytes.fromhex('21A001BC')),
         's4_li_far': LIST(bytes.fromhex('670001BD')),
+        'poi94': {
+            'locality': 'TSENTRAL\'NIY RAYON', 'brand': '',
+            'id': 0x21200FB9, 'coord': '59.945880N 30.329462E',
+            'name': 'PAMYATNIK ALEKSANDRU SUVOROVU', 'brand': '',
+            'country': 'ROSSIYA', 'region': 'SANKT PETERBURG',
+            'city': 'SANKT PETERBURG', 'street': 'SUVOROVSKAYA PLOSHCHAD\'',
+            'houseno': '', 'postcode': '191186', 'phone': '', '_zero1': 0x1,
+        }
     },
 }
 
@@ -168,7 +192,7 @@ def test_get_poi_returns_poi_instance(block_10_fixture):
     """3.1 get_poi возвращает POI или None"""
     block, _ = block_10_fixture
     assert block.s0_li_brif.cnt > 0
-    first_brif_offset = OFFSET_S0_BRIFS + POI_BRIF.size
+    first_brif_offset = PREAMBULA_BLOCK_0x10 + POI_BRIF.size
     poi = block.get_poi(first_brif_offset)
     assert poi is None or isinstance(poi, POI)
 
@@ -177,7 +201,7 @@ def test_get_poi_has_name(block_10_fixture):
     """3.2 POI имеет name"""
     block, _ = block_10_fixture
     assert block.s0_li_brif.cnt > 0
-    first_brif_offset = OFFSET_S0_BRIFS + POI_BRIF.size
+    first_brif_offset = PREAMBULA_BLOCK_0x10 + POI_BRIF.size
     poi = block.get_poi(first_brif_offset)
     if poi is not None:
         assert hasattr(poi, 'name')
@@ -187,7 +211,7 @@ def test_get_poi_has_brand(block_10_fixture):
     """3.3 POI имеет brand"""
     block, _ = block_10_fixture
     assert block.s0_li_brif.cnt > 0
-    first_brif_offset = OFFSET_S0_BRIFS + POI_BRIF.size
+    first_brif_offset = PREAMBULA_BLOCK_0x10 + POI_BRIF.size
     poi = block.get_poi(first_brif_offset)
     if poi is not None:
         assert hasattr(poi, 'brand')
@@ -197,7 +221,7 @@ def test_get_poi_has_coord(block_10_fixture):
     """3.4 POI имеет coord"""
     block, _ = block_10_fixture
     assert block.s0_li_brif.cnt > 0
-    first_brif_offset = OFFSET_S0_BRIFS + POI_BRIF.size
+    first_brif_offset = PREAMBULA_BLOCK_0x10 + POI_BRIF.size
     poi = block.get_poi(first_brif_offset)
     if poi is not None:
         assert hasattr(poi, 'coord')
@@ -232,15 +256,64 @@ def test_poi_initial_values():
     assert poi.street == ''
     assert poi.id == 0
     assert poi.coord is None
-    assert poi.raw_road is None
+    assert type(poi.raw_road) is list
+    assert poi._zero1 == 0
 
 
 # ======================================================================
 # 7. Интеграционные тесты
 # ======================================================================
+def test_get_poi_94_has_metric(block_10_fixture):
+    """POI #94 имеет заполненный brand"""
+    block, metric = block_10_fixture
+    block: block_0x10
+    expected_val = metric['poi94']
+
+    assert block.s0_li_brif.cnt > 94
+
+    poi_offset = PREAMBULA_BLOCK_0x10 + POI_BRIF.size * 94
+    poi: POI = block.get_poi(poi_offset)
+
+    # str = f"'id': 0x{poi.id:X}, 'coord': '{poi.coord}', 'name': '{poi.name}', 'brand': '{poi.brand}' "
+    # str = f"'country': '{poi.country}', 'region': '{poi.region}', 'city': '{poi.city}', 'street': '{poi.street}', "
+    # str = f"'houseno': '{poi.houseno}', 'postcode': '{poi.postcode}', 'phone': '{poi.phone}', '_zero1': 0x{poi._zero1:X}" # noqa
+    # str = f"'locality': '{poi.locality}', 'brand': '{poi.brand}'"
+    # assert str == ''
+
+    assert poi.id == expected_val['id']
+    assert repr(poi.coord) == expected_val['coord']
+    assert poi._zero1 == expected_val['_zero1']
+    assert poi.locality == expected_val['locality']
+    assert poi.name == expected_val['name']
+    assert poi.brand == expected_val['brand']
+    assert poi.postcode == expected_val['postcode']
+    assert poi.country == expected_val['country']
+    assert poi.region == expected_val['region']
+    assert poi.city == expected_val['city']
+    assert poi.street == expected_val['street']
+    assert poi.houseno == expected_val['houseno']
+    assert poi.phone == expected_val['phone']
+    assert poi.region == expected_val['region']
+
+
+def test_get_poi_third_has_metric(block_10_fixture):
+    """У всех poi есть ссылка на дорожную сеть"""
+    block, _ = block_10_fixture
+    block: block_0x10
+
+    assert block.s0_li_brif.cnt > 0
+
+    ptr = block.s0_li_brif.ptr
+    for _ in range(block.s0_li_brif.cnt):
+        poi: POI = block.get_poi(ptr)
+        ptr += POI_BRIF.size
+        assert poi.raw_road is not None
+
+
 # raise NotImplementedError(f"Byte alias: {alias} is neither zero, not 1. \
 # E   NotImplementedError: Byte alias: 2 is neither zero, not 1.  (41872, 2, 19, 0, 17488)
 # (A390, 2, 13, 0, 4450)
+
 
 def test_block_0x10_integration_get_brifs_and_poi(block_10_fixture):
     """7.1 get_all_brifs + get_poi — полный цикл"""

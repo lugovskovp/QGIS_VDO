@@ -12,10 +12,8 @@ a) 0x07 -> 0x09 -> 0x08 -> 0x06 -> 0x10
 b) 0x0b -> 0x0a -> 0x10 poi countris
 c) 0x0d -> 0x0c -> 0x10 poi cities
 d) 0x0f -> 0x0e -> 0x10 poi streets
-???e) 0x0 -> 0x0 -> 0x10 ???
+???e) 0x0? -> 0x11 -> 0x10 ??? houses
 """
-
-import struct
 
 from typing import TYPE_CHECKING, Iterator
 # from typing import TYPE_CHECKING, Union, Any, Optional, Iterator
@@ -29,11 +27,12 @@ else:
 
 
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.enums import en_CARINET_LANGUAGE
-from QGIS_VDO.vdo.geotypes import COORD
+# from QGIS_VDO.vdo.enums import en_CARINET_LANGUAGE
+from QGIS_VDO.vdo.geotypes import POI_BRIF, POI, POI_DETAILS     # COORD,
 from QGIS_VDO.vdo.datatypes import (
     BYTESTRUCT,
     BLADDR,
+    # LIST,
 )
 
 
@@ -46,106 +45,13 @@ OFFSET_S9_NEXT0x10 = 0x2C       # next 0x10 in file
 # 0x30... - BRIFs
 
 
-struct_POI_BRIF = struct.Struct(">HBBHH")
-struct_POI_DETAILS = struct.Struct(">LHHHHHHHHLHHL")
-
-
-class POI_BRIF(BYTESTRUCT):
-    """
-    (c) fdemusso
-    0x00   2   NAME_PTR
-    0x02   2   TYPE          (2 in 94% of records on DB-REL 22, >99% on DB-REL 34)
-    0x04   2   LOCALITY_PTR  or 0; shown after the post-town initial ("S.-LOCALITY")
-    0x06   2   DETAIL_PTR    byte offset of an S1 record
-    ppl:
-    0x02 - is 2 bytes: is_alias flag (0/1) and en_CARINET_LANGUAGE.value
-    """
-    size: int = 8
-
-    def __init__(self, buffer: ReadableBuffer):
-        super().__init__(buffer)
-        (self._ptr_name, alias, en_Lang,
-         self._ptr_city, self._ptr_more) = struct_POI_BRIF.unpack_from(self._raw, 0)  # (">HBBHH
-        self.en_Lang = en_CARINET_LANGUAGE(en_Lang)
-        if not alias:
-            self.is_alias = False
-        elif alias == 1:
-            self.is_alias = True
-        else:
-            raise NotImplementedError(f"Byte alias: {alias} is not zero, not 1")
-        self.name = ''
-        self.city = ''  # Read city.." if self._ptr_city else ""
-        self.details = None
-        
-    def __repr__(self):
-        a = ' (alias)' if self.is_alias else ''
-        s = f" [{self.city}]" if self._ptr_city else ''
-        b = f"{self.name}{a}{s}: {self.en_Lang.name}"
-        return b
-
-    
-# ===============================================
-
-
-class POI_DETAILS(BYTESTRUCT):
-    """
-    (c) fdemusso
-    S1 — `n1` detail records, 40 bytes (`T[0x2f]`; the other candidate, `T[0x51]`, is 28
-    on DB-REL 22):
-
-    ```LHHHHHLHLHHL
-    off  size  field
-    0x00   4   X             absolute, same frame as §7
-    0x04   4   Y
-    0x08   2   LINK_PTR      byte offset of an S4 road link (the record's own in 77,711 / 92,774)
-    0x0A   2   1             (92,305 / 92,774 on CD-ID 2952)
-    0x0C   2   BRAND_PTR     or 0
-    0x0E   2   STREET_PTR
-    0x10   2   CITY_PTR
-    0x12   2   COUNTY_PTR
-    0x14   2   COUNTRY_PTR   (`england`, `scotland`, `wales`, `france`, …)
-    0x16   4   0             (92,308 / 92,774)
-    0x1A   2   HOUSE_NO_PTR
-    0x1C   4   POI_ID        u16 prefix (0x0113, 0x0114, 0x0115, … on CD-ID 2952) + u16 serial;
-                            the same in every copy of the POI and in its 0x06 records
-    0x20   2   PHONE_PTR
-    0x22   2   POSTCODE_PTR  (outward code + first inward digit, e.g. "sw7 2"; 0 on DB-REL 22)
-    0x24   4   0             (all)
-    """
-    size: int = 0x28
-
-    def __init__(self, buffer: ReadableBuffer):
-        super().__init__(buffer)
-        self.coord = COORD(self.read(0, COORD.size))
-        (self.li_road, self._ps_brand, self._ps_street, self._ps_city,
-            self._ps_region, self._ps_country, self.zero1, zero2, self._ps_house,
-            self.id, self._ps_phone, self._ps_postcode,
-            zero3) = struct_POI_DETAILS.unpack_from(self._raw, 8)  # ">LHHHHHHHHLHHL"
-
-        if (self.zero1 and self.zero1 != 1) or zero2 or zero3:
-            raise NotImplementedError(f"z1: {self.zero1}, z2: {zero2}, z3: {zero3}")
-        # zero=1 = aeroport twente, closed from 2008
-        #
-        #
-
-        self.brand = ''
-        self.postcode = ''
-        self.phone = ''
-        self.house = ''
-        self.country = ''
-        self.region = ''
-        self.city = ''
-        self.street = ''
-
-        
 # ===============================================
 
 
 class block_0x10(block_base):
     """
-
+    Справочник POI
     """
-
     # Жестко фиксируем слоты.
     __slots__ = ("s0_li_brif", "s1_li_more", "s4_li_far", "prev", "next")
 
@@ -158,61 +64,124 @@ class block_0x10(block_base):
         self.prev = self.read_bladdr(OFFSET_S8_PREV0x10)
         self.next = self.read_bladdr(OFFSET_S9_NEXT0x10)
 
-    #
-    def get_poi_old(self, offset: int) -> POI_BRIF:
+    def get_poi(self, offset: int) -> POI:
         """
+        Full POI info
         """
-        poi = POI_BRIF(self.read(offset, POI_BRIF.size))
+        # TODO: li_road after 0x00 block
+
+        poi = POI(self._raw[offset:offset + POI_BRIF.size])
         if poi._ptr_name:
             poi.name = self.read_str(poi._ptr_name)
-        if poi._ptr_city:
-            poi.city = self.read_str(poi._ptr_city)
-        det = POI_DETAILS(self.read(poi._ptr_more, POI_DETAILS.size))
-        if det._ps_brand:
-            det.brand = self.read_str(det._ps_brand)
-        if det._ps_postcode:
-            det.postcode = self.read_str(det._ps_postcode)
-        if det._ps_phone:
-            det.phone = self.read_str(det._ps_phone)
-        if det._ps_house:
-            det.house = self.read_str(det._ps_house)
-        if det._ps_country:
-            det.country = self.read_str(det._ps_country)
-        if det._ps_region:
-            det.region = self.read_str(det._ps_region)
-        if det._ps_city:
-            det.city = self.read_str(det._ps_city)
-        if det._ps_street:
-            det.street = self.read_str(det._ps_street)
+        if poi._ptr_locality:
+            poi.locality = self.read_str(poi._ptr_locality)
+        if poi._ptr_more:
+            # если есть ссылка на детальную информацию
+            det: POI_DETAILS = POI_DETAILS(self._raw[poi._ptr_more: poi._ptr_more + POI_DETAILS.size])
 
-        poi.details = det
-        return poi
+            if det._ps_brand:
+                poi.brand = self.read_str(det._ps_brand)
+            if det._ps_postcode:
+                poi.postcode = self.read_str(det._ps_postcode)
+            if det._ps_phone:
+                poi.phone = self.read_str(det._ps_phone)
+            if det._ps_house:
+                poi.houseno = self.read_str(det._ps_house)
+            if det._ps_country:
+                poi.country = self.read_str(det._ps_country)
+            if det._ps_region:
+                poi.region = self.read_str(det._ps_region)
+            if det._ps_city:
+                poi.city = self.read_str(det._ps_city)
+            if det._ps_street:
+                poi.street = self.read_str(det._ps_street)
+            poi.coord = det.coord
+            poi.id = det.id
+            poi.zero1 = det.zero1
+
+            #
+            if det.li_road:
+                # bladdr short short
+                poi.raw_road = BYTESTRUCT(self.read(det.li_road.ptr, det.li_road.cnt * 8))
+                if det.li_road.cnt > 1:
+                    raise NotImplementedError("if det.li_road.cnt > 1:")
+            return poi
+        return
+    
+    # def get_poi_far(self, offset: int) -> POI_BRIF:
+    #     """
+    #     Возвращает один экземпляр класса POI_BRIF
+    #     Args:
+    #         offset: int - inblock offset
+    #         is_with_details: bool - POI_BRIF или полный объект, с деталями
+    #     Returns:
+    #         poi: POI_BRIF ()
+    #     """
+    #     poi = read_far_poi(self.vdo, self.head.bladdr.value, offset)
+    #     return poi
+    
+    #     poi = POI_BRIF(self.read(offset, POI_BRIF.size))
+    #     if poi._ptr_name:
+    #         poi.name = self.read_str(poi._ptr_name)
+    #     if poi._ptr_city:
+    #         poi.city = self.read_str(poi._ptr_city)
+
+    #     # if is_with_roite
+
+    #     return poi
+
+    # -------------------------------------------------------
+    #
+    # def get_poi_old(self, offset: int) -> POI_BRIF:
+    #     """
+    #     """
+    #     poi = POI_BRIF(self.read(offset, POI_BRIF.size))
+    #     if poi._ptr_name:
+    #         poi.name = self.read_str(poi._ptr_name)
+    #     if poi._ptr_city:
+    #         poi.city = self.read_str(poi._ptr_city)
+
+    #     det = POI_DETAILS(self.read(poi._ptr_more, POI_DETAILS.size))
+    #     if det._ps_brand:
+    #         det.brand = self.read_str(det._ps_brand)
+    #     if det._ps_postcode:
+    #         det.postcode = self.read_str(det._ps_postcode)
+    #     if det._ps_phone:
+    #         det.phone = self.read_str(det._ps_phone)
+    #     if det._ps_house:
+    #         det.house = self.read_str(det._ps_house)
+    #     if det._ps_country:
+    #         det.country = self.read_str(det._ps_country)
+    #     if det._ps_region:
+    #         det.region = self.read_str(det._ps_region)
+    #     if det._ps_city:
+    #         det.city = self.read_str(det._ps_city)
+    #     if det._ps_street:
+    #         det.street = self.read_str(det._ps_street)
+
+    #     poi.details = det
+    #     return poi
 
     #
     def get_all_brifs(self) -> Iterator[POI_BRIF]:
         """
+        0x00   2   NAME_PTR
+        0x02   1    is_alias flag (0/1)
+        0x03   1    en_CARINET_LANGUAGE.value
+        0x04   2   LOCALITY_PTR  or 0; shown after the post-town initial ("S.-LOCALITY")
+        0x06   2   DETAIL_PTR    byte offset of an S1 record
         """
         ptr = self.s0_li_brif.ptr
         for _ in range(self.s0_li_brif.cnt):
             brif = POI_BRIF(self.read(ptr, POI_BRIF.size))
             if brif._ptr_name:
                 brif.name = self.read_str(brif._ptr_name)
-            if brif._ptr_city:
-                brif.city = self.read_str(brif._ptr_city)
+            if brif._ptr_locality:
+                brif.locality = self.read_str(brif._ptr_locality)
             ptr += POI_BRIF.size
             yield brif
 
-    def get_poi(self, offset: int, only_brif=True) -> POI_BRIF:
-        """
-        Возвращает экземпляр класса POI_BRIF
-        Args:
-            offset: int - inblock offset
-            only_brif: bool - POI_BRIF или полный объект, с деталями
-        Returns:
-            poi: POI_BRIF
-        """
 
-        
 # ------------------------------------------------------
 
 if __name__ == '__main__':

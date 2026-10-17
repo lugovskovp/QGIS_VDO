@@ -94,15 +94,9 @@ class block_0x10(block_base):
 
         #
         ptr = det.li_road.ptr
-        for i in range(det.li_road.cnt):
-            raw = BYTESTRUCT(memoryview(self._raw[ptr:ptr + 8]))
-            poi.raw_road.append(raw)
-
-        # if det.li_road.cnt > 0:
-        #     # bladdr short short
-        #     poi.raw_road = BYTESTRUCT(self.read(det.li_road.ptr, det.li_road.cnt * 8))
-        #     if det.li_road.cnt > 1:
-        #         raise NotImplementedError("if det.li_road.cnt > 1:")
+        for _ in range(det.li_road.cnt):
+            poi.raw_road.append(BYTESTRUCT(self._raw[ptr:ptr + 8]))
+            ptr += 8
         return poi
     
     # def get_poi_far(self, offset: int) -> POI_BRIF:

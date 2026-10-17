@@ -2,6 +2,60 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.28 (2026-10-17)
+
+### Code Style
+
+- Rename struct_
+  ([`b994bd3`](https://github.com/lugovskovp/QGIS_VDO/commit/b994bd3b4e7e62429b9760cdaec026118cbe814a))
+
+### Features
+
+- Add list.__eq__, tests covered
+  ([`7ed4feb`](https://github.com/lugovskovp/QGIS_VDO/commit/7ed4feb58e4e1b61583ec9e196eeab79f3092bf8))
+
+- Add POI_ITEM, POI_BRIF, POI_DETAILS, POI
+  ([`0abe548`](https://github.com/lugovskovp/QGIS_VDO/commit/0abe548617cc61a04878443b5fec44b30b3677ed))
+
+- Block 0x10 - poi list
+  ([`ecbc85e`](https://github.com/lugovskovp/QGIS_VDO/commit/ecbc85e17989cb26d6ce57c109a42750f06d5fb9))
+
+- Сохранять и POI._zero1
+  ([`01b25cd`](https://github.com/lugovskovp/QGIS_VDO/commit/01b25cd13a255521e80041bcc7da0494493c9667))
+
+- **block)0x06**: Poi, собранные по географии
+  ([`9d829f8`](https://github.com/lugovskovp/QGIS_VDO/commit/9d829f8dc51547288f4ebd5f0b081145457fa413))
+
+### Performance Improvements
+
+- Test_block_0x10 — оптимизация тестового покрытия POI
+  ([`36b4013`](https://github.com/lugovskovp/QGIS_VDO/commit/36b4013350886fcdd05756ecd3e659c85daeaf44))
+
+- Убрал избыточную memoryview и закомментированный код
+  ([`bcaa7c2`](https://github.com/lugovskovp/QGIS_VDO/commit/bcaa7c209ad907729c78db3b6cdd1cc2ef2a39c8))
+
+### Refactoring
+
+- Get_poi - полная информация, быстро
+  ([`9d5c8ce`](https://github.com/lugovskovp/QGIS_VDO/commit/9d5c8ce8ee0fddb990428f2a6e4765156c4fe57a))
+
+- Gigacode review
+  ([`59c3fa3`](https://github.com/lugovskovp/QGIS_VDO/commit/59c3fa301f2f5d7e7dc5e11f554bd83694fdce67))
+
+- Slots, get_all_items
+  ([`ec94e99`](https://github.com/lugovskovp/QGIS_VDO/commit/ec94e99b4c52a0488d98c4957eca57cdc375c144))
+
+- Быстродействие, tested 100%
+  ([`0c62d27`](https://github.com/lugovskovp/QGIS_VDO/commit/0c62d2782d4447a69c4c5e62b9f6eaecc2baaf5e))
+
+- Переписал block_0x10 — get_poi всегда загружает детали, get_all_brifs с memoryview
+  ([`8f66a5d`](https://github.com/lugovskovp/QGIS_VDO/commit/8f66a5d0ce9983cd3a7c5e8f5f2f75bc0a355f30))
+
+- Экономия на итерацию: 2 аллокации (pack + memoryview) × 466K POI = ~1M лишних объектов не
+  создаётся.
+  ([`1de3212`](https://github.com/lugovskovp/QGIS_VDO/commit/1de32128a94bd6303931cf88647f4323dd694ec0))
+
+
 ## v1.0.0-dev.27 (2026-10-14)
 
 ### Chores

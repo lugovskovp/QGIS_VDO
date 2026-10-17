@@ -1,14 +1,7 @@
 """
-
 # noqa:
-
-from scale1?
-
-PREAMBULA_BLOCK = 0x20 - размер заголовка
-BLHEAD 
-LIST S0_
-LIST S1_const_zero?
-MAP area
+POI индекс геопокрытия
+from scale1
 
 """
 
@@ -22,11 +15,11 @@ else:
     # Запасной вариант для рантайма, чтобы не было NameError
     ReadableBuffer = bytes
 
+from itertools import groupby
 
 from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BLADDR   # BYTESTRUCT,
-from QGIS_VDO.vdo.geotypes import MAP_AREA, COORD, POI_ITEM, read_far_poi
-# from QGIS_VDO.vdo.enums import en_POI_CAT
+from QGIS_VDO.vdo.geotypes import MAP_AREA, COORD, POI_ITEM
 
 
 OFFSET_S0_ITEMS = 0x08      # LIST items
@@ -39,6 +32,11 @@ OFFSET_MAP_AREA = 0x10
 class block_0x06(block_base):
     """
     POI spatial index block.
+    PREAMBULA_BLOCK = 0x20 - размер заголовка:
+    BLHEAD
+    LIST S0_
+    LIST S1_const_zero?
+    MAP_AREA area
     """
     __slots__ = ("s0_li_items", "area")
 
@@ -51,8 +49,28 @@ class block_0x06(block_base):
         if zero:
             raise NotImplementedError(f"Not zero: {zero}")
 
+    def get_all_items_extended(self) -> Iterator[POI_ITEM]:
+        """
+        Итератор полных значений - с получением информации из 0x10 блоков
+        """
+        def get_bladdr10(poi: POI_ITEM):
+            """Функция для сортировки"""
+            return poi._bladr10
+        
+        # получаем список всех итемов, отсортированный по значению poi._bladr10
+        sorted_poi = sorted(self.get_all_items(), key=get_bladdr10)
+        # группируем, чтобы не перечитывать block_10
+        for bladr10, group in groupby(sorted_poi, key=get_bladdr10):
+            # bla_0x10 = self.vdo.get_bladdr(bladr10)
+            block_0x10 = self.vdo.get_block(self.vdo.get_bladdr(bladr10))
+            for poi in group:
+                poi.poi = block_0x10.get_poi(poi._ptr10)
+                yield poi
+            pass
+        pass
+
     #
-    def get_all_items(self, is_load_extended=False) -> Iterator[POI_ITEM]:
+    def get_all_items(self) -> Iterator[POI_ITEM]:
         """
         Оптимизированная версия:
         - Предварительный срез буфера POI (zero-copy memoryview)
@@ -83,11 +101,6 @@ class block_0x06(block_base):
                 base_hlat + (item._LOCAL_Y << 8)
             )
             
-            if is_load_extended:
-                if not item._bladr10:   # архитектурно очень вряд ли. Но вдруг есть POI 06 без 10
-                    raise NotImplementedError(f"POI 06._bladr10 без 10: {item}")
-                item.poi = read_far_poi(self.vdo, item._bladr10, item._ptr10)
-            
             yield item
             offset += size
 
@@ -110,15 +123,12 @@ if __name__ == '__main__':
         # print(f"{p.brand}: {p.cat}")
         pass
 
-    items = [item for item in blo.get_all_items(is_load_extended=True)]
+    # items = [item for item in blo.get_all_items(is_load_extended=True)]
     items2 = list(blo.get_all_items())
-    # arr_more = []
-    # for it in items:
-    #     bl_details = blo.vdo.get_block(it.bladdr)
-    #     poi = bl_details.get_poi(it._ptr10)
-    #     it.de
-    #     arr_more.append[det]    52.556052N 6.736922E   52.568355N 6.737567E = Gas_station: G
+    items3 = list(blo.get_all_items_extended())
+
     pass
+
 
 """
 # noqa: (C) 

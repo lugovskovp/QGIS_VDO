@@ -1,9 +1,8 @@
 import pytest   # type: ignore
-# import struct
+from unittest.mock import MagicMock  # type: ignore
 
 from QGIS_VDO.vdo.blocks import block_0x06
 from QGIS_VDO.vdo.blocks.block_0x06 import OFFSET_S0_ITEMS  # , POI_ITEM
-# from QGIS_VDO.vdo.blocks.block_0x10 import POI_BRIF, POI_DETAILS
 from QGIS_VDO.vdo.datatypes import VDO_FILE
 from QGIS_VDO.vdo.geotypes import COORD, MAP_AREA
 from QGIS_VDO.vdo.enums import en_POI_CAT
@@ -88,13 +87,6 @@ def block_06_fixture(request):
     return (block, metric)
 
 
-# @pytest.fixture(scope="function")
-# def vdo_bnl_fixture():
-#     """Полный VDO объект для BNL (для extended-тестов)."""
-#     from QGIS_VDO.vdo.fixtures_vdo import vdo34bnl as vdo
-#     return vdo
-
-
 # № ----------------------------------------------------------------------------
 
 def test_init_block(block_06_fixture):
@@ -104,6 +96,7 @@ def test_init_block(block_06_fixture):
 
     assert block.dbrev == metrics['dbrev']
     assert block.vdo.segsize == metrics['segsize']
+
 
 # ======================================================================
 # 1. POI_ITEM — парсинг и структура
@@ -142,7 +135,7 @@ def test_poi_item_coord_calculation(block_06_fixture):
     block, metrix = block_06_fixture
 
     # items = list(block.get_all_items())
-    items = [item for item in block.get_all_items(is_load_extended=False)]
+    items = [item for item in block.get_all_items()]
     second = items[1]
 
     assert len(items) > 0
@@ -233,29 +226,35 @@ def test_block_06_s0_list(block_06_fixture):
 # 4. block_0x06 — get_all_items is_load_extended= True
 # ======================================================================
 
-def test_block_06_s0_list_load_extended(block_06_fixture, monkeypatch):
-    """4.1 read_far_poi вызывается при is_load_extended=True"""
+def test_block_06_s0_list_load_extended(block_06_fixture):
+    """4.1 get_all_items_extended вызывает get_poi для каждого item"""
     block, _ = block_06_fixture
 
-    from unittest.mock import patch, MagicMock
-    from QGIS_VDO.vdo.geotypes import POI
+    mock_poi = MagicMock()
+    mock_block_0x10 = MagicMock()
+    mock_block_0x10.get_poi.return_value = mock_poi
 
-    mock_poi = MagicMock(spec=POI)
-    mock_poi.coord = None
-    mock_poi.id = 0
+    # Создаём mock vdo с замоканным get_block
+    mock_vdo = MagicMock()
+    mock_vdo.get_block.return_value = mock_block_0x10
 
-    with patch('QGIS_VDO.vdo.blocks.block_0x06.read_far_poi', return_value=mock_poi) as mock_read_far:
-        items = list(block.get_all_items(is_load_extended=True))
+    # Подменяем block.vdo (vdo в __slots__, можно перезаписать)
+    orig_vdo = block.vdo
+    block.vdo = mock_vdo
 
-        # read_far_poi должен быть вызван для каждого item
-        assert mock_read_far.call_count == len(items)
+    try:
+        items = list(block.get_all_items_extended())
+
+        # get_poi должен быть вызван для каждого item
+        assert mock_block_0x10.get_poi.call_count == len(items)
         assert len(items) > 0
 
-        # Проверим первый вызов: (vdo, bladr10, ptr10)
-        first_call = mock_read_far.call_args_list[0]
-        assert first_call[0][0] is block.vdo  # первый аргумент — vdo
-        assert first_call[0][1] == items[0]._bladr10  # второй — bladr10
-        assert first_call[0][2] == items[0]._ptr10  # третий — ptr10
+        # Проверим первый вызов get_poi — аргумент это ptr10
+        first_call = mock_block_0x10.get_poi.call_args_list[0]
+        assert first_call[0][0] == items[0]._ptr10
 
         # У item должен появиться атрибут poi
         assert items[0].poi is mock_poi
+    finally:
+        # Восстанавливаем оригинальный vdo
+        block.vdo = orig_vdo

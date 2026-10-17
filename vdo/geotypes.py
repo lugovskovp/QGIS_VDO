@@ -694,7 +694,7 @@ class POI(POI_BRIF):
     """
     block 0x10 - extended
     """
-    __slots__ = ('brand', 'id', 'raw_road', 'coord',
+    __slots__ = ('brand', 'id', 'raw_road', 'coord', '_zero1',
                  'postcode', 'phone', 'houseno', 'country', 'region', 'city', 'street')
 
     def __init__(self, mem_buff):
@@ -709,7 +709,8 @@ class POI(POI_BRIF):
         self.street = ''
         self.id = 0
         self.coord = None
-        self.raw_road = None
+        self.raw_road = []
+        self._zero1 = 0
 
 
 # -------------------------------------------------------------------------

@@ -90,7 +90,7 @@
        <enum>QTabWidget::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>2</number>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -998,6 +998,24 @@
         </item>
         <item>
          <widget class="QScrollArea" name="scrollAreaScales">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>220</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>220</height>
+           </size>
+          </property>
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
@@ -1007,11 +1025,11 @@
              <x>0</x>
              <y>0</y>
              <width>487</width>
-             <height>205</height>
+             <height>218</height>
             </rect>
            </property>
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -1142,6 +1160,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QSlider" name="horizontalSlider">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="AnimatedGroupBox" name="gb_CategoriesPOI">
           <property name="title">
            <string>POI Categories</string>
@@ -1158,7 +1183,7 @@
                 <x>0</x>
                 <y>0</y>
                 <width>463</width>
-                <height>214</height>
+                <height>379</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_13">
@@ -1188,13 +1213,19 @@
         </item>
         <item>
          <spacer name="verticalSpacer_2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="orientation">
            <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>28</width>
-            <height>177</height>
+            <width>20</width>
+            <height>0</height>
            </size>
           </property>
          </spacer>

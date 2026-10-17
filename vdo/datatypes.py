@@ -813,7 +813,12 @@ class LIST(BYTESTRUCT):
     def __repr__(self):
         ''' View while debug value'''
         return f"{self.ptr:04X}:{self.cnt:04X} cnt:{self.cnt}"
-        
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, LIST):
+            raise TypeError(f"Type right operand must be LIST, not {type(value)}")
+        return (self.ptr == value.ptr) and (self.cnt == value.cnt)
+    
     # @property
     # def ptr(self) -> int:
     #     ''' Near ptr to begin list'''

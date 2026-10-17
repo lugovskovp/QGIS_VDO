@@ -1,6 +1,6 @@
 import pytest     # type: ignore # noqa
 
-from QGIS_VDO.vdo.geotypes import VERTEX, VERTEX_struct
+from QGIS_VDO.vdo.geotypes import VERTEX, struct_VERTEX
 # from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 # from QGIS_VDO.vdo.enums import en_GEO_CATEGORY
 
@@ -13,7 +13,7 @@ from QGIS_VDO.vdo.geotypes import VERTEX, VERTEX_struct
 def test_vertex_successful_unpack():
     """Проверяем стандартную распаковку валидных координат X и Y."""
     # 0x1A06 = 6662, 0x0082 = 130
-    buf = bytearray(VERTEX_struct.pack(0x1A06, 0x0082))
+    buf = bytearray(struct_VERTEX.pack(0x1A06, 0x0082))
     
     vtx = VERTEX(buf)
     
@@ -40,7 +40,7 @@ def test_vertex_short_buffer_handling():
 
 def test_vertex_slots_optimization():
     """Проверяем отсутствие динамического словаря __dict__ у объекта."""
-    buf = bytearray(VERTEX_struct.pack(10, 20))
+    buf = bytearray(struct_VERTEX.pack(10, 20))
     vtx = VERTEX(buf)
     
     assert not hasattr(vtx, '__dict__')

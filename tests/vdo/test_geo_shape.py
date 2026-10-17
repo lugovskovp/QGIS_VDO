@@ -1,12 +1,12 @@
 import pytest     # type: ignore # noqa
 
-from QGIS_VDO.vdo.geotypes import GEO_SHAPE, GEO_SHAPE_struct
+from QGIS_VDO.vdo.geotypes import GEO_SHAPE, struct_GEO_SHAPE
 # from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY
 
 
 # Общий размер структуры для unpack одного элемента: 2+2+4+8+2+2+2+2+16 = 40 байт (0x28, что равно self.size * 2)
-# GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
+# struct_GEO_SHAPE = struct.Struct(">HHL8x2xHxxH16x")
 
 
 # --- ЗАГЛУШКИ ДЛЯ СРЕДЫ ТЕСТИРОВАНИЯ ---
@@ -17,8 +17,8 @@ def geo_shape_buffer_factory():
         # Первые 20 байт (текущий объект) + вторые 20 байт (для извлечения следующего ptr_vrtx)
         # Структура требует минимум 40 байт для успешного unpack_from со сдвигом,
         # либо мы упаковываем дважды, чтобы симулировать поток объектов.
-        buf1 = GEO_SHAPE_struct.pack(p_str, ptr_vrtx, shape_id, ptr_tstr, next_vrtx)
-        buf2 = GEO_SHAPE_struct.pack(0, next_vrtx, 0, 0, 0)
+        buf1 = struct_GEO_SHAPE.pack(p_str, ptr_vrtx, shape_id, ptr_tstr, next_vrtx)
+        buf2 = struct_GEO_SHAPE.pack(0, next_vrtx, 0, 0, 0)
         return bytearray(buf1 + buf2)
     return _create
 

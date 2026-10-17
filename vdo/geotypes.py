@@ -38,30 +38,29 @@ from QGIS_VDO.vdo.datatypes import DOUBLE_BYTES_CNT
 from QGIS_VDO.vdo.consts import struct_2UINT, MOST_SIGNIFICANT_BIT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE, en_CARINET_LANGUAGE, en_POI_CAT  # noqa
 
-# use: (cat, draw, ptr, next_ptr) = GEO_CATEGORY_struct.unpack(buf)
-GEO_CATEGORY_struct = struct.Struct(">BBHxBH")
+# use: (cat, draw, ptr, next_ptr) = struct_GEO_CATEGORY.unpack(buf)
+struct_GEO_CATEGORY = struct.Struct(">BBHxBH")
 
-# use: (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack(buf)
-GEO_SHAPE_struct = struct.Struct(">HHL8x2xHxxH16x")
+# use: (ptr_str, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = struct_GEO_SHAPE.unpack(buf)
+struct_GEO_SHAPE = struct.Struct(">HHL8x2xHxxH16x")
 
 # use: (   prt_str, ptr_vrtx, id, ptr_linesign, ptr_unk2, ptr_tstr, ptr_unk3,
-#           next_ptr_vrtx) = GEO_LINE_struct.unpack(buf)
-GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
+#           next_ptr_vrtx) = struct_GEO_LINE.unpack(buf)
+struct_GEO_LINE = struct.Struct(">HHLHHHHxxH12x")
 
-# use: (x, y) = VERTEX_struct.unpack(buf)
-VERTEX_struct = struct.Struct(">HH")
+# use: (x, y) = struct_VERTEX.unpack(buf)
+struct_VERTEX = struct.Struct(">HH")
 
-TSTR_struct = struct.Struct(">HBB")
+struct_TSTR = struct.Struct(">HBB")
 
-POI_ITEM_struct = struct.Struct(">LHHHHHHLLL")
+struct_POI_ITEM = struct.Struct(">LHHHHHHLLL")
 
 struct_POI_BRIF = struct.Struct(">HBBHH")
 
 struct_POI_DETAILS = struct.Struct(">HHHHHHHHHHLHHL")
 
 
-# на столько делится 1°00′
-# 1 градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
+# на столько делится 1°00′ градус экватора = 111362м / 5555554 = 0,02м - цена меньшего бита 2cm
 MULCOORD = 0x54C562     # was 54C563     # dec 5555555 - волшебный коэффициент перевода.
 
 # MOST_SIGNIFICANT_BIT = 0x80000000  # hi bit =1 -> minus val.
@@ -234,11 +233,11 @@ class GEO_CATEGORY(BYTESTRUCT):
 
     def __init__(self, buffer: bytearray | bytes | memoryview) -> None:
         """
-        Принимает буфер (минимум 8 байт для GEO_CATEGORY_struct),
+        Принимает буфер (минимум 8 байт для struct_GEO_CATEGORY),
         но сохраняет в базовый класс только свои 4 байта.
         """
-        # Распаковываем данные (требуется 8 байт из-за структуры GEO_CATEGORY_struct)
-        (cat, draw, ptr, next_draw, next_ptr) = GEO_CATEGORY_struct.unpack(buffer[:8])
+        # Распаковываем данные (требуется 8 байт из-за структуры struct_GEO_CATEGORY)
+        (cat, draw, ptr, next_draw, next_ptr) = struct_GEO_CATEGORY.unpack(buffer[:8])
         
         # Передаем базовому классу строго его 4 байта
         super().__init__(buffer[:self.size])
@@ -303,8 +302,8 @@ class GEO_SHAPE(BYTESTRUCT):
         mem_buf = memoryview(buffer)
         
         # Для распаковки следующего ptr_vrtx нам нужно прочитать 2 структуры (self.size * 2)
-        # Использование структуры GEO_SHAPE_struct.unpack_from эффективнее, так как не создает срез
-        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = GEO_SHAPE_struct.unpack_from(mem_buf, 0)
+        # Использование структуры struct_GEO_SHAPE.unpack_from эффективнее, так как не создает срез
+        (p_str_name, ptr_vrtx, id, ptr_tstr, next_ptr_vrtx) = struct_GEO_SHAPE.unpack_from(mem_buf, 0)
         
         # Передаем базовому классу только его размер (0x14)
         super().__init__(mem_buf[:self.size])
@@ -380,7 +379,7 @@ class GEO_LINE(BYTESTRUCT):
          c_b_or_c,
          c_pp_str_name,
          c_38_or_0b_country,
-         next_ptr_vrtx) = GEO_LINE_struct.unpack_from(mem_buf, 0)
+         next_ptr_vrtx) = struct_GEO_LINE.unpack_from(mem_buf, 0)
          
         # Передаем базовому классу первые 16 байт (size)
         super().__init__(mem_buf[:self.size])
@@ -429,7 +428,7 @@ class VERTEX(BYTESTRUCT):
             
         super().__init__(mem_buf[:self.size])
         # Распаковываем напрямую из memoryview без создания промежуточных объектов в RAM
-        self._x, self._y = VERTEX_struct.unpack_from(mem_buf, 0)
+        self._x, self._y = struct_VERTEX.unpack_from(mem_buf, 0)
     
     @property
     def x(self) -> int | None:        # координата х
@@ -480,7 +479,7 @@ class TSTR(BYTESTRUCT):
         super().__init__(buffer[:self.size])
         
         # Распаковываем данные из сохраненного memoryview (_raw)
-        (p_str, lang, obj_type) = TSTR_struct.unpack(self._raw)
+        (p_str, lang, obj_type) = struct_TSTR.unpack(self._raw)
         
         self.p_str = p_str
         self.lang = en_CARINET_LANGUAGE(lang)
@@ -525,7 +524,7 @@ class POI_ITEM(BYTESTRUCT):
         # 0x0E   2   0, or 1 on a few ports and airports - closed regular use flag?
         (bladdr10, self._ptr10, self._LOCAL_X, self._LOCAL_Y,
             en_cat, self._p_brand, self.is_custom,
-            self.id, zero1, zero2) = POI_ITEM_struct.unpack_from(self._raw, 0)
+            self.id, zero1, zero2) = struct_POI_ITEM.unpack_from(self._raw, 0)
         self._cat = en_POI_CAT(en_cat)
         # _base10 - bladdr. рассчитать абсолютный адрес начала блока 0x10
         self._bladr10 = bladdr10  # (bladdr10 >> 8) * vdo.segsize

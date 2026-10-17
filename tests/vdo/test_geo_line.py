@@ -1,12 +1,12 @@
 import pytest     # type: ignore # noqa
 
-from QGIS_VDO.vdo.geotypes import GEO_LINE, GEO_LINE_struct
+from QGIS_VDO.vdo.geotypes import GEO_LINE, struct_GEO_LINE
 # from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY
 
 
 # >HHLHHHHxxH12x (общий размер 32 байта, что соответствует двум структурам по 16 байт)
-# GEO_LINE_struct = struct.Struct(">HHLHHHHxxH12x")
+# struct_GEO_LINE = struct.Struct(">HHLHHHHxxH12x")
 
 @pytest.fixture
 def geo_line_buffer_factory():
@@ -14,8 +14,8 @@ def geo_line_buffer_factory():
     def _create(p_str, ptr_vrtx, line_id, poi, or_bc, tstr, country, next_vrtx):
         # Упаковываем текущую структуру (16 байт) и дополняем следующей структурой,
         # из которой извлекается поле next_ptr_vrtx (позиция 8-го аргумента)
-        buf1 = GEO_LINE_struct.pack(p_str, ptr_vrtx, line_id, poi, or_bc, tstr, country, next_vrtx)
-        buf2 = GEO_LINE_struct.pack(0, next_vrtx, 0, 0, 0, 0, 0, 0)
+        buf1 = struct_GEO_LINE.pack(p_str, ptr_vrtx, line_id, poi, or_bc, tstr, country, next_vrtx)
+        buf2 = struct_GEO_LINE.pack(0, next_vrtx, 0, 0, 0, 0, 0, 0)
         return bytearray(buf1 + buf2)
     return _create
 

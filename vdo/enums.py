@@ -228,6 +228,7 @@ class en_TeleAtlasRegion(enum.Enum):             # TeleAtlasHexRegion
     TURKIYE = 0xD8                            # Турция
     UKRAYINA = 0xDD                           # Украина
     UNITED_KINGDOM = 0xDF                     # Великобритания
+    USA = 0xE0                                # USA https://github.com/fdemusso/OpenCarin/issues/26#issuecomment-6650359676
     STATO_DELLA_CITTA_DEL_VATICANO = 0xE5     # Ватикан
     SRBIJA_I_CRNA_GORA = 0xF1                 # Сербия и Черногория
 """

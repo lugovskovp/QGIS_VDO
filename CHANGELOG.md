@@ -2,6 +2,17 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.29 (2026-11-05)
+
+### Features
+
+- Add USA = 0xE0 in en_TeleAtlasRegion
+  ([`ed73c2d`](https://github.com/lugovskovp/QGIS_VDO/commit/ed73c2d4ea0f4b9368eb90a06d1969263729c6a9))
+
+- Backup script
+  ([`8e2fd81`](https://github.com/lugovskovp/QGIS_VDO/commit/8e2fd81b9593f678fe029afb210a1272d457dafd))
+
+
 ## v1.0.0-dev.28 (2026-10-17)
 
 ### Code Style

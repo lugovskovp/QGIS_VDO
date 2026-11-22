@@ -12,3 +12,14 @@ class block_0x1E(block_basegeo):
     """
     def __init__(self, bladdr: BLADDR) -> None:
         super().__init__(bladdr)
+
+
+"""
+07158906 001e 0000
+p_poi = 0
+
+GEO_LINES
+ru30  0x03c68a03
+последний элемент - значения сгруппированы в категориях по возрастанию, и, кажется, по странам в хвостовом = 00F5
+
+"""

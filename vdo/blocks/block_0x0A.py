@@ -81,8 +81,10 @@ class MORE_INFO_0xA(BYTESTRUCT):
         8: const DWORD =11; 12: const DWORD =22; 
         16: const DWORD =33; 20: const DWORD =44  (00 00 00 0b 00 00 00 16 00 00 00 21 00 00 00 2c )
         24: +DWORD   pl_addinfo LIST на POI_CATEGORY (напр, архитектура, музеи, порты, парки и т.п)
-        28: const DWORD =0x01f4012c(dec 32768300); 32768 2^{15}, max short integer
-        32: const DWORD =0x03e801f4(dec 65536500) (2^{16} = 65536)
+        ~28: const DWORD =0x01f4012c(dec 32768300); 32768 2^{15}, max short integer
+        ~32: const DWORD =0x03e801f4(dec 65536500) (2^{16} = 65536)
+        UPD:::
+            28: ushort speed_limit[4]; 
         36: +WORD    is_island   1 - Это же остров!
         38: +WORD    is_DeutchBorder       1 - Страна - часть Евросоюза (или шенгена? вопрос...)
         40: +WORD    en_eng_strname - enum United Nations - номер в списке стран ООН 

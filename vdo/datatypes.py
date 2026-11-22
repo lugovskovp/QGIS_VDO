@@ -114,6 +114,9 @@ class VDO_FILE:
     Метод get_block() — динамическая загрузка классов блоков через importlib из папки blocks/
     load_single_block() — загрузка одного блока из отдельного файла (обходит синглтон-систему)
     Встроенная валидация по маркеру формата (первые 4 байта == 1)
+    DB-REL 34/0x22
+    DB-REL 30/0x1E  old_rus
+    DB-REL 26/0x1A  usa https://github.com/fdemusso/OpenCarin/issues/26#issuecomment-6650359676
     """
     
     # Запрещаем создание __dict__, жестко фиксируем свойства экземпляра
@@ -813,7 +816,12 @@ class LIST(BYTESTRUCT):
     def __repr__(self):
         ''' View while debug value'''
         return f"{self.ptr:04X}:{self.cnt:04X} cnt:{self.cnt}"
-        
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, LIST):
+            raise TypeError(f"Type right operand must be LIST, not {type(value)}")
+        return (self.ptr == value.ptr) and (self.cnt == value.cnt)
+    
     # @property
     # def ptr(self) -> int:
     #     ''' Near ptr to begin list'''

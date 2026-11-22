@@ -9,6 +9,7 @@
 
 > [!IMPORTANT]  
 > Плагин в процессе разработки, релиз v.1 фактически beta, **рекомендуется** ожидать версии 2.x.x.
+> The plugin is still under development; the v.1 release is effectively a beta; it is **recommended** to wait for version 2.x.x.
 
 
 # About
@@ -59,3 +60,8 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - VDO Dayton CD Carindb v.34
 
 - ~pip install bitarray~ - только для дебага и разработки
+
+
+- https://github.com/fdemusso/OpenCarin
+- https://github.com/daglitch/CARiN_P38
+- готовые полигоны океана и морей: https://osmdata.openstreetmap.de/data/water-polygons.html.  water-polygons-split-4326.zip

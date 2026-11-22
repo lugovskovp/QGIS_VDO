@@ -1,0 +1,22 @@
+#!/bin/bash
+#https://stackoverflow.com/questions/40462111/prevent-commits-in-master-branch
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "main" ]; then
+    echo "You can't commit directly to $branch branch"
+    exit 1
+fi
+
+# Указываем путь к flake8 в вашем виртуальном окружении
+FLAKE8_PATH="./.venv/Scripts/flake8" 
+# или "./venv/bin/flake8" (для Windows: "./.venv/Scripts/flake8")
+
+# Запуск flake8 для файлов в коммите
+git diff --cached --name-only --diff-filter=ACM | grep '\.py$' | xargs $FLAKE8_PATH
+
+if [ $? -ne 0 ]; then
+    echo "Ошибка: В коде есть нарушения Flake8. Коммит отменен!"
+    exit 1
+fi
+      

@@ -1,7 +1,7 @@
 import pytest     # type: ignore # noqa
 # from unittest.mock import Mock
 
-from QGIS_VDO.vdo.geotypes import GEO_CATEGORY, GEO_CATEGORY_struct
+from QGIS_VDO.vdo.geotypes import GEO_CATEGORY, struct_GEO_CATEGORY
 from QGIS_VDO.vdo.enums import en_GEO_CATEGORY, en_DRAW_TYPE
 
 
@@ -11,7 +11,7 @@ def geo_cat_buffer_factory():
     """Фабрика для генерации 8-байтового буфера категории."""
     def _create(cat: int, draw: int, ptr: int, next_draw: int, next_ptr: int) -> bytearray:
         # >bbHxbH -> cat(b), draw(b), ptr(H), pad(x), next_draw(b), next_ptr(H)
-        return bytearray(GEO_CATEGORY_struct.pack(cat, draw, ptr, next_draw, next_ptr))
+        return bytearray(struct_GEO_CATEGORY.pack(cat, draw, ptr, next_draw, next_ptr))
     return _create
 
 

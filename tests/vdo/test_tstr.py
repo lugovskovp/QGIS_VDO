@@ -1,18 +1,18 @@
 import pytest     # type: ignore # noqa
 
-from QGIS_VDO.vdo.geotypes import TSTR, TSTR_struct
+from QGIS_VDO.vdo.geotypes import TSTR, struct_TSTR
 # from QGIS_VDO.vdo.datatypes import BYTESTRUCT
 from QGIS_VDO.vdo.enums import en_CARINET_LANGUAGE
 
 
-#TSTR_struct = struct.Struct(">Hbb")  # Формат: USHORT, SIGNED BYTE, SIGNED BYTE
+#struct_TSTR = struct.Struct(">Hbb")  # Формат: USHORT, SIGNED BYTE, SIGNED BYTE
 
 # --------------------------------------------------------------------------
 
 def test_tstr_initialization():
     """Проверяем стандартную распаковку полей TSTR и приведение типов."""
     # Упаковываем: p_str=0x1234, lang=0x15 (RUSSIAN), obj_type=8 (__street)
-    buf = bytearray(TSTR_struct.pack(0x1234, 0x15, 8))
+    buf = bytearray(struct_TSTR.pack(0x1234, 0x15, 8))
     
     tstr_obj = TSTR(buf)
     
@@ -25,7 +25,7 @@ def test_tstr_initialization():
 
 def test_tstr_repr_output():
     """Проверяем строковое представление отладочного вывода."""
-    buf = bytearray(TSTR_struct.pack(0x0000, 2, 0x10))  # lang=2 (ENGLISH), obj_type=16 (__poliline -> 0x10)
+    buf = bytearray(struct_TSTR.pack(0x0000, 2, 0x10))  # lang=2 (ENGLISH), obj_type=16 (__poliline -> 0x10)
     tstr_obj = TSTR(buf)
     tstr_obj.name = "Main Street"
     
@@ -37,7 +37,7 @@ def test_tstr_repr_output():
 
 def test_tstr_slots_optimization():
     """Убеждаемся, что оптимизация памяти через __slots__ работает корректно."""
-    buf = bytearray(TSTR_struct.pack(0, 1, 0))
+    buf = bytearray(struct_TSTR.pack(0, 1, 0))
     tstr_obj = TSTR(buf)
     
     # __dict__ не должен создаваться

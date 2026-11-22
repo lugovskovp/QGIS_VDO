@@ -127,27 +127,38 @@ def DrawPacketPOIs(poi_packet: list, layer: QgsVectorLayer) -> None: # noqa
     """
     Пакетно добавляет POIs в слой layer.
     Args:
-        shapes_packet: [GEO_LINES]
-        layer: QgsVectorLayer
+        poi_packet: [POI_ITEM] (с заполненным .poi из block 0x10)
+        layer: QgsVectorLayer (Qgis.GeometryType.Point)
     """
     # Базовые проверки слоя
     if not layer or layer.geometryType() != Qgis.GeometryType.Point:
         return
 
-    # Извлекаем уникальные id из пакета (исключая None/пустые строки)
-    packet_id = {item.id for item in poi_packet if getattr(item, 'id', None)}
     if not poi_packet:
         return
 
-    # Получаем индексы полей безопасным способом (вернет -1, если поля нет)
+    # Извлекаем уникальные id из пакета (исключая None/пустые)
+    packet_id = {item.id for item in poi_packet if getattr(item, 'id', None)}
+    if not packet_id:
+        return
+
+    # Получаем индексы полей безопасным способом
     fields = layer.fields()
+    field_idx_variant = fields.indexOf('variant')
+    field_idx_name = fields.indexOf('name')
     field_idx_id = fields.indexOf('id')
+    field_idx_brand = fields.indexOf('brand')
+    field_idx_sign = fields.indexOf('sign')
+    field_idx_address = fields.indexOf('address')
+    field_idx_phone = fields.indexOf('phone')
+    field_idx_language = fields.indexOf('language')
 
     # Оптимизированный сбор существующих id в слое
     if field_idx_id != -1:
         # Экранируем одинарные кавычки для SQL
-        safe_id_str = ", ".join(f"'{str(id).replace("'", "''")}'" for id in packet_id)
-        exist_expression = f"\"block\" in ({safe_id_str})"
+        ids_escaped = [str(p).replace("'", "''") for p in packet_id]
+        safe_id_str = ", ".join(f"'{p}'" for p in ids_escaped)
+        exist_expression = f"\"id\" IN ({safe_id_str})"
 
         # Запрашиваем только поле id для максимальной скорости
         request = QgsFeatureRequest().setFilterExpression(exist_expression).setSubsetOfAttributes([field_idx_id])
@@ -155,13 +166,79 @@ def DrawPacketPOIs(poi_packet: list, layer: QgsVectorLayer) -> None: # noqa
     else:
         existing_id = set()
 
-    # Подготовка списка новых объектов (не дописано)
+    # Подготовка списка новых объектов
+    features_to_add = []
+
     for item in poi_packet:
-        # Если point с таким id уже есть на слое — пропускаем его
+        # Если POI с таким id уже есть на слое — пропускаем его
         if item.id in existing_id:
             continue
 
-    # TODO: дописать DrawPacketPOIs
+        # Проверяем наличие координат
+        # coo = item.coord
+        coord = getattr(item, 'coord', None)
+        if coord is None:
+            continue
+
+        # Создаём геометрию точки
+        point_geom = QgsGeometry.fromPointXY(QgsPointXY(item.poi.coord.lon, item.poi.coord.lat))
+
+        # Создаём объект QgsFeature
+        feature = QgsFeature(fields)
+        feature.setGeometry(point_geom)
+
+        # Безопасная установка атрибутов (только если поля существуют в слое)
+        if field_idx_variant != -1:
+            feature.setAttribute(field_idx_variant, item.cat)
+        if field_idx_name != -1:
+            poi = getattr(item, 'poi', None)
+            feature.setAttribute(field_idx_name, poi.name.upper() if poi and poi.name else "")
+        if field_idx_id != -1:
+            feature.setAttribute(field_idx_id, item.id)
+        if field_idx_brand != -1:
+            feature.setAttribute(field_idx_brand, item.brand if item.brand else "")
+        if field_idx_sign != -1:
+            feature.setAttribute(field_idx_sign, "")
+        if field_idx_address != -1:
+            poi = getattr(item, 'poi', None)
+            feature.setAttribute(field_idx_address, poi.address if poi else "")
+        if field_idx_phone != -1:
+            poi = getattr(item, 'poi', None)
+            feature.setAttribute(field_idx_phone, poi.phone if poi and poi.phone else "")
+        if field_idx_language != -1:
+            feature.setAttribute(field_idx_language, "")
+
+        features_to_add.append(feature)
+
+    # Если добавлять нечего — выходим
+    if not features_to_add:
+        return
+
+    # Единая транзакция для всего пакета объектов
+    was_editable = layer.isEditable()
+    if not was_editable:
+        if not layer.startEditing():
+            print("Не удалось перевести слой в режим редактирования.")
+            return
+
+    layer.blockSignals(True)
+    success = False
+    try:
+        success = layer.addFeatures(features_to_add)
+    except Exception as e:
+        print(f"Ошибка при вызове addFeatures: {e}")
+    finally:
+        layer.blockSignals(False)
+
+    # Фиксация изменений
+    if success:
+        if not was_editable:
+            layer.commitChanges()
+        layer.triggerRepaint()
+    else:
+        if not was_editable:
+            layer.rollBack()
+        print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
 
 def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
     """

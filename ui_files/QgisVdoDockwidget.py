@@ -378,7 +378,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             return
         
         # определяем масштаб
-        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X02}"]
+        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:02X}"]
         # слой по соответствию типа block, а не текущий
         scale_group = self._getScaleGroup(targetScale)
         if targetScale == 1:     # sc1 -> block 06 - spatial index POI
@@ -814,6 +814,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # root group - vdo
         root_gr = self._getRootGroup()
         for id in range(QTY_ALL_SCALES):
+            # кроме POI
+            if id == 1:
+                continue
             gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
             if gr := root_gr.findGroup(gr_name):
                 gr.setItemVisibilityChecked(id == self.currentIdScale)

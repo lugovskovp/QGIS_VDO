@@ -6,9 +6,9 @@ from qgis.PyQt.QtCore import Qt, QMetaType
 
 # Имена слоёв в интерфейсе
 NAME_LAYER_GLOBAL_BOUNDS = "Carindb bounds"
-NAME_LAYER_ALMANACS = 'Almanac'
+NAME_LAYER_ALMANACS = 'Tiles'
 NAME_LAYER_POI = 'POIs'
-NAME_LAYER_SHAPES = 'Contours'
+NAME_LAYER_SHAPES = 'Areas'
 NAME_LAYER_LINES = 'Ways'
 
 
@@ -423,8 +423,8 @@ LAYERS_PROPERTY = [
         'geometry': 'Point',
         'attributes': [
             ('variant', QMetaType.Type.QString),   # отображение, cat.value
-            ('name', QMetaType.Type.QString),   # отображение, cat.value
-            ('id', QMetaType.Type.Int),
+            ('name', QMetaType.Type.QString),       # отображение, cat.value
+            ('id', QMetaType.Type.LongLong),       # был Int - но не влазили некоторые DWORD
             ('brand', QMetaType.Type.QString),
             ('sign', QMetaType.Type.QString),
             ('address', QMetaType.Type.QString),
@@ -564,7 +564,21 @@ LAYERS_PROPERTY = [
             },
             {
                 'name': 'City',
-                'style' : {'svg_path': 'gpsicons/city_large.svg', 'color': 'blue', 'size': '8'},
+                'style' : {'svg_path': 'gpsicons/city_large.svg', 'color': 'grey', 'size': '2'},
+                # 'size_unit': 'MM'
+                # 'size_unit': 'Pixel'
+                'label_style': {
+                    'font_family': 'Arial',
+                    'font_size': 10,
+                    'color': '#966100',         # Желтая "#ffdd00"
+                    'bold': False,
+                    'italic': True,
+                    # 'buffer_enabled': True,     # Включаем обводку
+                    # 'buffer_color': "#966100",  #  обводка
+                    # 'buffer_size': 1.1,
+                    'label_min_size': 3.0,  # Скрывать подпись, если полигон на экране меньше 15 мм,
+                    "remove_duplicates": True,
+                },
             },
             {
                 'name': 'Cinema',

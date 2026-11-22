@@ -15,11 +15,14 @@
 block_0x07
 SCALE
 
-SCALE:
+SCALEs:
 8 - нулевой, без содержимого
-[5, 6, 7, 9, 10, 11] - полигоны и линии, по возрастанию масштаба: [7, 6, 9, 5, 10, 11]
-[2, 3, 4] - (types 01, 02, 03) POI, по возрастанию масштаба [4, 3, 2]
-[0, 1] - ? (types (?, 06))
+[5, 6, 7, 9, 10, 11] - полигоны и линии, если отсортировать по возрастанию масштаба: [7, 6, 9, 5, 10, 11]
+sc4 -> block 03 - route data
+sc3 -> block 02 - route data
+sc2 -> block 01 - route data
+sc1 -> block 06 - spatial index POI  - есть только в MRE_13_14 и в ru30_NAV_DB
+sc0 -> индексные файлы везде пустые
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
@@ -62,12 +65,13 @@ class SCALE(BYTESTRUCT):
 
     def __init__(self, buffer: Union[bytes, bytearray, memoryview], vdo: "VDO_FILE") -> None:
         # Определяем размер структуры на основе версии dbrev
+        # TODO: переработать в будущем - размер структуры брать из 12
         if vdo.dbrev == 34:
             structure_size = 0x1C
         elif vdo.dbrev == 30:
             structure_size = 0x18
         else:
-            raise ValueError(f"dbrev must be 30 or 34, got {vdo.dbrev}")
+            raise ValueError(f"dbrev must be 30 or 34, in this file: {vdo.dbrev}")
 
         # too small buffer
         if len(buffer) < structure_size:

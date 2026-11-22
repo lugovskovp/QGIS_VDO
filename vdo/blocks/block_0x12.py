@@ -39,6 +39,33 @@ a6  массив пар word, (сюда из off=28 OFFSET_MAY_BE_HUFFMAN_THREE)
 21a const_word = 0000, align?    sense unknown
 21c карта размещения групп блоков на CD, кроме 08, 09, 19, 1a, 1b, 1f
     word type, const_word = 0 align, bladr_08, first_bl, end_bl (size=0x10)
+
+    
+3. Resolution of RECORD_SIZE_TABLE Mapping & OS-9 Dual Module Architecture
+The mapping between BLOCK_TYPE and RECORD_SIZE_TABLE section indices is not stored as a unified table on disc.
+Instead, it is split across the two primary OS-9 navigation modules, each maintaining an isolated
+Global Data Area (GDA, register a6):
+
+A. Map-Rendering Engine (pbp / db_pub)
+Copies the disc's RECORD_SIZE_TABLE into its private GDA at -$71cc(a6), accessed as -(0x71cc - 2*idx)(a6).
+Hardcodes the section indices for rendering blocks:
+0x00: T[0x05], T[0x06], T[0x08], T[0x09], T[0x0B], T[0x0C], T[0x0F], T[0x10], T[0x12], T[0x13], T[0x14], T[0x15],
+T[0x40], T[0x4C], T[0x59].
+0x0E: T[0x2B], T[0x2D], T[0x41], T[0x42], etc.
+0x14, 0x15, 0x16: T[0x3A], T[0x3B], T[0x3C], T[0x3D], T[0x3F].
+Non-rendering blocks (0x10, 0x12, etc.): In dispatcher 0x3698, blocks > 0x0E not matched by specific
+decoders jump to 0x36d2. Here, pbp calculates size = sectors * 2048, pushes val = 0,
+and calls bsr.w $6a06 (memset(dest, 0, size)), zeroing the buffer because map-rendering does not display
+routing-only structures.
+
+B. Routing Engine (rpmod)
+Operates in its own distinct GDA where the table base is -$7ee8(a6) with cell offset -$7ee8 + (ID * 2).
+Factory Defaults (01af8a): Pre-loads 66 hardcoded default constants for IDs 0x01..0x42 (from -$7ee6(a6) to -$7e64(a6)).
+Dynamic Disc Override (01b122): Inspects the Superblock. If DB-REL >= 18 (read from +0x1A),
+reads the descriptor at +0x28 (0x00A6 on DB-REL 34) and dynamically overwrites
+RAM cells (move.w $2(a1), (a0, d0.l * 2)) with values from the disc for all entries ID <= 0x42.
+Used extensively (over 100 occurrences) across rpmod for element stride calculation, division
+to count records (divs.l -$7ebe(a6), d1), and parcel traversal. Entries with ID > 0x42 are ignored by rpmod.
 """
 # noqa: E501
 

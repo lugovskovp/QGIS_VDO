@@ -1,6 +1,7 @@
 .venv
 __pycache__
 examples
+osm
 # dev-setup/hooks
 .qgis-settings
 

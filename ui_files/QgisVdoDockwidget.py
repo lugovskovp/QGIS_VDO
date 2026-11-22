@@ -41,6 +41,7 @@ from QGIS_VDO.ui_files import (
     _DrawPacketAreas,
     DrawPacketShapes,
     DrawPacketLines,
+    DrawPacketPOIs,
 )
 from QGIS_VDO.ui_files.drawing import getCrsProjection, getLayer
 
@@ -59,6 +60,10 @@ RB_SCALE_OBJNAME_PREFIX = 'rb_scale_'
 SCALE_GROUP_NAME_PREFIX = 'Scale '
 QTY_ALL_SCALES = 12
 BLOCKTYPEX_SCALEID = {
+    "06" : 1,
+    "01" : 2,
+    "02" : 3,
+    "03" : 4,
     "14" : 5,
     "15" : 6,
     "16" : 7,
@@ -366,33 +371,38 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         
         # bladdr = self.vdo.get_bladdr(int(bladdr, 16))
         block = self.vdo.get_block(self.vdo.get_bladdr(int(bladdr, 16)))
-        if block.type not in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+        if block.type not in [0x06, 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
             # 1-0x06, 2-0x01, 3-0x02, 4-0x03
             # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
+            # и 06 - spatial POIs
             return
         
         # определяем масштаб
-        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
+        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X02}"]
         # слой по соответствию типа block, а не текущий
         scale_group = self._getScaleGroup(targetScale)
-        layer_poi = getLayer(scale_group, NAME_LAYER_POI)
-        del layer_poi
-        
-        layer_shape = getLayer(scale_group, NAME_LAYER_SHAPES)
+        if targetScale == 1:     # sc1 -> block 06 - spatial index POI
+            layer_poi = getLayer(scale_group, NAME_LAYER_POI)
+            pois = list(block.get_all_items_extended())
+            DrawPacketPOIs(pois, layer_poi)
+            # del layer_poi
+            
+        elif targetScale in [5, 6, 7, 9, 10, 11]:
+            layer_shape = getLayer(scale_group, NAME_LAYER_SHAPES)
 
-        # получаем полигоны слоя
-        shapes = [shp for shp in block.getObjects(isGetLines=False)]
-        # отрисовываем слой NAME_LAYER_SHAPES
-        DrawPacketShapes(shapes, layer_shape)
+            # получаем полигоны слоя
+            shapes = [shp for shp in block.getObjects(isGetLines=False)]
+            # отрисовываем слой NAME_LAYER_SHAPES
+            DrawPacketShapes(shapes, layer_shape)
 
-        layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
-        lines = [lin for lin in block.getObjects(isGetShapes=False)]
-        DrawPacketLines(lines, layer_lines)
+            layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
+            lines = [lin for lin in block.getObjects(isGetShapes=False)]
+            DrawPacketLines(lines, layer_lines)
 
-        # debug
-        objs = shapes + lines
-        for obj in objs:
-            pass   # print(obj)
+            # debug
+            # objs = shapes + lines
+            # for obj in objs:
+            #     pass   # print(obj)
 
         # print(layer_shape)
         pass

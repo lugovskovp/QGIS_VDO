@@ -422,11 +422,15 @@ LAYERS_PROPERTY = [
         'name': NAME_LAYER_POI,
         'geometry': 'Point',
         'attributes': [
-            ('variant', QMetaType.Type.QString),   # отображение, cat.name
-            # ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
-            # ('name', QMetaType.Type.QString),
-            # ('name2', QMetaType.Type.QString),
-            # ('id', QMetaType.Type.Int),
+            ('variant', QMetaType.Type.QString),   # отображение, cat.value
+            ('name', QMetaType.Type.QString),   # отображение, cat.value
+            ('id', QMetaType.Type.Int),
+            ('brand', QMetaType.Type.QString),
+            ('sign', QMetaType.Type.QString),
+            ('address', QMetaType.Type.QString),
+            # address = poi.postcode + poi.country + poi.region + poi.city + poi.street + poi.houseno
+            ('phone', QMetaType.Type.QString),
+            ('language', QMetaType.Type.QString),
             # ('block', QMetaType.Type.QString),
         ],
         'styles': [

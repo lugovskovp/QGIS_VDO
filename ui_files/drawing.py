@@ -123,6 +123,46 @@ def _DrawRectangleArea(area, area_name: str, layer: QgsVectorLayer, variant: str
     pass
 
 
+def DrawPacketPOIs(poi_packet: list, layer: QgsVectorLayer) -> None: # noqa
+    """
+    Пакетно добавляет POIs в слой layer.
+    Args:
+        shapes_packet: [GEO_LINES]
+        layer: QgsVectorLayer
+    """
+    # Базовые проверки слоя
+    if not layer or layer.geometryType() != Qgis.GeometryType.Point:
+        return
+
+    # Извлекаем уникальные id из пакета (исключая None/пустые строки)
+    packet_id = {item.id for item in poi_packet if getattr(item, 'id', None)}
+    if not poi_packet:
+        return
+
+    # Получаем индексы полей безопасным способом (вернет -1, если поля нет)
+    fields = layer.fields()
+    field_idx_id = fields.indexOf('id')
+
+    # Оптимизированный сбор существующих id в слое
+    if field_idx_id != -1:
+        # Экранируем одинарные кавычки для SQL
+        safe_id_str = ", ".join(f"'{str(id).replace("'", "''")}'" for id in packet_id)
+        exist_expression = f"\"block\" in ({safe_id_str})"
+
+        # Запрашиваем только поле id для максимальной скорости
+        request = QgsFeatureRequest().setFilterExpression(exist_expression).setSubsetOfAttributes([field_idx_id])
+        existing_id = {f.attribute('id') for f in layer.getFeatures(request)}
+    else:
+        existing_id = set()
+
+    # Подготовка списка новых объектов (не дописано)
+    for item in poi_packet:
+        # Если point с таким id уже есть на слое — пропускаем его
+        if item.id in existing_id:
+            continue
+
+    # TODO: дописать DrawPacketPOIs
+
 def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
     """
     Пакетно добавляет полилинии в слой layer.

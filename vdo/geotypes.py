@@ -712,6 +712,23 @@ class POI(POI_BRIF):
         self.raw_road = []
         self._zero1 = 0
 
+    @property
+    def address(self) -> str:
+        """
+        Формирует адрес из доступных полей, разделяя их запятыми.
+        Пропускает пустые значения и None.
+        Порядок: индекс, страна, регион, город, улица, дом.
+        """
+        parts = (
+            self.postcode,
+            self.country,
+            self.region,
+            self.city,
+            self.street,
+            self.houseno,
+        )
+        return ", ".join([s for s in parts if s]) or ""
+
 
 # -------------------------------------------------------------------------
 # functions

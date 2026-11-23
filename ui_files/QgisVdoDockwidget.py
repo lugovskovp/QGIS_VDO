@@ -73,8 +73,15 @@ BLOCKTYPEX_SCALEID = {
     "1E" : 11
 }
 
+# Порядок групп в rootGroup: POIs -> Scale 0-5 -> Routes 0-3
+# Индексы в SCALES_GROUP_NAMES соответствуют scaleId
 SCALES_GROUP_NAMES = ['Routes 0', 'POIs', 'Routes 3', 'Routes 2', 'Routes 1', 'Scale 3',
                       'Scale 1', 'Scale 0', 'Empty', 'Scale 2', 'Scale 4', 'Scale 5']
+
+# Порядок вставки групп в rootGroup: POI, затем Scale 0-5, затем Routes
+GROUP_INSERT_ORDER = [1,  # POIs
+                      0, 7, 6, 5, 10, 11,  # Scale 0-5
+                      0, 2, 3, 4]  # Routes 0-3
 
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
@@ -145,7 +152,6 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         if project is None:
             return
 
-        # return
         # получаем корневой ТОС area layer в группе
         layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
 
@@ -158,51 +164,17 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         if root_group is None:
             return
         root_group.setItemVisibilityChecked(True)
-        root_group.setExpanded(True)  # False — свернуть, True — развернуть
-
-        # по значению настроек - скрываем все другие группы vdo
-        if Settings.HideNonActiveVdoEnabled():
-            # Задаем регулярное выражение для поиска корневых vdo групп
-            pattern = r"_0x[0-9a-f]{4,}$"
-            regex = re.compile(pattern, re.IGNORECASE)
-            for child in project.layerTreeRoot().children():
-                if isinstance(child, QgsLayerTreeGroup):
-                    if child.name() != root_group.name():
-                        # Проверяем имя группы через regexp
-                        if regex.search(child.name()):
-                            child.setItemVisibilityChecked(False)
-                            child.setExpanded(False)  # False — свернуть, True — развернуть # noqa
-            pass
+        root_group.setExpanded(True)
 
         # Is dbrev old? no areas, show warning
         if self.vdo.dbrev != 34:
-            # Сообщение - что area a, b only in v.34
             self.iface.messageBar().pushMessage(
-                    self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
-                    Qgis.Warning, 3)
+                self.tr('Where are no Area_A, Area_B in this Carindb.'),
+                Qgis.Warning, 3)
             return
 
-        # Areas from TOC block
-        bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
-        area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
-        _DrawRectangleArea(area, "Area_B", layer)   # Area_A is bigger
-        area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
-        _DrawRectangleArea(area, "Area_A", layer)
-
-        # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
-        # Получаем доступ к карте (холсту)
-        canvas = self.iface.mapCanvas()
-        # Создаем трансформер координат
-        transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
-        # Трансформируем границы слоя в СК проекта
-        layer_extent = layer.extent()
-        layer_extent.scale(1.2)     # отступ +20% от границ
-        project_extent = transform.transformBoundingBox(layer_extent)
-        # Зуммируем
-        canvas.setExtent(project_extent)
-        # Обновляем карту для отображения изменений
-        canvas.refresh()
-        pass
+        # Отрисовка Areas и зум
+        self._draw_areas_and_zoom(root_group, layer)
 
     def tabTopo_DrawAlmanacArea(self, idScale: int) -> None:
         """
@@ -321,6 +293,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # set from settings
         self._setScale(checkScale)
+
+        # Создаём группы масштабов в правильном порядке
+        self._ensure_scale_groups_order()
 
         pass
 
@@ -492,11 +467,11 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         pass
 
     def tabBlock_on_tool_deactivated(self):
-        # Блокируем сигналы, чтобы повторно не вызывать toggle_coords_tool
-        self.pb_getCoordinates.blockSignals(True)
-        # Возвращаем кнопку в исходное состояние при выключении инструмен
-        self.pb_getCoordinates.setChecked(False)
-        self.pb_getCoordinates.blockSignals(False)
+        try:
+            self.pb_getCoordinates.blockSignals(True)
+            self.pb_getCoordinates.setChecked(False)
+        finally:
+            self.pb_getCoordinates.blockSignals(False)
         # Делаем кнопку активной визуально
         self.pb_loadBlock.setEnabled(not self.cb_LoadFolder.isChecked())
         self.cb_LoadFolder.setEnabled(True)
@@ -528,75 +503,81 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
     def _getRootGroup(self) -> QgsLayerTreeGroup:
         """
-        Возвращает QgsLayerTreeGroup текущего файла vdo
+        Возвращает QgsLayerTreeGroup текущего файла vdo,
+        создавая его при необходимости.
         """
         # Access the main root of the QGIS layer tree
         root_group = QgsProject.instance().layerTreeRoot().findGroup(self.vdo.QGISvdoGroupName)
         if root_group:
             return root_group
 
-        # --------------------------------------------------------------------------
-        # If root_group_name doesn't exist, create it
-        project: QgsProject = QgsProject.instance()
-        if project is None:
-            return
-        root_group = project.layerTreeRoot().insertGroup(0, self.vdo.QGISvdoGroupName)
+        root_group = self._ensure_root_group()
+        if root_group is None:
+            return root_group
 
         # И добавить слой bounds
-        # получаем корневой ТОС area layer в группе
         layer = getLayer(root_group, NAME_LAYER_GLOBAL_BOUNDS)
         self.iface.setActiveLayer(layer)
-        
-        curr_group = QgsProject.instance().layerTreeRoot().findGroup(self.vdo.QGISvdoGroupName)
-        if curr_group is None:
-            return
-        curr_group.setItemVisibilityChecked(True)
-        curr_group.setExpanded(True)  # False — свернуть, True — развернуть
 
         # по значению настроек - скрываем все другие группы vdo
-        if Settings.HideNonActiveVdoEnabled():
-            # Задаем регулярное выражение для поиска корневых vdo групп
-            pattern = r"_0x[0-9a-f]{4,}$"
-            regex = re.compile(pattern, re.IGNORECASE)
-            for child in QgsProject.instance().layerTreeRoot().children():
-                if isinstance(child, QgsLayerTreeGroup):
-                    if child.name() != root_group.name():
-                        # Проверяем имя группы через regexp
-                        if regex.search(child.name()):
-                            child.setItemVisibilityChecked(False)
-                            child.setExpanded(False)  # False — свернуть, True — развернуть # noqa
-            pass
+        self._hide_other_vdo_groups(root_group)
 
         # Is dbrev old? no areas, show warning
         if self.vdo.dbrev != 34:
-            # Сообщение - что area a, b only in v.34
             self.iface.messageBar().pushMessage(
-                    self.tr('Where are no Area_A, Area_B in this Carindb.'),   # noqa
-                    Qgis.Warning, 3)
+                self.tr('Where are no Area_A, Area_B in this Carindb.'),
+                Qgis.Warning, 3)
             return root_group
 
         # Areas from TOC block
-        bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
-        area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]  # noqa
-        _DrawRectangleArea(area, "Area_B", layer)   # Area_A is bigger
-        area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]  # noqa
-        _DrawRectangleArea(area, "Area_A", layer)
-        
-        # >>> Масштаб по границам слоя: приблизить карту по границам (содержимому) слоя
-        # Получаем доступ к карте (холсту)
-        canvas = self.iface.mapCanvas()
-        # Создаем трансформер координат
-        transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
-        # Трансформируем границы слоя в СК проекта
-        layer_extent = layer.extent()
-        layer_extent.scale(1.2)     # отступ +20% от границ
-        project_extent = transform.transformBoundingBox(layer_extent)
-        # Зуммируем
-        canvas.setExtent(project_extent)
-        # Обновляем карту для отображения изменений
-        canvas.refresh()
+        self._draw_areas_and_zoom(root_group, layer)
 
         return root_group
+
+    def _ensure_root_group(self) -> QgsLayerTreeGroup | None:
+        """Создаёт корневую группу VDO, если она не существует."""
+        project: QgsProject = QgsProject.instance()
+        if project is None:
+            return None
+        root_group = project.layerTreeRoot().insertGroup(0, self.vdo.QGISvdoGroupName)
+        curr_group = QgsProject.instance().layerTreeRoot().findGroup(self.vdo.QGISvdoGroupName)
+        if curr_group is None:
+            return None
+        curr_group.setItemVisibilityChecked(True)
+        curr_group.setExpanded(True)
+        return root_group
+
+    def _hide_other_vdo_groups(self, root_group: QgsLayerTreeGroup) -> None:
+        """Скрывает другие vdo-группы по regex, если включена настройка."""
+        if not Settings.HideNonActiveVdoEnabled():
+            return
+        pattern = r"_0x[0-9a-f]{4,}$"
+        regex = re.compile(pattern, re.IGNORECASE)
+        for child in QgsProject.instance().layerTreeRoot().children():
+            if isinstance(child, QgsLayerTreeGroup):
+                if child.name() != root_group.name():
+                    if regex.search(child.name()):
+                        child.setItemVisibilityChecked(False)
+                        child.setExpanded(False)
+
+    def _draw_areas_and_zoom(self, root_group: QgsLayerTreeGroup, layer: QgsVectorLayer) -> None:
+        """Отрисовка Areas и зум карты по их границам."""
+        # Areas from TOC block
+        bl_toc: block_0x12 = cast("block_0x12", self.vdo.get_block(0))
+        area = [(bl_toc.area_B[0].lat, bl_toc.area_B[0].lon), (bl_toc.area_B[1].lat, bl_toc.area_B[1].lon)]
+        _DrawRectangleArea(area, "Area_B", layer)
+        area = [(bl_toc.area_A[0].lat, bl_toc.area_A[0].lon), (bl_toc.area_A[1].lat, bl_toc.area_A[1].lon)]
+        _DrawRectangleArea(area, "Area_A", layer)
+
+        # Масштаб по границам слоя
+        canvas = self.iface.mapCanvas()
+        project = QgsProject.instance()
+        transform = QgsCoordinateTransform(layer.crs(), project.crs(), project)
+        layer_extent = layer.extent()
+        layer_extent.scale(1.2)
+        project_extent = transform.transformBoundingBox(layer_extent)
+        canvas.setExtent(project_extent)
+        canvas.refresh()
 
     def _getScaleGroup(self, scaleId: int) -> QgsLayerTreeGroup | None:
         """
@@ -604,11 +585,6 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         найдя её в rootGroup, либо создав.
         None при выходе за границы.
         """
-        # Функция для поиска числа в строке (например, из "Scale 11" достанет 11)
-        # def get_num(text):
-        #     match = re.search(r'\d+', text)
-        #     return int(match.group()) if match else -1
-
         # проверка номера - должен быть среди self.scales
         if not (0 <= scaleId < len(self.scales)):
             # номера слоёв 0..11
@@ -626,14 +602,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             return scaleGroup
         #----------------------------------------------------------------------
         # такой не найдено - надо её создать
-        insert_index = 0
-        # ищем scaleId - 1
-        for i in range(scaleId - 1, 0, -1):
-            gr_name = SCALES_GROUP_NAMES[i]
-            gr: QgsLayerTreeGroup
-            if gr := rootGroup.findGroup(gr_name):
-                insert_index = rootGroup.children().index(gr) + 1
-                break
+        # Вставляем в конец (наибольший индекс), чтобы сохранить порядок
+        insert_index = len(rootGroup.children())
 
         # вставляем
         scaleGroup = rootGroup.insertGroup(insert_index, SCALES_GROUP_NAMES[scaleId])
@@ -642,25 +612,40 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
     def _getScaleLayer(self, scaleId: int, layerName: str) -> QgsVectorLayer:
         """
-        Находит или создаёт слой с именем layerName в scale группе scaleId
+        Находит или создаёт слой с именем layerName в scale группе scaleId.
         Args:
             scaleId: int - номер scale [0..11]
             layerName: str наименование слоя
         Returns:
             layer: QgsVectorLayer
         """
-        # scaleGroup группа QgsLayerTreeGroup /root_group/scale_X
         if not (scaleGroup := self._getScaleGroup(scaleId)):
-            # какого хера то? вызываться должно после определения имени корневой группы
-            raise ValueError(f"Нет группы '{SCALES_GROUP_NAMES[scaleId]}_{scaleId}'")
+            raise ValueError(f"Нет группы '{SCALES_GROUP_NAMES[scaleId]}' для scale {scaleId}")
 
-        if layerName in [NAME_LAYER_ALMANACS]:
-            layer = getLayer(scaleGroup, NAME_LAYER_ALMANACS)
-            return layer
-        else:
-            # какого хера то? вызываться должно после определения имени корневой группы
-            raise ValueError(f"Нет варианта имени слоя {layerName}")
+        return getLayer(scaleGroup, layerName)
     
+    def _ensure_scale_groups_order(self) -> None:
+        """
+        Создаёт все группы масштабов в правильном порядке.
+        Порядок: POIs -> Scale 0-5 -> Routes 0-3
+        """
+        rootGroup = self._getRootGroup()
+        if rootGroup is None:
+            return
+
+        # Порядок создания групп: POI (1), Scale 0-5 (0,7,6,5,10,11), Routes (2,3,4)
+        insert_order = [1, 0, 7, 6, 5, 10, 11, 2, 3, 4]
+
+        for scale_id in insert_order:
+            if self.scales[scale_id].is_empty:
+                continue
+            group_name = SCALES_GROUP_NAMES[scale_id]
+            # Если группа уже существует — пропускаем
+            if rootGroup.findGroup(group_name):
+                continue
+            # Вставляем в конец
+            rootGroup.insertGroup(len(rootGroup.children()), group_name)
+
     def _restoreGroupBoxVisibility(self) -> None:
         """
         Восстанавливает ранее сохранённые настройки

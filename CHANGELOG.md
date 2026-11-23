@@ -2,6 +2,41 @@
 
 <!-- version list -->
 
+## v1.0.0-dev.30 (2026-11-23)
+
+### Bug Fixes
+
+- Исправлен порядок слоёв в scale-группах и добавлена защита от повисших узлов
+  ([`f009456`](https://github.com/lugovskovp/QGIS_VDO/commit/f0094565e5ab45f4964ba9bb93058145f71b4eaf))
+
+### Documentation
+
+- Добавлено исследование OS-9 архитектуры, обновлены конфиги и документация
+  ([`e9f93c8`](https://github.com/lugovskovp/QGIS_VDO/commit/e9f93c809cd223b2a19b3244b15cabea9e82a103))
+
+- Добавлены разделы в README
+  ([`45295c7`](https://github.com/lugovskovp/QGIS_VDO/commit/45295c7d0703ae7e49cc56d7d365bc28f7b72b60))
+
+### Features
+
+- Добавлен правильный порядок групп масштабов в rootGroup
+  ([`48a6a16`](https://github.com/lugovskovp/QGIS_VDO/commit/48a6a168fe0a781b6f2771fc11e5ae8ef601e47d))
+
+- Добавлена отрисовка POI для block 0x06 и расширены атрибуты слоя
+  ([`eae48b0`](https://github.com/lugovskovp/QGIS_VDO/commit/eae48b0ada4efa3bb661bfdfc918e54b0edd8098))
+
+- Добавлены имена групп масштабов и информация о блоке
+  ([`f9b7b0f`](https://github.com/lugovskovp/QGIS_VDO/commit/f9b7b0fd66cc4a27aabe4f78b963e14df249ad83))
+
+- Дописана DrawPacketPOIs и исправления для ru30
+  ([`5b2a734`](https://github.com/lugovskovp/QGIS_VDO/commit/5b2a734622e72d9086f4155a39820d8ccd171f66))
+
+### Refactoring
+
+- Исправление замечаний code review QgisVdoDockwidget.py
+  ([`31d4529`](https://github.com/lugovskovp/QGIS_VDO/commit/31d45298d5a59ca14b2f976f0918998b89da92af))
+
+
 ## v1.0.0-dev.29 (2026-11-05)
 
 ### Features

@@ -1,13 +1,15 @@
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
 [![GitHub License](https://img.shields.io/github/license/lugovskovp/QGIS_VDO)](#)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-brightgreen.svg)](https://www.python.org/downloads/)
 [![Format: CARINdb](https://img.shields.io/badge/format-CARiN%20%2F%20CarinDB-orange.svg)](https://github.com/fdemusso/OpenCarin)
 ![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Flugovskovp%2Fd73b601c90fe3a20bf364ee079c4a5c3%2Fraw%2Fqgis_vdo_coverage.json)
 ![GitHub Issues](https://img.shields.io/github/issues/lugovskovp/QGIS_VDO)
 ![GitHub Release](https://img.shields.io/github/v/release/lugovskovp/QGIS_VDO?link=https%3A%2F%2Fgithub.com%2Flugovskovp%2FQGIS_VDO%2Freleases%2Flatest)
 
 
-
+> [!IMPORTANT]  
+> Плагин в процессе разработки, релиз v.1 фактически beta, **рекомендуется** ожидать версии 2.x.x.
+> The plugin is still under development; the v.1 release is effectively a beta; it is **recommended** to wait for version 2.x.x.
 
 
 # About
@@ -16,26 +18,16 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 Плагин для просмотра в QGIS данных файлов навигационных систем VDO Dayton CD, устанавливавшихся на Citroen, Pegout, BMW, Mercedes, Fiat ect с начала 2000 годов.
 Формат карт для CARiN называется CDF (CARiN Database Format).
 
-> [!IMPORTANT]  
-> Плагин в процессе разработки, релиз v.1 по факту beta, рекомендуется ожидать версии 2.x.x.
 
 [![image](https://github.com/user-attachments/assets/7869eaa4-c747-43bc-b7ad-f6657638ce1f)](https://github.com/user-attachments/assets/7869eaa4-c747-43bc-b7ad-f6657638ce1f)
 
-# Версии ПО
-Оригинальная ОС система автонавигатора OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
-1991 - 2005 SiemensVDO Automotive AG
- 
-- QGIS 3.44.10 ltr
-- VDO Dayton CD Carindb v.30
-- VDO Dayton CD Carindb v.34
 
-- ~pip install bitarray~ - только для дебага и разработки
 
 
 # Функциональность
 - [x] Выбор файла. Вывод инфо о файле (файлах). Запоминание настроек.
-- Выбор страны, города, дороги, точки интереса вводом адреса
-- Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
+- [ ] Выбор страны, города, дороги, точки интереса вводом адреса
+- [x] Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
 - [x] Отображение картографического слоя по масштабам
 - [x] Работа с несколькими carindb
 - [x] Отображение в пользовательской СК "WGS 84 / Custom Pacific Split -80" - линия разрыва в атлантике, 80W
@@ -59,3 +51,92 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 
 
 
+# Версии ПО
+Оригинальная ОС система автонавигатора OS-9000/MIPS  V3.0  Copyright (c) 1997-2000 by Microware Systems Corp.
+1991 - 2005 SiemensVDO Automotive AG
+ 
+- QGIS 3.44.10 ltr
+- VDO Dayton CD Carindb v.30
+- VDO Dayton CD Carindb v.34
+
+- ~pip install bitarray~ - только для дебага и разработки
+
+
+- https://github.com/fdemusso/OpenCarin
+- https://github.com/daglitch/CARiN_P38
+- готовые полигоны океана и морей: https://osmdata.openstreetmap.de/data/water-polygons.html.  water-polygons-split-4326.zip
+
+# Вклад в проект
+1. Форк репозитория
+2. Создать ветку из `dev`: `git checkout -b feature/название dev`
+3. Написать тесты для нового функционала
+4. Запустить `flake8` и `pytest`
+5. Создать Pull Request в `dev`
+
+# Установка
+1. Открыть QGIS → Плагины → Управлять и установить плагины
+2. Настроить репозиторий (Settings → Plugins → Add new repository)
+3. Найти QGIS_VDO и установить
+
+# Запуск
+1. Открыть QGIS
+2. Панель плагинов → QGIS_VDO
+3. Выбрать файл carindb (DB30, DB34)
+
+# Структура проекта
+```
+QGIS_VDO/
+├── ui_files/           # UI и отрисовка
+│   ├── QgisVdoDockwidget.py   # Главный виджет
+│   └── drawing.py             # Функции отрисовки слоёв
+├── vdo/                # Парсинг carindb
+│   ├── blocks/            # Блоки 0x06, 0x07, 0x08, 0x09, 0x10, 0x12, 0x13, 0x14...
+│   ├── consts_layers.py   # Константы слоёв
+│   ├── enums.py           # Enum-категории POI
+│   └── geotypes.py        # Типы геометрии
+├── tests/              # 703 автотеста
+└── research/           # Исследования формата
+```
+
+# Поддерживаемые блоки carindb
+
+| Блок | Описание | Статус |
+|------|----------|--------|
+| 0x06 | Spatial POI Index (населённые пункты) | ✅ |
+| 0x07 | Scales | ✅ |
+| 0x08 | Almanac | ✅ |
+| 0x09 | Folder Map | ✅ |
+| 0x10 | POI Details (детали точек интереса) | ✅ |
+| 0x12 | TOC (Table of Contents) | ✅ |
+| 0x13 | Bibliography | ✅ |
+| 0x14 | MAP__05k200 | ✅ |
+| 0x15 | MAP__06k80 | ✅ |
+| 0x16 | MAP__07k40 | ✅ |
+| 0x1C | MAP__09k100 | ✅ |
+| 0x1D | MAP__10k400 | ✅ |
+| 0x1E | MAP__11k_11 | ✅ |
+
+# Тестирование
+```bash
+# Запуск всех тестов
+pytest -v tests/
+
+# Покрытие
+pytest --cov=QGIS_VDO tests/
+```
+Текущее покрытие: 703 теста
+
+# Roadmap
+- [ ] Выбор страны/города/дороги/POI вводом адреса
+- [ ] Routes (scale 0, 2, 3, 4) — отрисовка маршрутов
+
+# Известные ограничения
+- Проверено только с QGIS 3.40+
+- Требуется Python 3.12+
+- CRS: "WGS 84 / Custom Pacific Split -80"
+- POI scale group содержит spatial index из блока 0x07 — есть не во всех carindb и отображает населённые пункты (City)
+- Routes (0, 2, 3, 4) — не реализованы
+
+# Благодарности
+- [OpenCarin](https://github.com/fdemusso/OpenCarin) — реверс-инжиниринг формата CARiN
+- [CARiN_P38](https://github.com/daglitch/CARiN_P38) — дополнительная документация формата

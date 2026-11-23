@@ -16,6 +16,14 @@ def raw_coord_bytes():
     Координаты: 6.356619 N, 26.249632 W
     hlon = 20835376 -> hex: 0x013DEC30 -> Big-Endian: b'\x01\x3D\xEC\x30'
     hlat = 35314544 -> hex: 0x021ADB70 -> Big-Endian: b'\x02\x1A\xDB\x70'
+
+    sa1 = b'\x06\xe6y\xaa\x0b\xb1\xde\x1f'
+    sa2 = b'\nlvM\x10_\xf3\xf9'
+    sa3 = b'\xf1\x190\x00\xbczP\x00'
+    sa4 = b'Q\x190\x00\x1czP\x00'
+
+    c1 = COORD(sa1)  # 35.317104N 9.161808W
+    c2 = COORD(sa2)  # 49.450295N 1.478463E
     """
     return b'\x01\x3D\xEC\x30\x02\x1A\xDB\x70'
 
@@ -27,6 +35,26 @@ def raw_coord_bytes():
 def test_init_scenario_a_bytes(raw_coord_bytes):
     """Сценарий A: Инициализация из сырого буфера байт."""
     coord = COORD(raw_coord_bytes)
+    assert coord._hlon == 20835376
+    assert coord._hlat == 35314544
+    assert pytest.approx(coord.lon) == -26.249632
+    assert pytest.approx(coord.lat) == 6.356619
+
+
+def test_init_scenario_a_bytes_ba(raw_coord_bytes):
+    """Сценарий A: Инициализация из bytearray."""
+    ba_raw = bytearray(raw_coord_bytes)
+    coord = COORD(ba_raw)
+    assert coord._hlon == 20835376
+    assert coord._hlat == 35314544
+    assert pytest.approx(coord.lon) == -26.249632
+    assert pytest.approx(coord.lat) == 6.356619
+
+
+def test_init_scenario_a_bytes_mv(raw_coord_bytes):
+    """Сценарий A: Инициализация из memoryview."""
+    mv_raw = memoryview(raw_coord_bytes)
+    coord = COORD(mv_raw)
     assert coord._hlon == 20835376
     assert coord._hlat == 35314544
     assert pytest.approx(coord.lon) == -26.249632

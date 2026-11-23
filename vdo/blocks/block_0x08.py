@@ -145,6 +145,10 @@ class block_0x08(block_base):
         # Теперь мы точно знаем, что x и y валидны, и можем читать данные напрямую
         item_num = y + x * self.qty_y
         offset = self.li_items.ptr + item_num * BLADDR.size
+        if offset > len(self._raw) - 4:
+            # некоторые индексные файлы не хранят все возможные значения, экономят место,
+            # MRE_13_14 028FE908 0008 00 00 [08:SCALE_ALMANAC]
+            return None
         folder_bladdr_val = struct_UINT.unpack_from(self._raw, offset)[0]
         
         if not folder_bladdr_val:

@@ -636,7 +636,7 @@ class bitstream():
         # thats all folks
         return
 
-    def __unpack_all_strings(self) -> None:
+    def __unpack_all_strings(self) -> None:   # no cov
         """
         Распаковка текстовых строк. Весьма оригинальная реализация Хаффмана.
         Returns:
@@ -816,16 +816,16 @@ class bitstream():
         width = min(width, len(self._buf_bytes) * 8 - self._buf_idx)
         return self.pop(width)
 
-    def touch(self, qty_bits: int, start: int = 0) -> int:
-        '''Return qty bits from start W/o(!) deleting'''
-        byte_idx = start >> 3
-        bit_off = start & 7
-        n_bytes = (bit_off + qty_bits + 7) >> 3
-        raw = self._buf_bytes[byte_idx : byte_idx + n_bytes]
-        val = int.from_bytes(raw, 'big')
-        val >>= (n_bytes * 8 - qty_bits)
-        val &= (1 << qty_bits) - 1
-        return val
+    # def touch(self, qty_bits: int, start: int = 0) -> int:
+    #     '''Return qty bits from start W/o(!) deleting'''
+    #     byte_idx = start >> 3
+    #     bit_off = start & 7
+    #     n_bytes = (bit_off + qty_bits + 7) >> 3
+    #     raw = self._buf_bytes[byte_idx : byte_idx + n_bytes]
+    #     val = int.from_bytes(raw, 'big')
+    #     val >>= (n_bytes * 8 - qty_bits)
+    #     val &= (1 << qty_bits) - 1
+    #     return val
 
     def _unpack_byte(self, bit_compressed: int, left_shift: int = 0) -> int:
         """
@@ -887,7 +887,7 @@ class bitstream():
             return
         
         if bit_compressed > BITS_IN_WORD:
-            raise ValueError(bit_compressed, f"Значение bit больше {BITS_IN_WORD}, _unpack_write_short")
+            raise NotImplementedError(bit_compressed, f"Значение bit больше {BITS_IN_WORD}, _unpack_write_short")
         
         val = self.pop(bit_compressed)
         # добавить справа нолей на к-во сдвига
@@ -910,7 +910,7 @@ class bitstream():
             ValueError При bit_compressed более чем 32 бита
         """
         if bit_compressed > BITS_IN_UINT:
-            raise ValueError(bit_compressed, f"Значение больше {BITS_IN_UINT}, _unpack_write_uint")
+            raise NotImplementedError(bit_compressed, f"Значение больше {BITS_IN_UINT}, _unpack_write_uint")
         
         val = self.pop(bit_compressed)
         # добавить справа нолей на к-во сдвига

@@ -13,6 +13,7 @@ from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLayerTreeLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform
                        )
+from qgis.PyQt.QtCore import QCoreApplication
 
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker, PaintMapsProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
@@ -72,6 +73,9 @@ BLOCKTYPEX_SCALEID = {
     "1E" : 11
 }
 
+SCALES_GROUP_NAMES = ['Routes 0', 'POIs', 'Routes 3', 'Routes 2', 'Routes 1', 'Scale 3',
+                      'Scale 1', 'Scale 0', 'Empty', 'Scale 2', 'Scale 4', 'Scale 5']
+
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
     """
@@ -124,6 +128,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.pb_DebugClearVDO.clicked.connect(self.pb_DebugClearVDOevent)
 
         pass    # def __init__(self, parent_plugin, iface, parent=None):
+
+    def tr(self, message: str) -> str:
+        """Translate a string."""
+        return QCoreApplication.translate('VDOExplorerPlugin', message)
 
     def tabInfo_DrawTocAreas(self):
         """
@@ -289,7 +297,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             rb = self.tabWidget.findChild(QRadioButton, rb_name)
             # Изменить подпись: номер scale, value_a, масштаб от и до
             sc: SCALE = self.scales[id]
-            rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
+            # rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
+            rb.setText("{}  {}: {} - {}".format(id, SCALES_GROUP_NAMES[id], sc.zoom_from, sc.zoom_to))  # noqa
             # Установить enabled|disabled
             rb.setEnabled(not sc.is_empty)
             # TODO: а не излишне ли?
@@ -371,6 +380,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         
         # bladdr = self.vdo.get_bladdr(int(bladdr, 16))
         block = self.vdo.get_block(self.vdo.get_bladdr(int(bladdr, 16)))
+        if block is None:
+            blockInfo = self.tr("Not valid block number")
+            self.l_loadBlockInfo.setText(blockInfo)
+            return
+        else:
+            blockInfo = f"{block.head}"
+        self.l_loadBlockInfo.setText(blockInfo)
+
         if block.type not in [0x06, 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
             # 1-0x06, 2-0x01, 3-0x02, 4-0x03
             # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
@@ -604,7 +621,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         scaleGroup: QgsLayerTreeGroup
         rootGroup = self._getRootGroup()
         # поиск в существующих
-        scaleGroup = rootGroup.findGroup(SCALE_GROUP_NAME_PREFIX + str(scaleId))
+        scaleGroup = rootGroup.findGroup(SCALES_GROUP_NAMES[scaleId])
         if scaleGroup:
             return scaleGroup
         #----------------------------------------------------------------------
@@ -612,14 +629,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         insert_index = 0
         # ищем scaleId - 1
         for i in range(scaleId - 1, 0, -1):
-            gr_name = SCALE_GROUP_NAME_PREFIX + str(i)
+            gr_name = SCALES_GROUP_NAMES[i]
             gr: QgsLayerTreeGroup
             if gr := rootGroup.findGroup(gr_name):
                 insert_index = rootGroup.children().index(gr) + 1
                 break
 
         # вставляем
-        scaleGroup = rootGroup.insertGroup(insert_index, SCALE_GROUP_NAME_PREFIX + str(scaleId))
+        scaleGroup = rootGroup.insertGroup(insert_index, SCALES_GROUP_NAMES[scaleId])
         self.tabTopo_DrawAlmanacArea(scaleId)
         return scaleGroup
 
@@ -635,7 +652,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # scaleGroup группа QgsLayerTreeGroup /root_group/scale_X
         if not (scaleGroup := self._getScaleGroup(scaleId)):
             # какого хера то? вызываться должно после определения имени корневой группы
-            raise ValueError(f"Нет группы '{SCALE_GROUP_NAME_PREFIX}_{scaleId}'")
+            raise ValueError(f"Нет группы '{SCALES_GROUP_NAMES[scaleId]}_{scaleId}'")
 
         if layerName in [NAME_LAYER_ALMANACS]:
             layer = getLayer(scaleGroup, NAME_LAYER_ALMANACS)
@@ -815,7 +832,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # кроме POI
             if id == 1:
                 continue
-            gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
+            gr_name = SCALES_GROUP_NAMES[id]
             if gr := root_gr.findGroup(gr_name):
                 gr.setItemVisibilityChecked(id == self.currentIdScale)
                 

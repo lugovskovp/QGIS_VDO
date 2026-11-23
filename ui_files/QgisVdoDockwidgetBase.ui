@@ -90,7 +90,7 @@
        <enum>QTabWidget::Triangular</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>3</number>
       </property>
       <property name="usesScrollButtons">
        <bool>false</bool>
@@ -1324,12 +1324,36 @@
          <rect>
           <x>40</x>
           <y>80</y>
-          <width>301</width>
+          <width>291</width>
           <height>24</height>
          </rect>
         </property>
         <property name="value">
          <number>24</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="l_loadBlockInfo">
+        <property name="geometry">
+         <rect>
+          <x>40</x>
+          <y>110</y>
+          <width>421</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Current scale. Change on Topography tab.</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
         </property>
        </widget>
       </widget>

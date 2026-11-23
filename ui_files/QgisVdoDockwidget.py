@@ -10,7 +10,7 @@ from typing import cast
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
                                  QPushButton, QMessageBox, QCheckBox)
-from qgis.core import (Qgis, QgsProject, QgsVectorLayer,    # QgsField,  # QgsLayerTreeLayer,
+from qgis.core import (Qgis, QgsProject, QgsVectorLayer,
                        QgsLayerTreeGroup, QgsCoordinateTransform
                        )
 from qgis.PyQt.QtCore import QCoreApplication
@@ -73,15 +73,48 @@ BLOCKTYPEX_SCALEID = {
     "1E" : 11
 }
 
-# Порядок групп в rootGroup: POIs -> Scale 0-5 -> Routes 0-3
-# Индексы в SCALES_GROUP_NAMES соответствуют scaleId
-SCALES_GROUP_NAMES = ['Routes 0', 'POIs', 'Routes 3', 'Routes 2', 'Routes 1', 'Scale 3',
-                      'Scale 1', 'Scale 0', 'Empty', 'Scale 2', 'Scale 4', 'Scale 5']
+# Порядок групп в rootGroup сверху вниз: POIs -> Scale 0-5 -> Routes 0-3
+# Единая конфигурация для всех scale-групп
+GROUP_CONFIG = {
+    0: {'name': 'Routes 0', 'category': 'routes', 'sort_num': 0},
+    1: {'name': 'POIs', 'category': 'poi', 'sort_num': 1},
+    2: {'name': 'Routes 3', 'category': 'routes', 'sort_num': 3},
+    3: {'name': 'Routes 2', 'category': 'routes', 'sort_num': 2},
+    4: {'name': 'Routes 1', 'category': 'routes', 'sort_num': 1},
+    5: {'name': 'Scale 3', 'category': 'scale', 'sort_num': 3},
+    6: {'name': 'Scale 1', 'category': 'scale', 'sort_num': 1},
+    7: {'name': 'Scale 0', 'category': 'scale', 'sort_num': 0},
+    8: {'name': 'Empty', 'category': 'empty', 'sort_num': 8},
+    9: {'name': 'Scale 2', 'category': 'scale', 'sort_num': 2},
+    10: {'name': 'Scale 4', 'category': 'scale', 'sort_num': 4},
+    11: {'name': 'Scale 5', 'category': 'scale', 'sort_num': 5},
+}
 
-# Порядок вставки групп в rootGroup: POI, затем Scale 0-5, затем Routes
-GROUP_INSERT_ORDER = [1,  # POIs
-                      0, 7, 6, 5, 10, 11,  # Scale 0-5
-                      0, 2, 3, 4]  # Routes 0-3
+# Порядок категорий в rootGroup сверху вниз: POIs -> Scale 0-5 -> Routes 0-3
+CATEGORY_ORDER = ['poi', 'scale', 'routes']
+
+# Сообщения
+MSG_NO_AREAS = 'Where are no Area_A, Area_B in this Carindb.'
+
+# Типы блоков
+GEO_BLOCK_TYPES = {0x14, 0x15, 0x16, 0x1C, 0x1D, 0x1E}
+GEO_OR_POI_BLOCK_TYPES = GEO_BLOCK_TYPES | {0x06}
+MAP_SCALE_IDS = {1, 5, 6, 7, 9, 10, 11}
+
+
+def _get_group_name(scaleId: int) -> str:
+    """Возвращает название группы по scaleId."""
+    return GROUP_CONFIG[scaleId]['name']
+
+
+def _get_group_category(scaleId: int) -> str:
+    """Возвращает категорию группы по scaleId."""
+    return GROUP_CONFIG[scaleId]['category']
+
+
+def _get_group_sort_num(scaleId: int) -> int:
+    """Возвращает номер сортировки группы по scaleId."""
+    return GROUP_CONFIG[scaleId]['sort_num']
 
 
 class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
@@ -169,7 +202,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Is dbrev old? no areas, show warning
         if self.vdo.dbrev != 34:
             self.iface.messageBar().pushMessage(
-                self.tr('Where are no Area_A, Area_B in this Carindb.'),
+                self.tr(MSG_NO_AREAS),
                 Qgis.Warning, 3)
             return
 
@@ -251,37 +284,37 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         (к моменту вызова _restoreScale список масштабов уже есть)
         """
         # Восстановить из настроек ранее установленный scale
-        checkScale = Settings.ChousedScale()
-        if self.scales[checkScale].is_empty:
-            checkScale = DEFAULT_SCALE
-        if self.scales[checkScale].is_empty:
+        check_scale = Settings.ChousedScale()
+        if self.scales[check_scale].is_empty:
+            check_scale = DEFAULT_SCALE
+        if self.scales[check_scale].is_empty:
             for i in range(QTY_ALL_SCALES):
                 if not self.scales[i].is_empty:
-                    checkScale = i
+                    check_scale = i
                     break
         # root group - vdo
         # root = self._getRootGroup()
         # Создаем ОБЩУЮ группу для всех радиокнопок масштабов
         self.button_group_scale = QButtonGroup(self)
         # добавляем в группу все кнопки rb_scale_[0..11]
-        for id in range(QTY_ALL_SCALES):
-            rb_name = RB_SCALE_OBJNAME_PREFIX + str(id)
+        for scale_id in range(QTY_ALL_SCALES):
+            rb_name = RB_SCALE_OBJNAME_PREFIX + str(scale_id)
             rb = self.tabWidget.findChild(QRadioButton, rb_name)
             # Изменить подпись: номер scale, value_a, масштаб от и до
-            sc: SCALE = self.scales[id]
-            # rb.setText("{}  {}: {} - {}".format(id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
-            rb.setText("{}  {}: {} - {}".format(id, SCALES_GROUP_NAMES[id], sc.zoom_from, sc.zoom_to))  # noqa
+            sc: SCALE = self.scales[scale_id]
+            # rb.setText("{}  {}: {} - {}".format(scale_id, sc.value_a, sc.zoom_from, sc.zoom_to))  # noqa
+            rb.setText("{}  {}: {} - {}".format(scale_id, _get_group_name(scale_id), sc.zoom_from, sc.zoom_to))  # noqa
             # Установить enabled|disabled
             rb.setEnabled(not sc.is_empty)
             # TODO: а не излишне ли?
             # параллельно с rb создаём группы масштабов для отображения.
             # УПД - не создаём, issue 85
             # if not sc.is_empty:
-            #     gr_name = SCALE_GROUP_NAME_PREFIX + str(id)
+            #     gr_name = SCALE_GROUP_NAME_PREFIX + str(scale_id)
             #     if not (root.findGroup(gr_name)):
             #         root.insertGroup(-2, gr_name)
             # добавляем в группу rb
-            self.button_group_scale.addButton(rb, id)
+            self.button_group_scale.addButton(rb, scale_id)
             pass
 
         # Connect the change signal button_group_scale
@@ -292,10 +325,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.pb_LoadFolderMaps.clicked.connect(self.start_loading_folders)
 
         # set from settings
-        self._setScale(checkScale)
-
-        # Создаём группы масштабов в правильном порядке
-        self._ensure_scale_groups_order()
+        self._setScale(check_scale)
 
         pass
 
@@ -363,7 +393,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             blockInfo = f"{block.head}"
         self.l_loadBlockInfo.setText(blockInfo)
 
-        if block.type not in [0x06, 0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+        if block.type not in GEO_OR_POI_BLOCK_TYPES:
             # 1-0x06, 2-0x01, 3-0x02, 4-0x03
             # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
             # и 06 - spatial POIs
@@ -379,7 +409,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             DrawPacketPOIs(pois, layer_poi)
             # del layer_poi
             
-        elif targetScale in [5, 6, 7, 9, 10, 11]:
+        elif targetScale in MAP_SCALE_IDS:  # 5, 6, 7, 9, 10, 11
             layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
             lines = [lin for lin in block.getObjects(isGetShapes=False)]
             DrawPacketLines(lines, layer_lines)
@@ -525,7 +555,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # Is dbrev old? no areas, show warning
         if self.vdo.dbrev != 34:
             self.iface.messageBar().pushMessage(
-                self.tr('Where are no Area_A, Area_B in this Carindb.'),
+                self.tr(MSG_NO_AREAS),
                 Qgis.Warning, 3)
             return root_group
 
@@ -597,16 +627,15 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         scaleGroup: QgsLayerTreeGroup
         rootGroup = self._getRootGroup()
         # поиск в существующих
-        scaleGroup = rootGroup.findGroup(SCALES_GROUP_NAMES[scaleId])
+        scaleGroup = rootGroup.findGroup(_get_group_name(scaleId))
         if scaleGroup:
             return scaleGroup
         #----------------------------------------------------------------------
-        # такой не найдено - надо её создать
-        # Вставляем в конец (наибольший индекс), чтобы сохранить порядок
-        insert_index = len(rootGroup.children())
+        # такой не найдено - надо её создать лениво
+        insert_index = self._find_insert_index_for_category(rootGroup, scaleId)
 
         # вставляем
-        scaleGroup = rootGroup.insertGroup(insert_index, SCALES_GROUP_NAMES[scaleId])
+        scaleGroup = rootGroup.insertGroup(insert_index, _get_group_name(scaleId))
         self.tabTopo_DrawAlmanacArea(scaleId)
         return scaleGroup
 
@@ -620,31 +649,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             layer: QgsVectorLayer
         """
         if not (scaleGroup := self._getScaleGroup(scaleId)):
-            raise ValueError(f"Нет группы '{SCALES_GROUP_NAMES[scaleId]}' для scale {scaleId}")
+            raise ValueError(f"Нет группы '{_get_group_name(scaleId)}' для scale {scaleId}")
 
         return getLayer(scaleGroup, layerName)
-    
-    def _ensure_scale_groups_order(self) -> None:
-        """
-        Создаёт все группы масштабов в правильном порядке.
-        Порядок: POIs -> Scale 0-5 -> Routes 0-3
-        """
-        rootGroup = self._getRootGroup()
-        if rootGroup is None:
-            return
-
-        # Порядок создания групп: POI (1), Scale 0-5 (0,7,6,5,10,11), Routes (2,3,4)
-        insert_order = [1, 0, 7, 6, 5, 10, 11, 2, 3, 4]
-
-        for scale_id in insert_order:
-            if self.scales[scale_id].is_empty:
-                continue
-            group_name = SCALES_GROUP_NAMES[scale_id]
-            # Если группа уже существует — пропускаем
-            if rootGroup.findGroup(group_name):
-                continue
-            # Вставляем в конец
-            rootGroup.insertGroup(len(rootGroup.children()), group_name)
 
     def _restoreGroupBoxVisibility(self) -> None:
         """
@@ -751,7 +758,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # инициализируем слои для добавления
         block = self.vdo.get_block(next(folder_block.get_valid_blocks()))
-        if block.type not in [0x14, 0x15, 0x16, 0x1c, 0x1d, 0x1e]:
+        if block.type not in GEO_BLOCK_TYPES:
             # 1-0x06, 2-0x01, 3-0x02, 4-0x03
             # загружать ТОЛЬКО географические блоки:    5-0x14 6-0x15 7-0x16   9-0x1c 10-1d, 11-1e
             return
@@ -766,7 +773,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
                 button.setEnabled(False)
 
         # определяем масштаб
-        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
+        targetScale = BLOCKTYPEX_SCALEID[f"{block.type:02X}"]
         # слой по соответствию типа block, а не текущий
         self.curr_layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
         self.curr_layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
@@ -799,7 +806,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         """
         Triggered when any radio button in the group scale is clicked/changed
         """
-        self.currentIdScale = self.button_group_scale.id(button)
+        scale_id = self.button_group_scale.id(button)
+        if scale_id == -1 or scale_id >= len(self.scales):
+            return
+        self.currentIdScale = scale_id
         # сохраняем номер масштаба в settings
         Settings.setChousedScale(self.currentIdScale)
         # Получить слой для folder maps
@@ -817,7 +827,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # кроме POI
             if id == 1:
                 continue
-            gr_name = SCALES_GROUP_NAMES[id]
+            gr_name = _get_group_name(id)
             if gr := root_gr.findGroup(gr_name):
                 gr.setItemVisibilityChecked(id == self.currentIdScale)
                 
@@ -826,10 +836,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
 
     def closeEvent(self, event):
-        # self.closingPlugin.emit()
-        # event.accept()
         self.tabBlock_activate_coords_tool(False)
-        pass
+        event.accept()
+        super().closeEvent(event)
 
     def pbActionEvent(self, event):
         # action для кнопки

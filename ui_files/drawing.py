@@ -18,18 +18,13 @@ from qgis.PyQt.QtCore import Qt, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont
 
 from QGIS_VDO.vdo import (
-    NAME_LAYER_ALMANACS,
-    NAME_LAYER_POI,
     NAME_LAYER_SHAPES,
-    NAME_LAYER_LINES,
     CRS_NAME, CRS_PROJECTION_STRING,
     LAYERS_PROPERTY,
     PEN_STYLES,
     FILL_STYLES
 )
 
-
-ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]
 
 GEOMETRY_SYMBOLS = {
     'Polygon': QgsFillSymbol,
@@ -122,6 +117,123 @@ def _DrawRectangleArea(area, area_name: str, layer: QgsVectorLayer, variant: str
 
     pass
 
+
+def DrawPacketPOIs(poi_packet: list, layer: QgsVectorLayer) -> None: # noqa
+    """
+    Пакетно добавляет POIs в слой layer.
+    Args:
+        poi_packet: [POI_ITEM] (с заполненным .poi из block 0x10)
+        layer: QgsVectorLayer (Qgis.GeometryType.Point)
+    """
+    # Базовые проверки слоя
+    if not layer or layer.geometryType() != Qgis.GeometryType.Point:
+        return
+
+    if not poi_packet:
+        return
+
+    # Извлекаем уникальные id из пакета (исключая None/пустые)
+    packet_id = {item.id for item in poi_packet if getattr(item, 'id', None)}
+    if not packet_id:
+        return
+
+    # Получаем индексы полей безопасным способом
+    fields = layer.fields()
+    field_idx_variant = fields.indexOf('variant')
+    field_idx_name = fields.indexOf('name')
+    field_idx_id = fields.indexOf('id')
+    field_idx_brand = fields.indexOf('brand')
+    field_idx_sign = fields.indexOf('sign')
+    field_idx_address = fields.indexOf('address')
+    field_idx_phone = fields.indexOf('phone')
+    field_idx_language = fields.indexOf('language')
+
+    # Оптимизированный сбор существующих id в слое
+    if field_idx_id != -1:
+        # Экранируем одинарные кавычки для SQL
+        ids_escaped = [str(p).replace("'", "''") for p in packet_id]
+        safe_id_str = ", ".join(f"'{p}'" for p in ids_escaped)
+        exist_expression = f"\"id\" IN ({safe_id_str})"
+
+        # Запрашиваем только поле id для максимальной скорости
+        request = QgsFeatureRequest().setFilterExpression(exist_expression).setSubsetOfAttributes([field_idx_id])
+        existing_id = {f.attribute('id') for f in layer.getFeatures(request)}
+    else:
+        existing_id = set()
+
+    # Подготовка списка новых объектов
+    features_to_add = []
+
+    for item in poi_packet:
+        # Если POI с таким id уже есть на слое — пропускаем его
+        if item.id in existing_id:
+            continue
+
+        # Проверяем наличие координат
+        # coo = item.coord
+        coord = getattr(item, 'coord', None)
+        if coord is None:
+            continue
+
+        # Создаём геометрию точки
+        point_geom = QgsGeometry.fromPointXY(QgsPointXY(item.poi.coord.lon, item.poi.coord.lat))
+
+        # Создаём объект QgsFeature
+        feature = QgsFeature(fields)
+        feature.setGeometry(point_geom)
+
+        # Безопасная установка атрибутов (только если поля существуют в слое)
+        if field_idx_variant != -1:
+            feature.setAttribute(field_idx_variant, item.cat)
+        if field_idx_name != -1:
+            poi = getattr(item, 'poi', None)
+            feature.setAttribute(field_idx_name, poi.name.upper() if poi and poi.name else "")
+        if field_idx_id != -1:
+            feature.setAttribute(field_idx_id, item.id)
+        if field_idx_brand != -1:
+            feature.setAttribute(field_idx_brand, item.brand if item.brand else "")
+        if field_idx_sign != -1:
+            feature.setAttribute(field_idx_sign, "")
+        if field_idx_address != -1:
+            poi = getattr(item, 'poi', None)
+            feature.setAttribute(field_idx_address, poi.address if poi else "")
+        if field_idx_phone != -1:
+            poi = getattr(item, 'poi', None)
+            feature.setAttribute(field_idx_phone, poi.phone if poi and poi.phone else "")
+        if field_idx_language != -1:
+            feature.setAttribute(field_idx_language, "")
+
+        features_to_add.append(feature)
+
+    # Если добавлять нечего — выходим
+    if not features_to_add:
+        return
+
+    # Единая транзакция для всего пакета объектов
+    was_editable = layer.isEditable()
+    if not was_editable:
+        if not layer.startEditing():
+            print("Не удалось перевести слой в режим редактирования.")
+            return
+
+    layer.blockSignals(True)
+    success = False
+    try:
+        success = layer.addFeatures(features_to_add)
+    except Exception as e:
+        print(f"Ошибка при вызове addFeatures: {e}")
+    finally:
+        layer.blockSignals(False)
+
+    # Фиксация изменений
+    if success:
+        if not was_editable:
+            layer.commitChanges()
+        layer.triggerRepaint()
+    else:
+        if not was_editable:
+            layer.rollBack()
+        print(f"Не удалось импортировать пакет из {len(features_to_add)} объектов.")
 
 def DrawPacketLines(lines_packet: list, layer: QgsVectorLayer) -> None: # noqa
     """
@@ -471,6 +583,13 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
         layer: QgsVectorLayer
     """
     # Поиск layer в указанной группе.
+    # Сначала чистим повисшие узлы (layer == None)
+    children = list(parentGroup.children())
+    for child in children:
+        if isinstance(child, QgsLayerTreeLayer):
+            if child.layer() is None:
+                parentGroup.removeChildNode(child)
+
     if layer := _findLayer_in_Group(parentGroup, layerName):
         return layer
 
@@ -537,7 +656,7 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     if use_render_order:
         # Объекты с большими числами  ascending=True будут отрисованы ПОЗЖЕ (то есть лягут НАВЕРХУ).
         order_by = QgsFeatureRequest.OrderBy([
-            QgsFeatureRequest.OrderByClause('render_order', ascending=False)
+            QgsFeatureRequest.OrderByClause('render_order', ascending=True)
         ])
         renderer.setOrderBy(order_by)
         renderer.setOrderByEnabled(True)
@@ -661,15 +780,9 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     simplify_method.setTolerance(1.5)
     layer.setSimplifyMethod(simplify_method)
 
-    # Регистрируем в проекте без автоматического отображения в корне панели (False)
+    # Регистрируем слой в проекте и добавляем в группу
     QgsProject.instance().addMapLayer(layer, False)
-    
-    # Исправлено условие: явная проверка на None, чтобы 'place': 0 работал корректно
-    place = target.get('place')
-    if place is not None:
-        parentGroup.insertLayer(int(place), layer)
-    else:
-        _add_layer_in_right_order(parentGroup, layer, layerName)
+    parentGroup.addLayer(layer)
 
     # Сворачиваем дерево стилей/категорий слоя для аккуратности внутри parentGroup
     layer_node = parentGroup.findLayer(layer.id())
@@ -691,49 +804,13 @@ def _findLayer_in_Group(group: QgsLayerTreeGroup, LayerName: str) -> QgsVectorLa
         # Проверяем, что дочерний элемент — это слой и его имя совпадает
         if isinstance(child, QgsLayerTreeLayer) and child.name() == LayerName:
             layer = child.layer()
+            # Слой мог быть удалён, но узел остался в группе
+            if layer is None:
+                return None
             # Убеждаемся, что это векторный слой
             if isinstance(layer, QgsVectorLayer):
                 return layer
-            else:
-                raise ValueError(f"Что не так с {layer.name()}")
     return None
-
-
-def _add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLayer, layer_key: str):
-    """
-    Добавляет слой в QGIS на строго определенную позицию.
-    layer_key: 'poi', 'lines', 'shapes' или 'almanac'
-    """
-    if layer_key not in ORDER_PRIORITY:
-        raise ValueError(f"Неизвестный тип слоя: {layer_key}")
-
-    # Вычисляем правильный индекс для вставки
-    # Ищем, сколько слоев с БОЛЕЕ ВЫСОКИМ приоритетом уже есть на панели
-    target_index = 0
-    current_nodes = group.children()    # Все элементы на панели сверху вниз
-    
-    # Определяем ранг текущего добавляемого слоя (0 для poi, 1 для lines и т.д.)
-    new_layer_rank = ORDER_PRIORITY.index(layer_key)
-    
-    for node in current_nodes:
-        # Проверяем только векторные слои
-        if hasattr(node, 'layer') and node.layer():
-            existing_layer_name = node.layer().name().lower()
-            
-            # Определяем ранг уже существующего на панели слоя
-            existing_rank = None
-            for rank, key in enumerate(ORDER_PRIORITY):
-                if key in existing_layer_name:    # Проверка на частичное вхождение или точное имя
-                    existing_rank = rank
-                    break
-            
-            # Если ранг существующего слоя выше или равен нашему,
-            # мы должны пропустить его и встать ПОД ним (увеличиваем индекс вставки)
-            if existing_rank is not None and existing_rank <= new_layer_rank:
-                target_index += 1
-                
-    # Вставляем слой на вычисленную позицию
-    group.insertLayer(target_index, new_layer)
 
 
 def _create_complex_symbol(geometry_type: str, style_item: dict) -> object:

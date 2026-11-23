@@ -27,7 +27,7 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 # Функциональность
 - [x] Выбор файла. Вывод инфо о файле (файлах). Запоминание настроек.
 - [ ] Выбор страны, города, дороги, точки интереса вводом адреса
-- [ ] Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
+- [x] Отображение категорий POI, вывод списка категорий и POI по ним в интерфейс QGIS
 - [x] Отображение картографического слоя по масштабам
 - [x] Работа с несколькими carindb
 - [x] Отображение в пользовательской СК "WGS 84 / Custom Pacific Split -80" - линия разрыва в атлантике, 80W
@@ -65,3 +65,78 @@ Systeme Guidage Carminat C-IQ navigation database QGIS viewer This plugin for vi
 - https://github.com/fdemusso/OpenCarin
 - https://github.com/daglitch/CARiN_P38
 - готовые полигоны океана и морей: https://osmdata.openstreetmap.de/data/water-polygons.html.  water-polygons-split-4326.zip
+
+# Вклад в проект
+1. Форк репозитория
+2. Создать ветку из `dev`: `git checkout -b feature/название dev`
+3. Написать тесты для нового функционала
+4. Запустить `flake8` и `pytest`
+5. Создать Pull Request в `dev`
+
+# Установка
+1. Открыть QGIS → Плагины → Управлять и установить плагины
+2. Настроить репозиторий (Settings → Plugins → Add new repository)
+3. Найти QGIS_VDO и установить
+
+# Запуск
+1. Открыть QGIS
+2. Панель плагинов → QGIS_VDO
+3. Выбрать файл carindb (DB30, DB34)
+
+# Структура проекта
+```
+QGIS_VDO/
+├── ui_files/           # UI и отрисовка
+│   ├── QgisVdoDockwidget.py   # Главный виджет
+│   └── drawing.py             # Функции отрисовки слоёв
+├── vdo/                # Парсинг carindb
+│   ├── blocks/            # Блоки 0x06, 0x07, 0x08, 0x09, 0x10, 0x12, 0x13, 0x14...
+│   ├── consts_layers.py   # Константы слоёв
+│   ├── enums.py           # Enum-категории POI
+│   └── geotypes.py        # Типы геометрии
+├── tests/              # 703 автотеста
+└── research/           # Исследования формата
+```
+
+# Поддерживаемые блоки carindb
+
+| Блок | Описание | Статус |
+|------|----------|--------|
+| 0x06 | Spatial POI Index (населённые пункты) | ✅ |
+| 0x07 | Scales | ✅ |
+| 0x08 | Almanac | ✅ |
+| 0x09 | Folder Map | ✅ |
+| 0x10 | POI Details (детали точек интереса) | ✅ |
+| 0x12 | TOC (Table of Contents) | ✅ |
+| 0x13 | Bibliography | ✅ |
+| 0x14 | MAP__05k200 | ✅ |
+| 0x15 | MAP__06k80 | ✅ |
+| 0x16 | MAP__07k40 | ✅ |
+| 0x1C | MAP__09k100 | ✅ |
+| 0x1D | MAP__10k400 | ✅ |
+| 0x1E | MAP__11k_11 | ✅ |
+
+# Тестирование
+```bash
+# Запуск всех тестов
+pytest -v tests/
+
+# Покрытие
+pytest --cov=QGIS_VDO tests/
+```
+Текущее покрытие: 703 теста
+
+# Roadmap
+- [ ] Выбор страны/города/дороги/POI вводом адреса
+- [ ] Routes (scale 0, 2, 3, 4) — отрисовка маршрутов
+
+# Известные ограничения
+- Проверено только с QGIS 3.40+
+- Требуется Python 3.12+
+- CRS: "WGS 84 / Custom Pacific Split -80"
+- POI scale group содержит spatial index из блока 0x07 — есть не во всех carindb и отображает населённые пункты (City)
+- Routes (0, 2, 3, 4) — не реализованы
+
+# Благодарности
+- [OpenCarin](https://github.com/fdemusso/OpenCarin) — реверс-инжиниринг формата CARiN
+- [CARiN_P38](https://github.com/daglitch/CARiN_P38) — дополнительная документация формата

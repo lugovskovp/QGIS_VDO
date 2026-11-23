@@ -531,6 +531,9 @@ class POI_ITEM(BYTESTRUCT):
         self.brand = ''
         if zero1 or zero2:
             raise NotImplementedError(f"z1: {zero1}, z2: {zero2}")
+        if not self.id:
+            # ru30 - id = 0 везде, make id from x y
+            self.id = (self._LOCAL_X << 16) + self._LOCAL_Y
         self.coord = None
         self.poi = None
 
@@ -682,7 +685,10 @@ class POI_DETAILS(BYTESTRUCT):
             self.id, self._ps_phone, self._ps_postcode,
             zero3) = struct_POI_DETAILS.unpack_from(self._raw, 8)  # ">LHHHHHHHHLHHL"
 
-        if (self.zero1 and self.zero1 != 1) or zero2 or zero3:
+        # if (self.zero1 and self.zero1 != 1) or zero2 or zero3:
+        # NotImplementedError: POI_DETAILS z1: 0, z2: 0, z3: 65536
+        # 10.MRE_13_14 0xAE5401
+        if (self.zero1 and self.zero1 != 1) or zero2:
             raise NotImplementedError(f"POI_DETAILS z1: {self.zero1}, z2: {zero2}, z3: {zero3}")
         self.li_road = LIST(struct_LIST.pack(road_ptr, road_cnt))
         # zero=1 = aeroport twente, closed from 2008
@@ -711,6 +717,23 @@ class POI(POI_BRIF):
         self.coord = None
         self.raw_road = []
         self._zero1 = 0
+
+    @property
+    def address(self) -> str:
+        """
+        Формирует адрес из доступных полей, разделяя их запятыми.
+        Пропускает пустые значения и None.
+        Порядок: индекс, страна, регион, город, улица, дом.
+        """
+        parts = (
+            self.postcode,
+            self.country,
+            self.region,
+            self.city,
+            self.street,
+            self.houseno,
+        )
+        return ", ".join([s for s in parts if s]) or ""
 
 
 # -------------------------------------------------------------------------

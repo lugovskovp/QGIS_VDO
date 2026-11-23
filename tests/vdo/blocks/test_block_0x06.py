@@ -43,7 +43,7 @@ BLOCK_DICT = {
             '_cat': en_POI_CAT.City,
             '_p_brand': 0,
             'is_custom': 1,         # !!!
-            'id': 0,
+            'id': 0x209312a,  # computed from LOCAL_X/Y (0x209 << 16) + 0x312a
             'brand': '',
             'coord': '60.380991N 29.486025E',
         },

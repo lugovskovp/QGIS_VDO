@@ -120,7 +120,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         else:   # if self.vdo.is_empty:
             # TODO: vdo None -> make unactive groupbox?
             pass
-        # TODO: DEBUG привязать pb_DebugClearVDO
+        # DEBUG привязать pb_DebugClearVDO
         self.pb_DebugClearVDO.clicked.connect(self.pb_DebugClearVDOevent)
 
         pass    # def __init__(self, parent_plugin, iface, parent=None):
@@ -388,16 +388,13 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             # del layer_poi
             
         elif targetScale in [5, 6, 7, 9, 10, 11]:
-            layer_shape = getLayer(scale_group, NAME_LAYER_SHAPES)
-
-            # получаем полигоны слоя
-            shapes = [shp for shp in block.getObjects(isGetLines=False)]
-            # отрисовываем слой NAME_LAYER_SHAPES
-            DrawPacketShapes(shapes, layer_shape)
-
             layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
             lines = [lin for lin in block.getObjects(isGetShapes=False)]
             DrawPacketLines(lines, layer_lines)
+
+            layer_shape = getLayer(scale_group, NAME_LAYER_SHAPES)
+            shapes = [shp for shp in block.getObjects(isGetLines=False)]
+            DrawPacketShapes(shapes, layer_shape)
 
             # debug
             # objs = shapes + lines
@@ -769,8 +766,8 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # определяем масштаб
         targetScale = BLOCKTYPEX_SCALEID[f"{block.type:X}"]
         # слой по соответствию типа block, а не текущий
-        self.curr_layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
         self.curr_layer_lines = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_LINES)
+        self.curr_layer_shape = getLayer(self._getScaleGroup(targetScale), NAME_LAYER_SHAPES)
 
         # Делаем слой активным в интерфейсе
         self.iface.setActiveLayer(self.curr_layer_shape)
@@ -808,6 +805,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         # отрисовать area альманаха
         self.tabTopo_DrawAlmanacArea(self.currentIdScale)
         # tabBlock set l_currScaleId
+        # TODO: text must get from consts scqales?
         self.l_currScaleId.setText(f"{self.currentIdScale}")
 
         # Отключить видимость для всех групп iface

@@ -78,6 +78,148 @@ LAYERS_PROPERTY = [
         ]
     },
     {
+        'name': NAME_LAYER_LINES,
+        'geometry': 'LineString',
+        'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
+                       ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
+                       ('name', QMetaType.Type.QString),
+                       ('name2', QMetaType.Type.QString),
+                       ('id', QMetaType.Type.Int),
+                       ('block', QMetaType.Type.QString),
+                       # непонятные WORD
+                       ('c_p_line_sign', QMetaType.Type.QString),   # noqa TSTR? in 30 - все показывают на первый tstr.
+                       ('c_b_or_c', QMetaType.Type.QString),    # noqa  hex? in 30 - все = 0
+                       ('c_pp_str_name', QMetaType.Type.QString),   # noqa to TSTR, который на имя
+                       ('c_38_or_0b_country', QMetaType.Type.QString),   # noqa  hex?- WORD неясной природы
+                       ],
+        'labels' : [        # rule based labels
+            {'description' : 'Roads E', 'color': "#ffffff", 'background': "#00c300", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^E'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 10, 'bold': True, 'label_space': True, },
+            {'description' : 'Roads 0-9', 'color': "#000000", 'background': "#ffdc32", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^[0-9]'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, 'label_space': True, },
+            {'description' : 'Roads M', 'color': "#ffffff", 'background': "#ff0707", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^M'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 10, 'bold': True, 'label_space': True, },
+            {'description' : 'Roads P', 'color': "#000000", 'background': "#ffdc32", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^P'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, 'label_space': True, },
+            {'description' : 'Roads A', 'color': "#ffffff", 'background': "#3232ff", 'label_min_size': 10.0,
+             'condition' : "variant ~ '^ROAD_' and name ~ '^A'", 'placement' : Qgis.LabelPlacement.Horizontal,
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, 'label_space': True, },
+            #  'label_space': True, - добавить вертикального и горизонтального фонеа таблички
+            {'description' : 'ROAD_LOCAL', 'color': "#9c7c5d", 'label_min_size': 10.0,
+             'condition' : "variant = 'ROAD_LOCAL'",
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'ROAD_UNPAVED', 'color': "#9c7c5d", 'label_min_size': 10.0,
+             'condition' : "variant = 'ROAD_UNPAVED'",
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'CANAL', 'color': "#4400FF", 'label_min_size': 10.0,
+             'condition' : "variant = 'CANAL'",
+             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
+            {'description' : 'RIVER_STREAM', 'color': "#4400FF", 'label_min_size': 10.0,
+             'condition' : "variant = 'RIVER_STREAM'",
+             'font_family': 'Arial', 'font_size': 7, 'bold': True, },
+            {'description' : 'RIVER_MAJOR', 'color': "#4400FF", 'label_min_size': 10.0,
+             'condition' : "variant = 'RIVER_MAJOR'", 'placement' : Qgis.LabelPlacement.Curved,
+             'font_family': 'Arial', 'font_size': 9, 'bold': True, },
+
+        ],
+        'styles': [
+            {
+                'name': 'ROAD_HIGHWAY',
+                'style': [
+                    {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
+                    {"color": "#fff888", "width": 0.6, "pen_style": "solid"}
+                ],
+            },
+            {
+                'name': 'ROAD_PRIME',
+                'style': [
+                    {"color": "#e15a1f", "width": 0.8, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_MINOR',
+                'style': [
+                    {"color": "#e15a1f", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_LOCAL',   # Внутриквартальные
+                'style': [
+                    {"color": "#fff888", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_UNPAVED',     # Грунтовки
+                'style': [
+                    {"color": "#9c7c5d", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_SLIP',    # Съезды
+                'style': [
+                    {"color": "#fcd05b", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'ROAD_ROUNDABOUT',    # Кольца
+                'style': [
+                    {"color": "#f49c14", "width": 0.5, "pen_style": "solid"},
+                ],
+            },
+
+            {
+                'name': 'RAILWAY',
+                'style': [
+                    {"color": "#ffffff", "width": 0.8, "pen_style": "solid"},   # Подложка
+                    {"color": "#000000", "width": 0.5, "pen_style": "dot"}     # Пунктир сверху
+                ],
+            },
+            {
+                'name': 'BORDER',
+                'style': [
+                    {"color": "#ff0707", "width": 0.9, "custom_dash": [4.0, 4.0]},
+                    {"color": "#00c300", "width": 0.6, "custom_dash": [4.0, 4.0], "dash_offset": 4.0},
+                ],
+            },
+            {
+                'name': 'CANAL',    #
+                'style': [
+                    {"color": "#1d70b8", "width": 0.6, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'RIVER_STREAM',    #
+                'style': [
+                    {"color": "#a5d5f5", "width": 0.3, "pen_style": "solid"},
+                ],
+            },
+            {
+                'name': 'RIVER_MAJOR',    #
+                'style': [
+                    {"color": "#005ea5", "width": 0.8, "pen_style": "solid",
+                     'min_size': 5.0,  # Скрывать, если на экране меньше 5 мм,  TODO:
+                     },
+                ],
+            },
+            {
+                'name': 'PEDESTRIAN_ZONE',    #
+                'style': [
+                    {"color": "#808080", "width": 0.3, "pen_style": "dot"},
+                ],
+            },
+            {
+                'name': 'FERRY_CONNECTION',    # паром?
+                'style': [
+                    {"color": "#a500a2", "width": 0.4, "pen_style": "dot"},
+                ],
+            },
+        ],
+    },
+    {
         'name': NAME_LAYER_SHAPES,
         'geometry': 'Polygon',
         'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
@@ -225,22 +367,24 @@ LAYERS_PROPERTY = [
             {
                 'name': 'CITY',
                 'style': [{
-                    'fill_color': '#96969664',         # Полупрозрачная серая заливка
-                    'outline_color': '#C8C8C8FF',      # светлая серая граница
+                    'fill_color': '#fcfcfca4',         # Полупрозрачная white заливка '#96969664'
+                    'outline_color': '#a8a8a8FF',      # светлая серая граница
                     'outline_width': '0.1',
                     'fill_style': 'solid',
                     'outline_style': 'solid'
                 }],
                 'label_style': {
                     'font_family': 'Arial',
-                    'font_size': 1000,
-                    'size_in_meters' : True,
-                    'color': "#ffffff",         # Белая
+                    'font_size': 12,
+                    # 'font_size': 1000,
+                    # 'size_in_meters' : True,
+                    'color': "#903030",         # Белая
                     'bold': True,
-                    'buffer_enabled': True,     # Включаем обводку
-                    'buffer_color': "#020000",  # Черная обводка
+                    'italic': True,
+                    'buffer_enabled': True,       # Включаем обводку
+                    'buffer_color': "#F9F9F9",  # обводка
                     'buffer_size': 0.5,
-                    'label_min_size': 0.5,  # Скрывать подпись, если полигон на экране меньше 5 мм,
+                    'label_min_size': 0.7,  # Скрывать подпись, если полигон на экране меньше 5 мм,
                     # "remove_duplicates": True,
                 }
             },
@@ -275,148 +419,6 @@ LAYERS_PROPERTY = [
                 }],
             },
         ]
-    },
-    {
-        'name': NAME_LAYER_LINES,
-        'geometry': 'LineString',
-        'attributes': [('variant', QMetaType.Type.QString),   # отображение, cat.name
-                       ('render_order', QMetaType.Type.Int),   # порядок отрисовки symbol в слое
-                       ('name', QMetaType.Type.QString),
-                       ('name2', QMetaType.Type.QString),
-                       ('id', QMetaType.Type.Int),
-                       ('block', QMetaType.Type.QString),
-                       # непонятные WORD
-                       ('c_p_line_sign', QMetaType.Type.QString),   # noqa TSTR? in 30 - все показывают на первый tstr.
-                       ('c_b_or_c', QMetaType.Type.QString),    # noqa  hex? in 30 - все = 0
-                       ('c_pp_str_name', QMetaType.Type.QString),   # noqa to TSTR, который на имя
-                       ('c_38_or_0b_country', QMetaType.Type.QString),   # noqa  hex?- WORD неясной природы
-                       ],
-        'labels' : [        # rule based labels
-            {'description' : 'Roads E', 'color': "#ffffff", 'background': "#00c300", 'label_min_size': 10.0,
-             'condition' : "variant ~ '^ROAD_' and name ~ '^E'", 'placement' : Qgis.LabelPlacement.Horizontal,
-             'font_family': 'Arial', 'font_size': 10, 'bold': True, 'label_space': True, },
-            {'description' : 'Roads 0-9', 'color': "#000000", 'background': "#ffdc32", 'label_min_size': 10.0,
-             'condition' : "variant ~ '^ROAD_' and name ~ '^[0-9]'", 'placement' : Qgis.LabelPlacement.Horizontal,
-             'font_family': 'Arial', 'font_size': 8, 'bold': True, 'label_space': True, },
-            {'description' : 'Roads M', 'color': "#ffffff", 'background': "#ff0707", 'label_min_size': 10.0,
-             'condition' : "variant ~ '^ROAD_' and name ~ '^M'", 'placement' : Qgis.LabelPlacement.Horizontal,
-             'font_family': 'Arial', 'font_size': 10, 'bold': True, 'label_space': True, },
-            {'description' : 'Roads P', 'color': "#000000", 'background': "#ffdc32", 'label_min_size': 10.0,
-             'condition' : "variant ~ '^ROAD_' and name ~ '^P'", 'placement' : Qgis.LabelPlacement.Horizontal,
-             'font_family': 'Arial', 'font_size': 8, 'bold': True, 'label_space': True, },
-            {'description' : 'Roads A', 'color': "#ffffff", 'background': "#3232ff", 'label_min_size': 10.0,
-             'condition' : "variant ~ '^ROAD_' and name ~ '^A'", 'placement' : Qgis.LabelPlacement.Horizontal,
-             'font_family': 'Arial', 'font_size': 8, 'bold': True, 'label_space': True, },
-            #  'label_space': True, - добавить вертикального и горизонтального фонеа таблички
-            {'description' : 'ROAD_LOCAL', 'color': "#9c7c5d", 'label_min_size': 10.0,
-             'condition' : "variant = 'ROAD_LOCAL'",
-             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
-            {'description' : 'ROAD_UNPAVED', 'color': "#9c7c5d", 'label_min_size': 10.0,
-             'condition' : "variant = 'ROAD_UNPAVED'",
-             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
-            {'description' : 'CANAL', 'color': "#4400FF", 'label_min_size': 10.0,
-             'condition' : "variant = 'CANAL'",
-             'font_family': 'Arial', 'font_size': 8, 'bold': True, },
-            {'description' : 'RIVER_STREAM', 'color': "#4400FF", 'label_min_size': 10.0,
-             'condition' : "variant = 'RIVER_STREAM'",
-             'font_family': 'Arial', 'font_size': 7, 'bold': True, },
-            {'description' : 'RIVER_MAJOR', 'color': "#4400FF", 'label_min_size': 10.0,
-             'condition' : "variant = 'RIVER_MAJOR'", 'placement' : Qgis.LabelPlacement.Curved,
-             'font_family': 'Arial', 'font_size': 9, 'bold': True, },
-
-        ],
-        'styles': [
-            {
-                'name': 'ROAD_HIGHWAY',
-                'style': [
-                    {"color": "#e15a1f", "width": 1.2, "pen_style": "solid"},
-                    {"color": "#fff888", "width": 0.6, "pen_style": "solid"}
-                ],
-            },
-            {
-                'name': 'ROAD_PRIME',
-                'style': [
-                    {"color": "#e15a1f", "width": 0.8, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'ROAD_MINOR',
-                'style': [
-                    {"color": "#e15a1f", "width": 0.5, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'ROAD_LOCAL',   # Внутриквартальные
-                'style': [
-                    {"color": "#fff888", "width": 0.5, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'ROAD_UNPAVED',     # Грунтовки
-                'style': [
-                    {"color": "#9c7c5d", "width": 0.5, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'ROAD_SLIP',    # Съезды
-                'style': [
-                    {"color": "#fcd05b", "width": 0.5, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'ROAD_ROUNDABOUT',    # Кольца
-                'style': [
-                    {"color": "#f49c14", "width": 0.5, "pen_style": "solid"},
-                ],
-            },
-
-            {
-                'name': 'RAILWAY',
-                'style': [
-                    {"color": "#ffffff", "width": 0.8, "pen_style": "solid"},   # Подложка
-                    {"color": "#000000", "width": 0.5, "pen_style": "dot"}     # Пунктир сверху
-                ],
-            },
-            {
-                'name': 'BORDER',
-                'style': [
-                    {"color": "#ff0707", "width": 0.9, "custom_dash": [4.0, 4.0]},
-                    {"color": "#00c300", "width": 0.6, "custom_dash": [4.0, 4.0], "dash_offset": 4.0},
-                ],
-            },
-            {
-                'name': 'CANAL',    #
-                'style': [
-                    {"color": "#1d70b8", "width": 0.6, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'RIVER_STREAM',    #
-                'style': [
-                    {"color": "#a5d5f5", "width": 0.3, "pen_style": "solid"},
-                ],
-            },
-            {
-                'name': 'RIVER_MAJOR',    #
-                'style': [
-                    {"color": "#005ea5", "width": 0.8, "pen_style": "solid",
-                     'min_size': 5.0,  # Скрывать, если на экране меньше 5 мм,  TODO:
-                     },
-                ],
-            },
-            {
-                'name': 'PEDESTRIAN_ZONE',    #
-                'style': [
-                    {"color": "#808080", "width": 0.3, "pen_style": "dot"},
-                ],
-            },
-            {
-                'name': 'FERRY_CONNECTION',    # паром?
-                'style': [
-                    {"color": "#a500a2", "width": 0.4, "pen_style": "dot"},
-                ],
-            },
-        ],
     },
     {
         'name': NAME_LAYER_POI,
@@ -564,7 +566,7 @@ LAYERS_PROPERTY = [
             },
             {
                 'name': 'City',
-                'style' : {'svg_path': 'gpsicons/city_large.svg', 'color': 'grey', 'size': '2'},
+                'style' : {'svg_path': 'gpsicons/city_large.svg', 'color': 'white', 'size': '2'},
                 # 'size_unit': 'MM'
                 # 'size_unit': 'Pixel'
                 'label_style': {

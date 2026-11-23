@@ -18,18 +18,13 @@ from qgis.PyQt.QtCore import Qt, QSizeF
 from qgis.PyQt.QtGui import QColor, QFont
 
 from QGIS_VDO.vdo import (
-    NAME_LAYER_ALMANACS,
-    NAME_LAYER_POI,
     NAME_LAYER_SHAPES,
-    NAME_LAYER_LINES,
     CRS_NAME, CRS_PROJECTION_STRING,
     LAYERS_PROPERTY,
     PEN_STYLES,
     FILL_STYLES
 )
 
-
-ORDER_PRIORITY = [NAME_LAYER_POI, NAME_LAYER_LINES, NAME_LAYER_SHAPES, NAME_LAYER_ALMANACS]
 
 GEOMETRY_SYMBOLS = {
     'Polygon': QgsFillSymbol,
@@ -588,6 +583,13 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
         layer: QgsVectorLayer
     """
     # Поиск layer в указанной группе.
+    # Сначала чистим повисшие узлы (layer == None)
+    children = list(parentGroup.children())
+    for child in children:
+        if isinstance(child, QgsLayerTreeLayer):
+            if child.layer() is None:
+                parentGroup.removeChildNode(child)
+
     if layer := _findLayer_in_Group(parentGroup, layerName):
         return layer
 
@@ -654,7 +656,7 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     if use_render_order:
         # Объекты с большими числами  ascending=True будут отрисованы ПОЗЖЕ (то есть лягут НАВЕРХУ).
         order_by = QgsFeatureRequest.OrderBy([
-            QgsFeatureRequest.OrderByClause('render_order', ascending=False)
+            QgsFeatureRequest.OrderByClause('render_order', ascending=True)
         ])
         renderer.setOrderBy(order_by)
         renderer.setOrderByEnabled(True)
@@ -778,15 +780,9 @@ def getLayer(parentGroup: QgsLayerTreeGroup, layerName: str) -> QgsVectorLayer: 
     simplify_method.setTolerance(1.5)
     layer.setSimplifyMethod(simplify_method)
 
-    # Регистрируем в проекте без автоматического отображения в корне панели (False)
+    # Регистрируем слой в проекте и добавляем в группу
     QgsProject.instance().addMapLayer(layer, False)
-    
-    # Исправлено условие: явная проверка на None, чтобы 'place': 0 работал корректно
-    place = target.get('place')
-    if place is not None:
-        parentGroup.insertLayer(int(place), layer)
-    else:
-        _add_layer_in_right_order(parentGroup, layer, layerName)
+    parentGroup.addLayer(layer)
 
     # Сворачиваем дерево стилей/категорий слоя для аккуратности внутри parentGroup
     layer_node = parentGroup.findLayer(layer.id())
@@ -808,49 +804,13 @@ def _findLayer_in_Group(group: QgsLayerTreeGroup, LayerName: str) -> QgsVectorLa
         # Проверяем, что дочерний элемент — это слой и его имя совпадает
         if isinstance(child, QgsLayerTreeLayer) and child.name() == LayerName:
             layer = child.layer()
+            # Слой мог быть удалён, но узел остался в группе
+            if layer is None:
+                return None
             # Убеждаемся, что это векторный слой
             if isinstance(layer, QgsVectorLayer):
                 return layer
-            else:
-                raise ValueError(f"Что не так с {layer.name()}")
     return None
-
-
-def _add_layer_in_right_order(group: QgsLayerTreeGroup, new_layer: QgsVectorLayer, layer_key: str):
-    """
-    Добавляет слой в QGIS на строго определенную позицию.
-    layer_key: 'poi', 'lines', 'shapes' или 'almanac'
-    """
-    if layer_key not in ORDER_PRIORITY:
-        raise ValueError(f"Неизвестный тип слоя: {layer_key}")
-
-    # Вычисляем правильный индекс для вставки
-    # Ищем, сколько слоев с БОЛЕЕ ВЫСОКИМ приоритетом уже есть на панели
-    target_index = 0
-    current_nodes = group.children()    # Все элементы на панели сверху вниз
-    
-    # Определяем ранг текущего добавляемого слоя (0 для poi, 1 для lines и т.д.)
-    new_layer_rank = ORDER_PRIORITY.index(layer_key)
-    
-    for node in current_nodes:
-        # Проверяем только векторные слои
-        if hasattr(node, 'layer') and node.layer():
-            existing_layer_name = node.layer().name().lower()
-            
-            # Определяем ранг уже существующего на панели слоя
-            existing_rank = None
-            for rank, key in enumerate(ORDER_PRIORITY):
-                if key in existing_layer_name:    # Проверка на частичное вхождение или точное имя
-                    existing_rank = rank
-                    break
-            
-            # Если ранг существующего слоя выше или равен нашему,
-            # мы должны пропустить его и встать ПОД ним (увеличиваем индекс вставки)
-            if existing_rank is not None and existing_rank <= new_layer_rank:
-                target_index += 1
-                
-    # Вставляем слой на вычисленную позицию
-    group.insertLayer(target_index, new_layer)
 
 
 def _create_complex_symbol(geometry_type: str, style_item: dict) -> object:

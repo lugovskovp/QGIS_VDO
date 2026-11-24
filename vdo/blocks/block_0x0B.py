@@ -1,62 +1,79 @@
 """
 CH_country = 0x0b  # fully parsed chars idxs
 0x0B -> 0x0D 0x0F 0x11
-"""
 
-from typing import Iterator
+Страны и их индексы символов.
+Содержит список CH_IDX, каждый из которых указывает на блок с данными страны.
+"""
+from __future__ import annotations  # Обязательно на самой первой строчке файла
+
+from typing import TYPE_CHECKING, Iterator, Optional
+
+if TYPE_CHECKING:
+    from QGIS_VDO.vdo.datatypes import LIST as LIST_TYPE, CH_IDX as CH_IDX_TYPE
 
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.datatypes import BLADDR, LIST, CH_IDX, OFFSET_TOC
+from QGIS_VDO.vdo.datatypes import BLADDR, CH_IDX, OFFSET_TOC
 
 
 class block_0x0B(block_base):
-    """ CH_country type 0x0b  # fully parsed chars idxs """
+    """
+    CH_country type 0x0b  # fully parsed chars idxs
+
+    Содержит список стран и их символьных индексов.
+    Каждый элемент CH_IDX указывает на блок данных страны (0x0D, 0x0F, 0x11).
+    """
+
+    __slots__ = ('vdo', '_li_toc_cache')
 
     def __init__(self, bl_addr: BLADDR) -> None:
         super().__init__(bl_addr)
 
-    @property
-    def li_toc(self):
-        """ LIST to table of contents """
-        return self.read_list(OFFSET_TOC)
+        self.vdo = bl_addr.vdo
+        self._li_toc_cache: LIST_TYPE | None = None
 
-    def get_chidxs(self, li: LIST) -> dict:
+    @property
+    def li_toc(self) -> LIST_TYPE:
+        """LIST to table of contents (кэшированный)."""
+        if self._li_toc_cache is None:
+            self._li_toc_cache = self.read_list(OFFSET_TOC)
+        return self._li_toc_cache
+
+    def get_chidxs(self) -> dict[str, CH_IDX_TYPE]:
         """
-        Словарь {'CH_IDX.ch' : CH_IDX}
-        Args:
-            li: LIST - ptr-cnt массива ch_idx
+        Словарь {'CH_IDX.ch' : CH_IDX} для всех стран.
+
         Returns:
-            array: of ch_idx
+            dict: словарь символов -> CH_IDX
         """
-        res = {}
-        for chi in self.get_indexes(li):
+        res: dict[str, CH_IDX_TYPE] = {}
+        for chi in self.get_chidxs_iter():
             res[chi.ch] = chi
         return res
 
-    def find_chidxs(self, li: LIST, find_char) -> CH_IDX | None:
+    def find_chidx(self, find_char: str) -> Optional[CH_IDX_TYPE]:
         """
-        Перебор CH_IDX из li, пока не найдётся ch
+        Поиск CH_IDX по символу страны.
+
         Args:
-            li: LIST - ptr-cnt массива ch_idx
-            find_char: char for find
+            find_char: символ для поиска
+
         Returns:
-            CH_IDX: or None
+            CH_IDX или None
         """
-        for chi in self.get_indexes(li):
+        for chi in self.get_chidxs_iter():
             if chi.ch == find_char:
                 return chi
         return None
 
-    def get_indexes(self, li: LIST) -> Iterator[CH_IDX]:
-        """ Итератор ch_idx из li: ptr-cnt
-        Args:
-            li: LIST - ptr-cnt массива ch_idx
-        Returns:
-            array: of ch_idx
-        Example:
-            for ci in ch_country_block.get_indexes( ch_country_block.list_toc ):
-                print(ci.ch, ci.hex())
+    def get_chidxs_iter(self) -> Iterator[CH_IDX_TYPE]:
         """
+        Итератор по CH_IDX из li_toc.
+
+        Yields:
+            CH_IDX: объекты индексных записей стран
+        """
+        li = self.li_toc
         offset = li.ptr
         for _ in range(li.cnt):
             chidx = self.read_ch_idx(offset)
@@ -67,54 +84,29 @@ class block_0x0B(block_base):
 # -------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from vdo.datatypes import VDO_FILE
-    from vdo.blocks import block_0x12
+    from QGIS_VDO.vdo.blocks import block_0x12  # noqa
+    from QGIS_VDO.vdo.consts import struct_UINT        # noqa
+    from QGIS_VDO.vdo.fixtures_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
 
-    vdo2 = VDO_FILE()
+    # vdo = vdo30
+    # vdo = vdo34ee
+    # vdo = vdobmv
+    # vdo = vdo34bnl
+    vdo = vdoRu
 
-    fpath30 = 'c:\\DIY\\VDO\\db_src\\NAV_DB\\carindb'
-    vdo30 = VDO_FILE(fpath30)
+    bl_toc: block_0x12 = vdo.get_block(0)
+    bladdr_ch_country: BLADDR = bl_toc.bladdr_ch_country
+    bl_ch_country = vdo.get_block(bladdr_ch_country)
 
-    fpath34 = 'c:\\DIY\\VDO\\db_src\\1. BNL_13_14\\carindb'
-    vdo34 = VDO_FILE(fpath34)
+    # Все страны
+    all_chidxs = bl_ch_country.get_chidxs()
+    print(f"Всего стран: {len(all_chidxs)}")
 
-    fpathRu = 'c:\\DIY\\VDO\\db_src\\ru_2013\\ru\\carindb'
-    vdoRu = VDO_FILE(fpathRu)
+    # Найти конкретную страну
+    ru = bl_ch_country.find_chidx('R')
+    if ru:
+        print(f"Найдена: {ru.ch} -> {ru}")
 
-    fpathbmw = 'c:\\DIY\\VDO\\db_src\\bmw34-2010\\DB\\DB_0'
-    vdobmv = VDO_FILE(fpathbmw)
-
-    vdo = vdobmv
-    #vdo = vdo34
-    #vdo = vdoRu
-    #vdo = vdo30
-    bla = BLADDR(b'\x00\x00\x00\x01', vdo)
-
-    tos = block_0x12(vdo)
-
-    # ba0x13 = tos.bladdr_bibliogr
-    # ba0x07 = tos.bladdr_scales
-    ba0x0b = tos.bladdr_ch_country
-    # ---------------------------------------------
-
-    fl_ch_country = tos.get_farlist_ch_country()
-    ch_country = block_0x0B(ba0x0b)
-
-    arr = []
-    for ch in ch_country.get_indexes(ch_country.li_toc):
-        arr.append(ch)
-
-    # то же, но с 3-им элементом - noway, там 0А блок
-
-    ch_3 = block_0x0B(arr[0].bladdr)
-    arr3 = []
-    for ch in ch_country.get_indexes(ch_country.li_toc):
-        arr3.append(ch)
-
-    # vdo30  len=20
-    # rus = 17
-    # bnl = 3
-    # bmw = 17
     pass
 
 
@@ -135,7 +127,7 @@ BT_0x0B_0x0D_0x0F_0x11
 */
 
 // --------------------------------------------------------------------
-//{BT_0x0B_0x0D_0x0F_0x11
+ //{BT_0x0B_0x0D_0x0F_0x11
 typedef struct{
     BL_HEAD head; // заголовок
 // local size-offset для LIST
@@ -156,7 +148,7 @@ string Read_BT_0x0B_0x0D_0x0F_0x11(BT_0x0B_0x0D_0x0F_0x11 &a){
 #endif
 
 
-//{CH_IDX size = 3 * DWORD
+ //{CH_IDX size = 3 * DWORD
 /*
 DWORD - bl_postaddr адрес блока
 byte    ch    собственно буква

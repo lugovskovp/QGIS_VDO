@@ -14,6 +14,29 @@ class block_0x14(block_basegeo):
         super().__init__(bladdr)
 
 
+# ------------------------------------------------------
+# ошибка ru34
+# 094EBB03 0014 01 04 [14:MAP__05k200]
+# 09462201 0014 01 02 [14:MAP__05k200]
+if __name__ == '__main__':
+    #
+    from QGIS_VDO.vdo.fixtures_vdo import vdoRu as vdo
+
+    # ru34 0x094EBB03
+    # ru34 0x09462201       # 05 00 09 00
+    bla = vdo.get_bladdr(0x094EBB03)
+    blo: block_0x14 = vdo.get_block(bla)
+
+    for p in blo.get_all_items():
+        # print(f"{p.brand}: {p.cat}")
+        pass
+
+    # items = [item for item in blo.get_all_items(is_load_extended=True)]
+    items2 = list(blo.get_all_items())
+    items3 = list(blo.get_all_items_extended())
+
+    pass
+
 """
 line = p_str_name + ptr2firstObjVertex + id + ptr_linesign + ptr2poi + ptr2tstr + shrtEnd
 ptr_linesign - multilang, ссылка на первый TSTR с наименованием (=p_str_name)

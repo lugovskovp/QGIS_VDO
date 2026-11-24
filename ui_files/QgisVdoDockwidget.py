@@ -10,8 +10,8 @@ from typing import cast
 from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
                                  QPushButton, QMessageBox, QCheckBox)
-from qgis.core import (Qgis, QgsProject, QgsVectorLayer,
-                       QgsLayerTreeGroup, QgsCoordinateTransform
+from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsLayerTreeLayer,
+                       QgsLayerTreeGroup, QgsCoordinateTransform, QgsFeatureRequest
                        )
 from qgis.PyQt.QtCore import QCoreApplication
 
@@ -187,6 +187,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # получаем корневой ТОС area layer в группе
         layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
+
+        # Скрываем другие vdo-группы при переключении файла
+        root_group = self._getRootGroup()
+        self._hide_other_vdo_groups(root_group)
 
         # hide all another vdo root groups but root_group_name
         self.iface.setActiveLayer(layer)
@@ -653,6 +657,108 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         return getLayer(scaleGroup, layerName)
 
+    def _find_insert_index_for_category(self, rootGroup: QgsLayerTreeGroup, scaleId: int) -> int:
+        """
+        Находит индекс для вставки группы с учётом категории и сортировки.
+        Порядок: poi -> scale -> routes -> bounds-слой
+        Внутри категории — по возрастанию sort_num из GROUP_CONFIG.
+        """
+        # Ищем bounds-слой — все группы вставляются перед ним
+        bounds_index = self._find_bounds_layer_index(rootGroup)
+
+        # Ищем позицию внутри категории (сортировка по sort_num)
+        target_index = self._find_insert_index_within_category(rootGroup, scaleId)
+
+        # Ограничиваем bounds-слоем
+        return min(target_index, bounds_index)
+
+    def _find_bounds_layer_index(self, rootGroup: QgsLayerTreeGroup) -> int:
+        """Находит индекс bounds-слоя в rootGroup."""
+        for i, child in enumerate(rootGroup.children()):
+            if isinstance(child, QgsLayerTreeLayer):
+                layer = child.layer()
+                if layer and layer.name() == NAME_LAYER_GLOBAL_BOUNDS:
+                    return i
+        return len(rootGroup.children())
+
+    def _find_insert_index_within_category(self, rootGroup: QgsLayerTreeGroup, scaleId: int) -> int:
+        """
+        Находит позицию вставки внутри категории с сортировкой по sort_num.
+        Возвращает индекс, куда вставить новую группу.
+        """
+        category = GROUP_CONFIG[scaleId]['category']
+
+        # Собираем все существующие группы этой категории с их sort_num
+        category_groups = self._get_category_groups(rootGroup, category)
+
+        # Если групп этой категории ещё нет — ищем позицию после последней группы предыдущей категории
+        if not category_groups:
+            return self._find_first_index_in_category(rootGroup, category)
+
+        # Сортируем существующие группы по sort_num
+        category_groups.sort(key=lambda x: x[0])
+
+        # Ищем позицию для вставки: между группами с меньшим и большим sort_num
+        return self._find_insert_position_in_sorted_list(category_groups, scaleId)
+
+    def _get_category_groups(self, rootGroup: QgsLayerTreeGroup, category: str) -> list:
+        """Возвращает список (sort_num, index) для всех групп данной категории."""
+        result = []
+        for i, child in enumerate(rootGroup.children()):
+            if isinstance(child, QgsLayerTreeGroup):
+                child_name = child.name()
+                for sid in GROUP_CONFIG:
+                    if child_name == GROUP_CONFIG[sid]['name'] and sid < len(GROUP_CONFIG):
+                        if GROUP_CONFIG[sid]['category'] == category:
+                            result.append((GROUP_CONFIG[sid]['sort_num'], i))
+                            break
+        return result
+
+    def _find_first_index_in_category(self, rootGroup: QgsLayerTreeGroup, category: str) -> int:
+        """Находит индекс для первой группы в категории."""
+        prev_category_idx = CATEGORY_ORDER.index(category) - 1
+        if prev_category_idx < 0:
+            return 0
+
+        prev_category = CATEGORY_ORDER[prev_category_idx]
+        last_prev_index = self._find_last_group_index_by_category(rootGroup, prev_category)
+
+        if last_prev_index >= 0:
+            return last_prev_index + 1
+        return 0
+
+    def _find_last_group_index_by_category(self, rootGroup: QgsLayerTreeGroup, category: str) -> int:
+        """Находит индекс последней группы данной категории."""
+        last_index = -1
+        for i, child in enumerate(rootGroup.children()):
+            if isinstance(child, QgsLayerTreeGroup):
+                child_name = child.name()
+                for sid in GROUP_CONFIG:
+                    if child_name == GROUP_CONFIG[sid]['name'] and sid < len(GROUP_CONFIG):
+                        if GROUP_CONFIG[sid]['category'] == category:
+                            last_index = i
+                        break
+        return last_index
+
+    def _find_insert_position_in_sorted_list(self, sorted_groups: list, scaleId: int) -> int:
+        """
+        Находит позицию вставки в отсортированный список (sort_num, index).
+        Возвращает индекс в rootGroup, куда вставить группу.
+        """
+        new_sort_num = GROUP_CONFIG[scaleId]['sort_num']
+
+        for existing_sort_num, existing_index in sorted_groups:
+            if new_sort_num < existing_sort_num:
+                return existing_index
+
+        # new_sort_num > всех существующих — вставляем в конец
+        last_sort_num, last_index = sorted_groups[-1]
+        if new_sort_num > last_sort_num:
+            return last_index + 1
+
+        # new_sort_num уже существует — возвращаем его индекс
+        return last_index
+
     def _restoreGroupBoxVisibility(self) -> None:
         """
         Восстанавливает ранее сохранённые настройки
@@ -812,10 +918,19 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.currentIdScale = scale_id
         # сохраняем номер масштаба в settings
         Settings.setChousedScale(self.currentIdScale)
-        # Получить слой для folder maps
-        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)  # noqa
-        # отрисовать area альманаха
+
+        # Получить слой для folder maps и сделать его активным
+        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)
+        self.iface.setActiveLayer(self.layer_maps)
+
+        # Отрисовать area альманаха
         self.tabTopo_DrawAlmanacArea(self.currentIdScale)
+
+        # Проверить, есть ли уже загруженные тайлы (variant=map)
+        if not self._has_map_features(self.layer_maps):
+            # Если тайлов нет — запустить загрузку
+            self.start_loading_folders()
+
         # tabBlock set l_currScaleId
         # TODO: text must get from consts scqales?
         self.l_currScaleId.setText(f"{self.currentIdScale}")
@@ -830,10 +945,23 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             gr_name = _get_group_name(id)
             if gr := root_gr.findGroup(gr_name):
                 gr.setItemVisibilityChecked(id == self.currentIdScale)
-                
+
         # TODO: del?
         #  что то делаем
         # print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
+
+    def _has_map_features(self, layer: QgsVectorLayer) -> bool:
+        """
+        Проверяет, есть ли в слое объекты с variant='map'.
+        """
+        field_idx = layer.fields().indexOf('variant')
+        if field_idx == -1:
+            return False
+
+        request = QgsFeatureRequest().setFilterExpression("\"variant\" = 'map'")
+        for feature in layer.getFeatures(request):
+            return True
+        return False
 
     def closeEvent(self, event):
         self.tabBlock_activate_coords_tool(False)

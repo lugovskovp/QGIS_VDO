@@ -382,6 +382,8 @@ class VDOExplorerPlugin:
                 self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)  # noqa
             # если widget есть, то показать
             self.dockwidget.show()
+            # Скрыть другие vdo-группы при открытии нового файла
+            self.dockwidget._hide_other_vdo_groups(self.dockwidget._getRootGroup())
             # self.dockwidget.tabInfo_DrawTocAreas()   # noqa надо менять - не отрисовка, а что-то иное. Переключение на активный слой?
             self.dockwidget.progressBarLoadMapFromFolder.setValue(0)
             return

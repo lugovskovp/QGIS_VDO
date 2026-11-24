@@ -81,7 +81,8 @@ class bitstream():
         self.max_bits_in_ptr = archived_bock.ptr_bits_needed()      # max possible bits in near offset
 
         # упакованы НОМЕРА вертексов, а не offs на них
-        self.max_bits_in_vrtxnum = len(f"{(archived_bock.li_vrtx.cnt - 1):b}")
+        # self.max_bits_in_vrtxnum = len(f"{(archived_bock.li_vrtx.cnt - 1):b}")
+        self.max_bits_in_vrtxnum = len(f"{(archived_bock.li_vrtx.cnt):b}")
 
         # константы распаковки
         (
@@ -91,13 +92,9 @@ class bitstream():
             unkn_zero
         ) = archived_bock._raw[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4]
 
-        #
-
         # забираем данные block_basegeo для распаковки
         self.head = archived_bock.head
         self.map = archived_bock.map
-
-        #
 
         # на сколько сдвинуть единицу координат в карте влево, чтобы получить порядок значений COORD
         self.shift_scale = archived_bock.shift_scale
@@ -110,20 +107,7 @@ class bitstream():
         self.li_poi = archived_bock.li_poi          # хз, что это, но это не POI
         self.li_tstr = archived_bock.li_tstr        # наименования на разных языках
 
-        # распаковывать ли lin{5} - характеристика дороги, предположительно макс скорость
-        self.flag_unpack_lin5 = False
-
-        self.tail_cutted_after_str = None
-
-        # запакованное тело
-        arc = archived_bock._raw[OFFSET_PACKED_DATA + 4:]
-
-        CUT_ZERO_BYTES_CNT = 8
-        # с конца убрать нулевые байты, оставив менее 4х
-        while arc[-CUT_ZERO_BYTES_CNT:] == b'\x00' * CUT_ZERO_BYTES_CNT:
-            arc = arc[:-int(CUT_ZERO_BYTES_CNT / 2)]
-
-        self._buf_bytes = bytes(arc)
+        self._buf_bytes = bytes(archived_bock._raw[OFFSET_PACKED_DATA + 4:])
         self._buf_idx = 0
 
         # ----------------------------------------- 070CF805 0014 01 07 [14:MAP__05k200] id_line_if_0 = 0???
@@ -142,6 +126,8 @@ class bitstream():
             if DEBUG_MODE:  # no cov
                 # в буффер - запакованную часть блока, далее self.unpack полностью распакует
                 from bitarray import bitarray
+                # запакованное тело
+                arc = archived_bock._raw[OFFSET_PACKED_DATA + 4:]
                 self._bitarray_view = bitarray(buffer=arc, endian='big')
         
             # оставляем незапакованное начало
@@ -176,7 +162,7 @@ class bitstream():
         """
         # from FW
         floor = self._sections_end()
-
+        
         # <<<<<<<<<< 1 GEO_CATEGORY     # S0 (T[0x3b]=4)
         # cat = self.__S0_unpack_categories()
         # h = cat.hex()
@@ -413,6 +399,7 @@ class bitstream():
         # <<<<<<<<<< GEO_CATEGORY
         # Для каждой геокатегории - лишнее, нелогично паковать без категорий
         # +1 - всегда есть завершающий итем, нулевой
+        # res0 = self.unpacked.hex(' ', -4)
         for rec_idx in range(self.li_cat.cnt + 1):      # noqa
             offset = self.li_cat.ptr + rec_idx * GEO_CATEGORY.size
 
@@ -426,7 +413,7 @@ class bitstream():
             # left shift 1 - т.к. last = 0 always in this ptr
             # max_bits_in_ptr - 1 максимальное к-во бит для near ссылки на word
             self._unpack_write_short(self.max_bits_in_ptr - 1, 1, offset=offset + 2)
-
+        # res1 = self.unpacked.hex(' ', -4)
         return
 
     def __S1_unpack_shapes(self) -> None:
@@ -446,16 +433,17 @@ class bitstream():
         if not self.li_shp.cnt:
             return
 
+        # res0 = self.unpacked.hex(' ', -4)
         # если есть shapes - замкнутые полигоны - распаковываем
         for rec_idx in range(self.li_shp.cnt + 1):      # +1 - всегда есть завершающий итем, нулевой
             offset = self.li_shp.ptr + rec_idx * GEO_SHAPE.size
             # <<<<<<<<<< GEO_SHAPE
             # /0/ WORD - ptr2string <--- word, ptr to zero-ended string
             self._unpack_write_short(self.max_bits_in_ptr, offset=offset)
-    
+            
             # /1/ WORD, ptr 2 first vertex (упакованы НОМЕРА vrtx)
             self._unpack_vrtx_ptr(offset + 2)
-    
+
             # /2/  dword, id
             #id - если следующий бит = 1, ЕСТЬ 32бит ID, иначе bits_to_unpack_then_zero
             qty = BITS_IN_UINT if self.pop(1) else self.max_bits_id_shape_if_0
@@ -472,7 +460,7 @@ class bitstream():
             # /4/ WORD ZeroWord align
             # /5/ WORD ptr_to_table_to_strings (указатель на ПЕРВЫЙ TSTR, запаковано в другом месте)
             # zeroTail = b'\x00' * 4    # 2 * word bytes -> размер GEO_SHAPE полный
-
+        # res1 = self.unpacked.hex(' ', -4)
         return
             
     def __S2_unpack_lines(self) -> None:

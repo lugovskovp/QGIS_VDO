@@ -2,6 +2,25 @@
 
 <!-- version list -->
 
+## v1.1.1 (2026-11-24)
+
+### Bug Fixes
+
+- Добавлена недостающая логика вставки scale-групп
+  ([`3a280d7`](https://github.com/lugovskovp/QGIS_VDO/commit/3a280d73c59ec20bfe3d7473d06d86c5988314fd))
+
+- Исправление расчёта max_bits_in_vrtxnum для круглых значений
+  ([`4f93a8f`](https://github.com/lugovskovp/QGIS_VDO/commit/4f93a8f5f1e79357ae150579a4039cc9add1abb1))
+
+- Исправление скрытия других vdo-групп и автозагрузка тайлов
+  ([`a60fd49`](https://github.com/lugovskovp/QGIS_VDO/commit/a60fd49c8e94df3988be0e86580ba550ac4e5ffe))
+
+### Refactoring
+
+- Очистка закомментированного кода в bitstream и block_0x14
+  ([`2c5f977`](https://github.com/lugovskovp/QGIS_VDO/commit/2c5f977f92d008cf988137db0135bff9478c9c58))
+
+
 ## v1.1.0 (2026-11-23)
 
 

@@ -11,7 +11,7 @@ from qgis.PyQt import QtWidgets, uic
 from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
                                  QPushButton, QMessageBox, QCheckBox)
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsLayerTreeLayer,
-                       QgsLayerTreeGroup, QgsCoordinateTransform
+                       QgsLayerTreeGroup, QgsCoordinateTransform, QgsFeatureRequest
                        )
 from qgis.PyQt.QtCore import QCoreApplication
 
@@ -187,6 +187,10 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
 
         # получаем корневой ТОС area layer в группе
         layer = getLayer(self._getRootGroup(), NAME_LAYER_GLOBAL_BOUNDS)
+
+        # Скрываем другие vdo-группы при переключении файла
+        root_group = self._getRootGroup()
+        self._hide_other_vdo_groups(root_group)
 
         # hide all another vdo root groups but root_group_name
         self.iface.setActiveLayer(layer)
@@ -914,10 +918,19 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.currentIdScale = scale_id
         # сохраняем номер масштаба в settings
         Settings.setChousedScale(self.currentIdScale)
-        # Получить слой для folder maps
-        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)  # noqa
-        # отрисовать area альманаха
+
+        # Получить слой для folder maps и сделать его активным
+        self.layer_maps = self._getScaleLayer(self.currentIdScale, NAME_LAYER_ALMANACS)
+        self.iface.setActiveLayer(self.layer_maps)
+
+        # Отрисовать area альманаха
         self.tabTopo_DrawAlmanacArea(self.currentIdScale)
+
+        # Проверить, есть ли уже загруженные тайлы (variant=map)
+        if not self._has_map_features(self.layer_maps):
+            # Если тайлов нет — запустить загрузку
+            self.start_loading_folders()
+
         # tabBlock set l_currScaleId
         # TODO: text must get from consts scqales?
         self.l_currScaleId.setText(f"{self.currentIdScale}")
@@ -932,10 +945,23 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             gr_name = _get_group_name(id)
             if gr := root_gr.findGroup(gr_name):
                 gr.setItemVisibilityChecked(id == self.currentIdScale)
-                
+
         # TODO: del?
         #  что то делаем
         # print(f"Selected: {button.text()} (ID: {self.button_group_scale.id(button)})")
+
+    def _has_map_features(self, layer: QgsVectorLayer) -> bool:
+        """
+        Проверяет, есть ли в слое объекты с variant='map'.
+        """
+        field_idx = layer.fields().indexOf('variant')
+        if field_idx == -1:
+            return False
+
+        request = QgsFeatureRequest().setFilterExpression("\"variant\" = 'map'")
+        for feature in layer.getFeatures(request):
+            return True
+        return False
 
     def closeEvent(self, event):
         self.tabBlock_activate_coords_tool(False)

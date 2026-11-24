@@ -92,13 +92,9 @@ class bitstream():
             unkn_zero
         ) = archived_bock._raw[OFFSET_PACKED_DATA:OFFSET_PACKED_DATA + 4]
 
-        # # ru34 0x09462201       # 05 00 09 00
-
         # забираем данные block_basegeo для распаковки
         self.head = archived_bock.head
         self.map = archived_bock.map
-
-        #
 
         # на сколько сдвинуть единицу координат в карте влево, чтобы получить порядок значений COORD
         self.shift_scale = archived_bock.shift_scale
@@ -110,16 +106,6 @@ class bitstream():
         self.li_vrtx = archived_bock.li_vrtx     # x, y точек
         self.li_poi = archived_bock.li_poi          # хз, что это, но это не POI
         self.li_tstr = archived_bock.li_tstr        # наименования на разных языках
-
-        # распаковывать ли lin{5} - характеристика дороги, предположительно макс скорость
-        # self.flag_unpack_lin5 = False
-
-        # self.tail_cutted_after_str = None
-
-        # запакованное тело
-        # arc = archived_bock._raw[OFFSET_PACKED_DATA + 4:]
-        # from bitarray import bitarray
-        # ba = bitarray(buffer=arc)
 
         self._buf_bytes = bytes(archived_bock._raw[OFFSET_PACKED_DATA + 4:])
         self._buf_idx = 0
@@ -140,6 +126,7 @@ class bitstream():
             if DEBUG_MODE:  # no cov
                 # в буффер - запакованную часть блока, далее self.unpack полностью распакует
                 from bitarray import bitarray
+                # запакованное тело
                 arc = archived_bock._raw[OFFSET_PACKED_DATA + 4:]
                 self._bitarray_view = bitarray(buffer=arc, endian='big')
         

@@ -27,14 +27,6 @@ if __name__ == '__main__':
     bla = vdo.get_bladdr(0x094EBB03)
     blo: block_0x14 = vdo.get_block(bla)
 
-    for p in blo.get_all_items():
-        # print(f"{p.brand}: {p.cat}")
-        pass
-
-    # items = [item for item in blo.get_all_items(is_load_extended=True)]
-    items2 = list(blo.get_all_items())
-    items3 = list(blo.get_all_items_extended())
-
     pass
 
 """

@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.0-dev.1 (2026-11-24)
+
+### Features
+
+- Рефакторинг block_0x0B — типизация, кэширование, __slots__
+  ([`df99706`](https://github.com/lugovskovp/QGIS_VDO/commit/df99706e06eaeb3a3197f2db0a3a2bcf1e35b924))
+
+
 ## v1.1.1 (2026-11-24)
 
 ### Bug Fixes

@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.0-dev.2 (2026-11-26)
+
+### Bug Fixes
+
+- Skipped тесты для закомментированных методов block_0x0B
+  ([`2a8b854`](https://github.com/lugovskovp/QGIS_VDO/commit/2a8b8546f9ba02309dab9b331c30b0f9115c47d2))
+
+
 ## v1.2.0-dev.1 (2026-11-24)
 
 ### Features

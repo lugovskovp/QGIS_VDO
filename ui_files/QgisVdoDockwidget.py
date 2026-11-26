@@ -8,6 +8,7 @@ import re
 from typing import cast
 
 from qgis.PyQt import QtWidgets, uic
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import (QRadioButton, QButtonGroup,
                                  QPushButton, QMessageBox, QCheckBox)
 from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsLayerTreeLayer,
@@ -15,9 +16,11 @@ from qgis.core import (Qgis, QgsProject, QgsVectorLayer, QgsLayerTreeLayer,
                        )
 from qgis.PyQt.QtCore import QCoreApplication
 
+
 from QGIS_VDO.vdo_threading import FolderMapProcessingWorker, PaintMapsProcessingWorker
 from QGIS_VDO.settings import Settings, DEFAULT_SCALE
 from QGIS_VDO.vdo import VDO_FILE, COORD, BLADDR
+from QGIS_VDO.vdo.consts import PATH_ICON
 from QGIS_VDO.vdo.blocks import (
     block_0x12,
     block_0x13,
@@ -122,8 +125,17 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
     Главный рабочий виджет для отображения выбранного carindb
     """
     vdo: VDO_FILE
-    """current vdo file"""
-    
+
+    def _setupIcons(self) -> None:
+        """Загрузить SVG-иконки для кнопок."""
+        icon_zoom = QIcon(os.path.join(PATH_ICON, 'zoom_to_rect.svg'))
+        icon_help = QIcon(os.path.join(PATH_ICON, 'help.svg'))
+
+        if hasattr(self, 'pb_Country_center'):
+            self.pb_Country_center.setIcon(icon_zoom)
+        if hasattr(self, 'pb_Country_i'):
+            self.pb_Country_i.setIcon(icon_help)
+
     def __init__(self, parent_plugin, iface, parent=None):
         """Constructor."""
         super(QgisVdoDockwidget, self).__init__(parent)
@@ -135,6 +147,9 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.iface = iface
         # отрисовать
         self.setupUi(self)
+
+        # Иконки (qrc убран из UI-файла, задаём в коде)
+        self._setupIcons()
 
         # Проверить наличие открытого/активного сохранённого проекта
         if not self._isExistsOpenProject():
@@ -150,6 +165,7 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
             self._initTabInfo()
 
             # >>> tab_addr
+            self._initTabAddr()
 
             # >>> tab_topo
             self._initTabTopo()
@@ -280,6 +296,14 @@ class QgisVdoDockwidget(QtWidgets.QDockWidget, FORM_CLASS):  # type: ignore
         self.textBrowser_label.setPlainText(bl_bibliogr.str_label)
         self.textBrowser_descr.setPlainText(bl_bibliogr.str_description)
         self.textBrowser_info.setPlainText(bl_bibliogr.str_information)
+
+    def _initTabAddr(self) -> None:
+        """
+        Инициализация вкладки Address
+        
+        """
+
+        pass
 
     def _initTabTopo(self) -> None:
         """

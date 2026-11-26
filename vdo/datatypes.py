@@ -42,7 +42,7 @@ else:
 
 
 from QGIS_VDO.vdo.enums import BlockType
-from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT
+from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT, struct_CH_IDX     # , struct_ADDR_BRIF
 from QGIS_VDO.vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
 # from .block_base import block_base
 # from .geotypes import COORD     # cannot import name 'BYTESTRUCT' from partially initialized module '
@@ -416,6 +416,71 @@ class VDO_FILE:
         except OSError as e:
             raise RuntimeError(f"Ошибка при инициализации файла одиночного блока: {e}")
 
+    def get_ch_idxs(self, offset: int, cnt: int) -> dict:
+        """
+        Словарь ch_idx из (0x0b, 0x0d, 0x0f, 0x11) файлов
+        Args:
+            offset :int - абсолютный адрес
+            cnt :int - количество элементов
+        Returns:
+            res :dict {'ch' : (int_bladr, ch, is_out, int_list)}
+        """
+        results = {}
+        for _ in range(cnt):
+            (int_bladr, ch, is_out, int_list, align) = \
+                struct_CH_IDX.unpack_from(self.read(offset, struct_CH_IDX.size))
+            # Структура: BLADDR(4) + char(1) + is_out(1) + LIST(4) + align(2) = 12 байт
+            offset += struct_CH_IDX.size
+            if is_out not in [0, 1]:
+                raise ValueError(f"is_out must be 0 or 1, not {is_out}")
+            results[ch.decode('latin-1')] = (int_bladr, ch, is_out, int_list)
+        return results
+
+    # def get_ch_names(self, offset_block: int, offset_near: int, cnt: int) -> dict:
+    #     """
+    #     Словарь brif из (0x0a, 0x0c, 0x0e, 0x10) файлов
+    #     Args:
+    #         offset_block :int - абсолютный адрес начала блока
+    #         offset_near :int - относительный адрес начала данных
+    #         cnt :int - количество элементов
+    #     Returns:
+    #         res :dict {'str_name' : (bitemask, en_lang, str_location, ptr_info)}
+    #     """
+    #     results = {}
+    #     offset = offset_block + offset_near
+    #     for _ in range(cnt):
+    #         (pstr_name, bitemask, en_lang, pstr_location, ptr_info) = \
+    #             struct_ADDR_BRIF.unpack_from(self.read(offset, struct_ADDR_BRIF.size))
+    #         #
+    #         str_name = self.read_str(offset_block + pstr_name)
+    #         str_location = self.read_str(offset_block + pstr_location)
+    #         offset += struct_ADDR_BRIF.size
+    #         results[str_name] = (bitemask, en_lang, str_location, ptr_info)
+    #     return results
+        
+    # def read_str(self, offset: int, max_len: Optional[int] = None) -> str:
+    #     """
+    #     Чтение 0-ended строки с максимальной Си-скоростью поиска терминатора.
+
+    #     Args:
+    #         offset: offset в текущем file
+    #         max_len: ограничение длины
+    #     Returns:
+    #         str: строго декодированная строка до первого \x00
+    #     """
+    #     limit = max_len if max_len is not None else MAX_STR_LEN
+    #     sub_view = self.read(offset, limit)
+
+    #     # Находим терминатор на уровне скомпилированного Си-кода
+    #     # null_idx = sub_view.tobytes().find(b'\x00')
+    #     null_idx = sub_view.find(b'\x00')
+
+    #     if null_idx != -1:
+    #         sub_view = sub_view[:null_idx]
+
+    #     # Строгое декодирование. Падает при нарушении структуры данных.
+    #     return bytes(sub_view).decode("latin-1")
+    
     # def get_huffman_weights(self) -> dict:
     #     """
     #     в первом блоке, 0х12 есть таблица весов для дерева хаффмана

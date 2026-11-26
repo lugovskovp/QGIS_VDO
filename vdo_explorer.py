@@ -23,18 +23,23 @@ from qgis.core import Qgis  # , QgsMessageLog
 from qgis.gui import QgisInterface
 
 from .vdo import VDO_FILE
+from .vdo.consts import PATH_ICON
+
 from .settings import Settings
 from .ui_files.ConfigurationDialog import ConfigurationDialog
 from .ui_files.QgisVdoDockwidget import QgisVdoDockwidget
 
 #import logging
 
-ICON_PATH_PLUGIN = "resources/plugin.icons/qgis-vdo_i.svg"
-ICON_PATH_PLUGIN_CONFIG = "resources/plugin.icons/gears_i.svg"
-ICON_PATH_PLUGIN_OPEN = "resources/plugin.icons/folder_i.svg"
-ICON_PATH_PLUGIN_ALERT = "resources/plugin.icons/icon_alert.svg"
+
 ACTION_LOAD_NEW_CARINDB = "CarindbVDO_chooseNewCarindb"
 ACTION_CLEAR_RECENT_CARINDB = "CarindbVDO_clearRecentList"
+
+
+ICON_PLUGIN = "qgis-vdo_i.svg"
+ICON_ALERT = "icon_alert.svg"
+ICON_OPEN = "folder_i.svg"
+ICON_CONFIG = "gears_i.svg"
 
 
 class VDOExplorerPlugin:
@@ -43,15 +48,13 @@ class VDOExplorerPlugin:
     actionForPlugin: dict[str, QAction] = {}
     """ Список последних открытых carindb """
 
-    icon = QIcon(os.path.join(os.path.dirname(__file__), ICON_PATH_PLUGIN))
+    icon = QIcon(os.path.join(PATH_ICON, ICON_PLUGIN))
     """ Иконка плагина """
 
-    iconAlert = QIcon(os.path.join(os.path.dirname(__file__),
-                                   ICON_PATH_PLUGIN_ALERT))
+    iconAlert = QIcon(os.path.join(PATH_ICON, ICON_ALERT))
     """ Иконка - предупреждение """
 
-    iconOpen = QIcon(os.path.join(os.path.dirname(__file__),
-                                  ICON_PATH_PLUGIN_OPEN))
+    iconOpen = QIcon(os.path.join(PATH_ICON, ICON_OPEN))
     """ Иконка открытия файла """
 
     vdo: VDO_FILE = None
@@ -119,8 +122,7 @@ class VDOExplorerPlugin:
     def initGui(self):
         """Add actions to the QGIS menu and toolbar."""
         # self.log.debug('initGui <')
-        iconConf = QIcon(os.path.join(os.path.dirname(__file__),
-                         ICON_PATH_PLUGIN_CONFIG))
+        iconConf = QIcon(os.path.join(PATH_ICON, ICON_CONFIG))
         # В меню Модули добавить меню плагина
         self.menu = self.iface.pluginMenu().addMenu(self.icon, self.tr("&Carindb VDO"))
         # Кнопка на панели

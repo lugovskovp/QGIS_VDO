@@ -7,13 +7,13 @@ CH_country = 0x0b  # fully parsed chars idxs
 """
 from __future__ import annotations  # Обязательно на самой первой строчке файла
 
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import TYPE_CHECKING    # , Iterator, Optional
 
 if TYPE_CHECKING:
-    from QGIS_VDO.vdo.datatypes import LIST as LIST_TYPE, CH_IDX as CH_IDX_TYPE
+    from QGIS_VDO.vdo.datatypes import LIST as LIST_TYPE    # , CH_IDX as CH_IDX_TYPE
 
 from QGIS_VDO.vdo.block_base import block_base
-from QGIS_VDO.vdo.datatypes import BLADDR, CH_IDX, OFFSET_TOC
+from QGIS_VDO.vdo.datatypes import BLADDR, OFFSET_TOC       # CH_IDX,
 
 
 class block_0x0B(block_base):
@@ -39,64 +39,98 @@ class block_0x0B(block_base):
             self._li_toc_cache = self.read_list(OFFSET_TOC)
         return self._li_toc_cache
 
-    def get_chidxs(self) -> dict[str, CH_IDX_TYPE]:
-        """
-        Словарь {'CH_IDX.ch' : CH_IDX} для всех стран.
+    # def get_chidxs(self) -> dict[str, CH_IDX_TYPE]:
+    #     """
+    #     Словарь {'CH_IDX.ch' : CH_IDX} для всех стран.
 
-        Returns:
-            dict: словарь символов -> CH_IDX
-        """
-        res: dict[str, CH_IDX_TYPE] = {}
-        for chi in self.get_chidxs_iter():
-            res[chi.ch] = chi
-        return res
+    #     Returns:
+    #         dict: словарь символов -> CH_IDX
+    #     """
+    #     res: dict[str, CH_IDX_TYPE] = {}
+    #     for chi in self.get_chidxs_iter():
+    #         res[chi.ch] = chi
+    #     return res
 
-    def find_chidx(self, find_char: str) -> Optional[CH_IDX_TYPE]:
-        """
-        Поиск CH_IDX по символу страны.
+    # def find_chidx(self, find_char: str) -> Optional[CH_IDX_TYPE]:
+    #     """
+    #     Поиск CH_IDX по символу страны.
 
-        Args:
-            find_char: символ для поиска
+    #     Args:
+    #         find_char: символ для поиска
 
-        Returns:
-            CH_IDX или None
-        """
-        for chi in self.get_chidxs_iter():
-            if chi.ch == find_char:
-                return chi
-        return None
+    #     Returns:
+    #         CH_IDX или None
+    #     """
+    #     for chi in self.get_chidxs_iter():
+    #         if chi.ch == find_char:
+    #             return chi
+    #     return None
 
-    def get_chidxs_iter(self) -> Iterator[CH_IDX_TYPE]:
-        """
-        Итератор по CH_IDX из li_toc.
+    # def get_chidxs_iter(self) -> Iterator[CH_IDX_TYPE]:
+    #     """
+    #     Итератор по CH_IDX из li_toc.
 
-        Yields:
-            CH_IDX: объекты индексных записей стран
-        """
-        li = self.li_toc
-        offset = li.ptr
-        for _ in range(li.cnt):
-            chidx = self.read_ch_idx(offset)
-            offset += CH_IDX.size
-            yield chidx
+    #     Yields:
+    #         CH_IDX: объекты индексных записей стран
+    #     """
+    #     li = self.li_toc
+    #     offset = li.ptr
+    #     for _ in range(li.cnt):
+    #         chidx = self.read_ch_idx(offset)
+    #         offset += CH_IDX.size
+    #         yield chidx
 
 
 # -------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    from QGIS_VDO.vdo.blocks import block_0x12  # noqa
+    from QGIS_VDO.vdo.blocks import block_0x12, block_0x0A  # noqa
     from QGIS_VDO.vdo.consts import struct_UINT        # noqa
+    from QGIS_VDO.vdo.datatypes import LIST        # noqa
     from QGIS_VDO.vdo.fixtures_vdo import vdo30, vdo34ee, vdobmv, vdo34bnl, vdoRu  # noqa
 
     # vdo = vdo30
-    # vdo = vdo34ee
+    vdo = vdo34ee
     # vdo = vdobmv
     # vdo = vdo34bnl
     vdo = vdoRu
 
     bl_toc: block_0x12 = vdo.get_block(0)
-    bladdr_ch_country: BLADDR = bl_toc.bladdr_ch_country
-    bl_ch_country = vdo.get_block(bladdr_ch_country)
+    # начало - в блоке 0 есть информация о расположении начала поиска стран
+    fl_start = bl_toc.get_farlist_ch_country()
+
+    curr_idx = vdo.get_ch_idxs(fl_start.bladdr.offset + fl_start.list.ptr, fl_start.list.cnt)
+
+    chars = list(curr_idx)
+
+    ch = 'p'    # choused interactive from UI from chars
+
+    (int_bladr, ch, is_out, int_list) = curr_idx[ch]
+
+    offset_bl = (int_bladr >> 8) * vdo.segsize
+    offset_near = ((int_list & 0xFFFF0000) >> 16)
+    # offset = (int_bladr >> 4) * vdo.segsize + ((int_list & 0xFFFF0000) >> 16)
+    cnt = int_list & 0xFFFF
+    if is_out:
+        # farlist to address file (0x0a, 0x0c, 0x0e, 0x10)
+        # /      curr_names = vdo.get_ch_names(offset_bl, offset_near, cnt)
+        # пффф, 0x0a в ru34 - ziped
+        block_addr: block_0x0A = vdo.get_block(offset_bl)
+        li = LIST(struct_UINT.pack(int_list))
+        curr_names = {x.name : x for x in block_addr.get_brifs(li)}
+        pass
+    else:
+        # is_out == 0, to idxses
+        curr_idx = vdo.get_ch_idxs(offset_bl + offset_near, cnt)
+
+    #
+    if len(curr_names) == 1:
+        # only one choice
+        pass
+
+    pass
+    fl = bl_toc.get_farlist_ch_country()
+    bl_ch_country = vdo.get_block(fl.bladdr, fl.list)
 
     # Все страны
     all_chidxs = bl_ch_country.get_chidxs()

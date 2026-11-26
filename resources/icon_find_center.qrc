@@ -1,8 +1,0 @@
-<RCC>
-  <qresource prefix="newPrefix">
-    <file>plugin.icons/zoom_to_rect.svg</file>
-  </qresource>
-  <qresource prefix="newPrefix">
-    <file>plugin.icons/help.svg</file>
-  </qresource>
-</RCC>

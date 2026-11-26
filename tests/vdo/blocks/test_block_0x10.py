@@ -26,7 +26,8 @@ BLOCK_DICT = {
             'name': 'HUISKES KOKKELER AUTOMOBIELBEDR. VOLKSWAGEN', 'brand': 'VOLKSWAGEN',
             'country': 'NEDERLAND', 'region': 'OVERIJSSEL',
             'city': 'HAAKSBERGEN', 'street': 'ENSCHEDESESTRAAT',
-            'houseno': '47', 'postcode': '7481', 'phone': '+31535721345', '_zero1': 0x0
+            'houseno': '47', 'postcode': '7481', 'phone': '+31535721345', '_zero1': 0x0,
+            'address': '7481, NEDERLAND, OVERIJSSEL, HAAKSBERGEN, ENSCHEDESESTRAAT, 47',
         }
     },
     '0x10_ru30_0x6BC70C.bin': {
@@ -42,6 +43,7 @@ BLOCK_DICT = {
             'country': 'ROSSIYA', 'region': 'LENINGRAD',
             'city': 'OVSISCHE', 'street': '',
             'houseno': '', 'postcode': '', 'phone': '', '_zero1': 0x1,
+            'address': 'ROSSIYA, LENINGRAD, OVSISCHE',
         }
     },
     '0x10z_ru34_df002e.bin': {
@@ -57,6 +59,7 @@ BLOCK_DICT = {
             'country': 'ROSSIYA', 'region': 'SANKT PETERBURG',
             'city': 'SANKT PETERBURG', 'street': 'SUVOROVSKAYA PLOSHCHAD\'',
             'houseno': '', 'postcode': '191186', 'phone': '', '_zero1': 0x1,
+            'address': '191186, ROSSIYA, SANKT PETERBURG, SANKT PETERBURG, SUVOROVSKAYA PLOSHCHAD\'',
         }
     },
 }
@@ -294,6 +297,8 @@ def test_get_poi_94_has_metric(block_10_fixture):
     assert poi.houseno == expected_val['houseno']
     assert poi.phone == expected_val['phone']
     assert poi.region == expected_val['region']
+
+    assert poi.address == expected_val['address']
 
 
 def test_get_poi_third_has_metric(block_10_fixture):

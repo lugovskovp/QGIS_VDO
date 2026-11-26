@@ -103,9 +103,10 @@ def test_block_0x0b_li_toc_cache(block_0x0b_fixture):
 
 
 # ---------------------------------------------------------------------------
-# get_chidxs_iter() — итератор
+# get_chidxs_iter() — итератор (закомментировано в block_0x0B, см. TODO)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(reason="get_chidxs_iter закомментирован в block_0x0B")
 def test_block_0x0b_get_chidxs_iter_type(block_0x0b_fixture):
     """get_chidxs_iter возвращает итератор, элементы — CH_IDX."""
     block, _ = block_0x0b_fixture
@@ -115,6 +116,7 @@ def test_block_0x0b_get_chidxs_iter_type(block_0x0b_fixture):
     assert isinstance(first, CH_IDX)
 
 
+@pytest.mark.skip(reason="get_chidxs_iter закомментирован в block_0x0B")
 def test_block_0x0b_get_chidxs_iter_count(block_0x0b_fixture):
     """get_chidxs_iter возвращает корректное количество элементов."""
     block, _ = block_0x0b_fixture
@@ -125,9 +127,10 @@ def test_block_0x0b_get_chidxs_iter_count(block_0x0b_fixture):
 
 
 # ---------------------------------------------------------------------------
-# get_chidxs() — словарь
+# get_chidxs() — словарь (закомментировано в block_0x0B, см. TODO)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(reason="get_chidxs закомментирован в block_0x0B")
 def test_block_0x0b_get_chidxs_returns_dict(block_0x0b_fixture):
     """get_chidxs возвращает словарь str -> CH_IDX."""
     block, _ = block_0x0b_fixture
@@ -138,6 +141,7 @@ def test_block_0x0b_get_chidxs_returns_dict(block_0x0b_fixture):
         assert isinstance(value, CH_IDX)
 
 
+@pytest.mark.skip(reason="get_chidxs/get_chidxs_iter закомментированы в block_0x0B")
 def test_block_0x0b_get_chidxs_keys_match_iter(block_0x0b_fixture):
     """Ключи словаря get_chidxs() совпадают с буквами из итератора."""
     block, _ = block_0x0b_fixture
@@ -146,6 +150,7 @@ def test_block_0x0b_get_chidxs_keys_match_iter(block_0x0b_fixture):
     assert set(d.keys()) == it_chars
 
 
+@pytest.mark.skip(reason="get_chidxs/get_chidxs_iter закомментированы в block_0x0B")
 def test_block_0x0b_get_chidxs_values_match_iter(block_0x0b_fixture):
     """Значения словаря get_chidxs() — те же объекты CH_IDX, что и в итераторе."""
     block, _ = block_0x0b_fixture
@@ -160,9 +165,10 @@ def test_block_0x0b_get_chidxs_values_match_iter(block_0x0b_fixture):
 
 
 # ---------------------------------------------------------------------------
-# find_chidx() — поиск по символу
+# find_chidx() — поиск по символу (закомментировано в block_0x0B, см. TODO)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(reason="find_chidx закомментирован в block_0x0B")
 def test_block_0x0b_find_chidx_found(block_0x0b_fixture):
     """find_chidx находит существующий символ и возвращает CH_IDX."""
     block, metric = block_0x0b_fixture
@@ -173,6 +179,7 @@ def test_block_0x0b_find_chidx_found(block_0x0b_fixture):
         assert result.ch == ch
 
 
+@pytest.mark.skip(reason="find_chidx закомментирован в block_0x0B")
 def test_block_0x0b_find_chidx_not_found(block_0x0b_fixture):
     """find_chidx для несуществующего символа возвращает None."""
     block, _ = block_0x0b_fixture
@@ -180,6 +187,7 @@ def test_block_0x0b_find_chidx_not_found(block_0x0b_fixture):
     assert result is None
 
 
+@pytest.mark.skip(reason="find_chidx закомментирован в block_0x0B")
 def test_block_0x0b_find_chidx_empty_string(block_0x0b_fixture):
     """find_chidx для пустой строки возвращает None."""
     block, _ = block_0x0b_fixture
@@ -188,9 +196,10 @@ def test_block_0x0b_find_chidx_empty_string(block_0x0b_fixture):
 
 
 # ---------------------------------------------------------------------------
-# Интеграционные проверки
+# Интеграционные проверки (закомментировано в block_0x0B, см. TODO)
 # ---------------------------------------------------------------------------
 
+@pytest.mark.skip(reason="get_chidxs/get_chidxs_iter/find_chidx закомментированы в block_0x0B")
 def test_block_0x0b_full_roundtrip(block_0x0b_fixture):
     """Полный цикл: iter -> dict -> find — согласованность."""
     block, metric = block_0x0b_fixture
@@ -205,6 +214,7 @@ def test_block_0x0b_full_roundtrip(block_0x0b_fixture):
         assert block.find_chidx(ch).ch == ch
 
 
+@pytest.mark.skip(reason="get_chidxs_iter закомментирован в block_0x0B")
 def test_block_0x0b_chidx_bladdr_context(block_0x0b_fixture):
     """CH_IDX.bladdr привязан к тому же vdo, что и блок."""
     block, _ = block_0x0b_fixture

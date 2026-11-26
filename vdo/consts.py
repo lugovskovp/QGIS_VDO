@@ -5,8 +5,10 @@
 # — значения корректны для текущего проекта.
 """
 
+import os
 import struct
 
+PATH_ICON = os.path.join(os.path.dirname(__file__), "..", "resources", "plugin.icons")
 
 # constants values
 BITS_IN_ASCII = 7
@@ -25,6 +27,9 @@ struct_WORD = struct.Struct(">H")
 struct_WORD_TWICE = struct.Struct(">HH")
 struct_UINT = struct.Struct(">L")
 struct_2UINT = struct.Struct(">LL")     # 2x Unsigned Long (8 байт для COORD)
+# Структура: BLADDR(4) + char(1) + is_out(1) + LIST(4) + align(2) = 12 байт
+struct_CH_IDX = struct.Struct(">LcBLH")
+struct_ADDR_BRIF = struct.Struct(">HBBHH")
 
 # Бинарный DWORD 0
 ZERO_DWORD = b'\x00' * 4

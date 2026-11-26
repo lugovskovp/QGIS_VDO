@@ -12,9 +12,10 @@ from QGIS_VDO.vdo.block_base import block_base
 from QGIS_VDO.vdo.datatypes import BYTESTRUCT, BLADDR, LIST, FAR_LIST, VDO_FILE
 from QGIS_VDO.vdo.datatypes import OFFSET_TOC
 from QGIS_VDO.vdo.enums import en_CARINET_LANGUAGE, en_POI_CAT, en_TeleAtlasRegion
+from QGIS_VDO.vdo.consts import struct_ADDR_BRIF
 
 
-class BRIF_0xA(BYTESTRUCT):
+class BRIF_ADDR(BYTESTRUCT):
     '''
     BRIF_0xA    byte[8]
     Args:
@@ -28,46 +29,45 @@ class BRIF_0xA(BYTESTRUCT):
         6: WORD      p_moreinfo near ptr to item of MORE_INFO_0xA
         tst = BRIF_0xA(b'\x00\x10\x01\x07\x00\x00\x01\x00')
     '''
-    size: int = 8
+        
+    size: int = struct_ADDR_BRIF.size       # 8
 
     def __init__(self, buffer: bytearray, parent: block_base) -> None:
-        super().__init__(buffer, BRIF_0xA.size)       # 8 - self.bytescnt
+        super().__init__(buffer, struct_ADDR_BRIF.size)       # 8 - self.bytescnt
         self.parent = parent
-        
-    @property
-    def ptr_name(self) -> int:
-        """ pointer to zero-ended string (?) - name """
-        return self.ushort(0)
-    
-    @property
-    def is_alias(self) -> bool:
-        """ Brif - is alias (oesterreich is alias for österreich """
-        return self.uchar(2) == 1
-    
+        (self.pstr_name, self.bitemask, self.en_lang, self.pstr_location, self.ptr_info) = \
+            struct_ADDR_BRIF.unpack_from(self._raw)
+        self.name = parent.read_str(self.pstr_name)
+        self.location = '' if not self.pstr_location else parent.read_str(self.pstr_name)
+
+    def __repr__(self):
+        repr = f"{self.bitemask:02X} {self.name}:{self.location} [{self.native_lang}]"
+        return repr
+
     @property
     def native_lang(self) -> str:
         """ На каком языке разговаривают в стране """
-        en = self.uchar(3)
         try:
-            enl = en_CARINET_LANGUAGE(en).name
+            lang = en_CARINET_LANGUAGE(self.en_lang).name
         except ValueError:          # Exception as e:
-            enl = f"ValueError: {en} < not found in CARINET_LANGUAGE"
-        return enl
-    
-    @property
-    def p_MORE_INFO_0xA(self) -> int:
-        """ ptr на блок с большим количеством информации """
-        return self.ushort(6)
+            lang = f"ValueError: {self.en_lang} <<< not found in CARINET_LANGUAGE"
+        return lang
 
-    def get_name(self) -> str:
-        """
-        Return:
-            str: строковое имя
-        """
-        return self.parent.read_str(self.ptr_name)
+
+class BRIF_0xA(BRIF_ADDR):
+    """
+    """
+    def __init__(self, buffer: bytearray, parent: block_base) -> None:
+        super().__init__(buffer, parent)
+
+    @property
+    def is_alias(self) -> bool:
+        """ Is brif alias (oesterreich is alias for österreich) """
+        return self.bitemask == 1
 
 
 # -------------------------------------------------------------------------
+
 
 class MORE_INFO_0xA(BYTESTRUCT):
     '''

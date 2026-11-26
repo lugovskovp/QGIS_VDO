@@ -42,7 +42,7 @@ else:
 
 
 from QGIS_VDO.vdo.enums import BlockType
-from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT
+from QGIS_VDO.vdo.consts import struct_WORD, struct_UINT, struct_CH_IDX
 from QGIS_VDO.vdo.consts import USHORT_BYTES_CNT, UINT_BYTES_CNT, DOUBLE_BYTES_CNT, EMPTY_BUFFER
 # from .block_base import block_base
 # from .geotypes import COORD     # cannot import name 'BYTESTRUCT' from partially initialized module '
@@ -415,6 +415,26 @@ class VDO_FILE:
             
         except OSError as e:
             raise RuntimeError(f"Ошибка при инициализации файла одиночного блока: {e}")
+
+    def get_ch_idxs(self, offset: int, cnt: int) -> dict:
+        """
+        Словарь ch_idx из (0x0b, 0x0d, 0x0f, 0x11) файлов
+        Args:
+            offset :int - абсолютный адрес
+            cnt :int - количество элементов
+        Returns:
+            res :dict {'ch' : (int_bladr, ch, is_out, int_list)}
+        """
+        results = {}
+        for _ in range(cnt):
+            (int_bladr, ch, is_out, int_list, align) = \
+                struct_CH_IDX.unpack_from(self.read(offset, struct_CH_IDX.size))
+            # Структура: BLADDR(4) + char(1) + is_out(1) + LIST(4) + align(2) = 12 байт
+            offset += struct_CH_IDX.size
+            if is_out not in [0, 1]:
+                raise ValueError(f"is_out must be 0 or 1, not {is_out}")
+            results[ch.decode('latin-1')] = (int_bladr, ch, is_out, int_list)
+        return results
 
     # def get_huffman_weights(self) -> dict:
     #     """

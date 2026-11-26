@@ -445,7 +445,7 @@ LAYERS_PROPERTY = [
                 'style' : {'svg_path': 'gpsicons/gas.svg', 'size': '6'},  # noqa'transport/transport_fuel.svg'
             },
             {
-                'name': 'CarRent',
+                'name': 'Car_Rent',
                 'style' : {'svg_path': 'transport/transport_rental_car.svg', 'size': '8'},
             },
             {
@@ -453,11 +453,11 @@ LAYERS_PROPERTY = [
                 'style' : {'svg_path': 'gpsicons/parking.svg', 'size': '8'},  # noqa transport/transport_parking.svg
             },
             {
-                'name': 'ParkAndRide',
+                'name': 'Park_And_Ride',
                 'style' : {'svg_path': 'transport/transport_parking_bicycle.svg', 'size': '8'},
             },
             {
-                'name': 'RestingPlace',
+                'name': 'Resting_Place',
                 'style' : {'svg_path': 'gpsicons/teepee.svg', 'size': '8'},
             },
             {
@@ -587,11 +587,11 @@ LAYERS_PROPERTY = [
                 'style' : {'svg_path': 'entertainment/amenity=cinema.svg', 'color': 'orange', 'size': '8'},
             },
             {
-                'name': 'GolfClub',
+                'name': 'Golf_Club',
                 'style' : {'svg_path': 'gpsicons/golf.svg', 'color': 'orange', 'size': '8'},
             },
             {
-                'name': 'RailStation',
+                'name': 'Rail_Station',
                 'style' : {'svg_path': 'transport/transport_train_station2.svg', 'color': 'blue', 'size': '8'},
             },
             {
@@ -603,7 +603,7 @@ LAYERS_PROPERTY = [
                 'style' : {'svg_path': 'transport/amenity=ferry_terminal.svg', 'color': 'blue', 'size': '8'},
             },
             {
-                'name': 'BusStation',
+                'name': 'Bus_Station',
                 'style' : {'svg_path': 'transport/transport_bus_stop2.svg', 'color': 'blue', 'size': '8'},
             },
             {
@@ -623,7 +623,7 @@ LAYERS_PROPERTY = [
                 'style' : {'svg_path': 'transport/transport_aerodrome.svg', 'color': 'blue', 'size': '10'},   # noqa 'gpsicons/plane.svg'
             },
             {
-                'name': 'MotorbikeService',
+                'name': 'Motorbike_Service',
                 'style' : {'svg_path': 'transport/transport_rental_bicycle.svg', 'size': '8'},
             },
             {

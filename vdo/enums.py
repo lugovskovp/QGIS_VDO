@@ -96,10 +96,10 @@ class en_POI_CAT(enum.Enum):    	# //{en_PLACE_CATEGORY	 0xA 0xC blocks
     # исправлять имена - в соответствии с const_layers
     Car_repair        = 0x0B  #
     Gas_station       = 0x0C  #
-    CarRent           = 0x0D  #
+    Car_Rent           = 0x0D  #
     Parking           = 0x0E  #
-    ParkAndRide       = 0x0F  # // park and ride, intercept parking, parkuj i jedz metro marymont перехватывающая парковка
-    RestingPlace      = 0x10  # //  mop olesnica mala,  mop jonas polnoc, mop jonas poludnie зона отдыха
+    Park_And_Ride       = 0x0F  # // park and ride, intercept parking, parkuj i jedz metro marymont перехватывающая парковка
+    Resting_Place      = 0x10  # //  mop olesnica mala,  mop jonas polnoc, mop jonas poludnie зона отдыха
     Intresting        = 0x14  #
     Hotel             = 0x15  #
     Restaurant        = 0x16  #
@@ -128,16 +128,16 @@ class en_POI_CAT(enum.Enum):    	# //{en_PLACE_CATEGORY	 0xA 0xC blocks
     Shop              = 0x2F  # // supermarket?
     City	          = 0x30  # //russian map
     Cinema            = 0x31  #
-    GolfClub 	      = 0x32  # //first warsaw golf country club
-    RailStation       = 0x33  #
+    Golf_Club 	      = 0x32  # //first warsaw golf country club
+    Rail_Station       = 0x33  #
     Border_point      = 0x34  # //
     Seaport           = 0x35  # // oostende ramsgate (tonnel), zeebrugge (port), need mode exmpls
-    BusStation        = 0x36  #
+    Bus_Station        = 0x36  #
     Pier              = 0x37  # // przystan kortowska-> Piers, Dock
     Shcool            = 0x38  #
     Winery            = 0x39  # // lanson caves, champagne krug, moet et chandon, ruinart caves
     Airport           = 0x3a  # //brussel nationaal, brussels airport; , luchthaven brussel
-    MotorbikeService  = 0x3B  # bmw_motorbike_service
+    Motorbike_Service  = 0x3B  # bmw_motorbike_service
     Business          = 0x3D  # // Olsztyn, Poland https://en.wikipedia.org/wiki/Michelin_Polska
 
 

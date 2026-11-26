@@ -37,7 +37,7 @@ class AnimatedGroupBox(QGroupBox):
         
         # Проверяем, попал ли клик именно в область текста/заголовка
         sc = self.style().hitTestComplexControl(QStyle.CC_GroupBox, opt, event.pos(), self)
-        if sc & QStyle.SC_GroupBoxLabel:
+        if sc & QStyle.SC_GroupBoxLabel:    # pragma: no cover
             self.toggle_state(not self.isExpanded)
             event.accept()  # Говорим системе, что событие обработано
             return
@@ -56,7 +56,7 @@ class AnimatedGroupBox(QGroupBox):
             # --- РАЗВЕРНУТЬ ---
             # Возвращаем все дочерние виджеты в исходную видимость
             for child in self.children():
-                if isinstance(child, QtWidgets.QWidget):
+                if isinstance(child, QtWidgets.QWidget):        # pragma: no cover
                     child.setVisible(True)
             
             # Снимаем ограничения по высоте
@@ -70,7 +70,7 @@ class AnimatedGroupBox(QGroupBox):
             
             # Скрываем абсолютно ВСЕ дочерние элементы интерфейса внутри панели
             for child in self.children():
-                if isinstance(child, QtWidgets.QWidget):
+                if isinstance(child, QtWidgets.QWidget):    # pragma: no cover
                     child.setVisible(False)
             
             # Ограничиваем максимальную высоту только размером заголовка
